@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "500976764422",
+    "project_id": "loan-app-da81f",
+    "storage_bucket": "loan-app-da81f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:500976764422:android:73c27616139256431c2587",
+        "android_client_info": {
+          "package_name": "com.loanhub"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAG4ALmS7AsM_Jaas3B_IZ4BKatjCoqAyQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
