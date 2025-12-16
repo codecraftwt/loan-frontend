@@ -75,9 +75,10 @@ export default function LoginScreen({ navigation }) {
       })
       .catch(error => {
         console.error('Error ->', error);
+        // Handle error message from backend
         const errorMessage =
-          error ||
-          error.message ||
+          (typeof error === 'string' ? error : null) ||
+          error?.message ||
           'Invalid credentials or network error. Please try again.';
 
         Toast.show({

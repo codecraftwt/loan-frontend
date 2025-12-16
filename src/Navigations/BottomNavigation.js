@@ -3,15 +3,29 @@ import React from 'react';
 import Feather from 'react-native-vector-icons/Feather';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useSelector} from 'react-redux';
 import {m} from 'walstar-rn-responsive';
 
+// Lender screens (current dashboard)
 import Home from '../Screens/Dashboard/Home';
 import Profile from '../Screens/Dashboard/Profile';
 import Outward from '../Screens/Dashboard/Outward';
 import Inward from '../Screens/Dashboard/Inward';
 
+// Admin screens
+import AdminDashboard from '../Screens/Dashboard/AdminDashboard';
+import AddPlan from '../Screens/Dashboard/AddPlan';
+import EditPlan from '../Screens/Dashboard/EditPlan';
+import Revenue from '../Screens/Dashboard/Revenue';
+import LenderList from '../Screens/Dashboard/LenderList';
+
+// Borrower screens
+import BorrowerDashboard from '../Screens/Dashboard/BorrowerDashboard';
+
 export default function BottomNavigation() {
   const Tab = createBottomTabNavigator();
+  const user = useSelector(state => state.auth.user);
+  const roleId = user?.roleId;
 
   // Get safe area values
   const insets = useSafeAreaInsets();
@@ -28,6 +42,150 @@ export default function BottomNavigation() {
     );
   };
 
+  // Admin Dashboard (roleId === 0)
+  if (roleId === 0) {
+    return (
+      <View style={{flex: 1}}>
+        <Tab.Navigator
+          initialRouteName="AdminHome"
+          screenOptions={{
+            headerShown: false,
+            tabBarHideOnKeyboard: true,
+            tabBarActiveTintColor: '#ff6700',
+            tabBarInactiveTintColor: '#666666',
+            tabBarLabelStyle: {
+              fontSize: m(11),
+              fontFamily: 'Poppins-SemiBold',
+            },
+            tabBarStyle: {
+              position: 'absolute',
+              left: m(16),
+              right: m(16),
+              bottom: insets.bottom,
+              height: m(68),
+              backgroundColor: '#e5dad1',
+              borderTopWidth: 0,
+              paddingTop: m(5),
+              paddingBottom: insets.bottom > 0 ? m(5) : 0,
+            },
+          }}>
+          <Tab.Screen
+            name="AdminHome"
+            component={AdminDashboard}
+            options={{
+              tabBarLabel: 'Dashboard',
+              tabBarIcon: ({color, size, focused}) =>
+                renderIcon('home', color, size, focused),
+            }}
+          />
+          <Tab.Screen
+            name="Plans"
+            component={EditPlan}
+            options={{
+              tabBarLabel: 'Plans',
+              tabBarIcon: ({color, size, focused}) =>
+                renderIcon('file-text', color, size, focused),
+            }}
+          />
+          <Tab.Screen
+            name="Revenue"
+            component={Revenue}
+            options={{
+              tabBarLabel: 'Revenue',
+              tabBarIcon: ({color, size, focused}) =>
+                renderIcon('dollar-sign', color, size, focused),
+            }}
+          />
+          <Tab.Screen
+            name="Lenders"
+            component={LenderList}
+            options={{
+              tabBarLabel: 'Lenders',
+              tabBarIcon: ({color, size, focused}) =>
+                renderIcon('users', color, size, focused),
+            }}
+          />
+          <Tab.Screen
+            name="Profile"
+            component={Profile}
+            options={{
+              tabBarIcon: ({color, size, focused}) =>
+                renderIcon('user', color, size, focused),
+            }}
+          />
+        </Tab.Navigator>
+      </View>
+    );
+  }
+
+  // Borrower Dashboard (roleId === 2)
+  if (roleId === 2) {
+    return (
+      <View style={{flex: 1}}>
+        <Tab.Navigator
+          initialRouteName="BorrowerHome"
+          screenOptions={{
+            headerShown: false,
+            tabBarHideOnKeyboard: true,
+            tabBarActiveTintColor: '#ff6700',
+            tabBarInactiveTintColor: '#666666',
+            tabBarLabelStyle: {
+              fontSize: m(11),
+              fontFamily: 'Poppins-SemiBold',
+            },
+            tabBarStyle: {
+              position: 'absolute',
+              left: m(16),
+              right: m(16),
+              bottom: insets.bottom,
+              height: m(68),
+              backgroundColor: '#e5dad1',
+              borderTopWidth: 0,
+              paddingTop: m(5),
+              paddingBottom: insets.bottom > 0 ? m(5) : 0,
+            },
+          }}>
+          <Tab.Screen
+            name="BorrowerHome"
+            component={BorrowerDashboard}
+            options={{
+              tabBarLabel: 'Home',
+              tabBarIcon: ({color, size, focused}) =>
+                renderIcon('home', color, size, focused),
+            }}
+          />
+          <Tab.Screen
+            name="MyLoans"
+            component={Outward}
+            options={{
+              tabBarLabel: 'My Loans',
+              tabBarIcon: ({color, size, focused}) =>
+                renderIcon('file-text', color, size, focused),
+            }}
+          />
+          <Tab.Screen
+            name="History"
+            component={Inward}
+            options={{
+              tabBarLabel: 'History',
+              tabBarIcon: ({color, size, focused}) =>
+                renderIcon('clock', color, size, focused),
+            }}
+          />
+          <Tab.Screen
+            name="Profile"
+            component={Profile}
+            options={{
+              tabBarIcon: ({color, size, focused}) =>
+                renderIcon('user', color, size, focused),
+            }}
+          />
+        </Tab.Navigator>
+      </View>
+    );
+  }
+
+  // Lender Dashboard (roleId === 1) - Default/Current Dashboard
   return (
     <View style={{flex: 1}}>
       <Tab.Navigator

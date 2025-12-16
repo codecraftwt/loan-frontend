@@ -18,6 +18,11 @@ import SubscriptionScreen from '../Screens/Subscription/SubscriptionScreen';
 import HelpAndSupportScreen from '../Screens/Auth/HelpAndSupportScreen';
 import PersonalLoan from '../Screens/Dashboard/PersonalLoan';
 import AnalyticsScreen from '../Screens/Dashboard/AnalyticsScreen';
+// Admin screens
+import AddPlan from '../Screens/Dashboard/AddPlan';
+import EditPlan from '../Screens/Dashboard/EditPlan';
+import Revenue from '../Screens/Dashboard/Revenue';
+import LenderList from '../Screens/Dashboard/LenderList';
 
 const Navigation = () => {
   const Stack = createNativeStackNavigator();
@@ -49,6 +54,11 @@ const Navigation = () => {
 
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="AnalyticsScreen" component={AnalyticsScreen} />
+      {/* Admin Screens */}
+      <Stack.Screen name="AddPlan" component={AddPlan} />
+      <Stack.Screen name="EditPlan" component={EditPlan} />
+      <Stack.Screen name="Revenue" component={Revenue} />
+      <Stack.Screen name="LenderList" component={LenderList} />
     </Stack.Navigator>
   );
 };

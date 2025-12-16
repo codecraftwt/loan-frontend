@@ -40,6 +40,8 @@ export const login = createAsyncThunk(
         address,
         aadharCardNo,
         profileImage,
+        roleId,
+        isMobileVerified,
       } = response.data;
 
       // If token and user info are present, save to AsyncStorage
@@ -55,6 +57,8 @@ export const login = createAsyncThunk(
             address,
             aadharCardNo,
             profileImage,
+            roleId,
+            isMobileVerified,
           }),
         );
 
@@ -69,16 +73,18 @@ export const login = createAsyncThunk(
           address,
           aadharCardNo,
           profileImage,
+          roleId,
+          isMobileVerified,
         };
       } else {
         return rejectWithValue('Invalid credentials'); // Handle invalid response data
       }
     } catch (error) {
       // If there is a network issue or other API issues, capture the error and pass it to rejectWithValue
-      console.error('Login error:', error.response.data.message);
+      console.error('Login error:', error.response?.data?.message || error.message);
       if (
-        error.response ||
-        error.response.data ||
+        error.response &&
+        error.response.data &&
         error.response.data.message
       ) {
         return rejectWithValue(error.response.data.message);
@@ -92,21 +98,63 @@ export const login = createAsyncThunk(
 // Thunk for user registration
 export const registerUser = createAsyncThunk(
   'auth/signup',
-  async (userData, {rejectWithValue}) => {
+  async (formData, {rejectWithValue}) => {
     try {
-      const response = await instance.post('auth/signup', userData);
+      const response = await instance.post('auth/signup', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
 
-      // Get the user ID from the response
-      const {_id} = response.data.user;
+      // Backend returns { message, user, token }
+      const {user, token} = response.data;
 
-      // Register the device token after user registration
-      await registerDeviceToken(_id);
+      // If token and user info are present, save to AsyncStorage
+      if (token && user._id) {
+        await AsyncStorage.setItem('token', token);
+        await AsyncStorage.setItem(
+          'user',
+          JSON.stringify({
+            _id: user._id,
+            email: user.email,
+            userName: user.userName,
+            mobileNo: user.mobileNo,
+            address: user.address,
+            aadharCardNo: user.aadharCardNo,
+            profileImage: user.profileImage,
+            roleId: user.roleId,
+            isMobileVerified: user.isMobileVerified,
+          }),
+        );
+
+        // Register the device token after user registration
+        await registerDeviceToken(user._id);
+      }
 
       console.log(response.data, 'Success');
-      return response.data;
+      return {
+        user,
+        token,
+      };
     } catch (error) {
       console.log(error, 'error');
-      return rejectWithValue(error.response.data);
+      // Handle error response structure from backend
+      if (error.response && error.response.data) {
+        // Backend returns { message: "..." } or { message: "...", missingFields: [...] }
+        const errorData = error.response.data;
+        if (errorData.message) {
+          // If missingFields exist, include them in the error
+          if (errorData.missingFields) {
+            return rejectWithValue({
+              message: errorData.message,
+              missingFields: errorData.missingFields,
+            });
+          }
+          return rejectWithValue(errorData.message);
+        }
+        return rejectWithValue(errorData);
+      }
+      return rejectWithValue('Registration failed. Please try again.');
     }
   },
 );
@@ -297,7 +345,12 @@ const authSlice = createSlice({
       })
       .addCase(registerUser.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload.user;
+        if (action.payload.token) {
+          state.user = action.payload.user;
+          state.token = action.payload.token;
+        } else {
+          state.error = 'Registration failed';
+        }
       })
       .addCase(registerUser.rejected, (state, action) => {
         state.isLoading = false;
