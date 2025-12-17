@@ -20,10 +20,11 @@ import {
   createLoan,
   getLoanByAadhar,
   updateLoan,
-} from '../../Redux/Slices/loanSlice';
+} from '../../../Redux/Slices/loanSlice';
 import Toast from 'react-native-toast-message';
 import { m } from 'walstar-rn-responsive';
-import Header from '../../Components/Header';
+import Header from '../../../Components/Header';
+import LoanOTPVerification from '../../../Components/LoanOTPVerification';
 import { LinearGradient } from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
@@ -34,23 +35,57 @@ export default function AddDetails({ route, navigation }) {
   const { error, aadharError, loading } = useSelector(
     state => state.loans,
   );
-  const { loanDetails } = route.params || {};
+  const { loanDetails, borrowerData } = route.params || {};
 
-  const [formData, setFormData] = useState({
-    name: loanDetails?.name || '',
-    mobileNumber: loanDetails?.mobileNumber || '',
-    aadhaarNumber: loanDetails?.aadhaarNumber || '',
-    address: loanDetails?.address || '',
-    amount: loanDetails?.amount?.toString() || '',
-    loanStartDate: loanDetails?.loanStartDate || null,
-    loanEndDate: loanDetails?.loanEndDate || null,
-    purpose: loanDetails?.purpose || '',
-  });
+  // Auto-fill from borrowerData if available
+  const getInitialFormData = () => {
+    if (borrowerData) {
+      return {
+        name: borrowerData.name || '',
+        mobileNumber: borrowerData.mobileNumber || '',
+        aadhaarNumber: borrowerData.aadhaarNumber || '',
+        address: borrowerData.address || '',
+        amount: '',
+        loanStartDate: null,
+        loanEndDate: null,
+        purpose: '',
+        loanMode: 'cash', // Default to cash
+      };
+    }
+    if (loanDetails) {
+      return {
+        name: loanDetails.name || '',
+        mobileNumber: loanDetails.mobileNumber || '',
+        aadhaarNumber: loanDetails.aadhaarNumber || '',
+        address: loanDetails.address || '',
+        amount: loanDetails.amount?.toString() || '',
+        loanStartDate: loanDetails.loanStartDate || null,
+        loanEndDate: loanDetails.loanEndDate || null,
+        purpose: loanDetails.purpose || '',
+        loanMode: loanDetails.loanMode || 'cash',
+      };
+    }
+    return {
+      name: '',
+      mobileNumber: '',
+      aadhaarNumber: '',
+      address: '',
+      amount: '',
+      loanStartDate: null,
+      loanEndDate: null,
+      purpose: '',
+      loanMode: 'cash', // Default to cash
+    };
+  };
+
+  const [formData, setFormData] = useState(getInitialFormData());
   const [errorMessage, setErrorMessage] = useState('');
   const [showOldHistoryButton, setShowOldHistoryButton] = useState(false);
   const [isStartDatePickerVisible, setStartDatePickerVisible] = useState(false);
   const [isEndDatePickerVisible, setEndDatePickerVisible] = useState(false);
   const [isFocused, setIsFocused] = useState({});
+  const [isOTPModalVisible, setIsOTPModalVisible] = useState(false);
+  const [createdLoanData, setCreatedLoanData] = useState(null);
 
   // Focus animation
   const focusAnim = new Animated.Value(0);
@@ -123,19 +158,24 @@ export default function AddDetails({ route, navigation }) {
       return;
     }
 
+    // Format dates for new API
+    const loanStartDate = formData.loanStartDate instanceof Date
+      ? formData.loanStartDate.toISOString()
+      : formData.loanStartDate;
+    const loanEndDate = formData.loanEndDate instanceof Date
+      ? formData.loanEndDate.toISOString()
+      : formData.loanEndDate;
+
     const newData = {
       name: formData.name.trim(),
       mobileNumber: formData.mobileNumber.trim(),
       aadharCardNo: aadharNumber,
       address: formData.address.trim(),
       amount: parseFloat(formData.amount),
-      loanStartDate: formData.loanStartDate instanceof Date
-        ? formData.loanStartDate.toISOString()
-        : formData.loanStartDate,
-      loanEndDate: formData.loanEndDate instanceof Date
-        ? formData.loanEndDate.toISOString()
-        : formData.loanEndDate,
+      loanGivenDate: loanStartDate, // New API uses loanGivenDate
+      loanEndDate: loanEndDate,
       purpose: formData.purpose.trim(),
+      loanMode: formData.loanMode || 'cash',
     };
 
     try {
@@ -148,12 +188,39 @@ export default function AddDetails({ route, navigation }) {
         createLoan.fulfilled.match(response) ||
         updateLoan.fulfilled.match(response)
       ) {
-        Toast.show({
-          type: 'success',
-          position: 'top',
-          text1: 'Loan saved successfully',
-        });
-        navigation.navigate('BottomNavigation', { screen: 'Outward' });
+        // For new loans, show OTP verification modal
+        if (!loanDetails && createLoan.fulfilled.match(response)) {
+          // Handle API response structure: response.payload.data or response.payload
+          const responsePayload = response.payload;
+          const loanData = responsePayload?.data || responsePayload;
+          
+          if (loanData && loanData._id) {
+            setCreatedLoanData(loanData);
+            setIsOTPModalVisible(true);
+            Toast.show({
+              type: 'success',
+              position: 'top',
+              text1: 'Loan created successfully',
+              text2: 'OTP sent to borrower. Please verify to confirm the loan.',
+            });
+          } else {
+            // Fallback: navigate if loan data structure is unexpected
+            Toast.show({
+              type: 'success',
+              position: 'top',
+              text1: 'Loan created successfully',
+            });
+            navigation.navigate('BottomNavigation', { screen: 'Outward' });
+          }
+        } else {
+          // For updates, navigate directly
+          Toast.show({
+            type: 'success',
+            position: 'top',
+            text1: 'Loan updated successfully',
+          });
+          navigation.navigate('BottomNavigation', { screen: 'Outward' });
+        }
       } else {
         let errorMsg =
           response.payload?.message ||
@@ -202,6 +269,7 @@ export default function AddDetails({ route, navigation }) {
       loanStartDate: null,
       loanEndDate: null,
       purpose: '',
+      loanMode: 'cash',
     });
     setErrorMessage('');
     setShowOldHistoryButton(false);
@@ -227,6 +295,35 @@ export default function AddDetails({ route, navigation }) {
     setFormData({ ...formData, [type]: date });
     if (type === 'loanStartDate') setStartDatePickerVisible(false);
     else setEndDatePickerVisible(false);
+  };
+
+  const handleOTPVerifySuccess = (verifiedLoanData) => {
+    setIsOTPModalVisible(false);
+    setCreatedLoanData(null);
+    Toast.show({
+      type: 'success',
+      position: 'top',
+      text1: 'Loan confirmed',
+      text2: 'Borrower has accepted the loan.',
+    });
+    navigation.navigate('BottomNavigation', { screen: 'Outward' });
+  };
+
+  const handleOTPSkip = () => {
+    setIsOTPModalVisible(false);
+    Toast.show({
+      type: 'info',
+      position: 'top',
+      text1: 'OTP Verification Skipped',
+      text2: 'Loan is pending. You can verify OTP later.',
+    });
+    navigation.navigate('BottomNavigation', { screen: 'Outward' });
+  };
+
+  const handleOTPClose = () => {
+    setIsOTPModalVisible(false);
+    // If user closes without verifying or skipping, still navigate
+    navigation.navigate('BottomNavigation', { screen: 'Outward' });
   };
 
   return (
@@ -464,6 +561,51 @@ export default function AddDetails({ route, navigation }) {
               />
             </View>
 
+            {/* Loan Mode Selection */}
+            <View style={styles.loanModeContainer}>
+              <Text style={styles.loanModeLabel}>Payment Mode</Text>
+              <View style={styles.loanModeButtons}>
+                <TouchableOpacity
+                  style={[
+                    styles.loanModeButton,
+                    formData.loanMode === 'cash' && styles.loanModeButtonActive,
+                  ]}
+                  onPress={() => setFormData({ ...formData, loanMode: 'cash' })}>
+                  <Icon
+                    name="cash"
+                    size={20}
+                    color={formData.loanMode === 'cash' ? '#FFFFFF' : '#666'}
+                  />
+                  <Text
+                    style={[
+                      styles.loanModeButtonText,
+                      formData.loanMode === 'cash' && styles.loanModeButtonTextActive,
+                    ]}>
+                    Cash
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.loanModeButton,
+                    formData.loanMode === 'online' && styles.loanModeButtonActive,
+                  ]}
+                  onPress={() => setFormData({ ...formData, loanMode: 'online' })}>
+                  <Icon
+                    name="credit-card"
+                    size={20}
+                    color={formData.loanMode === 'online' ? '#FFFFFF' : '#666'}
+                  />
+                  <Text
+                    style={[
+                      styles.loanModeButtonText,
+                      formData.loanMode === 'online' && styles.loanModeButtonTextActive,
+                    ]}>
+                    Online
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
             {(errorMessage || error) && (
               <View style={styles.errorCard}>
                 <Icon name="alert" size={20} color="#dc2626" />
@@ -525,6 +667,18 @@ export default function AddDetails({ route, navigation }) {
           minimumDate={new Date()}
           display="spinner"
         />
+
+        {/* OTP Verification Modal */}
+        {createdLoanData && (
+          <LoanOTPVerification
+            visible={isOTPModalVisible}
+            loanId={createdLoanData._id}
+            borrowerMobile={formData.mobileNumber}
+            onVerifySuccess={handleOTPVerifySuccess}
+            onSkip={handleOTPSkip}
+            onClose={handleOTPClose}
+          />
+        )}
       </KeyboardAvoidingView>
     </TouchableWithoutFeedback>
   );
@@ -816,5 +970,42 @@ const styles = StyleSheet.create({
     fontSize: m(14),
     fontFamily: 'Montserrat-Bold',
     color: '#FFF',
+  },
+  loanModeContainer: {
+    marginBottom: m(20),
+  },
+  loanModeLabel: {
+    fontSize: m(14),
+    fontFamily: 'Montserrat-SemiBold',
+    color: '#374151',
+    marginBottom: m(12),
+  },
+  loanModeButtons: {
+    flexDirection: 'row',
+    gap: m(12),
+  },
+  loanModeButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: m(14),
+    borderRadius: m(12),
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#F9FAFB',
+    gap: m(8),
+  },
+  loanModeButtonActive: {
+    backgroundColor: '#ff7900',
+    borderColor: '#ff7900',
+  },
+  loanModeButtonText: {
+    fontSize: m(14),
+    fontFamily: 'Montserrat-SemiBold',
+    color: '#6B7280',
+  },
+  loanModeButtonTextActive: {
+    color: '#FFFFFF',
   },
 });

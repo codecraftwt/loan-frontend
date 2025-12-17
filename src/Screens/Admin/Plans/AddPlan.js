@@ -11,7 +11,7 @@ import {
 import Icon from 'react-native-vector-icons/Feather';
 import LinearGradient from 'react-native-linear-gradient';
 import { m } from 'walstar-rn-responsive';
-import Header from '../../Components/Header';
+import Header from '../../../Components/Header';
 
 export default function AddPlan({ navigation }) {
   const [planName, setPlanName] = useState('');
@@ -227,4 +227,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 });
+
+
 

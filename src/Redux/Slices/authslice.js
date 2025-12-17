@@ -312,7 +312,19 @@ const authSlice = createSlice({
     },
 
     setUser: (state, action) => {
-      state.user = action.payload;
+      // Preserve roleId if it exists in current state and is missing in payload
+      const currentRoleId = state.user?.roleId;
+      const payloadRoleId = action.payload?.roleId;
+      
+      state.user = {
+        ...action.payload,
+        // Preserve roleId if payload doesn't have it but current state does
+        roleId: payloadRoleId !== undefined && payloadRoleId !== null 
+          ? payloadRoleId 
+          : currentRoleId !== undefined && currentRoleId !== null 
+            ? currentRoleId 
+            : action.payload?.roleId,
+      };
       state.token = action.payload.token;
     },
   },

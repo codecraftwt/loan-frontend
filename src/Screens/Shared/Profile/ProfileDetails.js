@@ -16,16 +16,16 @@ import Toast from 'react-native-toast-message';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import { useDispatch, useSelector } from 'react-redux';
 import { m } from 'walstar-rn-responsive';
-import Header from '../../Components/Header';
-import PromptBox from '../PromptBox/Prompt';
+import Header from '../../../Components/Header';
+import PromptBox from '../../PromptBox/Prompt';
 import {
   deleteProfileImage,
   logout,
   removeUserDeviceToken,
   updateUser,
   updateUserProfile,
-} from '../../Redux/Slices/authslice';
-import useFetchUserFromStorage from '../../Redux/hooks/useFetchUserFromStorage';
+} from '../../../Redux/Slices/authslice';
+import useFetchUserFromStorage from '../../../Redux/hooks/useFetchUserFromStorage';
 
 const ProfileDetails = ({ navigation }) => {
   const dispatch = useDispatch();

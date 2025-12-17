@@ -11,8 +11,8 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { m } from 'walstar-rn-responsive';
-import Header from '../../Components/Header';
-import { useSubscription } from '../../hooks/useSubscription';
+import Header from '../../../Components/Header';
+import { useSubscription } from '../../../hooks/useSubscription';
 import { useSelector } from 'react-redux';
 
 const SubscriptionScreen = ({ navigation }) => {

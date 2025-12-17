@@ -13,11 +13,11 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
 import Ionicons from 'react-native-vector-icons/Ionicons'; import LinearGradient from 'react-native-linear-gradient';
-import { getLoanStats, getRecentActivities } from '../../Redux/Slices/loanSlice';
+import { getLoanStats, getRecentActivities } from '../../../Redux/Slices/loanSlice';
 import { useDispatch, useSelector } from 'react-redux';
-import useFetchUserFromStorage from '../../Redux/hooks/useFetchUserFromStorage';
+import useFetchUserFromStorage from '../../../Redux/hooks/useFetchUserFromStorage';
 import { m } from 'walstar-rn-responsive';
-import Header from '../../Components/Header';
+import Header from '../../../Components/Header';
 
 export default function Home() {
   const navigation = useNavigation();

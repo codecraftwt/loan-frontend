@@ -10,11 +10,11 @@ import {
 import Icon from 'react-native-vector-icons/Feather';
 import moment from 'moment';
 import { useDispatch, useSelector } from 'react-redux';
-import { updateLoanStatus } from '../../Redux/Slices/loanSlice';
+import { updateLoanStatus } from '../../../Redux/Slices/loanSlice';
 import Toast from 'react-native-toast-message';
 import { m } from 'walstar-rn-responsive';
-import PromptBox from '../PromptBox/Prompt';
-import Header from '../../Components/Header';
+import PromptBox from '../../PromptBox/Prompt';
+import Header from '../../../Components/Header';
 
 const DetailItem = ({ icon, label, value, isStatus, onStatusChange }) => {
   const isAccepted = value?.toLowerCase() === 'accepted';

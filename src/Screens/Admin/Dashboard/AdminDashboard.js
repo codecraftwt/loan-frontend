@@ -13,7 +13,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import { useSelector } from 'react-redux';
 import { m } from 'walstar-rn-responsive';
-import Header from '../../Components/Header';
+import Header from '../../../Components/Header';
 
 export default function AdminDashboard() {
   const navigation = useNavigation();

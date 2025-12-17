@@ -11,11 +11,11 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useDispatch, useSelector } from 'react-redux';
-import { getLoanByAadhar } from '../../Redux/Slices/loanSlice';
+import { getLoanByAadhar } from '../../../Redux/Slices/loanSlice';
 import { m } from 'walstar-rn-responsive';
-import LoaderSkeleton from '../../Components/LoaderSkeleton';
-import AgreementModal from '../PromptBox/AgreementModal';
-import Header from '../../Components/Header';
+import LoaderSkeleton from '../../../Components/LoaderSkeleton';
+import AgreementModal from '../../PromptBox/AgreementModal';
+import Header from '../../../Components/Header';
 import { LinearGradient } from 'react-native-linear-gradient';
 
 const { width } = Dimensions.get('window');

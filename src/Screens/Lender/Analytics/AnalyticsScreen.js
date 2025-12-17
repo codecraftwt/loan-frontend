@@ -9,12 +9,12 @@ import {
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { m } from 'walstar-rn-responsive';
-import Header from '../../Components/Header';
+import Header from '../../../Components/Header';
 import {
   getLoanByAadhar,
   getLoanByLender,
-} from '../../Redux/Slices/loanSlice';
-import DonutChart from '../../Components/DonutChart';
+} from '../../../Redux/Slices/loanSlice';
+import DonutChart from '../../../Components/DonutChart';
 
 const formatCurrency = value => {
   if (!value) {

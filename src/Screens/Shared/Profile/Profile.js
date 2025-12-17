@@ -12,11 +12,11 @@ import React, { useState } from 'react';
 import Icon from 'react-native-vector-icons/Feather';
 import { useNavigation } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
-import PromptBox from '../PromptBox/Prompt';
-import { logout, removeUserDeviceToken } from '../../Redux/Slices/authslice';
-import useFetchUserFromStorage from '../../Redux/hooks/useFetchUserFromStorage';
+import PromptBox from '../../PromptBox/Prompt';
+import { logout, removeUserDeviceToken } from '../../../Redux/Slices/authslice';
+import useFetchUserFromStorage from '../../../Redux/hooks/useFetchUserFromStorage';
 import { m } from 'walstar-rn-responsive';
-import Header from '../../Components/Header';
+import Header from '../../../Components/Header';
 
 export default function Profile() {
   const navigation = useNavigation();

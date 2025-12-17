@@ -13,35 +13,29 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useDispatch, useSelector } from 'react-redux';
 import {
-  getLoanByAadhar,
-  updateLoanAcceptanceStatus,
-} from '../../Redux/Slices/loanSlice';
+  getLoanByLender,
+} from '../../../Redux/Slices/loanSlice';
 import { useFocusEffect, useRoute } from '@react-navigation/native';
 import moment from 'moment';
-import PromptBox from '../PromptBox/Prompt';
 import Toast from 'react-native-toast-message';
-import LoaderSkeleton from '../../Components/LoaderSkeleton';
+import LoaderSkeleton from '../../../Components/LoaderSkeleton';
 import { m } from 'walstar-rn-responsive';
-import Header from '../../Components/Header';
+import Header from '../../../Components/Header';
 import DatePicker from 'react-native-date-picker';
 
 export default function Inward({ navigation }) {
   const dispatch = useDispatch();
   const route = useRoute();
   const user = useSelector(state => state.auth.user);
-  const { loans, totalAmount, loading, error } = useSelector(
+  const { lenderLoans, loading, error } = useSelector(
     state => state.loans,
   );
-  const aadhaarNumber = user?.aadharCardNo;
   
   // Get highlightLoanId from route params
   const highlightLoanId = route.params?.highlightLoanId;
   const scrollViewRef = React.useRef(null);
   const loanCardRefs = React.useRef({});
 
-  const [isPromptVisible, setIsPromptVisible] = useState(false);
-  const [selectedLoan, setSelectedLoan] = useState(null);
-  const [acceptanceStatus, setAcceptanceStatus] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
   const [startDateFilter, setStartDateFilter] = useState(null);
@@ -56,9 +50,6 @@ export default function Inward({ navigation }) {
   // Add debounced search state
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
-  // Remove frontend filtering - use backend filtered loans directly
-  const displayLoans = loans;
-
   const formatDate = date => moment(date).format('DD MMM, YYYY');
 
   // Add debouncing effect for search
@@ -70,71 +61,14 @@ export default function Inward({ navigation }) {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Fetch loans when debounced search changes
+  // Fetch given loans when debounced search changes
   useEffect(() => {
-    if (aadhaarNumber) {
-      const filters = {};
-      if (debouncedSearch) {
-        filters.search = debouncedSearch;
-      }
-      dispatch(getLoanByAadhar({ aadhaarNumber, filters }));
+    const filters = {};
+    if (debouncedSearch) {
+      filters.search = debouncedSearch;
     }
-  }, [debouncedSearch, dispatch, aadhaarNumber]);
-
-  // Helper function to get display status
-  const getDisplayStatus = (loan) => {
-    // If borrower rejected, show "Rejected" regardless of payment status
-    if (loan?.borrowerAcceptanceStatus?.toLowerCase() === 'rejected') {
-      return 'rejected';
-    }
-    // Otherwise, show the actual payment status
-    return loan?.status;
-  };
-
-  // Helper function to get display status text
-  const getDisplayStatusText = (loan) => {
-    if (loan?.borrowerAcceptanceStatus?.toLowerCase() === 'rejected') {
-      return 'Rejected';
-    }
-    return loan?.status?.charAt(0).toUpperCase() + loan?.status?.slice(1);
-  };
-
-  const handleStatusChange = (data, status) => {
-    setSelectedLoan(data);
-    setAcceptanceStatus(status);
-    setIsPromptVisible(true);
-  };
-
-  const handleConfirm = async () => {
-    setIsPromptVisible(false);
-    try {
-      await dispatch(
-        updateLoanAcceptanceStatus({
-          loanId: selectedLoan._id,
-          status: acceptanceStatus,
-        }),
-      ).unwrap();
-
-      Toast.show({
-        type: 'success',
-        position: 'top',
-        text1: 'Loan approval status updated successfully',
-      });
-
-      // Refresh the list after status update
-      const filters = {};
-      if (debouncedSearch) {
-        filters.search = debouncedSearch;
-      }
-      dispatch(getLoanByAadhar({ aadhaarNumber, filters }));
-    } catch (error) {
-      Toast.show({
-        type: 'error',
-        position: 'top',
-        text1: error.error || 'Error updating loan status',
-      });
-    }
-  };
+    dispatch(getLoanByLender(filters));
+  }, [debouncedSearch, dispatch]);
 
   const handleClearFilters = () => {
     setStartDateFilter(null);
@@ -144,7 +78,7 @@ export default function Inward({ navigation }) {
     setStatusFilter(null);
     setSearchQuery(''); // Clear search query
     setDebouncedSearch(''); // Clear debounced search
-    dispatch(getLoanByAadhar({ aadhaarNumber }));
+    dispatch(getLoanByLender());
     setIsFilterModalVisible(false);
   };
 
@@ -163,12 +97,7 @@ export default function Inward({ navigation }) {
       ...(debouncedSearch && { search: debouncedSearch }),
     };
     setIsFilterModalVisible(false);
-    await dispatch(getLoanByAadhar({ aadhaarNumber, filters }));
-  };
-
-  const handleCancel = () => {
-    setSelectedLoan(null);
-    setIsPromptVisible(false);
+    await dispatch(getLoanByLender(filters));
   };
 
   const onRefresh = async () => {
@@ -176,25 +105,23 @@ export default function Inward({ navigation }) {
     if (debouncedSearch) {
       filters.search = debouncedSearch;
     }
-    await dispatch(getLoanByAadhar({ aadhaarNumber, filters }));
+    await dispatch(getLoanByLender(filters));
   };
 
   useFocusEffect(
     useCallback(() => {
-      if (aadhaarNumber) {
-        const filters = {};
-        if (debouncedSearch) {
-          filters.search = debouncedSearch;
-        }
-        dispatch(getLoanByAadhar({ aadhaarNumber, filters }));
+      const filters = {};
+      if (debouncedSearch) {
+        filters.search = debouncedSearch;
       }
-    }, [dispatch, aadhaarNumber, debouncedSearch]),
+      dispatch(getLoanByLender(filters));
+    }, [dispatch, debouncedSearch]),
   );
 
   // Effect to scroll to and highlight loan when highlightLoanId is provided
   useEffect(() => {
-    if (highlightLoanId && displayLoans?.length > 0 && scrollViewRef.current) {
-      const loanIndex = displayLoans.findIndex(loan => loan._id === highlightLoanId);
+    if (highlightLoanId && lenderLoans?.length > 0 && scrollViewRef.current) {
+      const loanIndex = lenderLoans.findIndex(loan => loan._id === highlightLoanId);
       if (loanIndex !== -1) {
         setTimeout(() => {
           const cardRef = loanCardRefs.current[highlightLoanId];
@@ -214,11 +141,11 @@ export default function Inward({ navigation }) {
         }, 800);
       }
     }
-  }, [highlightLoanId, displayLoans]);
+  }, [highlightLoanId, lenderLoans]);
 
   const getStatusColor = (loan) => {
-    const displayStatus = getDisplayStatus(loan);
-    switch (displayStatus?.toLowerCase()) {
+    const status = loan?.status?.toLowerCase();
+    switch (status) {
       case 'accepted': return '#10B981';
       case 'rejected': return '#EF4444';
       case 'pending': return '#F59E0B';
@@ -228,8 +155,8 @@ export default function Inward({ navigation }) {
   };
 
   const getStatusIcon = (loan) => {
-    const displayStatus = getDisplayStatus(loan);
-    switch (displayStatus?.toLowerCase()) {
+    const status = loan?.status?.toLowerCase();
+    switch (status) {
       case 'accepted': return 'check-circle';
       case 'rejected': return 'cancel';
       case 'paid': return 'check-circle';
@@ -237,30 +164,13 @@ export default function Inward({ navigation }) {
     }
   };
 
-  const getBorrowerStatusColor = (status) => {
-    switch (status?.toLowerCase()) {
-      case 'accepted': return '#10B981';
-      case 'rejected': return '#EF4444';
-      default: return '#F59E0B';
-    }
+  const getStatusText = (loan) => {
+    return loan?.status?.charAt(0).toUpperCase() + loan?.status?.slice(1);
   };
-
-  // Filter for total amount calculation - only include pending loans that are accepted
-  const getFilteredLoansForTotal = () => {
-    return displayLoans?.filter(loan =>
-      loan?.status === 'pending' &&
-      loan?.borrowerAcceptanceStatus === 'accepted'
-    ) || [];
-  };
-
-  const calculatedTotalAmount = getFilteredLoansForTotal().reduce(
-    (sum, loan) => sum + (loan.amount || 0),
-    0
-  );
 
   return (
     <View style={styles.container}>
-      <Header title="My Taken Loans" />
+      <Header title="Given Loans" />
 
       {/* Search and Filter Section */}
       <View style={styles.searchSection}>
@@ -268,7 +178,7 @@ export default function Inward({ navigation }) {
           <Icon name="search" size={20} color="#6B7280" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search by name..."
+            placeholder="Search by borrower name..."
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholderTextColor="#9CA3AF"
@@ -280,21 +190,6 @@ export default function Inward({ navigation }) {
           </TouchableOpacity>
         </View>
       </View>
-
-      {/* Total Amount Card - Show only if there are pending accepted loans */}
-      {calculatedTotalAmount > 0 && (
-        <View style={styles.totalAmountCard}>
-          <View style={styles.totalAmountContent}>
-            <Icon name="account-balance-wallet" size={24} color="#3B82F6" />
-            <View style={styles.totalAmountTextContainer}>
-              <Text style={styles.totalAmountLabel}>Total Pending Amount</Text>
-              <Text style={styles.totalAmountValue}>
-                ₹{calculatedTotalAmount?.toLocaleString('en-IN')}
-              </Text>
-            </View>
-          </View>
-        </View>
-      )}
 
       {/* Filter Modal */}
       <Modal
@@ -316,7 +211,7 @@ export default function Inward({ navigation }) {
 
             {/* Search in Filter Modal */}
             <View style={styles.searchFilterContainer}>
-              <Text style={styles.filterLabel}>Search by Lender</Text>
+              <Text style={styles.filterLabel}>Search by Borrower</Text>
               <View style={styles.searchInputContainer}>
                 <Icon name="search" size={18} color="#6B7280" />
                 <TextInput
@@ -468,20 +363,22 @@ export default function Inward({ navigation }) {
             <RefreshControl refreshing={loading} onRefresh={onRefresh} />
           }
           showsVerticalScrollIndicator={false}>
-          {displayLoans?.length === 0 ? (
+              {lenderLoans?.length === 0 ? (
             <View style={styles.emptyState}>
-              <Icon name="receipt" size={60} color="#E5E7EB" />
-              <Text style={styles.emptyTitle}>No loans found</Text>
+              <Icon 
+                name="account-balance-wallet" 
+                size={60} 
+                color="#E5E7EB" 
+              />
+              <Text style={styles.emptyTitle}>No loans given</Text>
               <Text style={styles.emptySubtitle}>
-                {searchQuery ? 'Try a different search term' : 'No loans taken yet'}
+                {searchQuery 
+                  ? 'Try a different search term' 
+                  : 'No loans given yet'}
               </Text>
             </View>
           ) : (
-            displayLoans?.map((loan, index) => {
-              const isAccepted = loan?.borrowerAcceptanceStatus === 'accepted';
-              const isRejected = loan?.borrowerAcceptanceStatus === 'rejected';
-              const showActionButtons = !isAccepted && !isRejected;
-              const displayStatus = getDisplayStatusText(loan);
+            lenderLoans?.map((loan, index) => {
               const isHighlighted = highlightLoanId === loan._id;
 
               return (
@@ -502,7 +399,6 @@ export default function Inward({ navigation }) {
                     activeOpacity={0.9}>
                     <View style={[
                       styles.loanCard,
-                      isRejected && styles.rejectedLoanCard,
                       isHighlighted && styles.highlightedLoanCard
                     ]}>
                     {/* Card Header */}
@@ -516,13 +412,13 @@ export default function Inward({ navigation }) {
                         ) : (
                           <View style={styles.avatarPlaceholder}>
                             <Text style={styles.avatarText}>
-                              {user?.userName?.charAt(0)?.toUpperCase() || 'U'}
+                              {loan?.name?.charAt(0)?.toUpperCase() || 'B'}
                             </Text>
                           </View>
                         )}
                         <View style={styles.userDetails}>
                           <Text style={styles.lenderName} numberOfLines={1}>
-                            {loan?.lenderId?.userName || 'Unknown Lender'}
+                            {loan?.name || 'Unknown Borrower'}
                           </Text>
                           <Text style={styles.loanPurpose}>
                             {loan.purpose}
@@ -530,10 +426,7 @@ export default function Inward({ navigation }) {
                         </View>
                       </View>
                       <View style={styles.amountContainer}>
-                        <Text style={[
-                          styles.amountText,
-                          isRejected && styles.rejectedAmountText
-                        ]}>
+                        <Text style={styles.amountText}>
                           ₹{loan.amount?.toLocaleString('en-IN')}
                         </Text>
                         <Text style={styles.amountLabel}>Loan Amount</Text>
@@ -558,10 +451,19 @@ export default function Inward({ navigation }) {
                         ]}>
                           <Icon name={getStatusIcon(loan)} size={12} color="#FFFFFF" />
                           <Text style={styles.statusText}>
-                            {displayStatus}
+                            {getStatusText(loan)}
                           </Text>
                         </View>
                       </View>
+                      {loan.loanMode && (
+                        <View style={styles.detailItem}>
+                          <Icon name={loan.loanMode === 'cash' ? 'cash' : 'credit-card'} size={16} color="#6B7280" />
+                          <Text style={styles.detailLabel}>Mode</Text>
+                          <Text style={styles.detailValue}>
+                            {loan.loanMode.charAt(0).toUpperCase() + loan.loanMode.slice(1)}
+                          </Text>
+                        </View>
+                      )}
                     </View>
 
                     {/* Card Footer */}
@@ -573,44 +475,24 @@ export default function Inward({ navigation }) {
                         </Text>
                       </View>
 
-                      {/* Borrower Acceptance Status */}
-                      <View style={[
-                        styles.borrowerStatusBadge,
-                        { backgroundColor: getBorrowerStatusColor(loan.borrowerAcceptanceStatus) }
-                      ]}>
-                        <Text style={styles.borrowerStatusText}>
-                          {loan.borrowerAcceptanceStatus?.toUpperCase() || 'PENDING'}
-                        </Text>
-                      </View>
+                      {/* Loan Mode Badge */}
+                      {loan.loanMode && (
+                        <View style={[
+                          styles.borrowerStatusBadge,
+                          styles.loanModeBadge,
+                          { backgroundColor: loan.loanMode === 'cash' ? '#10B981' : '#3B82F6' }
+                        ]}>
+                          <Icon 
+                            name={loan.loanMode === 'cash' ? 'cash' : 'credit-card'} 
+                            size={12} 
+                            color="#FFFFFF" 
+                          />
+                          <Text style={styles.borrowerStatusText}>
+                            {loan.loanMode.toUpperCase()}
+                          </Text>
+                        </View>
+                      )}
                     </View>
-
-                    {/* Action Buttons - Only show if not accepted/rejected */}
-                    {showActionButtons && (
-                      <View style={styles.actionButtons}>
-                        <TouchableOpacity
-                          style={[styles.actionButton, styles.acceptButton]}
-                          onPress={() => handleStatusChange(loan, 'accepted')}>
-                          <Icon name="check" size={18} color="#FFFFFF" />
-                          <Text style={styles.actionButtonText}>Accept Loan</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[styles.actionButton, styles.rejectButton]}
-                          onPress={() => handleStatusChange(loan, 'rejected')}>
-                          <Icon name="close" size={18} color="#FFFFFF" />
-                          <Text style={styles.actionButtonText}>Reject</Text>
-                        </TouchableOpacity>
-                      </View>
-                    )}
-
-                    {/* Rejection message */}
-                    {isRejected && (
-                      <View style={styles.rejectionNote}>
-                        <Icon name="info" size={14} color="#EF4444" />
-                        <Text style={styles.rejectionNoteText}>
-                          This loan has been rejected
-                        </Text>
-                      </View>
-                    )}
                   </View>
                   </TouchableOpacity>
                 </View>
@@ -619,13 +501,6 @@ export default function Inward({ navigation }) {
           )}
         </ScrollView>
       )}
-
-      <PromptBox
-        visible={isPromptVisible}
-        message={`Are you sure you want to ${acceptanceStatus} this loan?`}
-        onConfirm={handleConfirm}
-        onCancel={handleCancel}
-      />
     </View>
   );
 }
@@ -635,7 +510,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F9FAFB',
   },
-
   // Search Section
   searchSection: {
     flexDirection: 'row',
@@ -664,41 +538,6 @@ const styles = StyleSheet.create({
   },
   filterButton: {
     padding: m(8),
-  },
-
-  // Total Amount Card
-  totalAmountCard: {
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: m(16),
-    marginTop: m(12),
-    marginBottom: m(8),
-    borderRadius: m(16),
-    padding: m(16),
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-  },
-  totalAmountContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  totalAmountTextContainer: {
-    marginLeft: m(12),
-    flex: 1,
-  },
-  totalAmountLabel: {
-    fontSize: m(14),
-    color: '#6B7280',
-    marginBottom: m(2),
-  },
-  totalAmountValue: {
-    fontSize: m(20),
-    fontWeight: '700',
-    color: '#111827',
   },
 
   // Filter Modal
@@ -1019,35 +858,10 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     letterSpacing: m(0.5),
   },
-
-  // Action Buttons
-  actionButtons: {
-    flexDirection: 'row',
-    gap: m(12),
-    marginTop: m(12),
-    paddingTop: m(12),
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-  },
-  actionButton: {
-    flex: 1,
+  loanModeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: m(8),
-    paddingVertical: m(10),
-    borderRadius: m(12),
-  },
-  acceptButton: {
-    backgroundColor: '#10B981',
-  },
-  rejectButton: {
-    backgroundColor: '#EF4444',
-  },
-  actionButtonText: {
-    fontSize: m(13),
-    fontWeight: '600',
-    color: '#FFFFFF',
+    gap: m(4),
   },
 
   // Input Styles

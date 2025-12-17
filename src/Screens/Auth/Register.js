@@ -60,9 +60,17 @@ export default function Register({ navigation }) {
     setNameError(''); // Clear error when user types
   };
 
+  // const handleEmailChange = text => {
+  //   setEmail(text);
+  //   setEmailError(''); // Clear error when user types
+  // };
   const handleEmailChange = text => {
-    setEmail(text);
-    setEmailError(''); // Clear error when user types
+    // Convert the first letter to lowercase and keep the rest of the string intact
+    const modifiedText = text.charAt(0).toLowerCase() + text.slice(1);
+  
+    // Set the modified email in the state
+    setEmail(modifiedText);
+    setEmailError('');
   };
 
   const handleAddressChange = text => {
@@ -117,13 +125,13 @@ export default function Register({ navigation }) {
     if (!email || email.trim().length < 1) {
       setEmailError('Email is required.');
       hasError = true;
-    } else {
+        } else {
       const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
       if (!emailRegex.test(email)) {
         setEmailError('Please enter a valid email address.');
         hasError = true;
+        }
       }
-    }
 
     if (!address || address.trim().length < 1) {
       setAddressError('Address is required.');
@@ -165,7 +173,7 @@ export default function Register({ navigation }) {
           'PAN card must be 10 characters (5 letters, 4 digits, 1 letter).',
         );
         hasError = true;
-      } else {
+    } else {
         const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
         if (!panRegex.test(panCardNumber)) {
           setPanCardError('Invalid PAN card format.');
@@ -303,14 +311,14 @@ export default function Register({ navigation }) {
       navigation.navigate('Login');
     } catch (error) {
       console.log(error, 'Error while creating user');
-      const errorMessage =
+      const errorMessage = 
         (typeof error === 'string' ? error : null) ||
         error?.message ||
         (error?.missingFields
           ? `Missing fields: ${error.missingFields.join(', ')}`
           : null) ||
         'Registration failed. Please try again.';
-
+      
       Toast.show({
         type: 'error',
         position: 'top',
@@ -328,19 +336,19 @@ export default function Register({ navigation }) {
         <Text style={styles.inputLabel}>Full Name</Text>
         <View
           style={[
-            styles.inputContainer,
+        styles.inputContainer,
             nameError ? styles.inputError : {},
-          ]}>
+      ]}>
           <Ionicons
             name="person-outline"
             size={20}
             color={nameError ? '#FF4444' : '#ff7900'}
             style={styles.inputIcon}
           />
-          <TextInput
-            style={styles.input}
+        <TextInput
+          style={styles.input}
             placeholder="Enter your full name"
-            placeholderTextColor="#999"
+          placeholderTextColor="#999"
             value={name}
             onChangeText={handleNameChange}
           />
@@ -431,11 +439,11 @@ export default function Register({ navigation }) {
               color="#ff7900"
             />
           </TouchableOpacity>
-        </View>
+      </View>
         {passwordError ? (
           <Text style={styles.errorText}>{passwordError}</Text>
         ) : null}
-      </View>
+    </View>
 
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>Confirm Password</Text>
@@ -467,11 +475,11 @@ export default function Register({ navigation }) {
               color="#ff7900"
             />
           </TouchableOpacity>
-        </View>
+            </View>
         {confirmPasswordError ? (
           <Text style={styles.errorText}>{confirmPasswordError}</Text>
         ) : null}
-      </View>
+          </View>
     </>
   );
 
@@ -560,19 +568,19 @@ export default function Register({ navigation }) {
         ) : null}
       </View>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>PAN Card Number (Optional)</Text>
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>PAN Card Number (Optional)</Text>
         <View
           style={[
-            styles.inputContainer,
-            panCardError ? styles.inputError : {},
+              styles.inputContainer,
+              panCardError ? styles.inputError : {},
             panCardNumber.length === 10 && !panCardError
               ? styles.inputSuccess
               : {},
-          ]}>
-          <Ionicons
-            name="card-outline"
-            size={20}
+            ]}>
+              <Ionicons
+                name="card-outline"
+                size={20}
             color={
               panCardError
                 ? '#FF4444'
@@ -580,88 +588,88 @@ export default function Register({ navigation }) {
                   ? '#28a745'
                   : '#ff7900'
             }
-            style={styles.inputIcon}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Enter 10 digit PAN (e.g., ABCDE1234F)"
-            placeholderTextColor="#999"
-            value={panCardNumber}
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Enter 10 digit PAN (e.g., ABCDE1234F)"
+                placeholderTextColor="#999"
+                value={panCardNumber}
             onChangeText={handlePanCardChange}
-            autoCapitalize="characters"
-            maxLength={10}
-          />
-          {panCardNumber.length === 10 && !panCardError && (
-            <Ionicons name="checkmark-circle" size={20} color="#28a745" />
-          )}
-        </View>
-        {panCardError ? (
-          <Text style={styles.errorText}>{panCardError}</Text>
-        ) : null}
-      </View>
+                autoCapitalize="characters"
+                maxLength={10}
+              />
+              {panCardNumber.length === 10 && !panCardError && (
+                <Ionicons name="checkmark-circle" size={20} color="#28a745" />
+              )}
+            </View>
+            {panCardError ? (
+              <Text style={styles.errorText}>{panCardError}</Text>
+            ) : null}
+          </View>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Account Type *</Text>
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Account Type *</Text>
         <View style={styles.roleContainer}>
-          <TouchableOpacity
-            style={[
-              styles.roleOption,
+              <TouchableOpacity
+                style={[
+                  styles.roleOption,
               roleId === 0 && styles.roleOptionSelected,
-            ]}
+                ]}
             onPress={() => setRoleId(0)}>
-            <Ionicons
+                <Ionicons
               name={roleId === 0 ? 'radio-button-on' : 'radio-button-off'}
-              size={20}
-              color={roleId === 0 ? '#ff6700' : '#999'}
-            />
+                  size={20}
+                  color={roleId === 0 ? '#ff6700' : '#999'}
+                />
             <Text
               style={[
-                styles.roleOptionText,
+                  styles.roleOptionText,
                 roleId === 0 && styles.roleOptionTextSelected,
               ]}>
               Admin
             </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.roleOption,
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.roleOption,
               roleId === 1 && styles.roleOptionSelected,
-            ]}
+                ]}
             onPress={() => setRoleId(1)}>
-            <Ionicons
+                <Ionicons
               name={roleId === 1 ? 'radio-button-on' : 'radio-button-off'}
-              size={20}
-              color={roleId === 1 ? '#ff6700' : '#999'}
-            />
+                  size={20}
+                  color={roleId === 1 ? '#ff6700' : '#999'}
+                />
             <Text
               style={[
-                styles.roleOptionText,
+                  styles.roleOptionText,
                 roleId === 1 && styles.roleOptionTextSelected,
               ]}>
               Lender
             </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.roleOption,
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.roleOption,
               roleId === 2 && styles.roleOptionSelected,
-            ]}
+                ]}
             onPress={() => setRoleId(2)}>
-            <Ionicons
+                <Ionicons
               name={roleId === 2 ? 'radio-button-on' : 'radio-button-off'}
-              size={20}
-              color={roleId === 2 ? '#ff6700' : '#999'}
-            />
+                  size={20}
+                  color={roleId === 2 ? '#ff6700' : '#999'}
+                />
             <Text
               style={[
-                styles.roleOptionText,
+                  styles.roleOptionText,
                 roleId === 2 && styles.roleOptionTextSelected,
               ]}>
               Borrower
             </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+              </TouchableOpacity>
+            </View>
+          </View>
     </>
   );
 
@@ -671,52 +679,83 @@ export default function Register({ navigation }) {
       <Text style={styles.stepSubtitle}>Add a profile picture (Optional)</Text>
 
       <View style={styles.imagePickerContainer}>
-        {profileImage ? (
-          <View style={styles.imagePreviewContainer}>
-            <Image
-              source={{ uri: profileImage.uri }}
-              style={styles.profileImagePreview}
-            />
-            <TouchableOpacity
-              style={styles.removeImageButton}
-              onPress={() => setProfileImage(null)}>
-              <Ionicons name="close-circle" size={24} color="#FF4444" />
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={styles.imagePlaceholder}>
-            <Ionicons name="person" size={60} color="#ff7900" />
-            <Text style={styles.imagePlaceholderText}>
-              No profile picture selected
-            </Text>
-          </View>
-        )}
+        {/* Image Preview/Placeholder */}
+        <View style={styles.imageWrapper}>
+          {profileImage ? (
+            <View style={styles.imagePreviewContainer}>
+              <Image
+                source={{ uri: profileImage.uri }}
+                style={styles.profileImagePreview}
+              />
+              <TouchableOpacity
+                style={styles.removeImageButton}
+                onPress={() => setProfileImage(null)}
+                activeOpacity={0.7}>
+                <View style={styles.removeButtonInner}>
+                  <Ionicons name="close" size={18} color="#FFFFFF" />
+                </View>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.imagePlaceholder}>
+              <View style={styles.placeholderIconContainer}>
+                <Ionicons name="camera" size={m(40)} color="#ff7900" />
+              </View>
+              <Text style={styles.imagePlaceholderText}>
+                No profile picture
+              </Text>
+              <Text style={styles.imagePlaceholderSubtext}>
+                Tap below to add one
+              </Text>
+            </View>
+          )}
+        </View>
 
+        {/* Image Picker Buttons */}
         <View style={styles.imagePickerButtons}>
           <TouchableOpacity
             style={styles.imagePickerButton}
-            onPress={() => handleImagePicker('gallery')}>
-            <Ionicons name="images-outline" size={24} color="#ff6700" />
-            <Text style={styles.imagePickerButtonText}>Choose from Gallery</Text>
+            onPress={() => handleImagePicker('gallery')}
+            activeOpacity={0.7}>
+            <View style={styles.imagePickerButtonIcon}>
+              <Ionicons name="images-outline" size={m(22)} color="#ff6700" />
+            </View>
+            <Text style={styles.imagePickerButtonText}>Gallery</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.imagePickerButton}
-            onPress={() => handleImagePicker('camera')}>
-            <Ionicons name="camera-outline" size={24} color="#ff6700" />
-            <Text style={styles.imagePickerButtonText}>Take Photo</Text>
+            onPress={() => handleImagePicker('camera')}
+            activeOpacity={0.7}>
+            <View style={styles.imagePickerButtonIcon}>
+              <Ionicons name="camera-outline" size={m(22)} color="#ff6700" />
+            </View>
+            <Text style={styles.imagePickerButtonText}>Camera</Text>
           </TouchableOpacity>
         </View>
+
+        {profileImage && (
+          <TouchableOpacity
+            style={styles.changeImageButton}
+            onPress={() => handleImagePicker('gallery')}
+            activeOpacity={0.7}>
+            <Ionicons name="refresh-outline" size={m(18)} color="#ff6700" />
+            <Text style={styles.changeImageButtonText}>Change Photo</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
-      <View style={styles.termsContainer}>
-        <Ionicons name="checkmark-circle" size={20} color="#28a745" />
-        <Text style={styles.termsText}>
-          By creating an account, you agree to our{' '}
-          <Text style={styles.termsLink}>Terms of Service</Text> and{' '}
-          <Text style={styles.termsLink}>Privacy Policy</Text>
-        </Text>
-      </View>
+      {/* Terms Agreement */}
+          <View style={styles.termsContainer}>
+        <View style={styles.termsIconContainer}>
+          <Ionicons name="checkmark-circle" size={m(20)} color="#28a745" />
+        </View>
+            <Text style={styles.termsText}>
+              By creating an account, you agree to our{' '}
+              <Text style={styles.termsLink}>Terms of Service</Text> and{' '}
+              <Text style={styles.termsLink}>Privacy Policy</Text>
+            </Text>
+          </View>
     </>
   );
 
@@ -814,18 +853,18 @@ export default function Register({ navigation }) {
                 </LinearGradient>
               </TouchableOpacity>
             ) : (
-              <TouchableOpacity
-                style={[
-                  styles.registerButtonContainer,
+          <TouchableOpacity
+            style={[
+              styles.registerButtonContainer,
                   isLoading && styles.registerButtonDisabled,
-                ]}
-                onPress={handleRegister}
+            ]}
+            onPress={handleRegister}
                 disabled={isLoading}>
-                <LinearGradient
-                  colors={['#ff6700', '#ff7900', '#ff8500']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.registerButtonGradient}>
+            <LinearGradient
+              colors={['#ff6700', '#ff7900', '#ff8500']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.registerButtonGradient}>
                   {isLoading ? (
                     <>
                       <Text style={styles.registerButtonText}>
@@ -845,8 +884,8 @@ export default function Register({ navigation }) {
                       />
                     </>
                   )}
-                </LinearGradient>
-              </TouchableOpacity>
+            </LinearGradient>
+          </TouchableOpacity>
             )}
           </View>
 
@@ -1058,62 +1097,127 @@ const styles = StyleSheet.create({
   },
   imagePickerContainer: {
     marginBottom: m(24),
+    alignItems: 'center',
+  },
+  imageWrapper: {
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: m(24),
   },
   imagePreviewContainer: {
     position: 'relative',
     alignItems: 'center',
-    marginBottom: m(20),
+    justifyContent: 'center',
   },
   profileImagePreview: {
-    width: m(150),
-    height: m(150),
-    borderRadius: m(75),
-    borderWidth: 3,
+    width: m(160),
+    height: m(160),
+    borderRadius: m(80),
+    borderWidth: 4,
     borderColor: '#ff6700',
+    backgroundColor: '#F5F5F5',
   },
   removeImageButton: {
     position: 'absolute',
-    top: m(10),
-    right: m(80),
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(12),
+    top: m(-8),
+    right: m(-8),
+    zIndex: 10,
+  },
+  removeButtonInner: {
+    width: m(32),
+    height: m(32),
+    borderRadius: m(16),
+    backgroundColor: '#FF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   imagePlaceholder: {
-    width: m(150),
-    height: m(150),
-    borderRadius: m(75),
+    width: m(160),
+    height: m(160),
+    borderRadius: m(80),
     backgroundColor: '#FFF9F0',
     borderWidth: 3,
     borderColor: '#FFEDD5',
     borderStyle: 'dashed',
     justifyContent: 'center',
     alignItems: 'center',
-    alignSelf: 'center',
-    marginBottom: m(20),
+    padding: m(20),
+  },
+  placeholderIconContainer: {
+    width: m(60),
+    height: m(60),
+    borderRadius: m(30),
+    backgroundColor: '#FFEDD5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: m(12),
   },
   imagePlaceholderText: {
+    fontSize: m(14),
+    fontWeight: '600',
+    color: '#666',
+    marginTop: m(8),
+    textAlign: 'center',
+  },
+  imagePlaceholderSubtext: {
     fontSize: m(12),
     color: '#999',
-    marginTop: m(8),
+    marginTop: m(4),
+    textAlign: 'center',
   },
   imagePickerButtons: {
     flexDirection: 'row',
     gap: m(12),
+    width: '100%',
+    marginBottom: m(12),
   },
   imagePickerButton: {
     flex: 1,
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: m(18),
+    paddingHorizontal: m(12),
+    backgroundColor: '#FFF9F0',
+    borderRadius: m(12),
+    borderWidth: 2,
+    borderColor: '#FFEDD5',
+    minHeight: m(100),
+  },
+  imagePickerButtonIcon: {
+    width: m(48),
+    height: m(48),
+    borderRadius: m(24),
+    backgroundColor: '#FFEDD5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: m(8),
+  },
+  imagePickerButtonText: {
+    fontSize: m(14),
+    fontWeight: '600',
+    color: '#ff6700',
+    textAlign: 'center',
+  },
+  changeImageButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: m(14),
-    paddingHorizontal: m(16),
-    backgroundColor: '#FFF9F0',
-    borderRadius: m(12),
+    paddingVertical: m(12),
+    paddingHorizontal: m(20),
+    backgroundColor: '#FFFFFF',
+    borderRadius: m(8),
     borderWidth: 1,
-    borderColor: '#FFEDD5',
+    borderColor: '#ff6700',
     gap: m(8),
+    alignSelf: 'center',
   },
-  imagePickerButtonText: {
+  changeImageButtonText: {
     fontSize: m(14),
     fontWeight: '600',
     color: '#ff6700',
@@ -1122,17 +1226,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: m(24),
-    padding: m(12),
+    padding: m(16),
     backgroundColor: '#FFF7ED',
     borderRadius: m(12),
     borderWidth: 1,
     borderColor: '#FFEDD5',
   },
+  termsIconContainer: {
+    marginRight: m(12),
+    marginTop: m(2),
+  },
   termsText: {
     flex: 1,
     fontSize: m(12),
     color: '#7C2D12',
-    marginLeft: m(8),
     lineHeight: m(18),
   },
   termsLink: {

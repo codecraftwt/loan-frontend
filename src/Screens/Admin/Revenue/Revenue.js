@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { m } from 'walstar-rn-responsive';
-import Header from '../../Components/Header';
+import Header from '../../../Components/Header';
 
 const { width } = Dimensions.get('window');
 
@@ -221,4 +221,6 @@ const styles = StyleSheet.create({
     color: '#333',
   },
 });
+
+
 

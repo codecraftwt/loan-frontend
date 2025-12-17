@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { m } from 'walstar-rn-responsive';
-import Header from '../../Components/Header';
+import Header from '../../../Components/Header';
 
 export default function LenderList() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -376,4 +376,6 @@ const styles = StyleSheet.create({
     marginTop: m(12),
   },
 });
+
+
 

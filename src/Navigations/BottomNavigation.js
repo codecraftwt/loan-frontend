@@ -1,31 +1,42 @@
 import {StyleSheet, View} from 'react-native';
-import React from 'react';
+import React, {useMemo} from 'react';
 import Feather from 'react-native-vector-icons/Feather';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useSelector} from 'react-redux';
 import {m} from 'walstar-rn-responsive';
 
-// Lender screens (current dashboard)
-import Home from '../Screens/Dashboard/Home';
-import Profile from '../Screens/Dashboard/Profile';
-import Outward from '../Screens/Dashboard/Outward';
-import Inward from '../Screens/Dashboard/Inward';
+// Lender screens
+import Home from '../Screens/Lender/Dashboard/Home';
+import Outward from '../Screens/Shared/Loans/Outward';
+import Inward from '../Screens/Shared/Loans/Inward';
 
 // Admin screens
-import AdminDashboard from '../Screens/Dashboard/AdminDashboard';
-import AddPlan from '../Screens/Dashboard/AddPlan';
-import EditPlan from '../Screens/Dashboard/EditPlan';
-import Revenue from '../Screens/Dashboard/Revenue';
-import LenderList from '../Screens/Dashboard/LenderList';
+import AdminDashboard from '../Screens/Admin/Dashboard/AdminDashboard';
+import AddPlan from '../Screens/Admin/Plans/AddPlan';
+import EditPlan from '../Screens/Admin/Plans/EditPlan';
+import Revenue from '../Screens/Admin/Revenue/Revenue';
+import LenderList from '../Screens/Admin/Lenders/LenderList';
 
 // Borrower screens
-import BorrowerDashboard from '../Screens/Dashboard/BorrowerDashboard';
+import BorrowerDashboard from '../Screens/Borrower/Dashboard/BorrowerDashboard';
+
+// Shared screens
+import Profile from '../Screens/Shared/Profile/Profile';
 
 export default function BottomNavigation() {
   const Tab = createBottomTabNavigator();
   const user = useSelector(state => state.auth.user);
-  const roleId = user?.roleId;
+  // Memoize roleId to prevent unnecessary re-renders
+  const roleId = useMemo(() => {
+    // Get roleId from user object, ensuring it's a valid number
+    const id = user?.roleId;
+    if (id === 0 || id === 1 || id === 2) {
+      return id;
+    }
+    // If roleId is invalid, try to get from AsyncStorage as fallback
+    return undefined;
+  }, [user?.roleId]);
 
   // Get safe area values
   const insets = useSafeAreaInsets();
@@ -220,7 +231,7 @@ export default function BottomNavigation() {
           }}
         />
         <Tab.Screen
-          name="Given"
+          name="Borrowers"
           component={Outward}
           options={{
             tabBarIcon: ({color, size, focused}) =>
@@ -228,7 +239,7 @@ export default function BottomNavigation() {
           }}
         />
         <Tab.Screen
-          name="Taken"
+          name="Loans"
           component={Inward}
           options={{
             tabBarIcon: ({color, size, focused}) =>

@@ -7,7 +7,7 @@ import {baseurl} from '../../Utils/API';
 
 const useFetchUserFromStorage = () => {
   const dispatch = useDispatch();
-  // const user = useSelector(state => state.auth.user);
+  const currentUser = useSelector(state => state.auth.user);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -23,6 +23,25 @@ const useFetchUserFromStorage = () => {
           });
 
           const userData = response.data.user;
+
+          // Preserve roleId from Redux state or AsyncStorage if API doesn't return it
+          if (userData.roleId === undefined || userData.roleId === null) {
+            if (currentUser?.roleId !== undefined && currentUser?.roleId !== null) {
+              userData.roleId = currentUser.roleId;
+            } else {
+              const existingUserStr = await AsyncStorage.getItem('user');
+              if (existingUserStr) {
+                try {
+                  const existingUser = JSON.parse(existingUserStr);
+                  if (existingUser.roleId !== undefined && existingUser.roleId !== null) {
+                    userData.roleId = existingUser.roleId;
+                  }
+                } catch (e) {
+                  console.error('Error parsing existing user data:', e);
+                }
+              }
+            }
+          }
 
           console.log('User Data updated');
 
@@ -43,7 +62,7 @@ const useFetchUserFromStorage = () => {
     };
 
     fetchUser();
-  }, [dispatch]);
+  }, [dispatch, currentUser?.roleId]);
 };
 
 export default useFetchUserFromStorage;

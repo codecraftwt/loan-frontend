@@ -11,8 +11,8 @@ import Icon from 'react-native-vector-icons/Feather';
 import moment from 'moment';
 import { m } from 'walstar-rn-responsive';
 import { useSelector } from 'react-redux';
-import AgreementModal from '../PromptBox/AgreementModal';
-import Header from '../../Components/Header';
+import AgreementModal from '../../PromptBox/AgreementModal';
+import Header from '../../../Components/Header';
 
 const DetailCard = ({ icon, label, value }) => (
   <View style={styles.detailCard}>

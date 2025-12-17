@@ -126,7 +126,20 @@ export const createLoan = createAsyncThunk(
 
       console.log('Creating loan with data:', loanData);
 
-      const response = await instance.post('loan/add-loan', loanData, {
+      // Map old field names to new API structure
+      const apiData = {
+        name: loanData.name,
+        aadharCardNo: loanData.aadharCardNo || loanData.aadhaarNumber,
+        mobileNumber: loanData.mobileNumber,
+        address: loanData.address,
+        amount: loanData.amount,
+        purpose: loanData.purpose,
+        loanGivenDate: loanData.loanGivenDate || loanData.loanStartDate,
+        loanEndDate: loanData.loanEndDate,
+        loanMode: loanData.loanMode || 'cash', // Default to cash if not provided
+      };
+
+      const response = await instance.post('lender/loans/create', apiData, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -155,6 +168,40 @@ export const createLoan = createAsyncThunk(
 
       return rejectWithValue(
         error.response?.data?.message || error.message || 'Failed to create loan'
+      );
+    }
+  },
+);
+
+// Verify OTP for loan
+export const verifyLoanOTP = createAsyncThunk(
+  'loans/verifyLoanOTP',
+  async ({ loanId, otp }, { rejectWithValue }) => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        return rejectWithValue('User is not authenticated');
+      }
+
+      if (!loanId || !otp) {
+        return rejectWithValue('loanId and otp are required');
+      }
+
+      const response = await instance.post(
+        'lender/loans/verify-otp',
+        { loanId, otp },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error('Verify OTP error:', error.response?.data || error.message);
+      return rejectWithValue(
+        error.response?.data?.message || error.message || 'Failed to verify OTP'
       );
     }
   },
@@ -249,7 +296,7 @@ export const getRecentActivities = createAsyncThunk(
 
 const loanSlice = createSlice({
   name: 'loans',
-  initialState: {},
+  initialState,
   reducers: {},
   extraReducers: builder => {
     builder
@@ -303,7 +350,11 @@ const loanSlice = createSlice({
       })
       .addCase(createLoan.fulfilled, (state, action) => {
         state.loading = false;
-        state.lenderLoans.unshift(action.payload);
+        // Handle new API response structure (data.data or data)
+        const loanData = action.payload.data || action.payload;
+        if (loanData) {
+          state.lenderLoans.unshift(loanData);
+        }
         state.error = null;
       })
       .addCase(createLoan.rejected, (state, action) => {
@@ -447,6 +498,26 @@ const loanSlice = createSlice({
           action.error?.message ||
           'Error fetching recent activities';
         state.recentActivities = [];
+      })
+      // Handling verifyLoanOTP
+      .addCase(verifyLoanOTP.pending, state => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(verifyLoanOTP.fulfilled, (state, action) => {
+        state.loading = false;
+        const verifiedLoan = action.payload.data;
+        const updatedLoanIndex = state.lenderLoans.findIndex(
+          loan => loan._id === verifiedLoan._id,
+        );
+        if (updatedLoanIndex >= 0) {
+          state.lenderLoans[updatedLoanIndex] = verifiedLoan;
+        }
+        state.error = null;
+      })
+      .addCase(verifyLoanOTP.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || 'Failed to verify OTP';
       });
   },
 });

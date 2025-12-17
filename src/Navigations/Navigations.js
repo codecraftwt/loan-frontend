@@ -7,22 +7,23 @@ import ForgotPassword from '../Screens/Auth/ForgotPassword';
 import OTP from '../Screens/Auth/OTP';
 import CreatePass from '../Screens/Auth/CreatePass';
 import BottomNavigation from './BottomNavigation';
-import LoanRequest from '../Screens/Dashboard/LoanRequest';
-import Outward from '../Screens/Dashboard/Outward';
-import AddDetails from '../Screens/Dashboard/AddDetails';
-import LoanDetailScreen from '../Screens/Dashboard/LoanDetailsScreen';
-import ProfileDetails from '../Screens/Dashboard/ProfileDetails';
-import OldHistoryPage from '../Screens/Dashboard/OldHistoryPage';
-import SettingsScreen from '../Screens/Dashboard/SettingsScreen';
-import SubscriptionScreen from '../Screens/Subscription/SubscriptionScreen';
+import LoanRequest from '../Screens/Shared/Loans/LoanRequest';
+import Outward from '../Screens/Shared/Loans/Outward';
+import AddDetails from '../Screens/Lender/Loans/AddDetails';
+import LoanDetailScreen from '../Screens/Shared/Loans/LoanDetailsScreen';
+import BorrowerDetailsScreen from '../Screens/Shared/Borrowers/BorrowerDetailsScreen';
+import ProfileDetails from '../Screens/Shared/Profile/ProfileDetails';
+import OldHistoryPage from '../Screens/Shared/History/OldHistoryPage';
+import SettingsScreen from '../Screens/Shared/Profile/SettingsScreen';
+import SubscriptionScreen from '../Screens/Shared/Subscription/SubscriptionScreen';
 import HelpAndSupportScreen from '../Screens/Auth/HelpAndSupportScreen';
-import PersonalLoan from '../Screens/Dashboard/PersonalLoan';
-import AnalyticsScreen from '../Screens/Dashboard/AnalyticsScreen';
+import PersonalLoan from '../Screens/Shared/Loans/PersonalLoan';
+import AnalyticsScreen from '../Screens/Lender/Analytics/AnalyticsScreen';
 // Admin screens
-import AddPlan from '../Screens/Dashboard/AddPlan';
-import EditPlan from '../Screens/Dashboard/EditPlan';
-import Revenue from '../Screens/Dashboard/Revenue';
-import LenderList from '../Screens/Dashboard/LenderList';
+import AddPlan from '../Screens/Admin/Plans/AddPlan';
+import EditPlan from '../Screens/Admin/Plans/EditPlan';
+import Revenue from '../Screens/Admin/Revenue/Revenue';
+import LenderList from '../Screens/Admin/Lenders/LenderList';
 
 const Navigation = () => {
   const Stack = createNativeStackNavigator();
@@ -41,6 +42,7 @@ const Navigation = () => {
       <Stack.Screen name="Outward" component={Outward} />
       <Stack.Screen name="AddDetails" component={AddDetails} />
       <Stack.Screen name="LoanDetailScreen" component={LoanDetailScreen} />
+      <Stack.Screen name="BorrowerDetailsScreen" component={BorrowerDetailsScreen} />
       <Stack.Screen name="PersonalLoan" component={PersonalLoan} />
 
       <Stack.Screen name="ProfileDetails" component={ProfileDetails} />
