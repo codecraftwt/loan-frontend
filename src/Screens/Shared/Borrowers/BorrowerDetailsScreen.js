@@ -5,6 +5,7 @@ import {
   View,
   ScrollView,
   Image,
+  TouchableOpacity,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import moment from 'moment';
@@ -27,6 +28,15 @@ const DetailItem = ({ icon, label, value }) => {
 
 export default function BorrowerDetailsScreen({ route, navigation }) {
   const { borrowerDetails } = route.params || {};
+
+  const handleViewLoanHistory = () => {
+    if (borrowerDetails?._id) {
+      navigation.navigate('BorrowerLoanHistoryScreen', {
+        borrowerId: borrowerDetails._id,
+        borrowerDetails,
+      });
+    }
+  };
 
   if (!borrowerDetails) {
     return (
@@ -145,6 +155,15 @@ export default function BorrowerDetailsScreen({ route, navigation }) {
               </Text>
             </View>
           </View>
+
+          {/* Loan History Button */}
+          <TouchableOpacity
+            style={styles.loanHistoryButton}
+            onPress={handleViewLoanHistory}>
+            <Icon name="history" size={20} color="#FFFFFF" />
+            <Text style={styles.loanHistoryButtonText}>View Loan History</Text>
+            <Icon name="chevron-right" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
         </View>
 
         {/* Details Card */}
@@ -184,37 +203,29 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: m(16),
-    paddingBottom: m(40),
+    paddingBottom: m(20),
   },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  errorText: {
-    fontSize: m(16),
-    color: '#6B7280',
-  },
-  
-  // Profile Card
   profileCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: m(16),
-    padding: m(20),
-    marginBottom: m(14),
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    elevation: 2,
+    margin: m(16),
+    padding: m(16),
+    borderRadius: m(12),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   profileHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: m(14),
+    marginBottom: m(16),
+  },
+  profileImage: {
+    width: m(60),
+    height: m(60),
+    borderRadius: m(30),
+    marginRight: m(16),
   },
   profileAvatar: {
     width: m(60),
@@ -226,17 +237,9 @@ const styles = StyleSheet.create({
     marginRight: m(16),
   },
   avatarText: {
-    fontSize: m(28),
+    fontSize: m(24),
     fontWeight: '600',
     color: '#FFFFFF',
-  },
-  profileImage: {
-    width: m(60),
-    height: m(60),
-    borderRadius: m(30),
-    marginRight: m(16),
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
   },
   profileInfo: {
     flex: 1,
@@ -244,47 +247,43 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: m(20),
     fontWeight: '600',
-    color: '#111827',
+    color: '#1F2937',
     marginBottom: m(8),
   },
   profileMeta: {
-    gap: m(6),
+    gap: m(4),
   },
   metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(6),
   },
   metaText: {
-    fontSize: m(14),
+    fontSize: m(12),
     color: '#6B7280',
+    marginLeft: m(6),
     flex: 1,
   },
-  
-  // Verification Container
   verificationContainer: {
-    paddingTop: m(14),
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    marginBottom: m(16),
   },
   verificationBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
     paddingHorizontal: m(12),
-    paddingVertical: m(8),
+    paddingVertical: m(6),
     borderRadius: m(20),
-    gap: m(6),
   },
   verifiedBadge: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#10B98115',
   },
   unverifiedBadge: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: '#F59E0B15',
   },
   verificationText: {
-    fontSize: m(13),
-    fontWeight: '600',
+    fontSize: m(12),
+    fontWeight: '500',
+    marginLeft: m(6),
   },
   verifiedText: {
     color: '#10B981',
@@ -292,25 +291,37 @@ const styles = StyleSheet.create({
   unverifiedText: {
     color: '#F59E0B',
   },
-  
-  // Details Card
+  loanHistoryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#3B82F6',
+    padding: m(12),
+    borderRadius: m(8),
+    marginTop: m(8),
+  },
+  loanHistoryButtonText: {
+    color: '#FFFFFF',
+    fontSize: m(14),
+    fontWeight: '600',
+    marginHorizontal: m(8),
+  },
   detailsCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: m(16),
-    padding: m(20),
+    marginHorizontal: m(16),
     marginBottom: m(16),
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    elevation: 2,
+    padding: m(16),
+    borderRadius: m(12),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   detailsTitle: {
     fontSize: m(18),
     fontWeight: '600',
-    color: '#111827',
+    color: '#1F2937',
     marginBottom: m(16),
   },
   detailsGrid: {
@@ -318,16 +329,13 @@ const styles = StyleSheet.create({
   },
   detailItem: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    borderRadius: m(12),
-    padding: m(12),
+    alignItems: 'flex-start',
   },
   detailIconContainer: {
-    width: m(40),
-    height: m(40),
-    borderRadius: m(10),
-    backgroundColor: '#EFF6FF',
+    width: m(32),
+    height: m(32),
+    borderRadius: m(16),
+    backgroundColor: '#3B82F615',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: m(12),
@@ -338,31 +346,33 @@ const styles = StyleSheet.create({
   detailLabel: {
     fontSize: m(12),
     color: '#6B7280',
-    marginBottom: m(4),
+    marginBottom: m(2),
   },
   detailValue: {
-    fontSize: m(15),
+    fontSize: m(14),
     fontWeight: '500',
-    color: '#374151',
+    color: '#1F2937',
   },
-  
-  // Footer
   footer: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
-    gap: m(6),
-    padding: m(12),
+    alignItems: 'center',
+    padding: m(16),
   },
   footerText: {
-    fontSize: m(14),
+    fontSize: m(12),
     color: '#9CA3AF',
+    marginLeft: m(6),
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    fontSize: m(16),
+    color: '#EF4444',
   },
 });
-
-
-
-
-
 
 

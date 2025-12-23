@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   Image,
+  PermissionsAndroid
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
@@ -54,6 +55,29 @@ export default function Register({ navigation }) {
   const { isLoading } = useSelector(state => state.auth || {});
   const dispatch = useDispatch();
 
+  const requestCameraPermission = async () => {
+    if (Platform.OS !== 'android') {
+      return true; // iOS handles permissions differently
+    }
+    try {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.CAMERA,
+        {
+          title: "App Needs Camera Access",
+          message: "This app needs access to your camera to take a profile photo.",
+          buttonNeutral: "Ask Me Later",
+          buttonNegative: "Cancel",
+          buttonPositive: "OK"
+        }
+      );
+      // Check if permission was granted
+      return granted === PermissionsAndroid.RESULTS.GRANTED;
+    } catch (err) {
+      console.warn("Camera permission error:", err);
+      return false;
+    }
+  };
+
   // Simple input handlers - no validation while typing
   const handleNameChange = text => {
     setName(text);
@@ -67,7 +91,7 @@ export default function Register({ navigation }) {
   const handleEmailChange = text => {
     // Convert the first letter to lowercase and keep the rest of the string intact
     const modifiedText = text.charAt(0).toLowerCase() + text.slice(1);
-  
+
     // Set the modified email in the state
     setEmail(modifiedText);
     setEmailError('');
@@ -125,13 +149,13 @@ export default function Register({ navigation }) {
     if (!email || email.trim().length < 1) {
       setEmailError('Email is required.');
       hasError = true;
-        } else {
+    } else {
       const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
       if (!emailRegex.test(email)) {
         setEmailError('Please enter a valid email address.');
         hasError = true;
-        }
       }
+    }
 
     if (!address || address.trim().length < 1) {
       setAddressError('Address is required.');
@@ -173,7 +197,7 @@ export default function Register({ navigation }) {
           'PAN card must be 10 characters (5 letters, 4 digits, 1 letter).',
         );
         hasError = true;
-    } else {
+      } else {
         const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
         if (!panRegex.test(panCardNumber)) {
           setPanCardError('Invalid PAN card format.');
@@ -213,27 +237,6 @@ export default function Register({ navigation }) {
     }
   };
 
-  // Check if step is valid (for button disable state)
-  const isStep1Valid = () => {
-    return (
-      name &&
-      email &&
-      address &&
-      password.length >= 6 &&
-      confirmPassword &&
-      password === confirmPassword
-    );
-  };
-
-  const isStep2Valid = () => {
-    return (
-      aadharNumber.length === 12 &&
-      mobileNumber.length === 10 &&
-      (roleId === 0 || roleId === 1 || roleId === 2) &&
-      (!panCardNumber || panCardNumber.length === 10)
-    );
-  };
-
   const handleBack = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
@@ -241,15 +244,26 @@ export default function Register({ navigation }) {
   };
 
   // Image picker
-  const handleImagePicker = action => {
+  const handleImagePicker = async action => {
+    // Request permission if using camera on Android
+  if (action === 'camera' && Platform.OS === 'android') {
+    const hasPermission = await requestCameraPermission();
+    if (!hasPermission) {
+      Toast.show({
+        type: 'error',
+        text1: 'Camera permission is required.',
+      });
+      return; // Stop if permission was denied
+    }
+  }
     const options =
       action === 'camera'
         ? {
-            mediaType: 'photo',
-            cameraType: 'front',
-            quality: 0.8,
-            saveToPhotos: true,
-          }
+          mediaType: 'photo',
+          cameraType: 'front',
+          quality: 0.8,
+          saveToPhotos: true,
+        }
         : { mediaType: 'photo', quality: 0.8 };
 
     const launch = action === 'camera' ? launchCamera : launchImageLibrary;
@@ -310,15 +324,14 @@ export default function Register({ navigation }) {
 
       navigation.navigate('Login');
     } catch (error) {
-      console.log(error, 'Error while creating user');
-      const errorMessage = 
+      const errorMessage =
         (typeof error === 'string' ? error : null) ||
         error?.message ||
         (error?.missingFields
           ? `Missing fields: ${error.missingFields.join(', ')}`
           : null) ||
         'Registration failed. Please try again.';
-      
+
       Toast.show({
         type: 'error',
         position: 'top',
@@ -336,19 +349,19 @@ export default function Register({ navigation }) {
         <Text style={styles.inputLabel}>Full Name</Text>
         <View
           style={[
-        styles.inputContainer,
+            styles.inputContainer,
             nameError ? styles.inputError : {},
-      ]}>
+          ]}>
           <Ionicons
             name="person-outline"
             size={20}
             color={nameError ? '#FF4444' : '#ff7900'}
             style={styles.inputIcon}
           />
-        <TextInput
-          style={styles.input}
+          <TextInput
+            style={styles.input}
             placeholder="Enter your full name"
-          placeholderTextColor="#999"
+            placeholderTextColor="#999"
             value={name}
             onChangeText={handleNameChange}
           />
@@ -439,11 +452,11 @@ export default function Register({ navigation }) {
               color="#ff7900"
             />
           </TouchableOpacity>
-      </View>
+        </View>
         {passwordError ? (
           <Text style={styles.errorText}>{passwordError}</Text>
         ) : null}
-    </View>
+      </View>
 
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>Confirm Password</Text>
@@ -475,11 +488,11 @@ export default function Register({ navigation }) {
               color="#ff7900"
             />
           </TouchableOpacity>
-            </View>
+        </View>
         {confirmPasswordError ? (
           <Text style={styles.errorText}>{confirmPasswordError}</Text>
         ) : null}
-          </View>
+      </View>
     </>
   );
 
@@ -568,19 +581,19 @@ export default function Register({ navigation }) {
         ) : null}
       </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>PAN Card Number (Optional)</Text>
+      <View style={styles.inputGroup}>
+        <Text style={styles.inputLabel}>PAN Card Number (Optional)</Text>
         <View
           style={[
-              styles.inputContainer,
-              panCardError ? styles.inputError : {},
+            styles.inputContainer,
+            panCardError ? styles.inputError : {},
             panCardNumber.length === 10 && !panCardError
               ? styles.inputSuccess
               : {},
-            ]}>
-              <Ionicons
-                name="card-outline"
-                size={20}
+          ]}>
+          <Ionicons
+            name="card-outline"
+            size={20}
             color={
               panCardError
                 ? '#FF4444'
@@ -588,88 +601,88 @@ export default function Register({ navigation }) {
                   ? '#28a745'
                   : '#ff7900'
             }
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Enter 10 digit PAN (e.g., ABCDE1234F)"
-                placeholderTextColor="#999"
-                value={panCardNumber}
+            style={styles.inputIcon}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Enter 10 digit PAN (e.g., ABCDE1234F)"
+            placeholderTextColor="#999"
+            value={panCardNumber}
             onChangeText={handlePanCardChange}
-                autoCapitalize="characters"
-                maxLength={10}
-              />
-              {panCardNumber.length === 10 && !panCardError && (
-                <Ionicons name="checkmark-circle" size={20} color="#28a745" />
-              )}
-            </View>
-            {panCardError ? (
-              <Text style={styles.errorText}>{panCardError}</Text>
-            ) : null}
-          </View>
+            autoCapitalize="characters"
+            maxLength={10}
+          />
+          {panCardNumber.length === 10 && !panCardError && (
+            <Ionicons name="checkmark-circle" size={20} color="#28a745" />
+          )}
+        </View>
+        {panCardError ? (
+          <Text style={styles.errorText}>{panCardError}</Text>
+        ) : null}
+      </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Account Type *</Text>
+      <View style={styles.inputGroup}>
+        <Text style={styles.inputLabel}>Account Type *</Text>
         <View style={styles.roleContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.roleOption,
+          <TouchableOpacity
+            style={[
+              styles.roleOption,
               roleId === 0 && styles.roleOptionSelected,
-                ]}
+            ]}
             onPress={() => setRoleId(0)}>
-                <Ionicons
+            <Ionicons
               name={roleId === 0 ? 'radio-button-on' : 'radio-button-off'}
-                  size={20}
-                  color={roleId === 0 ? '#ff6700' : '#999'}
-                />
+              size={20}
+              color={roleId === 0 ? '#ff6700' : '#999'}
+            />
             <Text
               style={[
-                  styles.roleOptionText,
+                styles.roleOptionText,
                 roleId === 0 && styles.roleOptionTextSelected,
               ]}>
               Admin
             </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.roleOption,
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.roleOption,
               roleId === 1 && styles.roleOptionSelected,
-                ]}
+            ]}
             onPress={() => setRoleId(1)}>
-                <Ionicons
+            <Ionicons
               name={roleId === 1 ? 'radio-button-on' : 'radio-button-off'}
-                  size={20}
-                  color={roleId === 1 ? '#ff6700' : '#999'}
-                />
+              size={20}
+              color={roleId === 1 ? '#ff6700' : '#999'}
+            />
             <Text
               style={[
-                  styles.roleOptionText,
+                styles.roleOptionText,
                 roleId === 1 && styles.roleOptionTextSelected,
               ]}>
               Lender
             </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.roleOption,
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.roleOption,
               roleId === 2 && styles.roleOptionSelected,
-                ]}
+            ]}
             onPress={() => setRoleId(2)}>
-                <Ionicons
+            <Ionicons
               name={roleId === 2 ? 'radio-button-on' : 'radio-button-off'}
-                  size={20}
-                  color={roleId === 2 ? '#ff6700' : '#999'}
-                />
+              size={20}
+              color={roleId === 2 ? '#ff6700' : '#999'}
+            />
             <Text
               style={[
-                  styles.roleOptionText,
+                styles.roleOptionText,
                 roleId === 2 && styles.roleOptionTextSelected,
               ]}>
               Borrower
             </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          </TouchableOpacity>
+        </View>
+      </View>
     </>
   );
 
@@ -746,16 +759,16 @@ export default function Register({ navigation }) {
       </View>
 
       {/* Terms Agreement */}
-          <View style={styles.termsContainer}>
+      <View style={styles.termsContainer}>
         <View style={styles.termsIconContainer}>
           <Ionicons name="checkmark-circle" size={m(20)} color="#28a745" />
         </View>
-            <Text style={styles.termsText}>
-              By creating an account, you agree to our{' '}
-              <Text style={styles.termsLink}>Terms of Service</Text> and{' '}
-              <Text style={styles.termsLink}>Privacy Policy</Text>
-            </Text>
-          </View>
+        <Text style={styles.termsText}>
+          By creating an account, you agree to our{' '}
+          <Text style={styles.termsLink}>Terms of Service</Text> and{' '}
+          <Text style={styles.termsLink}>Privacy Policy</Text>
+        </Text>
+      </View>
     </>
   );
 
@@ -853,18 +866,18 @@ export default function Register({ navigation }) {
                 </LinearGradient>
               </TouchableOpacity>
             ) : (
-          <TouchableOpacity
-            style={[
-              styles.registerButtonContainer,
+              <TouchableOpacity
+                style={[
+                  styles.registerButtonContainer,
                   isLoading && styles.registerButtonDisabled,
-            ]}
-            onPress={handleRegister}
+                ]}
+                onPress={handleRegister}
                 disabled={isLoading}>
-            <LinearGradient
-              colors={['#ff6700', '#ff7900', '#ff8500']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.registerButtonGradient}>
+                <LinearGradient
+                  colors={['#ff6700', '#ff7900', '#ff8500']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.registerButtonGradient}>
                   {isLoading ? (
                     <>
                       <Text style={styles.registerButtonText}>
@@ -884,8 +897,8 @@ export default function Register({ navigation }) {
                       />
                     </>
                   )}
-            </LinearGradient>
-          </TouchableOpacity>
+                </LinearGradient>
+              </TouchableOpacity>
             )}
           </View>
 
@@ -1284,9 +1297,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
-  },
-  nextButtonDisabled: {
-    opacity: 0.5,
   },
   nextButtonGradient: {
     flexDirection: 'row',

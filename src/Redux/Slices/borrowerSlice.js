@@ -3,6 +3,16 @@ import instance from '../../Utils/AxiosInstance';
 
 const initialState = {
   borrowers: [],
+  borrowerHistory: [],
+  historyLoading: false,
+  historyError: null,
+  historySummary: null,
+  historyPagination: {
+    page: 1,
+    limit: 10,
+    totalPages: 1,
+    totalDocuments: 0,
+  },
   loading: false,
   error: null,
   pagination: {
@@ -82,6 +92,72 @@ export const searchBorrowers = createAsyncThunk(
   },
 );
 
+// Get borrower loan history
+export const getBorrowerHistory = createAsyncThunk(
+  'borrowers/getBorrowerHistory',
+  async ({ 
+    borrowerId, 
+    page = 1, 
+    limit = 10, 
+    startDate, 
+    endDate, 
+    status, 
+    minAmount, 
+    maxAmount,
+    search 
+  }, { rejectWithValue }) => {
+    try {
+      if (!borrowerId) {
+        return rejectWithValue('Borrower ID is required');
+      }
+
+      const params = {
+        page,
+        limit,
+      };
+
+      // Add optional filters
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
+      if (status) params.status = status;
+      if (minAmount) params.minAmount = minAmount;
+      if (maxAmount) params.maxAmount = maxAmount;
+      if (search) params.search = search;
+
+      const response = await instance.get(`history/borrowers/borrower/${borrowerId}`, { params });
+
+      if (response.status === 404) {
+        return {
+          borrower: null,
+          history: [],
+          summary: null,
+          pagination: initialState.historyPagination,
+        };
+      }
+
+      return {
+        borrower: response.data.borrower || null,
+        history: response.data.data || [],
+        summary: response.data.summary || null,
+        pagination: response.data.pagination || initialState.historyPagination,
+      };
+    } catch (error) {
+      if (error.response && error.response.data) {
+        return rejectWithValue(error.response.data.message || 'Failed to fetch borrower history');
+      }
+      return rejectWithValue(error.message || 'Unknown error');
+    }
+  },
+);
+
+// Clear borrower history
+export const clearBorrowerHistory = createAsyncThunk(
+  'borrowers/clearBorrowerHistory',
+  async () => {
+    return;
+  }
+);
+
 const borrowerSlice = createSlice({
   name: 'borrowers',
   initialState,
@@ -90,6 +166,12 @@ const borrowerSlice = createSlice({
       state.borrowers = [];
       state.error = null;
       state.pagination = initialState.pagination;
+    },
+    clearHistoryData: (state) => {
+      state.borrowerHistory = [];
+      state.historySummary = null;
+      state.historyError = null;
+      state.historyPagination = initialState.historyPagination;
     },
   },
   extraReducers: builder => {
@@ -127,12 +209,39 @@ const borrowerSlice = createSlice({
         state.error = action.payload || 'Failed to search borrowers';
         state.borrowers = [];
         state.pagination = initialState.pagination;
+      })
+      // Get borrower history
+      .addCase(getBorrowerHistory.pending, state => {
+        state.historyLoading = true;
+        state.historyError = null;
+      })
+      .addCase(getBorrowerHistory.fulfilled, (state, action) => {
+        state.historyLoading = false;
+        state.borrowerHistory = action.payload.history;
+        state.historySummary = action.payload.summary;
+        state.historyPagination = action.payload.pagination;
+        state.historyError = null;
+      })
+      .addCase(getBorrowerHistory.rejected, (state, action) => {
+        state.historyLoading = false;
+        state.historyError = action.payload || 'Failed to fetch borrower history';
+        state.borrowerHistory = [];
+        state.historySummary = null;
+        state.historyPagination = initialState.historyPagination;
+      })
+      // Clear borrower history
+      .addCase(clearBorrowerHistory.fulfilled, (state) => {
+        state.borrowerHistory = [];
+        state.historySummary = null;
+        state.historyError = null;
+        state.historyPagination = initialState.historyPagination;
       });
   },
 });
 
-export const { clearBorrowers } = borrowerSlice.actions;
+export const { clearBorrowers, clearHistoryData } = borrowerSlice.actions;
 export default borrowerSlice.reducer;
+
 
 
 

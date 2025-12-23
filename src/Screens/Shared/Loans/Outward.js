@@ -15,7 +15,6 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useDispatch, useSelector } from 'react-redux';
 import { getAllBorrowers, searchBorrowers } from '../../../Redux/Slices/borrowerSlice';
-import Toast from 'react-native-toast-message';
 import LoaderSkeleton from '../../../Components/LoaderSkeleton';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
@@ -31,10 +30,6 @@ const Outward = ({ navigation }) => {
   const scrollViewRef = React.useRef(null);
 
   const loading = borrowersLoading;
-  const error = borrowersError;
-
-  const formatDate = date => moment(date).format('DD-MM-YYYY');
-
   // Add debouncing effect for search
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -46,20 +41,26 @@ const Outward = ({ navigation }) => {
 
   // Fetch borrowers when debounced search changes
   useEffect(() => {
-    if (debouncedSearch && debouncedSearch.trim() !== '') {
-      dispatch(searchBorrowers({ search: debouncedSearch }));
-    } else {
-      dispatch(getAllBorrowers());
-    }
+    const fetchData = async () => {
+      if (debouncedSearch && debouncedSearch.trim() !== '') {
+        dispatch(searchBorrowers({ search: debouncedSearch }));
+      } else {
+        try {
+          // Assuming dispatch(getAllBorrowers()) returns a promise or handles data fetching asynchronously
+          const result = await dispatch(getAllBorrowers());
+        } catch (error) {
+          console.error("Error fetching borrowers:", error); // In case there is an error fetching data
+        }
+      }
+    };
+    fetchData();
   }, [debouncedSearch, dispatch]);
+
 
   // Fetch borrowers on initial mount
   useEffect(() => {
     dispatch(getAllBorrowers());
   }, [dispatch]);
-
-
-
 
   const onRefresh = useCallback(async () => {
     if (debouncedSearch && debouncedSearch.trim() !== '') {
@@ -207,7 +208,7 @@ const Outward = ({ navigation }) => {
                     <View style={styles.detailItem}>
                       <Icon name="phone" size={16} color="#6B7280" />
                       <Text style={styles.detailValue}>
-                        {borrower.mobileNo || 'N/A'}
+                      {borrower.mobileNo ? borrower.mobileNo : 'N/A'}
                       </Text>
                     </View>
                     <View style={styles.detailItem}>
@@ -217,12 +218,6 @@ const Outward = ({ navigation }) => {
                       </Text>
                     </View>
                   </View>
-                  {borrower.isMobileVerified && (
-                    <View style={styles.verifiedBadge}>
-                      <Icon name="verified" size={14} color="#10B981" />
-                      <Text style={styles.verifiedText}>Verified</Text>
-                    </View>
-                  )}
                 </View>
               </TouchableOpacity>
             ))
@@ -265,9 +260,7 @@ const styles = StyleSheet.create({
     fontSize: m(16),
     color: '#374151',
   },
-  filterButton: {
-    padding: m(8),
-  },
+
   addButton: {
     width: m(44),
     height: m(44),
@@ -283,148 +276,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
-  modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: m(20),
-    borderTopRightRadius: m(20),
-    padding: m(24),
-    maxHeight: '80%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: m(24),
-  },
-  modalTitle: {
-    fontSize: m(20),
-    fontWeight: '600',
-    color: '#111827',
-  },
-  filterLabel: {
-    fontSize: m(14),
-    fontWeight: '500',
-    color: '#374151',
-    marginBottom: m(8),
-  },
-  dateFilterContainer: {
-    marginBottom: m(20),
-  },
-  dateRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  dateInput: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: m(10),
-    padding: m(12),
-    marginRight: m(8),
-  },
-  dateText: {
-    marginLeft: m(8),
-    fontSize: m(14),
-    color: '#374151',
-  },
-  amountFilterContainer: {
-    marginBottom: m(20),
-  },
-  amountRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  amountInputContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: m(10),
-  },
-  amountPrefix: {
-    paddingHorizontal: m(12),
-    fontSize: m(14),
-    color: '#6B7280',
-  },
-  amountInput: {
-    flex: 1,
-    borderWidth: 0,
-    paddingLeft: 0,
-  },
-  amountSeparator: {
-    marginHorizontal: m(8),
-    fontSize: m(16),
-    color: '#6B7280',
-  },
-  statusFilterContainer: {
-    marginBottom: m(24),
-  },
-  statusButtons: {
-    flexDirection: 'row',
-  },
-  statusButton: {
-    flex: 1,
-    paddingVertical: m(10),
-    paddingHorizontal: m(12),
-    borderRadius: m(8),
-    marginRight: m(8),
-    alignItems: 'center',
-  },
-  statusButtonActive: {
-    backgroundColor: 'black',
-  },
-  statusButtonInactive: {
-    backgroundColor: '#F3F4F6',
-  },
-  statusButtonText: {
-    fontSize: m(14),
-    fontWeight: '500',
-  },
-  statusButtonTextActive: {
-    color: '#FFFFFF',
-  },
-  statusButtonTextInactive: {
-    color: '#6B7280',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: m(14),
-    borderRadius: m(12),
-    alignItems: 'center',
-  },
-  clearButton: {
-    backgroundColor: '#F3F4F6',
-    marginRight: m(8),
-  },
-  applyButton: {
-    backgroundColor: 'black',
-    marginLeft: m(8),
-  },
-  clearButtonText: {
-    color: '#6B7280',
-    fontSize: m(16),
-    fontWeight: '600',
-  },
-  applyButtonText: {
-    color: '#FFFFFF',
-    fontSize: m(16),
-    fontWeight: '600',
-  },
 
   // Loan List
   loanListContainer: {
     padding: m(16),
   },
-   scrollContent: {
+  scrollContent: {
     paddingTop: m(8),
     paddingBottom: m(130),
   },
@@ -447,29 +304,6 @@ const styles = StyleSheet.create({
   },
 
   // Loan Card
-  loanCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(16),
-    padding: m(16),
-    marginBottom: m(12),
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-  },
-  highlightedLoanCard: {
-    borderWidth: 3,
-    borderColor: '#ff6700',
-    backgroundColor: '#FFF5E6',
-    elevation: 8,
-    shadowColor: '#ff6700',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-  },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -510,85 +344,17 @@ const styles = StyleSheet.create({
     color: '#111827',
     marginBottom: m(2),
   },
-  amountContainer: {
-    alignItems: 'flex-end',
-  },
-  amountText: {
-    fontSize: m(16),
-    fontWeight: '700',
-    color: '#111827',
-  },
-  amountLabel: {
-    fontSize: m(11.6),
-    color: '#6B7280',
-    marginTop: m(2),
-  },
-  loanDetails: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: m(12),
-    padding: m(12),
-    marginBottom: m(10),
-  },
   detailItem: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: m(6),
   },
-  detailLabel: {
-    fontSize: m(12),
-    color: '#6B7280',
-    marginLeft: m(8),
-    marginRight: m(4),
-    width: m(60),
-  },
   detailValue: {
     fontSize: m(14),
     fontWeight: '500',
     color: '#374151',
-    flex: 1,
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: m(10),
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-  },
-  footerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  timeText: {
-    fontSize: m(12),
-    color: '#6B7280',
-    marginLeft: m(4),
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: m(12),
-    paddingVertical: m(6),
-    borderRadius: m(20),
-  },
-  statusPaid: {
-    backgroundColor: '#10B981',
-  },
-  statusPending: {
-    backgroundColor: '#F59E0B',
-  },
-  statusText: {
-    fontSize: m(12),
-    fontWeight: '600',
-    color: '#FFFFFF',
-    marginLeft: m(4),
-  },
-
-  // Input Styles
-  input: {
-    fontSize: m(14),
-    color: '#374151',
-    height: m(44),
+    marginLeft: m(10)
+    // flex: 1,
   },
   // Borrower Card Styles
   borrowerCard: {
@@ -605,30 +371,14 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   borrowerDetails: {
-    flexDirection: 'row',
+    flexDirection: 'coloum',
     marginTop: m(12),
-    gap: m(16),
+    gap: m(8),
   },
   userEmail: {
     fontSize: m(13),
     color: '#6B7280',
     marginTop: m(2),
-  },
-  verifiedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    marginTop: m(8),
-    paddingHorizontal: m(10),
-    paddingVertical: m(4),
-    borderRadius: m(12),
-    backgroundColor: '#ECFDF5',
-    gap: m(4),
-  },
-  verifiedText: {
-    fontSize: m(11),
-    fontWeight: '600',
-    color: '#10B981',
   },
   // Action Modal Styles
   actionModalContent: {
