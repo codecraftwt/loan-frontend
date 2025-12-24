@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -9,8 +9,6 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import LinearGradient from 'react-native-linear-gradient';
 import { useSelector } from 'react-redux';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
@@ -83,9 +81,9 @@ export default function BorrowerDashboard() {
     },
     {
       id: 3,
-      title: 'Loan History',
+      title: 'Payment History',
       icon: 'clock',
-      screen: 'LoanHistory',
+      screen: 'BorrowerLoanHistoryScreen',
       color: '#4CAF50',
     },
   ];

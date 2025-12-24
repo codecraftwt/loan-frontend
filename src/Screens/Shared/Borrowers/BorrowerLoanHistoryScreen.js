@@ -13,29 +13,33 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useDispatch, useSelector } from 'react-redux';
-import { getBorrowerHistory } from '../../../Redux/Slices/borrowerSlice';
+import { getBorrowerLoansById } from '../../../Redux/Slices/borrowerLoanSlice';
 import Header from '../../../Components/Header';
 import moment from 'moment';
 import { m } from 'walstar-rn-responsive';
 
 const LoanHistoryCard = ({ loan, onPress }) => {
   const getStatusColor = (status) => {
-    switch (status) {
-      case 'pending':
-        return '#F59E0B'; // amber
+    switch (status?.toLowerCase()) {
       case 'paid':
         return '#10B981'; // green
+      case 'part paid':
+        return '#F59E0B'; // amber
+      case 'pending':
+        return '#6B7280'; // gray
       default:
         return '#6B7280'; // gray
     }
   };
 
   const getStatusIcon = (status) => {
-    switch (status) {
-      case 'pending':
-        return 'schedule';
+    switch (status?.toLowerCase()) {
       case 'paid':
         return 'check-circle';
+      case 'part paid':
+        return 'schedule';
+      case 'pending':
+        return 'help';
       default:
         return 'help';
     }
@@ -46,16 +50,16 @@ const LoanHistoryCard = ({ loan, onPress }) => {
       <View style={styles.loanCardHeader}>
         <View style={styles.loanInfo}>
           <Text style={styles.loanAmount}>₹{loan.amount?.toLocaleString() || '0'}</Text>
-          <Text style={styles.loanPurpose}>{loan.purpose || 'N/A'}</Text>
+          <Text style={styles.loanPurpose}>Loan Amount</Text>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(loan.status) + '15' }]}>
-          <Icon 
-            name={getStatusIcon(loan.status)} 
-            size={16} 
-            color={getStatusColor(loan.status)} 
+        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(loan.paymentStatus) + '15' }]}>
+          <Icon
+            name={getStatusIcon(loan.paymentStatus)}
+            size={16}
+            color={getStatusColor(loan.paymentStatus)}
           />
-          <Text style={[styles.statusText, { color: getStatusColor(loan.status) }]}>
-            {loan.status?.charAt(0).toUpperCase() + loan.status?.slice(1) || 'Unknown'}
+          <Text style={[styles.statusText, { color: getStatusColor(loan.paymentStatus) }]}>
+            {loan.paymentStatus?.charAt(0).toUpperCase() + loan.paymentStatus?.slice(1) || 'Unknown'}
           </Text>
         </View>
       </View>
@@ -63,15 +67,25 @@ const LoanHistoryCard = ({ loan, onPress }) => {
       <View style={styles.loanDetails}>
         <View style={styles.detailRow}>
           <View style={styles.detailItem}>
-            <Icon name="calendar-today" size={14} color="#6B7280" />
-            <Text style={styles.detailLabel}>Given:</Text>
+            <Icon name="check-circle" size={14} color="#10B981" />
+            <Text style={styles.detailLabel}>Paid:</Text>
             <Text style={styles.detailValue}>
-              {moment(loan.loanGivenDate).format('DD MMM YYYY')}
+              ₹{loan.totalPaid?.toLocaleString('en-IN') || '0'}
             </Text>
           </View>
           <View style={styles.detailItem}>
+            <Icon name="schedule" size={14} color="#F59E0B" />
+            <Text style={styles.detailLabel}>Remaining:</Text>
+            <Text style={styles.detailValue}>
+              ₹{loan.remainingAmount?.toLocaleString('en-IN') || loan.amount}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.detailRow}>
+          <View style={styles.detailItem}>
             <Icon name="event" size={14} color="#6B7280" />
-            <Text style={styles.detailLabel}>End:</Text>
+            <Text style={styles.detailLabel}>Due:</Text>
             <Text style={styles.detailValue}>
               {moment(loan.loanEndDate).format('DD MMM YYYY')}
             </Text>
@@ -88,12 +102,6 @@ const LoanHistoryCard = ({ loan, onPress }) => {
         )}
 
         <View style={styles.loanFooter}>
-          <View style={styles.modeContainer}>
-            <Icon name="payment" size={14} color="#8B5CF6" />
-            <Text style={styles.loanMode}>
-              {loan.loanMode?.charAt(0).toUpperCase() + loan.loanMode?.slice(1) || 'N/A'}
-            </Text>
-          </View>
           <Text style={styles.loanDate}>
             {moment(loan.createdAt).fromNow()}
           </Text>
@@ -147,7 +155,7 @@ const FilterModal = ({ visible, onClose, filters, setFilters, applyFilters }) =>
             <View style={styles.filterSection}>
               <Text style={styles.filterLabel}>Status</Text>
               <View style={styles.statusFilterOptions}>
-                {['', 'pending', 'paid'].map((status) => (
+                {['', 'part paid', 'paid'].map((status) => (
                   <TouchableOpacity
                     key={status}
                     style={[
@@ -247,12 +255,12 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
   const { borrowerId, borrowerDetails } = route.params || {};
   
   const {
-    borrowerHistory,
-    historyLoading,
-    historyError,
-    historySummary,
-    historyPagination,
-  } = useSelector(state => state.borrowers);
+    loans: borrowerHistory,
+    loading: historyLoading,
+    error: historyError,
+    summary: historySummary,
+    pagination: historyPagination,
+  } = useSelector(state => state.borrowerLoans);
 
   const [refreshing, setRefreshing] = useState(false);
   const [filters, setFilters] = useState({
@@ -268,12 +276,14 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
   const loadHistory = useCallback((page = 1) => {
     if (!borrowerId) return;
 
-    dispatch(getBorrowerHistory({
+    dispatch(getBorrowerLoansById({
       borrowerId,
-      page,
-      limit: 10,
-      ...filters,
-      search: searchQuery,
+      params: {
+        page,
+        limit: 10,
+        ...filters,
+        search: searchQuery,
+      }
     }));
   }, [borrowerId, dispatch, filters, searchQuery]);
 
@@ -331,28 +341,34 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
             </View>
             <View style={styles.summaryCard}>
               <Text style={[styles.summaryNumber, { color: '#F59E0B' }]}>
-                {historySummary.pendingLoans || 0}
+                {historySummary.activeLoans || 0}
               </Text>
-              <Text style={styles.summaryLabel}>Pending</Text>
+              <Text style={styles.summaryLabel}>Active</Text>
             </View>
             <View style={styles.summaryCard}>
               <Text style={[styles.summaryNumber, { color: '#10B981' }]}>
-                {historySummary.paidLoans || 0}
+                {historySummary.completedLoans || 0}
               </Text>
-              <Text style={styles.summaryLabel}>Paid</Text>
+              <Text style={styles.summaryLabel}>Completed</Text>
             </View>
           </View>
           <View style={styles.amountSummary}>
             <View style={styles.amountItem}>
-              <Text style={styles.amountLabel}>Pending Amount:</Text>
-              <Text style={[styles.amountValue, { color: '#F59E0B' }]}>
-                {formatCurrency(historySummary.totalPendingAmount)}
+              <Text style={styles.amountLabel}>Total Borrowed:</Text>
+              <Text style={[styles.amountValue, { color: '#3B82F6' }]}>
+                {formatCurrency(historySummary.totalAmountBorrowed)}
               </Text>
             </View>
             <View style={styles.amountItem}>
-              <Text style={styles.amountLabel}>Paid Amount:</Text>
+              <Text style={styles.amountLabel}>Total Paid:</Text>
               <Text style={[styles.amountValue, { color: '#10B981' }]}>
-                {formatCurrency(historySummary.totalPaidAmount)}
+                {formatCurrency(historySummary.totalAmountPaid)}
+              </Text>
+            </View>
+            <View style={styles.amountItem}>
+              <Text style={styles.amountLabel}>Remaining:</Text>
+              <Text style={[styles.amountValue, { color: '#EF4444' }]}>
+                {formatCurrency(historySummary.totalAmountRemaining)}
               </Text>
             </View>
           </View>
@@ -407,7 +423,7 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
             <Icon name="history" size={60} color="#E5E7EB" />
             <Text style={styles.emptyTitle}>No Loan History</Text>
             <Text style={styles.emptySubtitle}>
-              {searchQuery || filters.status ? 'No loans match your criteria' : 'No loans found for this borrower'}
+              {searchQuery || filters.status ? 'No loans match your criteria' : 'This borrower has no loan history'}
             </Text>
           </View>
         ) : (

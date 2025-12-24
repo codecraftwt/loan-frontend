@@ -5,13 +5,11 @@ import {
   Image,
   StyleSheet,
   StatusBar,
-  Platform,
   Animated,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {logo} from '../../Assets';
 import {useDispatch} from 'react-redux';
-import {useNavigation} from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {setUser} from '../../Redux/Slices/authslice';
 import {m} from 'walstar-rn-responsive';

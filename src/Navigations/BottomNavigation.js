@@ -20,6 +20,7 @@ import LenderList from '../Screens/Admin/Lenders/LenderList';
 
 // Borrower screens
 import BorrowerDashboard from '../Screens/Borrower/Dashboard/BorrowerDashboard';
+import MyLoans from '../Screens/Borrower/Loans/MyLoans';
 
 // Shared screens
 import Profile from '../Screens/Shared/Profile/Profile';
@@ -167,7 +168,7 @@ export default function BottomNavigation() {
           />
           <Tab.Screen
             name="MyLoans"
-            component={Outward}
+            component={MyLoans}
             options={{
               tabBarLabel: 'My Loans',
               tabBarIcon: ({color, size, focused}) =>

@@ -4,13 +4,10 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Dimensions,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
-
-const { width } = Dimensions.get('window');
 
 export default function Revenue() {
   // Static revenue data

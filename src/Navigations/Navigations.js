@@ -25,6 +25,11 @@ import EditPlan from '../Screens/Admin/Plans/EditPlan';
 import Revenue from '../Screens/Admin/Revenue/Revenue';
 import LenderList from '../Screens/Admin/Lenders/LenderList';
 import BorrowerLoanHistoryScreen from '../Screens/Shared/Borrowers/BorrowerLoanHistoryScreen';
+// Borrower Loan Screens
+import MyLoans from '../Screens/Borrower/Loans/MyLoans';
+import BorrowerLoanDetails from '../Screens/Borrower/Loans/BorrowerLoanDetails';
+import MakePayment from '../Screens/Borrower/Loans/MakePayment';
+import PaymentHistory from '../Screens/Borrower/Loans/PaymentHistory';
 
 const Navigation = () => {
   const Stack = createNativeStackNavigator();
@@ -61,8 +66,14 @@ const Navigation = () => {
       <Stack.Screen name="EditPlan" component={EditPlan} />
       <Stack.Screen name="Revenue" component={Revenue} />
       <Stack.Screen name="LenderList" component={LenderList} />
-      
-      {/* Borrower screen */}
+
+      {/* Borrower Loan Screens */}
+      <Stack.Screen name="MyLoans" component={MyLoans} />
+      <Stack.Screen name="BorrowerLoanDetails" component={BorrowerLoanDetails} />
+      <Stack.Screen name="MakePayment" component={MakePayment} />
+      <Stack.Screen name="PaymentHistory" component={PaymentHistory} />
+
+      {/* Other Borrower screens */}
       <Stack.Screen name="BorrowerLoanHistoryScreen" component={BorrowerLoanHistoryScreen} />
       <Stack.Screen name="BorrowerDetailsScreen" component={BorrowerDetailsScreen} />
 

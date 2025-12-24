@@ -6,7 +6,6 @@ import {
   TextInput,
   TouchableOpacity,
   StatusBar,
-  Alert,
   Platform,
 } from 'react-native';
 import {useDispatch, useSelector} from 'react-redux';
@@ -17,9 +16,6 @@ import {m} from 'walstar-rn-responsive';
 export default function ForgotPassword({navigation}) {
   const dispatch = useDispatch();
 
-  const forgotPasswordMessage = useSelector(
-    state => state.auth.forgotPasswordMessage,
-  );
   const error = useSelector(state => state.auth.error);
 
   const [email, setEmail] = useState('');

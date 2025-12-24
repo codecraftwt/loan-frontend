@@ -24,7 +24,7 @@ export default function LoginScreen({ navigation }) {
   const [mobileError, setMobileError] = useState('');
   const [passwordError, setPasswordError] = useState('');
 
-  const { isLoading, error } = useSelector(state => state.auth || {});
+  const { isLoading } = useSelector(state => state.auth || {});
   const dispatch = useDispatch();
 
   const validateMobile = text => {
