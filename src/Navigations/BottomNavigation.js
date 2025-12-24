@@ -13,7 +13,6 @@ import Inward from '../Screens/Shared/Loans/Inward';
 
 // Admin screens
 import AdminDashboard from '../Screens/Admin/Dashboard/AdminDashboard';
-import AddPlan from '../Screens/Admin/Plans/AddPlan';
 import EditPlan from '../Screens/Admin/Plans/EditPlan';
 import Revenue from '../Screens/Admin/Revenue/Revenue';
 import LenderList from '../Screens/Admin/Lenders/LenderList';
@@ -68,12 +67,14 @@ export default function BottomNavigation() {
             tabBarLabelStyle: {
               fontSize: m(11),
               fontFamily: 'Poppins-SemiBold',
+              paddingTop:m(5)
             },
             tabBarStyle: {
               position: 'absolute',
               left: m(16),
               right: m(16),
-              bottom: insets.bottom,
+              // bottom: insets.bottom,
+              bottom: insets.bottom - m(10),
               height: m(68),
               backgroundColor: '#e5dad1',
               borderTopWidth: 0,
@@ -144,16 +145,18 @@ export default function BottomNavigation() {
             tabBarLabelStyle: {
               fontSize: m(11),
               fontFamily: 'Poppins-SemiBold',
+              paddingTop:m(5)
             },
             tabBarStyle: {
               position: 'absolute',
               left: m(16),
               right: m(16),
-              bottom: insets.bottom,
-              height: m(68),
+              // bottom: insets.bottom,
+              bottom: insets.bottom - m(10),
+              height: m(69),
               backgroundColor: '#e5dad1',
               borderTopWidth: 0,
-              paddingTop: m(5),
+              paddingTop: m(6),
               paddingBottom: insets.bottom > 0 ? m(5) : 0,
             },
           }}>
@@ -179,7 +182,7 @@ export default function BottomNavigation() {
             name="History"
             component={Inward}
             options={{
-              tabBarLabel: 'History',
+              tabBarLabel: 'Analytics',
               tabBarIcon: ({color, size, focused}) =>
                 renderIcon('clock', color, size, focused),
             }}
@@ -210,16 +213,17 @@ export default function BottomNavigation() {
           tabBarLabelStyle: {
             fontSize: m(11),
             fontFamily: 'Poppins-SemiBold',
+            paddingTop:m(5)
           },
           tabBarStyle: {
             position: 'absolute',
             left: m(16),
             right: m(16),
             bottom: insets.bottom,
-            height: m(68),
+            height: m(69),
             backgroundColor: '#e5dad1',
             borderTopWidth: 0,
-            paddingTop: m(5),
+            paddingTop: m(10),
             paddingBottom: insets.bottom > 0 ? m(5) : 0,
           },
         }}>
@@ -267,6 +271,7 @@ const styles = StyleSheet.create({
     borderRadius: m(17),
     justifyContent: 'center',
     alignItems: 'center',
+    // paddingBottom: m(1)
   },
   iconWrapperActive: {
     backgroundColor: '#ff6700',

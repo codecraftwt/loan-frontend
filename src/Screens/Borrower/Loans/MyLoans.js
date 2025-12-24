@@ -28,6 +28,7 @@ export default function MyLoans() {
   const [filteredLoans, setFilteredLoans] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState('all'); // 'pending', 'paid', or 'all'
   const [filters, setFilters] = useState({
     status: '',
     startDate: '',
@@ -56,7 +57,7 @@ export default function MyLoans() {
 
   useEffect(() => {
     filterLoans();
-  }, [searchQuery, loans]);
+  }, [searchQuery, loans, activeTab]);
 
   useEffect(() => {
     if (error) {
@@ -83,17 +84,25 @@ export default function MyLoans() {
   };
 
   const filterLoans = () => {
-    // Client-side filtering for search query (server-side filtering is handled by API)
-    if (!searchQuery.trim()) {
-      setFilteredLoans(loans);
-      return;
+    let filtered = loans;
+
+    // Filter by tab first
+    if (activeTab === 'pending') {
+      filtered = loans.filter(loan => loan.paymentStatus !== 'paid');
+    } else if (activeTab === 'paid') {
+      filtered = loans.filter(loan => loan.paymentStatus === 'paid');
+    }
+    // For 'all' tab, no filtering needed - use all loans
+
+    // Then apply search query filter
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(loan =>
+        loan.lenderId?.userName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        loan.amount?.toString().includes(searchQuery) ||
+        loan.paymentStatus?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
     }
 
-    const filtered = loans.filter(loan =>
-      loan.lenderId?.userName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      loan.amount?.toString().includes(searchQuery) ||
-      loan.paymentStatus?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
     setFilteredLoans(filtered);
   };
 
@@ -221,15 +230,15 @@ export default function MyLoans() {
       <Ionicons name="document-outline" size={64} color="#D1D5DB" />
       <Text style={styles.emptyTitle}>No Loans Found</Text>
       <Text style={styles.emptySubtitle}>
-        {searchQuery ? 'Try adjusting your search criteria' : 'You haven\'t taken any loans yet'}
+        {searchQuery
+          ? 'Try adjusting your search criteria'
+          : activeTab === 'pending'
+            ? 'No pending loans at the moment'
+            : activeTab === 'paid'
+              ? 'No paid loans yet'
+              : 'You haven\'t taken any loans yet'
+        }
       </Text>
-      {!searchQuery && (
-        <TouchableOpacity
-          style={styles.applyLoanButton}
-          onPress={() => navigation.navigate('LoanRequest')}>
-          <Text style={styles.applyLoanButtonText}>Apply for Loan</Text>
-        </TouchableOpacity>
-      )}
     </View>
   );
 
@@ -266,6 +275,33 @@ export default function MyLoans() {
             </TouchableOpacity>
           ) : null}
         </View>
+      </View>
+
+      {/* Tabs */}
+      <View style={styles.tabsContainer}>
+
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'all' && styles.activeTab]}
+          onPress={() => setActiveTab('all')}>
+          <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>
+            All ({loans.length})
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'paid' && styles.activeTab]}
+          onPress={() => setActiveTab('paid')}>
+          <Text style={[styles.tabText, activeTab === 'paid' && styles.activeTabText]}>
+            Paid ({loans.filter(loan => loan.paymentStatus === 'paid').length})
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'pending' && styles.activeTab]}
+          onPress={() => setActiveTab('pending')}>
+          <Text style={[styles.tabText, activeTab === 'pending' && styles.activeTabText]}>
+            Pending ({loans.filter(loan => loan.paymentStatus !== 'paid').length})
+          </Text>
+        </TouchableOpacity>
+
       </View>
 
       {/* Loans List */}
@@ -305,6 +341,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: m(12),
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  activeTab: {
+    borderBottomColor: '#3B82F6',
+  },
+  tabText: {
+    fontSize: m(14),
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  activeTabText: {
+    color: '#3B82F6',
   },
   searchInputContainer: {
     flexDirection: 'row',
@@ -442,17 +502,6 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     marginBottom: m(24),
-  },
-  applyLoanButton: {
-    backgroundColor: '#3B82F6',
-    paddingHorizontal: m(24),
-    paddingVertical: m(12),
-    borderRadius: m(12),
-  },
-  applyLoanButtonText: {
-    fontSize: m(16),
-    fontWeight: '600',
-    color: '#FFFFFF',
   },
   summaryCard: {
     backgroundColor: '#FFFFFF',

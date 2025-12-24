@@ -79,19 +79,10 @@ export default function LoanDetailScreen({ route, navigation }) {
   useEffect(() => {
     if (!isLender) return;
     
-    // console.log('Checking for pending payments:', {
-    //   loanId: loanDetails?._id,
-    //   currentLoanDetails: currentLoanDetails?.pendingConfirmations,
-    //   originalLoanDetails: loanDetails?.pendingConfirmations,
-    //   pendingPaymentsFromRedux: pendingPayments,
-    //   paymentHistory: loanDetails?.paymentHistory?.length || 0,
-    // });
-    
     // Strategy 1: Check currentLoanDetails (from API)
     if (currentLoanDetails?.pendingConfirmations?.payments) {
       const payments = currentLoanDetails.pendingConfirmations.payments;
       if (Array.isArray(payments) && payments.length > 0) {
-        // console.log('Found pending payments in currentLoanDetails:', payments.length);
         setPendingPaymentsForLoan(payments);
         return;
       }
@@ -103,7 +94,6 @@ export default function LoanDetailScreen({ route, navigation }) {
         loan => loan.loanId === loanDetails?._id || loan._id === loanDetails?._id
       );
       if (loanPendingPayments && loanPendingPayments.pendingPayments) {
-        // console.log('Found pending payments in Redux:', loanPendingPayments.pendingPayments.length);
         setPendingPaymentsForLoan(loanPendingPayments.pendingPayments);
         return;
       }
@@ -115,7 +105,6 @@ export default function LoanDetailScreen({ route, navigation }) {
         payment => payment.paymentStatus?.toLowerCase() === 'pending'
       );
       if (pendingFromHistory.length > 0) {
-        // console.log('Found pending payments in paymentHistory:', pendingFromHistory.length);
         setPendingPaymentsForLoan(pendingFromHistory);
         return;
       }
@@ -125,7 +114,6 @@ export default function LoanDetailScreen({ route, navigation }) {
     if (loanDetails?.pendingConfirmations?.payments) {
       const payments = loanDetails.pendingConfirmations.payments;
       if (Array.isArray(payments) && payments.length > 0) {
-        // console.log('Found pending payments in original loanDetails:', payments.length);
         setPendingPaymentsForLoan(payments);
         return;
       }
@@ -146,14 +134,12 @@ export default function LoanDetailScreen({ route, navigation }) {
         if (response?.data) {
           setCurrentLoanDetails(response.data);
           if (response.data.pendingConfirmations?.payments) {
-            // console.log('Found pending payments in loan details API:', response.data.pendingConfirmations.payments.length);
             setPendingPaymentsForLoan(response.data.pendingConfirmations.payments);
             setLoadingPendingPayments(false);
             return;
           }
         }
       } catch (apiError) {
-        // console.log('Loan details API error:', apiError.message);
       }
 
       // Strategy 2: Try pending payments endpoint (handles 500 gracefully)
@@ -165,7 +151,6 @@ export default function LoanDetailScreen({ route, navigation }) {
             loan => loan.loanId === loanDetails._id || loan._id === loanDetails._id
           );
           if (loanPending?.pendingPayments && loanPending.pendingPayments.length > 0) {
-            // console.log('Found pending payments from pending endpoint:', loanPending.pendingPayments.length);
             setPendingPaymentsForLoan(loanPending.pendingPayments);
             setLoadingPendingPayments(false);
             return;
@@ -182,7 +167,6 @@ export default function LoanDetailScreen({ route, navigation }) {
           payment => payment.paymentStatus?.toLowerCase() === 'pending'
         );
         if (pendingFromHistory.length > 0) {
-          // console.log('Found pending payments in loan paymentHistory:', pendingFromHistory.length);
           setPendingPaymentsForLoan(pendingFromHistory);
           setLoadingPendingPayments(false);
           return;
@@ -191,14 +175,11 @@ export default function LoanDetailScreen({ route, navigation }) {
 
       // Strategy 4: Check existing loanDetails for pendingConfirmations
       if (loanDetails?.pendingConfirmations?.payments) {
-        // console.log('Found pending payments in original loanDetails:', loanDetails.pendingConfirmations.payments.length);
         setPendingPaymentsForLoan(loanDetails.pendingConfirmations.payments);
       } else {
-        // console.log('No pending payments found in any source');
         setPendingPaymentsForLoan([]);
       }
     } catch (error) {
-      // console.log('Error fetching loan confirmations:', error);
       // Use existing loanDetails if available
       if (loanDetails?.pendingConfirmations?.payments) {
         setPendingPaymentsForLoan(loanDetails.pendingConfirmations.payments);
@@ -209,8 +190,6 @@ export default function LoanDetailScreen({ route, navigation }) {
       setLoadingPendingPayments(false);
     }
   };
-
-  const handleBack = () => navigation.goBack();
 
   const formatDate = date => moment(date).format('DD MMM, YYYY');
 
@@ -464,29 +443,6 @@ export default function LoanDetailScreen({ route, navigation }) {
     },
   ];
 
-  // Add installment info if available
-  // if (totalInstallments > 0) {
-  //   loanInfo.splice(3, 0, {
-  //     label: 'Installments',
-  //     value: `${paidInstallments} of ${totalInstallments} paid`,
-  //     icon: 'layers',
-  //   });
-  //   if (nextDueDate && !isLoanClosed) {
-  //     loanInfo.splice(4, 0, {
-  //       label: 'Next Due Date',
-  //       value: formatDate(nextDueDate),
-  //       icon: 'calendar',
-  //     });
-  //   }
-  //   if (installmentAmount > 0) {
-  //     loanInfo.splice(4, 0, {
-  //       label: 'Installment Amount',
-  //       value: formatCurrency(installmentAmount),
-  //       icon: 'dollar-sign',
-  //     });
-  //   }
-  // }
-
   const isAccepted = loanDetails.borrowerAcceptanceStatus?.toLowerCase() === 'accepted';
   const canMarkAsPaid = isAccepted && loanDetails.status === 'pending' && !isLoanClosed;
 
@@ -615,31 +571,6 @@ export default function LoanDetailScreen({ route, navigation }) {
                 <Text style={styles.closedBadgeText}>Loan Closed - All Amount Paid</Text>
               </View>
             )}
-
-            {/* Installment Progress */}
-            {/* {totalInstallments > 0 && (
-              <View style={styles.installmentProgress}>
-                <View style={styles.installmentProgressHeader}>
-                  <Icon name="layers" size={16} color="#6B7280" />
-                  <Text style={styles.installmentProgressLabel}>
-                    Installment Progress: {paidInstallments} of {totalInstallments}
-                  </Text>
-                </View>
-                <View style={styles.installmentProgressBar}>
-                  <View 
-                    style={[
-                      styles.installmentProgressFill, 
-                      { width: `${(paidInstallments / totalInstallments) * 100}%` }
-                    ]} 
-                  />
-                </View>
-                {nextDueDate && !isLoanClosed && (
-                  <Text style={styles.nextDueDateText}>
-                    Next Due: {formatDate(nextDueDate)}
-                  </Text>
-                )}
-              </View>
-            )} */}
           </View>
         )}
 
@@ -1212,40 +1143,6 @@ const styles = StyleSheet.create({
     fontSize: m(14),
     fontWeight: '600',
     color: '#10B981',
-  },
-  installmentProgress: {
-    marginTop: m(16),
-    paddingTop: m(16),
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-  },
-  installmentProgressHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(8),
-    marginBottom: m(8),
-  },
-  installmentProgressLabel: {
-    fontSize: m(14),
-    fontWeight: '500',
-    color: '#374151',
-  },
-  installmentProgressBar: {
-    height: m(6),
-    backgroundColor: '#E5E7EB',
-    borderRadius: m(3),
-    overflow: 'hidden',
-    marginBottom: m(8),
-  },
-  installmentProgressFill: {
-    height: '100%',
-    backgroundColor: '#3B82F6',
-    borderRadius: m(3),
-  },
-  nextDueDateText: {
-    fontSize: m(12),
-    color: '#6B7280',
-    textAlign: 'center',
   },
   
   // Pending Confirmations Card

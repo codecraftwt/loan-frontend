@@ -228,15 +228,6 @@ export default function LoginScreen({ navigation }) {
             <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
           </TouchableOpacity>
         </View>
-
-        {/* Footer */}
-        {/* <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            By signing in, you agree to our{' '}
-            <Text style={styles.footerLink}>Terms & Conditions</Text> and{' '}
-            <Text style={styles.footerLink}>Privacy Policy</Text>
-          </Text>
-        </View> */}
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -248,7 +239,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f8f8',
   },
 
-  // Orange Gradient Header (Matching your header) - EXACTLY YOUR DESIGN
   headerContent: {
     borderBottomLeftRadius: m(25),
     borderBottomRightRadius: m(25),
@@ -283,7 +273,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f8f8',
   },
 
-  // Form Card - EXACTLY YOUR DESIGN
+  // Form Card
   formCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: m(20),
@@ -312,7 +302,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Input Groups - EXACTLY YOUR DESIGN
+  // Input Groups
   inputGroup: {
     marginBottom: m(20),
   },
@@ -357,7 +347,7 @@ const styles = StyleSheet.create({
     marginLeft: m(4),
   },
 
-  // Login Button with Gradient - EXACTLY YOUR DESIGN
+  // Login Button with Gradient
   loginButtonContainer: {
     borderRadius: m(12),
     marginTop: m(8),
@@ -389,7 +379,7 @@ const styles = StyleSheet.create({
 
   },
 
-  // Divider - EXACTLY YOUR DESIGN
+  // Divider
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -407,7 +397,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  // Alternative Buttons - EXACTLY YOUR DESIGN
+  // Alternative Buttons
   registerButtonGradient: {
     paddingVertical: m(8),
     alignItems: 'center',
@@ -418,7 +408,7 @@ const styles = StyleSheet.create({
     color: '#ff6700',
   },
 
-  // Forgot Password - EXACTLY YOUR DESIGN
+  // Forgot Password
   forgotPasswordButton: {
     alignItems: 'center',
     paddingVertical: m(8),
@@ -428,21 +418,4 @@ const styles = StyleSheet.create({
     color: '#ff7900',
     fontWeight: '500',
   },
-
-  // Footer - EXACTLY YOUR DESIGN
-  // footer: {
-  //   marginTop: 'auto',
-  //   marginBottom: m(20),
-  //   paddingHorizontal: m(20),
-  // },
-  // footerText: {
-  //   fontSize: m(12),
-  //   color: '#888',
-  //   textAlign: 'center',
-  //   lineHeight: m(18),
-  // },
-  // footerLink: {
-  //   color: '#ff6700',
-  //   fontWeight: '500',
-  // },
 });

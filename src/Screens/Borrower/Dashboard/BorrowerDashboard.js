@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,78 +9,38 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
+import { getBorrowerLoans, clearLoans } from '../../../Redux/Slices/borrowerLoanSlice';
 
 export default function BorrowerDashboard() {
   const navigation = useNavigation();
+  const dispatch = useDispatch();
   const user = useSelector(state => state.auth.user);
+  const { loans, summary, loading } = useSelector(state => state.borrowerLoans);
 
-  // Static data
-  const loanPlans = [
-    {
-      id: 1,
-      name: 'Personal Loan Basic',
-      interestRate: 12.5,
-      minAmount: 10000,
-      maxAmount: 500000,
-      duration: '12-36 months',
-    },
-    {
-      id: 2,
-      name: 'Personal Loan Premium',
-      interestRate: 11.5,
-      minAmount: 50000,
-      maxAmount: 1000000,
-      duration: '12-48 months',
-    },
-    {
-      id: 3,
-      name: 'Quick Loan',
-      interestRate: 13.5,
-      minAmount: 5000,
-      maxAmount: 100000,
-      duration: '6-24 months',
-    },
-  ];
+  useEffect(() => {
+    if (user?._id) {
+      dispatch(getBorrowerLoans({ borrowerId: user._id }));
+    }
+    return () => {
+      dispatch(clearLoans());
+    };
+  }, [user?._id, dispatch]);
 
-  const myLoans = [
-    {
-      id: 1,
-      planName: 'Personal Loan Basic',
-      amount: 50000,
-      status: 'Active',
-      dueDate: '2024-07-15',
-      remainingAmount: 35000,
-    },
-    {
-      id: 2,
-      planName: 'Quick Loan',
-      amount: 25000,
-      status: 'Pending',
-      dueDate: '2024-08-20',
-      remainingAmount: 25000,
-    },
-  ];
+  const myLoans = loans.slice(0, 2); // Show only first 2 loans on dashboard
 
   const quickActions = [
     {
       id: 1,
-      title: 'Apply for Loan',
-      icon: 'file-plus',
-      screen: 'LoanRequest',
-      color: '#ff6700',
-    },
-    {
-      id: 2,
       title: 'My Loans',
       icon: 'file-text',
       screen: 'MyLoans',
       color: '#2196F3',
     },
     {
-      id: 3,
+      id: 2,
       title: 'Payment History',
       icon: 'clock',
       screen: 'BorrowerLoanHistoryScreen',
@@ -88,60 +48,33 @@ export default function BorrowerDashboard() {
     },
   ];
 
-  const renderLoanPlan = ({ item }) => (
-    <TouchableOpacity
-      style={styles.planCard}
-      onPress={() => navigation.navigate('LoanRequest', { plan: item })}>
-      <View style={styles.planHeader}>
-        <Text style={styles.planName}>{item.name}</Text>
-        <View style={styles.interestBadge}>
-          <Text style={styles.interestText}>{item.interestRate}%</Text>
-        </View>
-      </View>
-      <View style={styles.planDetails}>
-        <View style={styles.planDetailItem}>
-          <Icon name="dollar-sign" size={16} color="#666" />
-          <Text style={styles.planDetailText}>
-            ₹{item.minAmount.toLocaleString()} - ₹{item.maxAmount.toLocaleString()}
-          </Text>
-        </View>
-        <View style={styles.planDetailItem}>
-          <Icon name="calendar" size={16} color="#666" />
-          <Text style={styles.planDetailText}>{item.duration}</Text>
-        </View>
-      </View>
-      <TouchableOpacity style={styles.applyButton}>
-        <Text style={styles.applyButtonText}>Apply Now</Text>
-        <Icon name="arrow-right" size={16} color="#ff6700" />
-      </TouchableOpacity>
-    </TouchableOpacity>
-  );
-
   const renderMyLoan = ({ item }) => (
     <TouchableOpacity
       style={styles.loanCard}
-      onPress={() => navigation.navigate('LoanDetailScreen', { loan: item })}>
+      onPress={() => navigation.navigate('BorrowerLoanDetails', { loan: item })}>
       <View style={styles.loanHeader}>
         <View>
-          <Text style={styles.loanPlanName}>{item.planName}</Text>
-          <Text style={styles.loanAmount}>₹{item.amount.toLocaleString()}</Text>
+          <Text style={styles.loanPlanName}>{item.lenderId?.userName || 'Unknown Lender'}</Text>
+          <Text style={styles.loanAmount}>₹{item.amount?.toLocaleString('en-IN')}</Text>
         </View>
         <View
           style={[
             styles.statusBadge,
             {
               backgroundColor:
-                item.status === 'Active' ? '#E8F5E9' : '#FFF3E0',
+                item.paymentStatus === 'paid' ? '#E8F5E9' :
+                item.paymentStatus === 'part paid' ? '#FFF3E0' : '#FFF3E0',
             },
           ]}>
           <Text
             style={[
               styles.statusText,
               {
-                color: item.status === 'Active' ? '#4CAF50' : '#FF9800',
+                color: item.paymentStatus === 'paid' ? '#4CAF50' :
+                       item.paymentStatus === 'part paid' ? '#FF9800' : '#FF9800',
               },
             ]}>
-            {item.status}
+            {item.paymentStatus?.charAt(0).toUpperCase() + item.paymentStatus?.slice(1)}
           </Text>
         </View>
       </View>
@@ -151,20 +84,20 @@ export default function BorrowerDashboard() {
             style={[
               styles.progressFill,
               {
-                width: `${((item.amount - item.remainingAmount) / item.amount) * 100}%`,
+                width: item.amount > 0 ? `${((item.totalPaid || 0) / item.amount) * 100}%` : '0%',
               },
             ]}
           />
         </View>
         <Text style={styles.progressText}>
-          Remaining: ₹{item.remainingAmount.toLocaleString()}
+          Remaining: ₹{item.remainingAmount?.toLocaleString('en-IN') || item.amount}
         </Text>
       </View>
       <View style={styles.loanFooter}>
         <View style={styles.loanFooterItem}>
           <Icon name="calendar" size={14} color="#666" />
           <Text style={styles.loanFooterText}>
-            Due: {new Date(item.dueDate).toLocaleDateString()}
+            Due: {item.loanEndDate ? new Date(item.loanEndDate).toLocaleDateString() : 'N/A'}
           </Text>
         </View>
         <Icon name="chevron-right" size={20} color="#666" />
@@ -172,8 +105,8 @@ export default function BorrowerDashboard() {
     </TouchableOpacity>
   );
 
-  const totalActiveLoans = myLoans.filter(l => l.status === 'Active').length;
-  const totalLoanAmount = myLoans.reduce((sum, loan) => sum + loan.amount, 0);
+  const totalActiveLoans = summary.activeLoans || 0;
+  const totalLoanAmount = summary.totalAmountBorrowed || 0;
 
   return (
     <View style={styles.container}>
@@ -226,10 +159,9 @@ export default function BorrowerDashboard() {
               <Icon name="check-circle" size={24} color="#FF9800" />
               <Text style={styles.statValue}>
                 ₹{(
-                  myLoans.reduce(
-                    (sum, loan) => sum + loan.remainingAmount,
-                    0,
-                  ) / 1000
+                  loans
+                    .filter(loan => loan.paymentStatus !== 'paid')
+                    .reduce((sum, loan) => sum + (loan.remainingAmount || 0), 0) / 1000
                 ).toFixed(0)}K
               </Text>
               <Text style={styles.statLabel}>Remaining</Text>
@@ -249,22 +181,11 @@ export default function BorrowerDashboard() {
             <FlatList
               data={myLoans}
               renderItem={renderMyLoan}
-              keyExtractor={item => item.id.toString()}
+              keyExtractor={item => item._id}
               scrollEnabled={false}
             />
           </View>
         )}
-
-        {/* Available Loan Plans */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Available Loan Plans</Text>
-          <FlatList
-            data={loanPlans}
-            renderItem={renderLoanPlan}
-            keyExtractor={item => item.id.toString()}
-            scrollEnabled={false}
-          />
-        </View>
       </ScrollView>
     </View>
   );
@@ -431,64 +352,7 @@ const styles = StyleSheet.create({
   loanFooterText: {
     fontSize: m(12),
     color: '#666',
-  },
-  planCard: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: m(12),
-    padding: m(16),
-    marginBottom: m(12),
-  },
-  planHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: m(12),
-  },
-  planName: {
-    fontSize: m(16),
-    fontWeight: '700',
-    color: '#333',
-    flex: 1,
-  },
-  interestBadge: {
-    backgroundColor: '#ff6700',
-    paddingHorizontal: m(12),
-    paddingVertical: m(6),
-    borderRadius: m(12),
-  },
-  interestText: {
-    fontSize: m(14),
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  planDetails: {
-    marginBottom: m(12),
-  },
-  planDetailItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(8),
-    marginBottom: m(8),
-  },
-  planDetailText: {
-    fontSize: m(14),
-    color: '#666',
-  },
-  applyButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: m(12),
-    borderWidth: 1,
-    borderColor: '#ff6700',
-    borderRadius: m(8),
-    gap: m(8),
-  },
-  applyButtonText: {
-    fontSize: m(14),
-    fontWeight: '600',
-    color: '#ff6700',
-  },
+  }
 });
 
 

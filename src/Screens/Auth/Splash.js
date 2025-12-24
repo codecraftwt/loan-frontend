@@ -112,7 +112,7 @@ export default function SplashScreen({navigation}) {
             ],
           },
         ]}>
-        <Text style={styles.appName}>LoanHub</Text>
+        {/* <Text style={styles.appName}>LoanHub</Text> */}
       </Animated.View>
 
       {/* Tagline with Animation */}
@@ -188,17 +188,19 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   taglineContainer: {
-    marginBottom: m(40),
+    marginBottom: m(30),
+    marginTop: m(50),
+    // backgroundColor:'red'
   },
   tagline: {
-    fontSize: m(18),
-    color: '#FFFFFF',
+    fontSize: m(20),
+    color: 'white',
     fontWeight: '300',
     letterSpacing: 1.5,
     opacity: 0.9,
   },
   loadingContainer: {
-    marginTop: m(30),
+    // marginTop: m(30),
   },
   loadingDots: {
     flexDirection: 'row',

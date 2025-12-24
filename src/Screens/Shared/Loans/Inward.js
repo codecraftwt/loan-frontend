@@ -430,15 +430,15 @@ export default function Inward({ navigation }) {
                     {/* Card Header */}
                     <View style={styles.cardHeader}>
                       <View style={styles.userInfo}>
-                        {user?.profileImage ? (
+                        {loan?.profileImage ? (
                           <Image
-                            source={{ uri: user.profileImage }}
+                            source={{ uri: loan.profileImage }}
                             style={styles.userAvatar}
                           />
                         ) : (
                           <View style={styles.avatarPlaceholder}>
                             <Text style={styles.avatarText}>
-                              {loan?.name?.charAt(0)?.toUpperCase() || 'B'}
+                              {(loan?.name || 'B')?.charAt(0)?.toUpperCase()}
                             </Text>
                           </View>
                         )}

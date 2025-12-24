@@ -30,6 +30,7 @@ const DetailCard = ({ icon, label, value }) => (
 
 export default function PersonalLoan({ route }) {
   const { loanDetails } = route.params;
+  console.log('loanDetails ======>',loanDetails)
   const user = useSelector(state => state.auth.user);
 
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -75,20 +76,6 @@ export default function PersonalLoan({ route }) {
     if (user?.roleId === 1 && user?.userName) {
       return user.userName;
     }
-    
-    // Debug: Log the structure to help identify the issue (only in development)
-    if (__DEV__) {
-      console.log('Lender info structure:', {
-        lenderId: loanDetails?.lenderId,
-        lenderIdType: typeof loanDetails?.lenderId,
-        lender: loanDetails?.lender,
-        lenderName: loanDetails?.lenderName,
-        userRole: user?.roleId,
-        userName: user?.userName,
-        loanDetailsKeys: Object.keys(loanDetails || {}),
-      });
-    }
-    
     return 'Unknown';
   };
 
@@ -218,15 +205,15 @@ export default function PersonalLoan({ route }) {
         {/* Profile Card */}
         <View style={styles.profileCard}>
           <View style={styles.profileHeader}>
-            {user?.profileImage ? (
+            {loanDetails.profileImage ? (
               <Image
-                source={{ uri: user.profileImage }}
+                source={{ uri: loanDetails.profileImage }}
                 style={styles.profileImage}
               />
             ) : (
               <View style={styles.profileAvatar}>
                 <Text style={styles.avatarText}>
-                  {user?.userName?.charAt(0)?.toUpperCase() || 'U'}
+                  {(loanDetails.name || user?.userName || 'U')?.charAt(0)?.toUpperCase()}
                 </Text>
               </View>
             )}
@@ -289,7 +276,7 @@ export default function PersonalLoan({ route }) {
                   {loanDetails.borrowerAcceptanceStatus?.toUpperCase() || 'PENDING'}
                 </Text>
               </View>
-              <Text style={styles.statusLabel}>Your Decision</Text>
+              <Text style={styles.statusLabel}>Borrower Decision</Text>
             </View>
           </View>
         </View>

@@ -1,10 +1,6 @@
 import {createSlice, createAsyncThunk} from '@reduxjs/toolkit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import instance from '../../Utils/AxiosInstance';
-// NOTE: Firebase cloud messaging is temporarily disabled on iOS while
-// resolving NativeEventEmitter issues. The token registration helpers
-// are currently no-ops to avoid runtime crashes.
-// import messaging from '@react-native-firebase/messaging';
 
 // Function to register the device token after login or signup
 const registerDeviceToken = async userId => {
