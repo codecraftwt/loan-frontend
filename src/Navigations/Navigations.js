@@ -30,6 +30,8 @@ import MyLoans from '../Screens/Borrower/Loans/MyLoans';
 import BorrowerLoanDetails from '../Screens/Borrower/Loans/BorrowerLoanDetails';
 import MakePayment from '../Screens/Borrower/Loans/MakePayment';
 import PaymentHistory from '../Screens/Borrower/Loans/PaymentHistory';
+// Lender Payment Screens
+import PendingPayments from '../Screens/Lender/Payments/PendingPayments';
 
 const Navigation = () => {
   const Stack = createNativeStackNavigator();
@@ -61,6 +63,10 @@ const Navigation = () => {
 
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="AnalyticsScreen" component={AnalyticsScreen} />
+      
+      {/* Lender Payment Screens */}
+      <Stack.Screen name="PendingPayments" component={PendingPayments} />
+      
       {/* Admin Screens */}
       <Stack.Screen name="AddPlan" component={AddPlan} />
       <Stack.Screen name="EditPlan" component={EditPlan} />

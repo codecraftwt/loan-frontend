@@ -58,8 +58,9 @@ export const borrowerLoanAPI = {
   // Make a payment for a loan
   makePayment: async (loanId, paymentData) => {
     try {
+      console.log('Submitting payment for loan:', loanId, paymentData);
       const response = await axiosInstance.post(
-        `/borrower/loans/payment/${loanId}`,
+        `borrower/loans/payment/${loanId}`,
         paymentData,
         {
           headers: {
@@ -67,9 +68,16 @@ export const borrowerLoanAPI = {
           },
         }
       );
+      console.log('Payment submission response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error making payment:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+      });
       throw error;
     }
   },

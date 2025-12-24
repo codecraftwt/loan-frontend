@@ -14,6 +14,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
 import Ionicons from 'react-native-vector-icons/Ionicons'; import LinearGradient from 'react-native-linear-gradient';
 import { getLoanStats, getRecentActivities } from '../../../Redux/Slices/loanSlice';
+import { getPendingPayments } from '../../../Redux/Slices/lenderPaymentSlice';
 import { useDispatch, useSelector } from 'react-redux';
 import useFetchUserFromStorage from '../../../Redux/hooks/useFetchUserFromStorage';
 import { m } from 'walstar-rn-responsive';
@@ -26,6 +27,16 @@ export default function Home() {
   const user = useSelector(state => state.auth.user);
   const loanCount = useSelector(state => state.loans.loanStats);
   const recentActivities = useSelector(state => state.loans.recentActivities || []);
+  const { pendingPayments, loading: pendingPaymentsLoading } = useSelector(state => state.lenderPayments);
+
+  // Debug: Log pending payments
+  useEffect(() => {
+    console.log('Pending payments in dashboard:', pendingPayments);
+    if (pendingPayments && pendingPayments.length > 0) {
+      const totalPending = pendingPayments.reduce((total, loan) => total + (loan.pendingPayments?.length || 0), 0);
+      console.log('Total pending payments:', totalPending);
+    }
+  }, [pendingPayments]);
 
   const [refreshing, setRefreshing] = useState(false);
   const [showAllActivity, setShowAllActivity] = useState(false);
@@ -69,6 +80,10 @@ export default function Home() {
     React.useCallback(() => {
       dispatch(getLoanStats(aadhaarNumber));
       dispatch(getRecentActivities(5));
+      // Fetch pending payments for lender
+      dispatch(getPendingPayments({ page: 1, limit: 10 })).then((result) => {
+        console.log('Pending payments fetched:', result);
+      });
 
       // Reset animations
       fadeAnim.setValue(0);
@@ -104,6 +119,7 @@ export default function Home() {
     await Promise.all([
       dispatch(getLoanStats(aadhaarNumber)),
       dispatch(getRecentActivities(5)),
+      dispatch(getPendingPayments({ page: 1, limit: 10 })),
     ]);
     setRefreshing(false);
   };
@@ -192,6 +208,68 @@ export default function Home() {
             <View style={styles.onlineIndicator} />
           </TouchableOpacity>
         </View>
+
+        {/* Pending Payments Notification */}
+        {pendingPayments && Array.isArray(pendingPayments) && pendingPayments.length > 0 && pendingPayments.some(loan => loan.pendingPayments && loan.pendingPayments.length > 0) && (
+          <Animated.View
+            style={[
+              styles.pendingPaymentCard,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideUpAnim }],
+              },
+            ]}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('PendingPayments')}
+              activeOpacity={0.8}>
+              <LinearGradient
+                colors={['#F59E0B', '#F97316']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.pendingPaymentGradient}>
+                <View style={styles.pendingPaymentContent}>
+                  <View style={styles.pendingPaymentIcon}>
+                    <Ionicons name="notifications" size={24} color="#FFFFFF" />
+                    {pendingPayments.reduce((total, loan) => total + (loan.pendingPayments?.length || 0), 0) > 0 && (
+                      <View style={styles.badge}>
+                        <Text style={styles.badgeText}>
+                          {pendingPayments.reduce((total, loan) => total + (loan.pendingPayments?.length || 0), 0)}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <View style={styles.pendingPaymentText}>
+                    <Text style={styles.pendingPaymentTitle}>
+                      Pending Payments
+                    </Text>
+                    <Text style={styles.pendingPaymentSubtitle} numberOfLines={2}>
+                      {(() => {
+                        const totalPending = pendingPayments.reduce((total, loan) => total + (loan.pendingPayments?.length || 0), 0);
+                        if (totalPending === 0) return '';
+                        const firstLoan = pendingPayments.find(loan => loan.pendingPayments && loan.pendingPayments.length > 0);
+                        if (firstLoan && firstLoan.pendingPayments && firstLoan.pendingPayments.length > 0) {
+                          const firstPayment = firstLoan.pendingPayments[0];
+                          const borrowerName = firstLoan.loanName || 'Borrower';
+                          const amount = typeof firstPayment.amount === 'number' 
+                            ? firstPayment.amount 
+                            : parseFloat(firstPayment.amount) || 0;
+                          const formattedAmount = `₹${amount.toLocaleString('en-IN')}`;
+                          if (totalPending === 1) {
+                            return `${borrowerName} paid ${formattedAmount}. Please check`;
+                          } else {
+                            return `${borrowerName} paid ${formattedAmount} and ${totalPending - 1} more payment${totalPending - 1 !== 1 ? 's' : ''} awaiting review`;
+                          }
+                        }
+                        return `${totalPending} payment${totalPending !== 1 ? 's' : ''} awaiting your review`;
+                      })()}
+                    </Text>
+                  </View>
+                  <Icon name="chevron-right" size={24} color="#FFFFFF" />
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+          </Animated.View>
+        )}
 
         {/* Premium CTA with Simplified Animation */}
         <Animated.View
@@ -1137,5 +1215,63 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-SemiBold',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  // Pending Payments Notification Card
+  pendingPaymentCard: {
+    marginHorizontal: m(16),
+    marginBottom: m(16),
+    borderRadius: m(16),
+    overflow: 'hidden',
+    elevation: 4,
+    shadowColor: '#F59E0B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  pendingPaymentGradient: {
+    borderRadius: m(16),
+    padding: m(16),
+  },
+  pendingPaymentContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  pendingPaymentIcon: {
+    position: 'relative',
+    marginRight: m(12),
+  },
+  badge: {
+    position: 'absolute',
+    top: -m(6),
+    right: -m(6),
+    backgroundColor: '#EF4444',
+    borderRadius: m(10),
+    minWidth: m(20),
+    height: m(20),
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: m(4),
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: m(10),
+    fontWeight: '700',
+  },
+  pendingPaymentText: {
+    flex: 1,
+  },
+  pendingPaymentTitle: {
+    fontSize: m(16),
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: m(4),
+  },
+  pendingPaymentSubtitle: {
+    fontSize: m(12),
+    color: '#FFFFFF',
+    opacity: 0.9,
   },
 });

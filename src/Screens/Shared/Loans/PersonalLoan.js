@@ -13,6 +13,8 @@ import { m } from 'walstar-rn-responsive';
 import { useSelector } from 'react-redux';
 import AgreementModal from '../../PromptBox/AgreementModal';
 import Header from '../../../Components/Header';
+import FontAwesome from 'react-native-vector-icons/FontAwesome';
+
 
 const DetailCard = ({ icon, label, value }) => (
   <View style={styles.detailCard}>
@@ -26,20 +28,93 @@ const DetailCard = ({ icon, label, value }) => (
   </View>
 );
 
-export default function PersonalLoan({ route, navigation }) {
-  const { loanDetails, isEdit } = route.params;
+export default function PersonalLoan({ route }) {
+  const { loanDetails } = route.params;
   const user = useSelector(state => state.auth.user);
 
   const [isModalVisible, setIsModalVisible] = useState(false);
 
   const formatDate = date => moment(date).format('DD MMM, YYYY');
+  const formatCurrency = (amount) => {
+    const numAmount = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
+    return `₹${numAmount.toLocaleString('en-IN')}`;
+  };
+
+  // Get lender name with multiple fallbacks
+  const getLenderName = () => {
+    // Check multiple possible structures for lenderId object
+    if (loanDetails?.lenderId) {
+      // If lenderId is an object with userName
+      if (typeof loanDetails.lenderId === 'object' && loanDetails.lenderId.userName) {
+        return loanDetails.lenderId.userName;
+      }
+      // If lenderId is an object with name
+      if (typeof loanDetails.lenderId === 'object' && loanDetails.lenderId.name) {
+        return loanDetails.lenderId.name;
+      }
+      // If lenderId is a string ID, check if current user is the lender
+      if (typeof loanDetails.lenderId === 'string' && user?.roleId === 1 && user?.userName) {
+        return user.userName;
+      }
+    }
+    
+    // Check lender object
+    if (loanDetails?.lender?.userName) {
+      return loanDetails.lender.userName;
+    }
+    if (loanDetails?.lender?.name) {
+      return loanDetails.lender.name;
+    }
+    
+    // Check lenderName field
+    if (loanDetails?.lenderName) {
+      return loanDetails.lenderName;
+    }
+    
+    // If user is a lender viewing their own loan, show their name
+    if (user?.roleId === 1 && user?.userName) {
+      return user.userName;
+    }
+    
+    // Debug: Log the structure to help identify the issue (only in development)
+    if (__DEV__) {
+      console.log('Lender info structure:', {
+        lenderId: loanDetails?.lenderId,
+        lenderIdType: typeof loanDetails?.lenderId,
+        lender: loanDetails?.lender,
+        lenderName: loanDetails?.lenderName,
+        userRole: user?.roleId,
+        userName: user?.userName,
+        loanDetailsKeys: Object.keys(loanDetails || {}),
+      });
+    }
+    
+    return 'Unknown';
+  };
+
+  // Calculate loan amounts
+  const loanAmount = typeof loanDetails.amount === 'number' 
+    ? loanDetails.amount 
+    : parseFloat(loanDetails.amount) || 0;
+  const totalPaid = typeof loanDetails.totalPaid === 'number'
+    ? loanDetails.totalPaid
+    : parseFloat(loanDetails.totalPaid) || 0;
+  const remainingAmount = typeof loanDetails.remainingAmount === 'number'
+    ? loanDetails.remainingAmount
+    : parseFloat(loanDetails.remainingAmount) || loanAmount;
+  
+  // Check if loan is closed
+  const isLoanClosed = remainingAmount <= 0 && totalPaid > 0;
 
   // Get display status based on borrower's decision
   const getDisplayStatus = () => {
     if (loanDetails.borrowerAcceptanceStatus?.toLowerCase() === 'rejected') {
       return 'rejected';
     }
-    return loanDetails.status;
+    if (isLoanClosed) {
+      return 'closed';
+    }
+    return loanDetails.paymentStatus || loanDetails.status;
   };
 
   const getStatusColor = (status) => {
@@ -49,6 +124,9 @@ export default function PersonalLoan({ route, navigation }) {
       case 'rejected': return '#EF4444';
       case 'pending': return '#F59E0B';
       case 'paid': return '#10B981';
+      case 'closed': return '#10B981';
+      case 'part paid': return '#F59E0B';
+      case 'overdue': return '#EF4444';
       default: return '#6B7280';
     }
   };
@@ -59,6 +137,9 @@ export default function PersonalLoan({ route, navigation }) {
       case 'accepted': return 'check-circle';
       case 'rejected': return 'x-circle';
       case 'paid': return 'check-circle';
+      case 'closed': return 'check-circle';
+      case 'part paid': return 'clock';
+      case 'overdue': return 'alert-circle';
       default: return 'clock';
     }
   };
@@ -68,13 +149,26 @@ export default function PersonalLoan({ route, navigation }) {
     if (loanDetails.borrowerAcceptanceStatus?.toLowerCase() === 'rejected') {
       return 'Rejected';
     }
-    return loanDetails.status?.charAt(0).toUpperCase() + loanDetails.status?.slice(1);
+    if (isLoanClosed) {
+      return 'Closed';
+    }
+    return (loanDetails.paymentStatus || loanDetails.status)?.charAt(0).toUpperCase() + (loanDetails.paymentStatus || loanDetails.status)?.slice(1);
   };
 
   const loanInfo = [
     {
       label: 'Loan Amount',
-      value: `₹${loanDetails.amount?.toLocaleString('en-IN')}`,
+      value: formatCurrency(loanAmount),
+      icon: 'dollar-sign',
+    },
+    {
+      label: 'Total Paid',
+      value: formatCurrency(totalPaid),
+      icon: 'check-circle',
+    },
+    {
+      label: 'Remaining Amount',
+      value: isLoanClosed ? '₹0 (Loan Closed)' : formatCurrency(remainingAmount),
       icon: 'dollar-sign',
     },
     {
@@ -99,7 +193,7 @@ export default function PersonalLoan({ route, navigation }) {
     },
     {
       label: 'Lender',
-      value: loanDetails?.lenderId?.userName || 'Unknown',
+      value: getLenderName(),
       icon: 'user',
     },
     {
@@ -148,7 +242,7 @@ export default function PersonalLoan({ route, navigation }) {
                   </Text>
                 </View>
                 <View style={styles.metaItem}>
-                  <Icon name="id-card" size={14} color="#6B7280" />
+                  <FontAwesome name="id-card" color="#6B7280" size={14} />
                   <Text style={styles.metaText}>
                     {loanDetails.aadhaarNumber || 'N/A'}
                   </Text>
@@ -160,8 +254,8 @@ export default function PersonalLoan({ route, navigation }) {
           {/* Status Indicators */}
           <View style={styles.statusContainer}>
             <View style={styles.statusItem}>
-              <View style={[styles.statusBadge, { backgroundColor: getStatusColor(loanDetails.status) }]}>
-                <Icon name={getStatusIcon(loanDetails.status)} size={14} color="#FFFFFF" />
+              <View style={[styles.statusBadge, { backgroundColor: isLoanClosed ? '#10B981' : getStatusColor(loanDetails.status) }]}>
+                <Icon name={isLoanClosed ? 'check-circle' : getStatusIcon(loanDetails.status)} size={14} color="#FFFFFF" />
                 <Text style={styles.statusText}>
                   {getStatusDisplayText()}
                 </Text>
@@ -199,6 +293,58 @@ export default function PersonalLoan({ route, navigation }) {
             </View>
           </View>
         </View>
+
+        {/* Payment Summary Card */}
+        {loanAmount > 0 && (
+          <View style={styles.paymentSummaryCard}>
+            <Text style={styles.paymentSummaryTitle}>Payment Summary</Text>
+            
+            <View style={styles.paymentSummaryRow}>
+              <View style={styles.paymentSummaryItem}>
+                <Text style={styles.paymentSummaryLabel}>Loan Amount</Text>
+                <Text style={styles.paymentSummaryValue}>{formatCurrency(loanAmount)}</Text>
+              </View>
+              <View style={styles.paymentSummaryItem}>
+                <Text style={styles.paymentSummaryLabel}>Total Paid</Text>
+                <Text style={[styles.paymentSummaryValue, styles.paidAmount]}>
+                  {formatCurrency(totalPaid)}
+                </Text>
+              </View>
+              <View style={styles.paymentSummaryItem}>
+                <Text style={styles.paymentSummaryLabel}>Remaining</Text>
+                <Text style={[styles.paymentSummaryValue, isLoanClosed ? styles.closedAmount : styles.remainingAmount]}>
+                  {isLoanClosed ? '₹0' : formatCurrency(remainingAmount)}
+                </Text>
+              </View>
+            </View>
+
+            {/* Progress Bar */}
+            <View style={styles.progressContainer}>
+              <View style={styles.progressBar}>
+                <View 
+                  style={[
+                    styles.progressFill, 
+                    { 
+                      width: `${loanAmount > 0 ? (totalPaid / loanAmount) * 100 : 0}%`,
+                      backgroundColor: isLoanClosed ? '#10B981' : '#3B82F6'
+                    }
+                  ]} 
+                />
+              </View>
+              <Text style={styles.progressText}>
+                {loanAmount > 0 ? `${((totalPaid / loanAmount) * 100).toFixed(1)}%` : '0%'} Paid
+              </Text>
+            </View>
+
+            {/* Loan Closed Badge */}
+            {isLoanClosed && (
+              <View style={styles.closedBadge}>
+                <Icon name="check-circle" size={20} color="#10B981" />
+                <Text style={styles.closedBadgeText}>Loan Closed - All Amount Paid</Text>
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Loan Details Grid */}
         <View style={styles.detailsSection}>
@@ -562,5 +708,91 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: m(12),
     color: '#9CA3AF',
+  },
+  
+  // Payment Summary Card
+  paymentSummaryCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: m(16),
+    padding: m(20),
+    marginBottom: m(16),
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+  },
+  paymentSummaryTitle: {
+    fontSize: m(18),
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: m(16),
+  },
+  paymentSummaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: m(16),
+    gap: m(12),
+  },
+  paymentSummaryItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  paymentSummaryLabel: {
+    fontSize: m(12),
+    color: '#6B7280',
+    marginBottom: m(4),
+  },
+  paymentSummaryValue: {
+    fontSize: m(16),
+    fontWeight: '700',
+    color: '#111827',
+  },
+  paidAmount: {
+    color: '#10B981',
+  },
+  remainingAmount: {
+    color: '#EF4444',
+  },
+  closedAmount: {
+    color: '#10B981',
+  },
+  progressContainer: {
+    marginBottom: m(16),
+  },
+  progressBar: {
+    height: m(8),
+    backgroundColor: '#E5E7EB',
+    borderRadius: m(4),
+    overflow: 'hidden',
+    marginBottom: m(8),
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: m(4),
+    backgroundColor: '#3B82F6',
+  },
+  progressText: {
+    fontSize: m(12),
+    color: '#6B7280',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  closedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ECFDF5',
+    borderRadius: m(8),
+    padding: m(12),
+    gap: m(8),
+    marginTop: m(8),
+  },
+  closedBadgeText: {
+    fontSize: m(14),
+    fontWeight: '600',
+    color: '#10B981',
   },
 });

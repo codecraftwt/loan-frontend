@@ -6,13 +6,14 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import moment from 'moment';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
-import axiosInstance from '../../../Utils/AxiosInstance';
+import borrowerLoanAPI from '../../../Services/borrowerLoanService';
+import Toast from 'react-native-toast-message';
 
 export default function BorrowerLoanDetails() {
   const navigation = useNavigation();
@@ -30,33 +31,42 @@ export default function BorrowerLoanDetails() {
     fetchPaymentHistory();
   }, []);
 
+  // Refresh payment history when screen is focused (e.g., returning from payment screen)
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchPaymentHistory();
+    }, [loan._id])
+  );
+
   const fetchPaymentHistory = async () => {
     try {
       // Fetch payment history for this loan
-      const response = await axiosInstance.get(`/borrower/loans/payment-history/${loan._id}`);
-      setPaymentHistory(response.data.data.paymentHistory || []);
+      const response = await borrowerLoanAPI.getPaymentHistory(loan._id);
+      const paymentData = response.data || {};
+      setPaymentHistory(paymentData.paymentHistory || []);
+      
+      // Update loan details with latest totals from API
+      if (paymentData.totalPaid !== undefined) {
+        setLoanDetails(prev => ({
+          ...prev,
+          // Ensure amounts are numbers, not strings
+          totalPaid: typeof paymentData.totalPaid === 'number' 
+            ? paymentData.totalPaid 
+            : parseFloat(paymentData.totalPaid) || 0,
+          remainingAmount: typeof paymentData.remainingAmount === 'number'
+            ? paymentData.remainingAmount
+            : parseFloat(paymentData.remainingAmount) || 0,
+          paymentStatus: paymentData.paymentStatus,
+        }));
+      }
     } catch (error) {
       console.error('Error fetching payment history:', error);
-      // Fallback to static data for now
-      setPaymentHistory([
-        {
-          _id: '1',
-          amount: 15000,
-          paymentMode: 'cash',
-          paymentType: 'one-time',
-          paymentDate: '2024-03-15T10:30:00.000Z',
-          paymentStatus: 'confirmed',
-          confirmedAt: '2024-03-15T11:00:00.000Z',
-        },
-        {
-          _id: '2',
-          amount: 15000,
-          paymentMode: 'online',
-          paymentType: 'installment',
-          paymentDate: '2024-06-15T10:30:00.000Z',
-          paymentStatus: 'pending',
-        },
-      ]);
+      Toast.show({
+        type: 'error',
+        position: 'top',
+        text1: 'Error',
+        text2: error.response?.data?.message || error.message || 'Failed to fetch payment history',
+      });
     }
   };
 
@@ -76,7 +86,7 @@ export default function BorrowerLoanDetails() {
     switch (status?.toLowerCase()) {
       case 'paid': return 'check-circle';
       case 'part paid': return 'clock';
-      case 'pending': return 'circle';
+      case 'pending': return 'clock';
       case 'confirmed': return 'check-circle';
       case 'rejected': return 'x-circle';
       case 'overdue': return 'x-circle';
@@ -85,12 +95,19 @@ export default function BorrowerLoanDetails() {
   };
 
   const formatCurrency = (amount) => {
-    return `₹${amount?.toLocaleString('en-IN') || 0}`;
+    // Ensure amount is a number before formatting to avoid string concatenation
+    const numAmount = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
+    return `₹${numAmount.toLocaleString('en-IN')}`;
   };
 
   const calculateProgress = () => {
-    const totalAmount = loanDetails.amount || 0;
-    const totalPaid = loanDetails.totalPaid || 0;
+    // Ensure amounts are numbers, not strings
+    const totalAmount = typeof loanDetails.amount === 'number' 
+      ? loanDetails.amount 
+      : parseFloat(loanDetails.amount) || 0;
+    const totalPaid = typeof loanDetails.totalPaid === 'number'
+      ? loanDetails.totalPaid
+      : parseFloat(loanDetails.totalPaid) || 0;
     return totalAmount > 0 ? (totalPaid / totalAmount) * 100 : 0;
   };
 
@@ -148,6 +165,16 @@ export default function BorrowerLoanDetails() {
         {item.confirmedAt && (
           <Text style={styles.confirmedDate}>
             Confirmed: {moment(item.confirmedAt).format('DD MMM YYYY, hh:mm A')}
+          </Text>
+        )}
+        {item.rejectedAt && item.reason && (
+          <Text style={styles.rejectedDate}>
+            Rejected: {item.reason}
+          </Text>
+        )}
+        {item.notes && (
+          <Text style={styles.paymentNotes}>
+            Note: {item.notes}
           </Text>
         )}
       </View>
@@ -541,6 +568,17 @@ const styles = StyleSheet.create({
   confirmedDate: {
     fontSize: m(12),
     color: '#10B981',
+  },
+  rejectedDate: {
+    fontSize: m(12),
+    color: '#EF4444',
+    marginTop: m(4),
+  },
+  paymentNotes: {
+    fontSize: m(12),
+    color: '#6B7280',
+    marginTop: m(4),
+    fontStyle: 'italic',
   },
   actionsContainer: {
     gap: m(12),

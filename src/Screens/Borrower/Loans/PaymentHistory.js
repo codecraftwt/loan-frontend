@@ -15,7 +15,7 @@ import moment from 'moment';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
 import Toast from 'react-native-toast-message';
-import axiosInstance from '../../../Utils/AxiosInstance';
+import borrowerLoanAPI from '../../../Services/borrowerLoanService';
 
 export default function PaymentHistory() {
   const navigation = useNavigation();
@@ -43,17 +43,22 @@ export default function PaymentHistory() {
   const fetchPaymentHistory = async () => {
     try {
       setLoading(true);
-      const response = await axiosInstance.get(`/borrower/loans/payment-history/${loan._id}`);
-      const payments = response.data.data.paymentHistory || [];
+      const response = await borrowerLoanAPI.getPaymentHistory(loan._id);
+      const payments = response.data?.paymentHistory || [];
       setPaymentHistory(payments);
       calculateStats(payments);
+      
+      // Update loan totals from response
+      if (response.data) {
+        // Update loan data if needed
+      }
     } catch (error) {
       console.error('Error fetching payment history:', error);
       Toast.show({
         type: 'error',
         position: 'top',
         text1: 'Error',
-        text2: error.response?.data?.message || 'Failed to fetch payment history',
+        text2: error.response?.data?.message || error.message || 'Failed to fetch payment history',
       });
     } finally {
       setLoading(false);
@@ -63,7 +68,15 @@ export default function PaymentHistory() {
   const calculateStats = (payments) => {
     const stats = payments.reduce(
       (acc, payment) => {
-        acc.totalPaid += payment.amount || 0;
+        // Only count confirmed payments in totalPaid
+        if (payment.paymentStatus?.toLowerCase() === 'confirmed') {
+          // Ensure amount is parsed as number to avoid string concatenation
+          const amount = typeof payment.amount === 'number' 
+            ? payment.amount 
+            : parseFloat(payment.amount) || 0;
+          acc.totalPaid = (acc.totalPaid || 0) + amount;
+        }
+        
         switch (payment.paymentStatus?.toLowerCase()) {
           case 'pending':
             acc.pendingPayments += 1;
@@ -107,7 +120,9 @@ export default function PaymentHistory() {
   };
 
   const formatCurrency = (amount) => {
-    return `₹${amount?.toLocaleString('en-IN') || 0}`;
+    // Ensure amount is a number before formatting to avoid string concatenation
+    const numAmount = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
+    return `₹${numAmount.toLocaleString('en-IN')}`;
   };
 
   const renderPaymentItem = ({ item }) => (

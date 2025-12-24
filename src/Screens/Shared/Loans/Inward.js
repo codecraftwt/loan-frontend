@@ -143,29 +143,55 @@ export default function Inward({ navigation }) {
     }
   }, [highlightLoanId, lenderLoans]);
 
+  const formatCurrency = (amount) => {
+    const numAmount = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
+    return `₹${numAmount.toLocaleString('en-IN')}`;
+  };
+
+  const getLoanStatus = (loan) => {
+    const loanAmount = typeof loan.amount === 'number' ? loan.amount : parseFloat(loan.amount) || 0;
+    const totalPaid = typeof loan.totalPaid === 'number' ? loan.totalPaid : parseFloat(loan.totalPaid) || 0;
+    const remainingAmount = typeof loan.remainingAmount === 'number' ? loan.remainingAmount : parseFloat(loan.remainingAmount) || loanAmount;
+    
+    if (remainingAmount <= 0 && totalPaid > 0) {
+      return 'closed';
+    }
+    return loan?.paymentStatus?.toLowerCase() || loan?.status?.toLowerCase();
+  };
+
   const getStatusColor = (loan) => {
-    const status = loan?.status?.toLowerCase();
+    const status = getLoanStatus(loan);
     switch (status) {
       case 'accepted': return '#10B981';
       case 'rejected': return '#EF4444';
       case 'pending': return '#F59E0B';
       case 'paid': return '#10B981';
+      case 'closed': return '#10B981';
+      case 'part paid': return '#F59E0B';
+      case 'overdue': return '#EF4444';
       default: return '#6B7280';
     }
   };
 
   const getStatusIcon = (loan) => {
-    const status = loan?.status?.toLowerCase();
+    const status = getLoanStatus(loan);
     switch (status) {
       case 'accepted': return 'check-circle';
       case 'rejected': return 'cancel';
       case 'paid': return 'check-circle';
+      case 'closed': return 'check-circle';
+      case 'part paid': return 'pending';
+      case 'overdue': return 'error';
       default: return 'pending';
     }
   };
 
   const getStatusText = (loan) => {
-    return loan?.status?.charAt(0).toUpperCase() + loan?.status?.slice(1);
+    const status = getLoanStatus(loan);
+    if (status === 'closed') {
+      return 'Closed';
+    }
+    return (loan?.paymentStatus || loan?.status)?.charAt(0).toUpperCase() + (loan?.paymentStatus || loan?.status)?.slice(1);
   };
 
   return (
@@ -465,6 +491,50 @@ export default function Inward({ navigation }) {
                         </View>
                       )}
                     </View>
+
+                    {/* Payment Summary */}
+                    {(() => {
+                      const loanAmount = typeof loan.amount === 'number' ? loan.amount : parseFloat(loan.amount) || 0;
+                      const totalPaid = typeof loan.totalPaid === 'number' ? loan.totalPaid : parseFloat(loan.totalPaid) || 0;
+                      const remainingAmount = typeof loan.remainingAmount === 'number' ? loan.remainingAmount : parseFloat(loan.remainingAmount) || loanAmount;
+                      const isLoanClosed = remainingAmount <= 0 && totalPaid > 0;
+                      const paymentPercent = loanAmount > 0 ? (totalPaid / loanAmount) * 100 : 0;
+
+                      return loanAmount > 0 ? (
+                        <View style={styles.paymentSummary}>
+                          <View style={styles.paymentSummaryRow}>
+                            <View style={styles.paymentItem}>
+                              <Text style={styles.paymentLabel}>Paid</Text>
+                              <Text style={[styles.paymentValue, styles.paidAmount]}>
+                                {formatCurrency(totalPaid)}
+                              </Text>
+                            </View>
+                            <View style={styles.paymentDivider} />
+                            <View style={styles.paymentItem}>
+                              <Text style={styles.paymentLabel}>Remaining</Text>
+                              <Text style={[styles.paymentValue, isLoanClosed ? styles.closedAmount : styles.remainingAmount]}>
+                                {isLoanClosed ? '₹0' : formatCurrency(remainingAmount)}
+                              </Text>
+                            </View>
+                          </View>
+                          <View style={styles.paymentProgressBar}>
+                            <View 
+                              style={[
+                                styles.paymentProgressFill, 
+                                { 
+                                  width: `${paymentPercent}%`,
+                                  backgroundColor: isLoanClosed ? '#10B981' : '#3B82F6'
+                                }
+                              ]} 
+                            />
+                          </View>
+                          <Text style={styles.paymentProgressText}>
+                            {paymentPercent.toFixed(1)}% Paid
+                            {isLoanClosed && ' • Loan Closed'}
+                          </Text>
+                        </View>
+                      ) : null;
+                    })()}
 
                     {/* Card Footer */}
                     <View style={styles.cardFooter}>
@@ -869,5 +939,66 @@ const styles = StyleSheet.create({
     fontSize: m(14),
     color: '#374151',
     height: m(44),
+  },
+
+  // Payment Summary
+  paymentSummary: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: m(12),
+    padding: m(12),
+    marginTop: m(12),
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  paymentSummaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: m(12),
+  },
+  paymentItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  paymentLabel: {
+    fontSize: m(11),
+    color: '#6B7280',
+    marginBottom: m(4),
+  },
+  paymentValue: {
+    fontSize: m(14),
+    fontWeight: '700',
+    color: '#111827',
+  },
+  paidAmount: {
+    color: '#10B981',
+  },
+  remainingAmount: {
+    color: '#EF4444',
+  },
+  closedAmount: {
+    color: '#10B981',
+  },
+  paymentDivider: {
+    width: 1,
+    height: m(40),
+    backgroundColor: '#E5E7EB',
+  },
+  paymentProgressBar: {
+    height: m(6),
+    backgroundColor: '#E5E7EB',
+    borderRadius: m(3),
+    overflow: 'hidden',
+    marginBottom: m(6),
+  },
+  paymentProgressFill: {
+    height: '100%',
+    borderRadius: m(3),
+    backgroundColor: '#3B82F6',
+  },
+  paymentProgressText: {
+    fontSize: m(11),
+    color: '#6B7280',
+    textAlign: 'center',
+    fontWeight: '500',
   },
 });

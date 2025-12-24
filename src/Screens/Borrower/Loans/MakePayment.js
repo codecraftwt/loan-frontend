@@ -16,12 +16,15 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
 import Toast from 'react-native-toast-message';
-import axiosInstance from '../../../Utils/AxiosInstance';
+import borrowerLoanAPI from '../../../Services/borrowerLoanService';
+import { useDispatch } from 'react-redux';
+import { getBorrowerLoans } from '../../../Redux/Slices/borrowerLoanSlice';
 
 export default function MakePayment() {
   const navigation = useNavigation();
   const route = useRoute();
   const { loan } = route.params;
+  const dispatch = useDispatch();
 
   const [loading, setLoading] = useState(false);
   const [paymentMode, setPaymentMode] = useState('');
@@ -139,32 +142,32 @@ export default function MakePayment() {
         });
       }
 
-      const response = await axiosInstance.post(
-        `/borrower/loans/payment/${loan._id}`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      );
+      const response = await borrowerLoanAPI.makePayment(loan._id, formData);
 
       Toast.show({
         type: 'success',
         position: 'top',
-        text1: 'Success',
-        text2: response.data.message || 'Payment submitted successfully',
+        text1: 'Payment Submitted',
+        text2: response.message || 'Payment submitted successfully. Awaiting lender confirmation.',
       });
 
-      // Navigate back to loan details
-      navigation.goBack();
+      // Refresh loan data after successful payment
+      // Navigate back to loan details with updated loan data
+      navigation.navigate('BorrowerLoanDetails', { 
+        loan: {
+          ...loan,
+          totalPaid: response.data?.totalPaid || loan.totalPaid,
+          remainingAmount: response.data?.remainingAmount || loan.remainingAmount,
+          paymentStatus: response.data?.paymentStatus || loan.paymentStatus,
+        }
+      });
     } catch (error) {
       console.error('Payment submission error:', error);
       Toast.show({
         type: 'error',
         position: 'top',
-        text1: 'Error',
-        text2: error.response?.data?.message || 'Failed to submit payment',
+        text1: 'Payment Failed',
+        text2: error.response?.data?.message || error.message || 'Failed to submit payment. Please try again.',
       });
     } finally {
       setLoading(false);

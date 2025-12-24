@@ -9,7 +9,7 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useDispatch, useSelector } from 'react-redux';
@@ -44,6 +44,15 @@ export default function MyLoans() {
       dispatch(clearLoans());
     };
   }, [user?._id]);
+
+  // Refresh loans when screen is focused (e.g., after lender confirms/rejects payment)
+  useFocusEffect(
+    React.useCallback(() => {
+      if (user?._id) {
+        fetchMyLoans();
+      }
+    }, [user?._id])
+  );
 
   useEffect(() => {
     filterLoans();
