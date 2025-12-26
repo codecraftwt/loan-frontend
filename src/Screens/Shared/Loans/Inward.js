@@ -17,7 +17,6 @@ import {
 } from '../../../Redux/Slices/loanSlice';
 import { useFocusEffect, useRoute } from '@react-navigation/native';
 import moment from 'moment';
-import Toast from 'react-native-toast-message';
 import LoaderSkeleton from '../../../Components/LoaderSkeleton';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
@@ -27,7 +26,7 @@ export default function Inward({ navigation }) {
   const dispatch = useDispatch();
   const route = useRoute();
   const user = useSelector(state => state.auth.user);
-  const { lenderLoans, loading, error } = useSelector(
+  const { lenderLoans, loading } = useSelector(
     state => state.loans,
   );
   

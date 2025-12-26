@@ -30,7 +30,6 @@ import useFetchUserFromStorage from '../../../Redux/hooks/useFetchUserFromStorag
 const ProfileDetails = ({ navigation }) => {
   const dispatch = useDispatch();
   const profileData = useSelector(state => state.auth.user);
-  const isLoading = useSelector(state => state.auth.loading);
 
   useFetchUserFromStorage();
 
@@ -90,7 +89,6 @@ const ProfileDetails = ({ navigation }) => {
     }
   };
 
-  const handleLogout = () => setIsPromptVisible(true);
   const handleConfirmLogout = async () => {
     await dispatch(removeUserDeviceToken());
     dispatch(logout());
@@ -294,26 +292,6 @@ const ProfileDetails = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  // Edit Mode Header
-  editHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: m(16),
-    paddingTop: Platform.OS === 'ios' ? m(50) : m(40),
-    paddingBottom: m(16),
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-  },
-  backButton: {
-    padding: m(8),
-  },
   // Profile Card
   profileCard: {
     alignItems: 'center',

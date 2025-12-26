@@ -30,7 +30,6 @@ const DetailCard = ({ icon, label, value }) => (
 
 export default function PersonalLoan({ route }) {
   const { loanDetails } = route.params;
-  console.log('loanDetails ======>',loanDetails)
   const user = useSelector(state => state.auth.user);
 
   const [isModalVisible, setIsModalVisible] = useState(false);

@@ -27,14 +27,12 @@ export default function Home() {
   const user = useSelector(state => state.auth.user);
   const loanCount = useSelector(state => state.loans.loanStats);
   const recentActivities = useSelector(state => state.loans.recentActivities || []);
-  const { pendingPayments, loading: pendingPaymentsLoading } = useSelector(state => state.lenderPayments);
+  const { pendingPayments} = useSelector(state => state.lenderPayments);
 
   // Debug: Log pending payments
   useEffect(() => {
-    console.log('Pending payments in dashboard:', pendingPayments);
     if (pendingPayments && pendingPayments.length > 0) {
       const totalPending = pendingPayments.reduce((total, loan) => total + (loan.pendingPayments?.length || 0), 0);
-      console.log('Total pending payments:', totalPending);
     }
   }, [pendingPayments]);
 
@@ -412,7 +410,7 @@ export default function Home() {
                 label: 'Given',
                 gradient: ['#BBDEFB', '#90CAF9'],
                 textColor: '#1565C0',
-                tabName: 'Given' // Use the exact tab name from BottomNavigation.js
+                tabName: 'Given'
               },
               {
                 icon: 'arrow-down-circle',
@@ -420,7 +418,7 @@ export default function Home() {
                 label: 'Taken',
                 gradient: ['#FFE0B2', '#FFCC80'],
                 textColor: '#E65100',
-                tabName: 'Taken' // Use the exact tab name from BottomNavigation.js
+                tabName: 'Taken'
               },
               {
                 icon: 'check-circle',
@@ -436,7 +434,7 @@ export default function Home() {
                 gradient: ['#E1BEE7', '#e6d6e9ff'],
                 textColor: '#7B1FA2'
               },
-            ].map((stat, index) => {
+            ].map((stat) => {
               const StatContainer = stat.tabName ? TouchableOpacity : View;
               const statProps = stat.tabName
                 ? {

@@ -22,7 +22,7 @@ import Header from '../../../Components/Header';
 const Outward = ({ navigation }) => {
   const dispatch = useDispatch();
   const [searchQuery, setSearchQuery] = useState('');
-  const { borrowers, loading: borrowersLoading, error: borrowersError } = useSelector(state => state.borrowers);
+  const { borrowers, loading: borrowersLoading,} = useSelector(state => state.borrowers);
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedBorrower, setSelectedBorrower] = useState(null);
   const [borrowerActionModalVisible, setBorrowerActionModalVisible] = useState(false);
@@ -260,7 +260,6 @@ const styles = StyleSheet.create({
     fontSize: m(16),
     color: '#374151',
   },
-
   addButton: {
     width: m(44),
     height: m(44),

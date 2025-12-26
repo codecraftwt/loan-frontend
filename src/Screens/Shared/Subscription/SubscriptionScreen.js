@@ -92,7 +92,6 @@ const SubscriptionScreen = ({ navigation }) => {
             text: 'Great!', 
             onPress: () => {
               navigation.goBack();
-              // Refresh any loan data if needed
             } 
           },
         ]

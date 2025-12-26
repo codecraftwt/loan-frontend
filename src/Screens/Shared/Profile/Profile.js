@@ -35,10 +35,6 @@ export default function Profile() {
     navigation.navigate('ProfileDetails', { profileData: user });
   };
 
-  const navigateToSettings = () => {
-    navigation.navigate('Settings');
-  };
-
   const handleLogout = () => {
     setIsPromptVisible(true);
   };

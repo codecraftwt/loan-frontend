@@ -118,9 +118,7 @@ export default function LoanDetailScreen({ route, navigation }) {
         return;
       }
     }
-    
-    // console.log('No pending payments found');
-    setPendingPaymentsForLoan([]);
+      setPendingPaymentsForLoan([]);
   }, [pendingPayments, currentLoanDetails, loanDetails, isLender]);
 
   const fetchLoanDetailsWithConfirmations = async () => {
@@ -387,11 +385,11 @@ export default function LoanDetailScreen({ route, navigation }) {
   const isLoanClosed = remainingAmount <= 0 && totalPaid > 0;
   
   // Get installment information
-  const installmentPlan = loanDetails?.installmentPlan || {};
-  const paidInstallments = installmentPlan.paidInstallments || 0;
-  const totalInstallments = installmentPlan.totalInstallments || 0;
-  const nextDueDate = installmentPlan.nextDueDate;
-  const installmentAmount = installmentPlan.installmentAmount || 0;
+  // const installmentPlan = loanDetails?.installmentPlan || {};
+  // const paidInstallments = installmentPlan.paidInstallments || 0;
+  // const totalInstallments = installmentPlan.totalInstallments || 0;
+  // const nextDueDate = installmentPlan.nextDueDate;
+  // const installmentAmount = installmentPlan.installmentAmount || 0;
 
   const loanInfo = [
     {
