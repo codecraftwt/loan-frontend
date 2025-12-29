@@ -37,43 +37,47 @@ const SubscriptionScreen = ({ navigation }) => {
     fetchPlans();
   }, []);
 
-  useEffect(() => {
-    if (hasActiveSubscription) {
-      Alert.alert(
-        'Active Subscription',
-        'You already have an active subscription. You can view your current plan in the profile section.',
-        [
-          { 
-            text: 'View Profile', 
-            onPress: () => navigation.navigate('ProfileDetails') 
-          },
-          { 
-            text: 'Stay Here', 
-            style: 'cancel' 
-          },
-        ]
-      );
-    }
-  }, [hasActiveSubscription]);
+  // COMMENTED OUT - Active subscription check (to be updated with plan status)
+  // useEffect(() => {
+  //   if (hasActiveSubscription) {
+  //     Alert.alert(
+  //       'Active Subscription',
+  //       'You already have an active subscription. You can view your current plan in the profile section.',
+  //       [
+  //         { 
+  //           text: 'View Profile', 
+  //           onPress: () => navigation.navigate('ProfileDetails') 
+  //         },
+  //         { 
+  //           text: 'Stay Here', 
+  //           style: 'cancel' 
+  //         },
+  //       ]
+  //     );
+  //   }
+  // }, [hasActiveSubscription]);
 
   const handleProceedToPayment = async () => {
     if (!selectedPlan) {
-      Alert.alert('Select a Plan', 'Please select a subscription plan to continue.');
+      Alert.alert('Select a Plan', 'Please select a plan to continue.');
       return;
     }
 
-    if (hasActiveSubscription) {
-      Alert.alert(
-        'Active Subscription',
-        'You already have an active subscription. Would you like to upgrade?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Upgrade', onPress: () => proceedWithPayment() },
-        ]
-      );
-    } else {
-      proceedWithPayment();
-    }
+    // COMMENTED OUT - Active subscription check (to be updated with plan status)
+    // if (hasActiveSubscription) {
+    //   Alert.alert(
+    //     'Active Subscription',
+    //     'You already have an active subscription. Would you like to upgrade?',
+    //     [
+    //       { text: 'Cancel', style: 'cancel' },
+    //       { text: 'Upgrade', onPress: () => proceedWithPayment() },
+    //     ]
+    //   );
+    // } else {
+    //   proceedWithPayment();
+    // }
+    
+    proceedWithPayment();
   };
 
   const proceedWithPayment = async () => {
@@ -116,7 +120,9 @@ const SubscriptionScreen = ({ navigation }) => {
 
   const renderPlanCard = (plan) => {
     const isSelected = selectedPlan?._id === plan._id;
-    const isPopular = plan.name?.toLowerCase().includes('pro') || plan.name?.toLowerCase().includes('professional');
+    // Use planName (from admin plans) or name (mapped), check for popular keywords
+    const planName = plan.planName || plan.name || '';
+    const isPopular = planName.toLowerCase().includes('pro') || planName.toLowerCase().includes('professional') || planName.toLowerCase().includes('premium');
 
     return (
       <TouchableOpacity
@@ -139,13 +145,13 @@ const SubscriptionScreen = ({ navigation }) => {
             styles.planName,
             isSelected && styles.selectedPlanText,
           ]}>
-            {plan.name}
+            {planName}
           </Text>
           <Text style={[
             styles.planPrice,
             isSelected && styles.selectedPlanText,
           ]}>
-            ₹{plan.amount}
+            ₹{plan.priceMonthly || plan.amount || 0}
             <Text style={styles.planDuration}> / {plan.duration}</Text>
           </Text>
         </View>
@@ -154,15 +160,37 @@ const SubscriptionScreen = ({ navigation }) => {
           styles.planDescription,
           isSelected && styles.selectedPlanText,
         ]}>
-          {plan.description}
+          {plan.description || 'Unlimited loans with premium features'}
         </Text>
         
         <View style={styles.featuresContainer}>
-          {renderPlanFeatures(plan.features)}
+          {/* Use features array if available (mapped), otherwise build from planFeatures */}
+          {plan.features ? (
+            renderPlanFeatures(plan.features)
+          ) : (
+            <>
+              <View style={styles.featureItem}>
+                <Icon name="check-circle" size={16} color="#4CAF50" />
+                <Text style={styles.featureText}>Unlimited loans</Text>
+              </View>
+              {(plan.planFeatures?.advancedAnalytics ?? false) && (
+                <View style={styles.featureItem}>
+                  <Icon name="check-circle" size={16} color="#4CAF50" />
+                  <Text style={styles.featureText}>Advanced Analytics</Text>
+                </View>
+              )}
+              {(plan.planFeatures?.prioritySupport ?? false) && (
+                <View style={styles.featureItem}>
+                  <Icon name="check-circle" size={16} color="#4CAF50" />
+                  <Text style={styles.featureText}>Priority Support</Text>
+                </View>
+              )}
+            </>
+          )}
         </View>
         
         <Text style={styles.loanLimit}>
-          {plan.maxLoans === 0 ? 'Unlimited loans' : `Up to ${plan.maxLoans} loans per ${plan.duration}`}
+          Unlimited loans
         </Text>
         
         <View style={styles.selectIndicator}>
@@ -217,14 +245,15 @@ const SubscriptionScreen = ({ navigation }) => {
             Select a plan to unlock loan creation and premium features.
           </Text>
           
-          {hasActiveSubscription && (
+          {/* COMMENTED OUT - Active subscription banner (to be updated with plan status) */}
+          {/* {hasActiveSubscription && (
             <View style={styles.activeSubscriptionBanner}>
               <Icon name="shield" size={20} color="#fff" />
               <Text style={styles.activeSubscriptionText}>
                 You have an active subscription
               </Text>
             </View>
-          )}
+          )} */}
 
           {/* Plans List */}
           <View style={styles.plansContainer}>
@@ -243,13 +272,15 @@ const SubscriptionScreen = ({ navigation }) => {
             <View style={styles.selectedPlanSummary}>
               <Text style={styles.summaryTitle}>Selected Plan:</Text>
               <View style={styles.summaryDetails}>
-                <Text style={styles.summaryPlanName}>{selectedPlan.name}</Text>
-                <Text style={styles.summaryPrice}>₹{selectedPlan.amount}</Text>
+                <Text style={styles.summaryPlanName}>
+                  {selectedPlan.planName || selectedPlan.name || 'Plan'}
+                </Text>
+                <Text style={styles.summaryPrice}>
+                  ₹{selectedPlan.priceMonthly || selectedPlan.amount || 0}
+                </Text>
               </View>
               <Text style={styles.summaryDuration}>
-                {selectedPlan.duration === 'yearly' ? '1 Year' : 
-                 selectedPlan.duration === 'monthly' ? '1 Month' : 
-                 `${selectedPlan.durationInMonths} Months`}
+                {selectedPlan.duration || 'N/A'}
               </Text>
             </View>
           )}
@@ -264,14 +295,14 @@ const SubscriptionScreen = ({ navigation }) => {
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
                 <Text style={styles.subscribeButtonText}>
-                  {hasActiveSubscription ? 'Upgrade Plan' : 'Subscribe Now'}
+                  Subscribe Now
                 </Text>
               )}
             </TouchableOpacity>
           )}
 
-          {/* Already have subscription message */}
-          {hasActiveSubscription && !selectedPlan && (
+          {/* COMMENTED OUT - Already have subscription message (to be updated with plan status) */}
+          {/* {hasActiveSubscription && !selectedPlan && (
             <View style={styles.viewCurrentPlanButton}>
               <TouchableOpacity
                 style={styles.currentPlanButton}
@@ -281,7 +312,7 @@ const SubscriptionScreen = ({ navigation }) => {
                 </Text>
               </TouchableOpacity>
             </View>
-          )}
+          )} */}
         </View>
       </ScrollView>
     </SafeAreaView>
