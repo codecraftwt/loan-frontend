@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import instance from '../../Utils/AxiosInstance';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { lenderLoanAPI } from '../../Services/lenderLoanService';
 
 const initialState = {
   loans: [],
@@ -10,6 +11,7 @@ const initialState = {
   lenderTotalAmount: 0,
   loanStats: [],
   recentActivities: [],
+  lenderStatistics: null,
   loading: true,
   error: null,
   updateError: null,
@@ -294,6 +296,21 @@ export const getRecentActivities = createAsyncThunk(
   },
 );
 
+export const getLenderStatistics = createAsyncThunk(
+  'loans/getLenderStatistics',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await lenderLoanAPI.getLenderStatistics();
+      return response;
+    } catch (error) {
+      console.error('Error fetching lender statistics:', error);
+      return rejectWithValue(
+        error.response?.data?.message || error.message || 'Failed to fetch statistics',
+      );
+    }
+  },
+);
+
 const loanSlice = createSlice({
   name: 'loans',
   initialState,
@@ -518,6 +535,22 @@ const loanSlice = createSlice({
       .addCase(verifyLoanOTP.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || 'Failed to verify OTP';
+      })
+
+      // Handling getLenderStatistics
+      .addCase(getLenderStatistics.pending, state => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(getLenderStatistics.fulfilled, (state, action) => {
+        state.loading = false;
+        state.lenderStatistics = action.payload.data;
+        state.error = null;
+      })
+      .addCase(getLenderStatistics.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || 'Error fetching lender statistics';
+        state.lenderStatistics = null;
       });
   },
 });

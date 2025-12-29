@@ -60,6 +60,17 @@ export const lenderLoanAPI = {
       throw error;
     }
   },
+
+  // Get lender loan statistics
+  getLenderStatistics: async () => {
+    try {
+      const response = await axiosInstance.get('lender/loans/statistics');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching lender statistics:', error);
+      throw error;
+    }
+  },
 };
 
 export default lenderLoanAPI;

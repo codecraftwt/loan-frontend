@@ -20,8 +20,9 @@ import HelpAndSupportScreen from '../Screens/Auth/HelpAndSupportScreen';
 import PersonalLoan from '../Screens/Shared/Loans/PersonalLoan';
 import AnalyticsScreen from '../Screens/Lender/Analytics/AnalyticsScreen';
 // Admin screens
-import AddPlan from '../Screens/Admin/Plans/AddPlan';
-import EditPlan from '../Screens/Admin/Plans/EditPlan';
+import PlansList from '../Screens/Admin/Plans/PlansList';
+import CreateEditPlan from '../Screens/Admin/Plans/CreateEditPlan';
+import PlanDetailsScreen from '../Screens/Admin/Plans/PlanDetailsScreen';
 import Revenue from '../Screens/Admin/Revenue/Revenue';
 import LenderList from '../Screens/Admin/Lenders/LenderList';
 import BorrowerLoanHistoryScreen from '../Screens/Shared/Borrowers/BorrowerLoanHistoryScreen';
@@ -68,8 +69,9 @@ const Navigation = () => {
       <Stack.Screen name="PendingPayments" component={PendingPayments} />
       
       {/* Admin Screens */}
-      <Stack.Screen name="AddPlan" component={AddPlan} />
-      <Stack.Screen name="EditPlan" component={EditPlan} />
+      <Stack.Screen name="PlansList" component={PlansList} />
+      <Stack.Screen name="CreateEditPlan" component={CreateEditPlan} />
+      <Stack.Screen name="PlanDetailsScreen" component={PlanDetailsScreen} />
       <Stack.Screen name="Revenue" component={Revenue} />
       <Stack.Screen name="LenderList" component={LenderList} />
 

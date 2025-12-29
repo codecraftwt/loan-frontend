@@ -10,18 +10,17 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import Toast from 'react-native-toast-message';
-import { useNavigation } from '@react-navigation/native';
+// import { useNavigation } from '@react-navigation/native';
 import { m } from 'walstar-rn-responsive';
 import helpData from '../../data/helpData';
 import Header from '../../Components/Header';
 
 export default function HelpAndSupportScreen() {
-  const navigation = useNavigation();
+  // const navigation = useNavigation();
   const [message, setMessage] = useState('');
 
   const handleSendMessage = () => {
     if (message.trim()) {
-      console.log('Message sent:', message);
       setMessage('');
       Toast.show({
         type: 'success',

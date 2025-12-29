@@ -10,7 +10,6 @@ import {
   Alert,
   TextInput,
   Modal,
-  Image,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
@@ -27,7 +26,7 @@ import {
 } from '../../../Redux/Slices/lenderPaymentSlice';
 
 export default function PendingPayments() {
-  const navigation = useNavigation();
+  // const navigation = useNavigation();
   const dispatch = useDispatch();
   const {
     pendingPayments,
@@ -35,7 +34,7 @@ export default function PendingPayments() {
     confirming,
     rejecting,
     error,
-    pagination,
+    // pagination,
   } = useSelector(state => state.lenderPayments);
 
   const [refreshing, setRefreshing] = useState(false);

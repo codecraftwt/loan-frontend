@@ -29,56 +29,111 @@ export default function AdminDashboard() {
   ];
 
   const totalRevenue = revenueData.reduce((sum, item) => sum + item.amount, 0);
-  const totalLoans = revenueData.reduce((sum, item) => sum + item.loans, 0);
+  const avgRevenue = Math.round(totalRevenue / revenueData.length);
+  const growthRate = '+12.5%';
 
   const quickActions = [
     {
       id: 1,
       title: 'Add Plan',
       icon: 'plus-circle',
-      screen: 'AddPlan',
-      color: '#ff6700',
-      gradient: ['#ff6700', '#ff7900'],
+      screen: 'CreateEditPlan',
+      gradient: ['#FF6B6B', '#FF8E8E'],
+      iconBg: 'rgba(255, 107, 107, 0.15)',
     },
     {
       id: 2,
       title: 'Edit Plan',
-      icon: 'edit',
+      icon: 'edit-2',
       screen: 'Plans',
-      color: '#4CAF50',
-      gradient: ['#4CAF50', '#66BB6A'],
+      gradient: ['#4ECDC4', '#6AE0D8'],
+      iconBg: 'rgba(78, 205, 196, 0.15)',
     },
     {
       id: 3,
       title: 'Revenue',
-      icon: 'dollar-sign',
+      icon: 'bar-chart-2',
       screen: 'Revenue',
-      color: '#2196F3',
-      gradient: ['#2196F3', '#42A5F5'],
+      gradient: ['#45B7D1', '#67C9E0'],
+      iconBg: 'rgba(69, 183, 209, 0.15)',
     },
     {
       id: 4,
       title: 'Lender List',
       icon: 'users',
       screen: 'Lenders',
-      color: '#9C27B0',
-      gradient: ['#9C27B0', '#BA68C8'],
+      gradient: ['#96CEB4', '#AEDCC1'],
+      iconBg: 'rgba(150, 206, 180, 0.15)',
     },
   ];
 
-  const renderQuickAction = ({ item }) => (
+  const recentActivities = [
+    {
+      id: 1,
+      title: 'New Lender Added',
+      description: 'John Doe joined as new lender',
+      time: '2 hours ago',
+      icon: 'user-plus',
+      iconColor: '#4CAF50',
+      iconBg: 'rgba(76, 175, 80, 0.15)',
+    },
+    {
+      id: 2,
+      title: 'Plan Updated',
+      description: 'Business Loan plan modified',
+      time: '5 hours ago',
+      icon: 'edit',
+      iconColor: '#2196F3',
+      iconBg: 'rgba(33, 150, 243, 0.15)',
+    },
+    {
+      id: 3,
+      title: 'Revenue Report',
+      description: 'June revenue report generated',
+      time: '1 day ago',
+      icon: 'dollar-sign',
+      iconColor: '#FF9800',
+      iconBg: 'rgba(255, 152, 0, 0.15)',
+    },
+  ];
+
+  const renderQuickAction = ({ item, index }) => (
     <TouchableOpacity
-      style={styles.actionCard}
-      onPress={() => navigation.navigate(item.screen)}>
+      style={[
+        styles.actionCard,
+        index % 2 === 0 ? { marginRight: m(8) } : { marginLeft: m(8) },
+      ]}
+      onPress={() => navigation.navigate(item.screen)}
+      activeOpacity={0.9}>
       <LinearGradient
         colors={item.gradient}
         style={styles.actionGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}>
-        <Icon name={item.icon} size={28} color="#FFFFFF" />
+        <View style={[styles.actionIconContainer, { backgroundColor: item.iconBg }]}>
+          <Icon name={item.icon} size={28} color="#FFFFFF" />
+        </View>
         <Text style={styles.actionTitle}>{item.title}</Text>
+        <View style={styles.actionArrow}>
+          <Icon name="arrow-right" size={16} color="#FFFFFF" />
+        </View>
       </LinearGradient>
     </TouchableOpacity>
+  );
+
+  const renderActivityItem = ({ item }) => (
+    <View style={styles.activityItem}>
+      <View style={[styles.activityIcon, { backgroundColor: item.iconBg }]}>
+        <Icon name={item.icon} size={18} color={item.iconColor} />
+      </View>
+      <View style={styles.activityContent}>
+        <View style={styles.activityHeader}>
+          <Text style={styles.activityTitle}>{item.title}</Text>
+          <Text style={styles.activityTime}>{item.time}</Text>
+        </View>
+        <Text style={styles.activityDescription}>{item.description}</Text>
+      </View>
+    </View>
   );
 
   return (
@@ -88,15 +143,33 @@ export default function AdminDashboard() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
+
         {/* Welcome Section */}
-        <View style={styles.welcomeSection}>
-          <Text style={styles.welcomeText}>Welcome back,</Text>
-          <Text style={styles.userName}>{user?.userName || 'Admin'}</Text>
-        </View>
+        <LinearGradient
+          colors={['#000000', '#696666ff']}
+          style={styles.welcomeSection}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}>
+          <View style={styles.welcomeContent}>
+            <View>
+              <Text style={styles.welcomeText}>Welcome back,</Text>
+              <Text style={styles.userName}>{user?.userName || 'Admin'}</Text>
+            </View>
+            <View style={styles.avatarContainer}>
+              <Icon name="user" size={24} color="#FFFFFF" />
+            </View>
+          </View>
+          <Text style={styles.welcomeSubtitle}>Manage your Subscriptions</Text>
+        </LinearGradient>
 
         {/* Quick Actions */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Quick Actions</Text>
+            <TouchableOpacity>
+              <Text style={styles.sectionSubtitle}>Manage everything</Text>
+            </TouchableOpacity>
+          </View>
           <FlatList
             data={quickActions}
             renderItem={renderQuickAction}
@@ -111,73 +184,54 @@ export default function AdminDashboard() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Revenue Overview</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Revenue')}>
-              <Text style={styles.viewAllText}>View All</Text>
+            <TouchableOpacity
+              style={styles.viewAllButton}
+              onPress={() => navigation.navigate('Revenue')}>
+              <Text style={styles.viewAllText}>View Details</Text>
+              <Icon name="chevron-right" size={16} color="#667eea" />
             </TouchableOpacity>
           </View>
-          <View style={styles.revenueCard}>
-            <View style={styles.revenueRow}>
-              <View style={styles.revenueItem}>
-                <Icon name="dollar-sign" size={24} color="#4CAF50" />
-                <Text style={styles.revenueLabel}>Total Revenue</Text>
-                <Text style={styles.revenueAmount}>
-                  ₹{totalRevenue.toLocaleString()}
-                </Text>
+          <LinearGradient
+            colors={['#f8f9ff', '#ffffff']}
+            style={styles.revenueCard}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}>
+            <View style={styles.revenueHeader}>
+              <View>
+                <Text style={styles.revenueTotalLabel}>Total Revenue</Text>
+                <Text style={styles.revenueTotalAmount}>₹{totalRevenue.toLocaleString()}</Text>
               </View>
-              <View style={styles.revenueItem}>
-                <Icon name="file-text" size={24} color="#2196F3" />
-                <Text style={styles.revenueLabel}>Total Loans</Text>
-                <Text style={styles.revenueAmount}>{totalLoans}</Text>
-              </View>
-            </View>
-            <View style={styles.revenueRow}>
-              <View style={styles.revenueItem}>
-                <Icon name="trending-up" size={24} color="#FF9800" />
-                <Text style={styles.revenueLabel}>Avg. per Month</Text>
-                <Text style={styles.revenueAmount}>
-                  ₹{Math.round(totalRevenue / revenueData.length).toLocaleString()}
-                </Text>
-              </View>
-              <View style={styles.revenueItem}>
-                <Icon name="percent" size={24} color="#9C27B0" />
-                <Text style={styles.revenueLabel}>Growth Rate</Text>
-                <Text style={styles.revenueAmount}>+12.5%</Text>
+              <View style={styles.growthBadge}>
+                <Icon name="trending-up" size={14} color="#4CAF50" />
+                <Text style={styles.growthText}>{growthRate}</Text>
               </View>
             </View>
-          </View>
+            <View style={styles.revenueDetails}>
+              <View style={styles.revenueDetailItem}>
+                <Text style={styles.revenueDetailLabel}>Monthly Average</Text>
+                <Text style={styles.revenueDetailValue}>₹{avgRevenue.toLocaleString()}</Text>
+              </View>
+              <View style={styles.revenueDivider} />
+            </View>
+          </LinearGradient>
         </View>
 
         {/* Recent Activity */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Recent Activity</Text>
+            <TouchableOpacity>
+              <Text style={styles.viewAllText}>See All</Text>
+            </TouchableOpacity>
+          </View>
           <View style={styles.activityCard}>
-            <View style={styles.activityItem}>
-              <View style={styles.activityIcon}>
-                <Icon name="user-plus" size={20} color="#4CAF50" />
-              </View>
-              <View style={styles.activityContent}>
-                <Text style={styles.activityTitle}>New Lender Added</Text>
-                <Text style={styles.activityTime}>2 hours ago</Text>
-              </View>
-            </View>
-            <View style={styles.activityItem}>
-              <View style={[styles.activityIcon, { backgroundColor: '#E3F2FD' }]}>
-                <Icon name="edit" size={20} color="#2196F3" />
-              </View>
-              <View style={styles.activityContent}>
-                <Text style={styles.activityTitle}>Plan Updated</Text>
-                <Text style={styles.activityTime}>5 hours ago</Text>
-              </View>
-            </View>
-            <View style={styles.activityItem}>
-              <View style={[styles.activityIcon, { backgroundColor: '#FFF3E0' }]}>
-                <Icon name="dollar-sign" size={20} color="#FF9800" />
-              </View>
-              <View style={styles.activityContent}>
-                <Text style={styles.activityTitle}>Revenue Report Generated</Text>
-                <Text style={styles.activityTime}>1 day ago</Text>
-              </View>
-            </View>
+            <FlatList
+              data={recentActivities}
+              renderItem={renderActivityItem}
+              keyExtractor={item => item.id.toString()}
+              scrollEnabled={false}
+              ItemSeparatorComponent={() => <View style={styles.separator} />}
+            />
           </View>
         </View>
       </ScrollView>
@@ -188,33 +242,60 @@ export default function AdminDashboard() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: '#f8fafc',
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: m(100),
+    paddingBottom: m(120),
   },
   welcomeSection: {
-    padding: m(20),
-    backgroundColor: '#FFFFFF',
-    marginBottom: m(10),
+    padding: m(24),
+    marginHorizontal: m(16),
+    marginTop: m(16),
+    borderRadius: m(20),
+    elevation: 8,
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+  },
+  welcomeContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: m(8),
   },
   welcomeText: {
-    fontSize: m(16),
-    color: '#666',
+    fontSize: m(14),
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontFamily: 'System',
   },
   userName: {
     fontSize: m(24),
-    fontWeight: '700',
-    color: '#ff6700',
-    marginTop: m(4),
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginTop: m(2),
+  },
+  welcomeSubtitle: {
+    fontSize: m(13),
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontFamily: 'System',
+  },
+  avatarContainer: {
+    width: m(48),
+    height: m(48),
+    borderRadius: m(24),
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   section: {
-    padding: m(20),
-    backgroundColor: '#FFFFFF',
-    marginTop: m(10),
+    paddingHorizontal: m(16),
+    marginTop: m(24),
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -225,103 +306,179 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: m(18),
     fontWeight: '700',
-    color: '#333',
-    marginBottom: m(16),
+    color: '#1e293b',
+    fontFamily: 'System',
   },
-  viewAllText: {
-    fontSize: m(14),
-    color: '#ff6700',
-    fontWeight: '600',
+  sectionSubtitle: {
+    fontSize: m(13),
+    color: '#64748b',
+    fontWeight: '500',
   },
   actionsGrid: {
-    gap: m(12),
+    gap: m(16),
   },
   actionCard: {
     flex: 1,
-    margin: m(6),
-    borderRadius: m(12),
+    height: m(120),
+    borderRadius: m(20),
     overflow: 'hidden',
+  },
+  actionGradient: {
+    flex: 1,
+    padding: m(20),
+    justifyContent: 'space-between',
+  },
+  actionIconContainer: {
+    width: m(48),
+    height: m(48),
+    borderRadius: m(12),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: m(12),
+  },
+  actionTitle: {
+    fontSize: m(15),
+    fontWeight: '700',
+    color: '#FFFFFF',
+    fontFamily: 'System',
+  },
+  actionArrow: {
+    position: 'absolute',
+    bottom: m(16),
+    right: m(16),
+    width: m(28),
+    height: m(28),
+    borderRadius: m(14),
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  revenueCard: {
+    borderRadius: m(20),
+    padding: m(20),
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    borderWidth: m(1),
+    borderColor: 'rgba(0, 0, 0, 0.05)',
+    borderRadius: m(14),
   },
-  actionGradient: {
-    padding: m(20),
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: m(120),
-  },
-  actionTitle: {
-    fontSize: m(14),
-    fontWeight: '600',
-    color: '#FFFFFF',
-    marginTop: m(8),
-    textAlign: 'center',
-  },
-  revenueCard: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: m(12),
-    padding: m(16),
-  },
-  revenueRow: {
+  revenueHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: m(16),
+    alignItems: 'flex-start',
+    marginBottom: m(20),
   },
-  revenueItem: {
-    flex: 1,
-    alignItems: 'center',
-    padding: m(12),
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(8),
-    marginHorizontal: m(4),
-  },
-  revenueLabel: {
-    fontSize: m(12),
-    color: '#666',
-    marginTop: m(8),
+  revenueTotalLabel: {
+    fontSize: m(13),
+    color: '#64748b',
+    fontWeight: '500',
     marginBottom: m(4),
   },
-  revenueAmount: {
+  revenueTotalAmount: {
+    fontSize: m(28),
+    fontWeight: '800',
+    color: '#1e293b',
+    fontFamily: 'System',
+  },
+  growthBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    paddingHorizontal: m(10),
+    paddingVertical: m(6),
+    borderRadius: m(20),
+  },
+  growthText: {
+    fontSize: m(12),
+    color: '#4CAF50',
+    fontWeight: '700',
+    marginLeft: m(4),
+  },
+  revenueDetails: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  revenueDetailItem: {
+    flex: 1,
+  },
+  revenueDetailLabel: {
+    fontSize: m(12),
+    color: '#94a3b8',
+    fontWeight: '500',
+    marginBottom: m(4),
+  },
+  revenueDetailValue: {
     fontSize: m(16),
     fontWeight: '700',
-    color: '#333',
+    color: '#1e293b',
+  },
+  revenueDivider: {
+    width: 1,
+    height: m(40),
+    backgroundColor: '#e2e8f0',
+    marginHorizontal: m(20),
+  },
+  viewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  viewAllText: {
+    fontSize: m(13),
+    color: '#667eea',
+    fontWeight: '600',
   },
   activityCard: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: m(12),
-    padding: m(12),
+    backgroundColor: '#FFFFFF',
+    borderRadius: m(20),
+    padding: m(4),
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
   },
   activityItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: m(12),
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    padding: m(16),
   },
   activityIcon: {
     width: m(40),
     height: m(40),
-    borderRadius: m(20),
-    backgroundColor: '#E8F5E9',
+    borderRadius: m(12),
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: m(12),
+    marginRight: m(16),
   },
   activityContent: {
     flex: 1,
   },
-  activityTitle: {
-    fontSize: m(14),
-    fontWeight: '600',
-    color: '#333',
+  activityHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: m(4),
+  },
+  activityTitle: {
+    fontSize: m(15),
+    fontWeight: '600',
+    color: '#1e293b',
   },
   activityTime: {
     fontSize: m(12),
-    color: '#666',
+    color: '#94a3b8',
+    fontWeight: '500',
+  },
+  activityDescription: {
+    fontSize: m(13),
+    color: '#64748b',
+  },
+  separator: {
+    height: 1,
+    backgroundColor: '#f1f5f9',
+    marginHorizontal: m(16),
   },
 });
-

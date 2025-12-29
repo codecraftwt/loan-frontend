@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   TextInput,
@@ -11,7 +11,6 @@ import {
   Keyboard,
   ActivityIndicator,
   TouchableWithoutFeedback,
-  Dimensions,
   Animated,
 } from 'react-native';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
@@ -25,10 +24,7 @@ import Toast from 'react-native-toast-message';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
 import LoanOTPVerification from '../../../Components/LoanOTPVerification';
-import { LinearGradient } from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-
-const { width } = Dimensions.get('window');
 
 export default function AddDetails({ route, navigation }) {
   const dispatch = useDispatch();

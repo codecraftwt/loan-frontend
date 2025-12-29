@@ -13,19 +13,29 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
 import Ionicons from 'react-native-vector-icons/Ionicons'; import LinearGradient from 'react-native-linear-gradient';
-import { getLoanStats, getRecentActivities } from '../../../Redux/Slices/loanSlice';
+import { getLenderStatistics, getRecentActivities } from '../../../Redux/Slices/loanSlice';
 import { getPendingPayments } from '../../../Redux/Slices/lenderPaymentSlice';
 import { useDispatch, useSelector } from 'react-redux';
 import useFetchUserFromStorage from '../../../Redux/hooks/useFetchUserFromStorage';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
 
+const formatCurrency = value => {
+  if (!value) {
+    return '0';
+  }
+  const num = Number(value) || 0;
+  return num.toLocaleString('en-IN', {
+    maximumFractionDigits: 0,
+  });
+};
+
 export default function Home() {
   const navigation = useNavigation();
   const dispatch = useDispatch();
 
   const user = useSelector(state => state.auth.user);
-  const loanCount = useSelector(state => state.loans.loanStats);
+  const lenderStatistics = useSelector(state => state.loans.lenderStatistics);
   const recentActivities = useSelector(state => state.loans.recentActivities || []);
   const { pendingPayments} = useSelector(state => state.lenderPayments);
 
@@ -46,8 +56,6 @@ export default function Home() {
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useFetchUserFromStorage();
-
-  const aadhaarNumber = user?.aadhaarNumber || user?.aadharCardNo;
 
   // Enhanced animations
   useEffect(() => {
@@ -76,7 +84,7 @@ export default function Home() {
 
   useFocusEffect(
     React.useCallback(() => {
-      dispatch(getLoanStats(aadhaarNumber));
+      dispatch(getLenderStatistics());
       dispatch(getRecentActivities(5));
       // Fetch pending payments for lender
       dispatch(getPendingPayments({ page: 1, limit: 10 })).then((result) => {
@@ -115,7 +123,7 @@ export default function Home() {
   const onRefresh = async () => {
     setRefreshing(true);
     await Promise.all([
-      dispatch(getLoanStats(aadhaarNumber)),
+      dispatch(getLenderStatistics()),
       dispatch(getRecentActivities(5)),
       dispatch(getPendingPayments({ page: 1, limit: 10 })),
     ]);
@@ -123,10 +131,17 @@ export default function Home() {
   };
 
   const completionRate = Math.min(
-    ((loanCount?.loansPaidCount || 0) /
-      ((loanCount?.loansGivenCount || 0) + (loanCount?.loansTakenCount || 0) || 1)) * 100,
+    lenderStatistics?.percentages?.paidPercentage || 0,
     100
   );
+
+  // Calculate remaining loans (pending + overdue)
+  const remainingLoans = (lenderStatistics?.counts?.pendingLoans || 0) + 
+                         (lenderStatistics?.counts?.overdueLoans || 0);
+  
+  // Calculate remaining amount (pending + overdue)
+  const remainingAmount = (lenderStatistics?.totalPendingAmount || 0) + 
+                          (lenderStatistics?.totalOverdueAmount || 0);
 
   // Helper function to map activity type to UI properties
   const getActivityProperties = (activity) => {
@@ -406,33 +421,32 @@ export default function Home() {
             {[
               {
                 icon: 'arrow-up-circle',
-                value: loanCount?.loansGivenCount || 0,
+                value: lenderStatistics?.counts?.totalLoans || 0,
                 label: 'Given',
                 gradient: ['#BBDEFB', '#90CAF9'],
                 textColor: '#1565C0',
                 tabName: 'Given'
               },
               {
-                icon: 'arrow-down-circle',
-                value: loanCount?.loansTakenCount || 0,
-                label: 'Taken',
-                gradient: ['#FFE0B2', '#FFCC80'],
-                textColor: '#E65100',
-                tabName: 'Taken'
-              },
-              {
                 icon: 'check-circle',
-                value: loanCount?.loansPaidCount || 0,
+                value: lenderStatistics?.counts?.paidLoans || 0,
                 label: 'Paid',
                 gradient: ['#C8E6C9', '#A5D6A7'],
                 textColor: '#2E7D32'
               },
               {
                 icon: 'clock',
-                value: loanCount?.loansPendingCount || 0,
+                value: lenderStatistics?.counts?.pendingLoans || 0,
                 label: 'Pending',
                 gradient: ['#E1BEE7', '#e6d6e9ff'],
                 textColor: '#7B1FA2'
+              },
+              {
+                icon: 'alert-circle',
+                value: lenderStatistics?.counts?.overdueLoans || 0,
+                label: 'Overdue',
+                gradient: ['#FFCDD2', '#EF9A9A'],
+                textColor: '#C62828'
               },
             ].map((stat) => {
               const StatContainer = stat.tabName ? TouchableOpacity : View;
@@ -502,17 +516,24 @@ export default function Home() {
                 <View>
                   <Text style={styles.progressTitle}>Loan Completion</Text>
                   <Text style={styles.progressText}>
-                    {loanCount?.loansPaidCount || 0} of {((loanCount?.loansGivenCount || 0) + (loanCount?.loansTakenCount || 0)) || 1} loans completed
+                    {lenderStatistics?.counts?.paidLoans || 0} of {lenderStatistics?.counts?.totalLoans || 1} loans completed
+                  </Text>
+                  <Text style={styles.progressAmountText}>
+                    ₹{formatCurrency(lenderStatistics?.totalPaidAmount || 0)} of ₹{formatCurrency(lenderStatistics?.totalLoanAmount || 0)}
                   </Text>
                 </View>
                 <View style={styles.progressStats}>
                   <View style={styles.statRow}>
                     <View style={[styles.statDot, { backgroundColor: '#ffd700' }]} />
-                    <Text style={styles.statText}>Completed</Text>
+                    <Text style={styles.statText}>
+                      Completed ({lenderStatistics?.counts?.paidLoans || 0})
+                    </Text>
                   </View>
                   <View style={styles.statRow}>
                     <View style={[styles.statDot, { backgroundColor: 'rgba(255,255,255,0.3)' }]} />
-                    <Text style={styles.statText}>Remaining</Text>
+                    <Text style={styles.statText}>
+                      Remaining ({remainingLoans})
+                    </Text>
                   </View>
                 </View>
               </View>
@@ -1006,6 +1027,12 @@ const styles = StyleSheet.create({
     fontSize: m(12),
     color: 'rgba(255, 255, 255, 0.8)',
     fontFamily: 'Poppins-Regular',
+    marginBottom: m(4),
+  },
+  progressAmountText: {
+    fontSize: m(11),
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontFamily: 'Poppins-SemiBold',
     marginBottom: m(12),
   },
   progressStats: {

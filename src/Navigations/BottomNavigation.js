@@ -13,7 +13,7 @@ import Inward from '../Screens/Shared/Loans/Inward';
 
 // Admin screens
 import AdminDashboard from '../Screens/Admin/Dashboard/AdminDashboard';
-import EditPlan from '../Screens/Admin/Plans/EditPlan';
+import PlansList from '../Screens/Admin/Plans/PlansList';
 import Revenue from '../Screens/Admin/Revenue/Revenue';
 import LenderList from '../Screens/Admin/Lenders/LenderList';
 
@@ -93,7 +93,7 @@ export default function BottomNavigation() {
           />
           <Tab.Screen
             name="Plans"
-            component={EditPlan}
+            component={PlansList}
             options={{
               tabBarLabel: 'Plans',
               tabBarIcon: ({color, size, focused}) =>
