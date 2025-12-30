@@ -30,7 +30,9 @@ export default function SettingsScreen() {
           <Text style={styles.optionText}>Profile</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.option}>
+        <TouchableOpacity 
+          style={styles.option}
+          onPress={() => navigation.navigate('NotificationTestScreen')}>
           <Icon name="bell" size={24} color="#b80266" />
           <Text style={styles.optionText}>Notifications</Text>
         </TouchableOpacity>

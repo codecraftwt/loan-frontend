@@ -5,26 +5,95 @@ import {PaperProvider} from 'react-native-paper';
 import {NavigationContainer} from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
 import {toastConfig} from './src/Utils/toastConfig';
-import {Provider} from 'react-redux';
+import {Provider, useSelector} from 'react-redux';
 import store from './src/Redux/store/store';
-// NOTE: Push notification setup is temporarily disabled while resolving
-// iOS NativeEventEmitter issues with notification libraries.
-// import PushNotification from 'react-native-push-notification';
-// import {setupFirebaseNotifications} from './src/firebase/firebase';
-export default function App() {
+import NotificationService from './src/Services/NotificationService';
+
+function AppContent() {
+  const navigationRef = useRef(null);
+  const user = useSelector(state => state.auth?.user);
+  const authToken = useSelector(state => state.auth?.token);
+  const handlersInitialized = useRef(false);
+
+  // Initialize notification handlers once when navigation is ready
   useEffect(() => {
-    // Setup Firebase push notifications when the app starts
-    // setupFirebaseNotifications();
+    // Use a delayed check to ensure NavigationContainer is ready
+    const timer = setTimeout(() => {
+      if (navigationRef.current && !handlersInitialized.current) {
+        NotificationService.setNavigation(navigationRef.current);
+        NotificationService.setupNotificationHandlers();
+        handlersInitialized.current = true;
+      } else {
+        console.warn('Navigation ref not ready yet, will retry...');
+      }
+    }, 1000);
+
+    return () => clearTimeout(timer);
   }, []);
+
+  // Update navigation reference when NavigationContainer is ready
+  const onNavigationReady = () => {
+    if (navigationRef.current) {
+      NotificationService.setNavigation(navigationRef.current);
+      if (!handlersInitialized.current) {
+        NotificationService.setupNotificationHandlers();
+        handlersInitialized.current = true;
+      }
+    }
+  };
+
+  // Initialize notifications when user logs in
+  useEffect(() => {
+    const initNotificationsForUser = async () => {
+      if (user?._id && authToken && navigationRef.current) {
+        try {
+          // Ensure navigation is set
+          NotificationService.setNavigation(navigationRef.current);
+          
+          // Always request permission and initialize notifications when user logs in
+          const hasPermission = await NotificationService.requestPermission();
+          if (hasPermission) {
+            // Get or create FCM token
+            const fcmToken = await NotificationService.getFCMToken();
+            if (fcmToken) {
+              // Register token with backend
+              await NotificationService.registerToken(user._id, fcmToken);
+            }
+          } else {
+            console.warn('Notification permission not granted');
+          }
+        } catch (error) {
+          console.error('Error initializing notifications for user:', error);
+        }
+      }
+    };
+
+    if (user?._id) {
+      // Small delay to ensure navigation is ready
+      const timer = setTimeout(() => {
+        initNotificationsForUser();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [user?._id, authToken]);
+
+  return (
+    <NavigationContainer 
+      ref={navigationRef}
+      onReady={onNavigationReady}>
+      {/* Set the StatusBar color here */}
+      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
+      <Navigation />
+      <Toast config={toastConfig} />
+    </NavigationContainer>
+  );
+}
+
+export default function App() {
   return (
     <Provider store={store}>
       <PaperProvider>
-        <NavigationContainer>
-          {/* Set the StatusBar color here */}
-          <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
-          <Navigation />
-          <Toast config = {toastConfig} />
-        </NavigationContainer>
+        <AppContent />
       </PaperProvider>
     </Provider>
   );

@@ -15,9 +15,7 @@ export const lenderPaymentAPI = {
       const queryString = queryParams.toString();
       const url = `lender/loans/payments/pending${queryString ? `?${queryString}` : ''}`;
 
-      console.log('Fetching pending payments from:', url);
       const response = await axiosInstance.get(url);
-      console.log('Pending payments response:', response.data);
       return response.data;
     } catch (error) {
       // If 500 error, return empty data instead of throwing
@@ -58,9 +56,7 @@ export const lenderPaymentAPI = {
       const url = `lender/loans/payment/confirm/${loanId}/${paymentId}`;
       const payload = notes ? { notes } : {};
 
-      console.log('Confirming payment:', { loanId, paymentId, notes });
       const response = await axiosInstance.patch(url, payload);
-      console.log('Payment confirmation response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error confirming payment:', error);
@@ -80,9 +76,7 @@ export const lenderPaymentAPI = {
       const url = `lender/loans/payment/reject/${loanId}/${paymentId}`;
       const payload = { reason };
 
-      console.log('Rejecting payment:', { loanId, paymentId, reason });
       const response = await axiosInstance.patch(url, payload);
-      console.log('Payment rejection response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error rejecting payment:', error);

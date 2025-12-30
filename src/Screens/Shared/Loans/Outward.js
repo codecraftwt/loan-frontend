@@ -18,16 +18,144 @@ import { getAllBorrowers, searchBorrowers } from '../../../Redux/Slices/borrower
 import LoaderSkeleton from '../../../Components/LoaderSkeleton';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const Outward = ({ navigation }) => {
+const Outward = ({ navigation, route }) => {
   const dispatch = useDispatch();
   const [searchQuery, setSearchQuery] = useState('');
   const { borrowers, loading: borrowersLoading,} = useSelector(state => state.borrowers);
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedBorrower, setSelectedBorrower] = useState(null);
   const [borrowerActionModalVisible, setBorrowerActionModalVisible] = useState(false);
+  const [highlightedBorrowerId, setHighlightedBorrowerId] = useState(null);
+  const [pendingHighlightParams, setPendingHighlightParams] = useState(null);
 
   const scrollViewRef = React.useRef(null);
+
+  // Handle navigation from notification
+  useEffect(() => {
+  if (route?.params) {
+      const { highlightBorrowerId, highlightMobileNumber, notificationId, notificationType } = route.params;
+      
+      // Store params for retry if borrowers not loaded yet
+      if (highlightBorrowerId || highlightMobileNumber) {
+        setPendingHighlightParams({
+          highlightBorrowerId,
+          highlightMobileNumber,
+          notificationId,
+          notificationType,
+        });
+      }
+
+      // Find and highlight borrower when borrowers are loaded
+      if (borrowers && borrowers.length > 0) {
+        if (highlightBorrowerId) {
+          // Find by borrower ID
+          const borrower = borrowers.find(b => b._id === highlightBorrowerId);
+          if (borrower) {
+            setHighlightedBorrowerId(borrower._id);
+            // Scroll to borrower after a short delay
+            setTimeout(() => {
+              scrollToBorrower(borrower._id);
+            }, 500);
+          } else {
+            console.warn('⚠️ Borrower not found with ID:', highlightBorrowerId);
+          }
+        } else if (highlightMobileNumber) {
+          // Find by mobile number
+          const borrower = borrowers.find(b => 
+            b.mobileNo === highlightMobileNumber || 
+            b.mobileNo === `+91${highlightMobileNumber}` ||
+            b.mobileNo === highlightMobileNumber.replace(/^\+91/, '')
+          );
+          if (borrower) {
+            setHighlightedBorrowerId(borrower._id);
+            // Scroll to borrower after a short delay
+            setTimeout(() => {
+              scrollToBorrower(borrower._id);
+            }, 500);
+          } else {
+            console.warn('Borrower not found with mobile number:', highlightMobileNumber);
+          }
+        } else {
+          console.log('No highlightBorrowerId or highlightMobileNumber provided');
+        }
+      } else {
+        console.log('Borrowers list not loaded yet, will retry when loaded...');
+      }
+
+      // Clear route params after processing
+      if (navigation) {
+        navigation.setParams({
+          highlightBorrowerId: undefined,
+          highlightMobileNumber: undefined,
+          notificationId: undefined,
+          notificationType: undefined,
+        });
+      }
+    }
+  }, [route?.params]);
+
+  // Retry highlighting when borrowers are loaded
+  useEffect(() => {
+    if (pendingHighlightParams && borrowers && borrowers.length > 0) {
+      const { highlightBorrowerId, highlightMobileNumber } = pendingHighlightParams;
+      
+      if (highlightBorrowerId) {
+        const borrower = borrowers.find(b => b._id === highlightBorrowerId);
+        if (borrower) {
+          setHighlightedBorrowerId(borrower._id);
+          setTimeout(() => {
+            scrollToBorrower(borrower._id);
+          }, 500);
+          setPendingHighlightParams(null); // Clear after success
+        }
+      } else if (highlightMobileNumber) {
+        const borrower = borrowers.find(b => 
+          b.mobileNo === highlightMobileNumber || 
+          b.mobileNo === `+91${highlightMobileNumber}` ||
+          b.mobileNo === highlightMobileNumber.replace(/^\+91/, '')
+        );
+        if (borrower) {
+          setHighlightedBorrowerId(borrower._id);
+          setTimeout(() => {
+            scrollToBorrower(borrower._id);
+          }, 500);
+          setPendingHighlightParams(null); // Clear after success
+        }
+      }
+    }
+  }, [borrowers, pendingHighlightParams]);
+
+  // Mark notification as read
+  const markNotificationAsRead = async (notificationId) => {
+    try {
+      const readNotifications = await AsyncStorage.getItem('read_notifications');
+      let readList = readNotifications ? JSON.parse(readNotifications) : [];
+      
+      if (!readList.includes(notificationId)) {
+        readList.push(notificationId);
+        if (readList.length > 100) {
+          readList = readList.slice(-100);
+        }
+        await AsyncStorage.setItem('read_notifications', JSON.stringify(readList));
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  // Scroll to specific borrower
+  const scrollToBorrower = (borrowerId) => {
+    if (!scrollViewRef.current || !borrowers) return;
+    
+    const index = borrowers.findIndex(b => b._id === borrowerId);
+    if (index !== -1) {
+      // Scroll to the borrower card
+      // Note: This is a simplified scroll - you may need to adjust based on card heights
+      scrollViewRef.current?.scrollTo({ y: index * 200, animated: true });
+    }
+  };
 
   const loading = borrowersLoading;
   // Add debouncing effect for search
@@ -173,12 +301,17 @@ const Outward = ({ navigation }) => {
               </Text>
             </View>
           ) : (
-            borrowers?.map((borrower, index) => (
+            borrowers?.map((borrower, index) => {
+              const isHighlighted = highlightedBorrowerId === borrower._id;
+              return (
               <TouchableOpacity
                 key={borrower._id || index}
                 onPress={() => handleBorrowerCardPress(borrower)}
                 activeOpacity={0.9}>
-                <View style={styles.borrowerCard}>
+                <View style={[
+                  styles.borrowerCard,
+                  isHighlighted && styles.highlightedBorrowerCard
+                ]}>
                   <View style={styles.cardHeader}>
                     <View style={styles.userInfo}>
                       {borrower?.profileImage ? (
@@ -269,7 +402,8 @@ const Outward = ({ navigation }) => {
                   </View>
                 </View>
               </TouchableOpacity>
-            ))
+              );
+            })
           )}
         </ScrollView>
       )}
@@ -503,6 +637,16 @@ const styles = StyleSheet.create({
     fontSize: m(11),
     color: 'black',
     fontStyle: 'italic',
+  },
+  highlightedBorrowerCard: {
+    borderWidth: 3,
+    borderColor: '#b80266',
+    backgroundColor: '#FFF5F5',
+    shadowColor: '#b80266',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   // Action Modal Styles
   actionModalContent: {

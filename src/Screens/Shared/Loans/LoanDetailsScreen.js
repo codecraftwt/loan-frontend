@@ -159,7 +159,6 @@ export default function LoanDetailScreen({ route, navigation }) {
           }
         }
       } catch (pendingError) {
-        // console.log('Pending payments endpoint failed (expected for 500):', pendingError);
         // This is expected - the endpoint returns 500, but Redux handles it gracefully
       }
 

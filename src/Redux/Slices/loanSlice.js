@@ -126,8 +126,6 @@ export const createLoan = createAsyncThunk(
         return rejectWithValue('User is not authenticated');
       }
 
-      console.log('Creating loan with data:', loanData);
-
       // Map old field names to new API structure
       const apiData = {
         name: loanData.name,
@@ -224,15 +222,12 @@ export const updateLoanStatus = createAsyncThunk(
   'loans/updateLoanStatus',
   async ({ loanId, status }, { rejectWithValue }) => {
     try {
-      console.log('API call for update status', loanId);
       const response = await instance.patch(
         `loan/update-loan-status/${loanId}`,
         { status },
       );
-      console.log(response.data);
       return response.data;
     } catch (error) {
-      console.log('Fail---------------------------->', error.response.data.error);
       return rejectWithValue(error.response.data.error || error.message || error || 'Unknown error');
     }
   },
@@ -242,15 +237,12 @@ export const updateLoanAcceptanceStatus = createAsyncThunk(
   'loans/updateLoanAcceptanceStatus',
   async ({ loanId, status }, { rejectWithValue }) => {
     try {
-      console.log('API call for update status', loanId);
       const response = await instance.patch(
         `loan/update-loan-acceptance-status/${loanId}`,
         { status },
       );
-      console.log(response.data);
       return response.data;
     } catch (error) {
-      console.log('Failed loan status update', error.response.data);
       return rejectWithValue(error.response.data || 'Unknown error');
     }
   },
@@ -281,7 +273,6 @@ export const getLoanStats = createAsyncThunk(
 
       return response.data;
     } catch (error) {
-      console.log(error.response?.data || error.message);
       return rejectWithValue(
         error.response?.data || error.message || 'Unknown error',
       );
@@ -299,7 +290,6 @@ export const getRecentActivities = createAsyncThunk(
 
       return response.data;
     } catch (error) {
-      console.log(error.response?.data || error.message);
       return rejectWithValue(
         error.response?.data || error.message || 'Unknown error',
       );
@@ -434,7 +424,6 @@ const loanSlice = createSlice({
       .addCase(updateLoanStatus.rejected, (state, action) => {
         state.loading = false;
         const errorMessage = action.payload.replace(/^.*loanEndDate:\s*/, '')
-        console.log(errorMessage, "message <--------------")
         state.updateError =
           errorMessage.replace(/^.*loanEndDate:\s*/, '') || "Failed to update"
       })

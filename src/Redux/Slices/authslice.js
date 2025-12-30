@@ -1,19 +1,50 @@
 import {createSlice, createAsyncThunk} from '@reduxjs/toolkit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import instance from '../../Utils/AxiosInstance';
+import NotificationService from '../../Services/NotificationService';
 
 // Function to register the device token after login or signup
 const registerDeviceToken = async userId => {
-  // Temporarily disabled to prevent FCM from initializing while
-  // investigating NativeEventEmitter issues on iOS.
-  console.log('registerDeviceToken skipped for user:', userId);
+  try {
+    // Request permission first before getting token
+    const hasPermission = await NotificationService.requestPermission();
+    if (!hasPermission) {
+      console.warn('Notification permission not granted, skipping token registration');
+      return;
+    }
+
+    // Get FCM token after permission is granted
+    const token = await NotificationService.getFCMToken();
+    if (token && userId) {
+      const result = await NotificationService.registerToken(userId, token);
+      if (result.success) {
+        console.log('Device token registered successfully');
+      } else {
+        console.warn('Failed to register device token:', result.error);
+      }
+    }
+  } catch (error) {
+    console.error('Error in registerDeviceToken:', error);
+  }
 };
 
 // Function to remove device token
 const removeDeviceToken = async () => {
-  // Temporarily disabled to prevent FCM from initializing while
-  // investigating NativeEventEmitter issues on iOS.
-  console.log('removeDeviceToken skipped');
+  try {
+    const token = await AsyncStorage.getItem('fcm_token');
+    if (token) {
+      const result = await NotificationService.removeToken(token);
+      if (result.success) {
+        console.log('Device token removed successfully');
+      } else {
+        console.warn('Failed to remove device token:', result.error);
+      }
+      // Remove token from local storage
+      await AsyncStorage.removeItem('fcm_token');
+    }
+  } catch (error) {
+    console.error('Error in removeDeviceToken:', error);
+  }
 };
 
 // Thunk for user login
@@ -127,13 +158,11 @@ export const registerUser = createAsyncThunk(
         await registerDeviceToken(user._id);
       }
 
-      console.log(response.data, 'Success');
       return {
         user,
         token,
       };
     } catch (error) {
-      console.log(error, 'error');
       // Handle error response structure from backend
       if (error.response && error.response.data) {
         // Backend returns { message: "..." } or { message: "...", missingFields: [...] }
@@ -167,7 +196,6 @@ export const updateUser = createAsyncThunk(
       const response = await instance.patch('user/update-profile', {
         userData,
       });
-      console.log(response.data, 'Success');
       return response.data;
     } catch (error) {
       console.log(error, 'error');
@@ -272,7 +300,7 @@ export const resetPassword = createAsyncThunk(
 
 export const removeUserDeviceToken = createAsyncThunk(
   'auth/remove-device-token',
-  async ({rejectWithValue}) => {
+  async (_, {rejectWithValue}) => {
     try {
       // Remove the device token from the backend
       await removeDeviceToken();
@@ -305,6 +333,8 @@ const authSlice = createSlice({
       state.error = null;
       AsyncStorage.removeItem('token');
       AsyncStorage.removeItem('user');
+      // Cleanup notification handlers
+      NotificationService.cleanup();
     },
 
     setUser: (state, action) => {

@@ -51,7 +51,6 @@ export default function PendingPayments() {
   );
 
   useEffect(() => {
-    console.log('Pending payments updated:', pendingPayments);
     if (pendingPayments && pendingPayments.length > 0) {
       const totalPending = pendingPayments.reduce((total, loan) => total + (loan.pendingPayments?.length || 0), 0);
       console.log('Total pending payments count:', totalPending);
@@ -59,7 +58,6 @@ export default function PendingPayments() {
   }, [pendingPayments]);
 
   const fetchPendingPayments = async () => {
-    console.log('Fetching pending payments...');
     const result = await dispatch(getPendingPayments({ page: 1, limit: 20 }));
     console.log('Pending payments fetch result:', result);
   };

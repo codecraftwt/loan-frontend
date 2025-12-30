@@ -18,7 +18,7 @@ export default function BorrowerDashboard() {
   const navigation = useNavigation();
   const dispatch = useDispatch();
   const user = useSelector(state => state.auth.user);
-  const { loans, summary, loading } = useSelector(state => state.borrowerLoans);
+  const { loans, summary } = useSelector(state => state.borrowerLoans);
 
   useEffect(() => {
     if (user?._id) {

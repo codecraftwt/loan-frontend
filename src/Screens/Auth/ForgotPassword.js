@@ -8,15 +8,13 @@ import {
   StatusBar,
   Platform,
 } from 'react-native';
-import {useDispatch, useSelector} from 'react-redux';
+import {useDispatch} from 'react-redux';
 import {forgotPassword} from '../../Redux/Slices/authslice';
 import Toast from 'react-native-toast-message';
 import {m} from 'walstar-rn-responsive';
 
 export default function ForgotPassword({navigation}) {
   const dispatch = useDispatch();
-
-  const error = useSelector(state => state.auth.error);
 
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');

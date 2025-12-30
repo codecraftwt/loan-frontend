@@ -26,10 +26,7 @@ export const borrowerLoanAPI = {
       const queryString = queryParams.toString();
       const url = `borrower/loans/my-loans?${queryString}`;
 
-      console.log('Fetching borrower loans (authenticated) from:', url); // Debug log
-
       const response = await axiosInstance.get(url);
-      console.log('Borrower loans response:', response.data); // Debug log
       return response.data;
     } catch (error) {
       console.error('Error fetching borrower loans:', error);
@@ -58,7 +55,6 @@ export const borrowerLoanAPI = {
   // Make a payment for a loan
   makePayment: async (loanId, paymentData) => {
     try {
-      console.log('Submitting payment for loan:', loanId, paymentData);
       const response = await axiosInstance.post(
         `borrower/loans/payment/${loanId}`,
         paymentData,
@@ -68,7 +64,6 @@ export const borrowerLoanAPI = {
           },
         }
       );
-      console.log('Payment submission response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error making payment:', error);
@@ -92,9 +87,7 @@ export const borrowerLoanAPI = {
       const queryString = queryParams.toString();
       const url = `borrower/loans/payment-history/${loanId}${queryString ? `?${queryString}` : ''}`;
       
-      console.log('Fetching payment history from:', url);
       const response = await axiosInstance.get(url);
-      console.log('Payment history response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error fetching payment history:', error);
@@ -165,8 +158,6 @@ export const borrowerLoanAPI = {
       const queryString = queryParams.toString();
       const url = `${baseurl}borrower/loans/my-loans${queryString ? `?${queryString}` : ''}`;
 
-      console.log('Fetching borrower loans from:', url); // Debug log
-
       // Use plain axios without authentication for this endpoint
       const response = await axios.get(url, {
         timeout: 10000, // 10 second timeout
@@ -175,7 +166,6 @@ export const borrowerLoanAPI = {
         }
       });
 
-      console.log('Borrower loans response:', response.data); // Debug log
       return response.data;
     } catch (error) {
       console.error('Error fetching borrower loans:', error);

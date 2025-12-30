@@ -89,24 +89,8 @@ export const verifyPlanPayment = createAsyncThunk(
   'planPurchase/verifyPlanPayment',
   async (paymentData, { rejectWithValue }) => {
     try {
-      console.log('Sending verification request:', {
-        endpoint: 'plans/purchase/verify',
-        payload: {
-          razorpay_payment_id: paymentData.razorpay_payment_id,
-          razorpay_order_id: paymentData.razorpay_order_id,
-          razorpay_signature: paymentData.razorpay_signature ? 'Present' : 'Missing',
-          planId: paymentData.planId,
-        },
-      });
-
       const response = await instance.post('plans/purchase/verify', paymentData);
       
-      console.log('Verification response:', {
-        success: response.data.success,
-        message: response.data.message,
-        hasData: !!response.data.data,
-      });
-
       if (response.data.success) {
         return {
           plan: response.data.data.plan,

@@ -6,18 +6,10 @@ export const lenderLoanAPI = {
   // Get loan details by ID (for lenders)
   getLoanDetails: async (loanId) => {
     try {
-      // console.log('Fetching lender loan details for:', loanId);
       const response = await axiosInstance.get(`lender/loans/${loanId}`);
-      // console.log('Lender loan details response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error fetching lender loan details:', error);
-      // console.error('Error details:', {
-      //   message: error.message,
-      //   status: error.response?.status,
-      //   statusText: error.response?.statusText,
-      //   data: error.response?.data,
-      // });
       throw error;
     }
   },

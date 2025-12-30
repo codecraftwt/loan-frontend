@@ -35,6 +35,7 @@ import MakePayment from '../Screens/Borrower/Loans/MakePayment';
 import PaymentHistory from '../Screens/Borrower/Loans/PaymentHistory';
 // Lender Payment Screens
 import PendingPayments from '../Screens/Lender/Payments/PendingPayments';
+import NotificationTestScreen from '../Screens/Shared/Profile/NotificationTestScreen';
 
 const Navigation = () => {
   const Stack = createNativeStackNavigator();
@@ -67,6 +68,7 @@ const Navigation = () => {
       />
 
       <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="NotificationTestScreen" component={NotificationTestScreen} />
       <Stack.Screen name="AnalyticsScreen" component={AnalyticsScreen} />
       
       {/* Lender Payment Screens */}

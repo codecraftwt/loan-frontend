@@ -44,21 +44,8 @@ export const openRazorpayCheckout = (order, user) => {
       },
     };
 
-    console.log('Razorpay Options:', {
-      amount: options.amount,
-      orderId: options.order_id,
-      currency: options.currency,
-      description: options.description,
-      key: options.key ? 'Key present' : 'Key missing',
-    });
-
     RazorpayCheckout.open(options)
       .then((data) => {
-        console.log('Payment success - Full Data:', JSON.stringify(data, null, 2));
-        console.log('Payment ID:', data.razorpay_payment_id);
-        console.log('Order ID:', data.razorpay_order_id);
-        console.log('Signature:', data.razorpay_signature);
-        console.log('All data keys:', Object.keys(data));
         
         if (!data.razorpay_payment_id || !data.razorpay_order_id) {
           console.error('Missing payment or order ID');
@@ -91,23 +78,13 @@ export const openRazorpayCheckout = (order, user) => {
           order: order,
         };
         
-        console.log('Resolving with payment data:', {
-          payment_id: paymentResponse.data.razorpay_payment_id,
-          order_id: paymentResponse.data.razorpay_order_id,
-          signature_present: !!paymentResponse.data.razorpay_signature,
-        });
-        
         resolve(paymentResponse);
       })
       .catch((error) => {
         console.error('Razorpay error - Full error:', error);
-        console.error('Razorpay error code:', error.code);
-        console.error('Razorpay error description:', error.description);
-        console.error('Razorpay error message:', error.message);
         
         if (error.code === 2) {
           // User cancelled
-          console.log('User cancelled payment');
           reject({
             type: 'USER_CANCELLED',
             message: 'Payment cancelled by user',

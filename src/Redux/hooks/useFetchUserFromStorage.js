@@ -43,16 +43,10 @@ const useFetchUserFromStorage = () => {
             }
           }
 
-          console.log('User Data updated');
-
           dispatch(setUser(userData));
 
           // Optionally, store the updated user data in AsyncStorage if you want it available locally
           await AsyncStorage.setItem('user', JSON.stringify(userData));
-
-          console.log(
-            'User details fetched from the API and updated in Redux store',
-          );
         } else {
           console.log('No token found in AsyncStorage');
         }

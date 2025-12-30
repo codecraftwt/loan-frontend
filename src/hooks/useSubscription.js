@@ -58,21 +58,14 @@ export const useSubscription = () => {
       setProcessing(true);
       setPaymentError(null);
 
-      console.log('Starting plan purchase for plan:', planId);
-
       // Step 1: Create order
-      console.log('Creating order...');
       const order = await dispatch(createPlanOrder(planId)).unwrap();
-      console.log('Order created:', order.orderId);
 
       // Step 2: Open Razorpay checkout
-      console.log('Opening Razorpay...');
       let paymentResult;
       try {
         paymentResult = await openRazorpayCheckout(order, userData);
-        console.log('Payment result:', paymentResult.success);
       } catch (razorpayError) {
-        console.log('Razorpay error caught:', razorpayError);
         setProcessing(false);
         
         // Handle user cancellation

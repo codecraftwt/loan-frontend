@@ -50,11 +50,7 @@ export default function OTP({navigation, route}) {
     try {
       // Dispatch the verifyOtp action and wait for the response
       const result = await dispatch(verifyOtp({email, otp: otpCode})).unwrap();
-
-      console.log('msg otp', result.message);
-
-      console.log(result, 'result');
-
+      
       if (result.message === 'Invalid verification code') {
         Alert.alert('Error', 'The OTP you entered is invalid or expired.');
       } else {
@@ -69,7 +65,6 @@ export default function OTP({navigation, route}) {
       }
     } catch (err) {
       setError(err || 'An error occurred while verifying the OTP.');
-      console.log('msg otp --->', err);
       Toast.show({
         type: 'error',
         position: 'top',
