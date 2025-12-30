@@ -91,11 +91,20 @@ export default function PersonalLoan({ route }) {
   
   // Check if loan is closed
   const isLoanClosed = remainingAmount <= 0 && totalPaid > 0;
+  
+  // Check if loan is overdue
+  const isOverdue = loanDetails.loanEndDate && 
+    moment(loanDetails.loanEndDate).isBefore(moment(), 'day') && 
+    remainingAmount > 0 && 
+    !isLoanClosed;
 
   // Get display status based on borrower's decision
   const getDisplayStatus = () => {
     if (loanDetails.borrowerAcceptanceStatus?.toLowerCase() === 'rejected') {
       return 'rejected';
+    }
+    if (isOverdue) {
+      return 'overdue';
     }
     if (isLoanClosed) {
       return 'closed';
@@ -159,7 +168,7 @@ export default function PersonalLoan({ route }) {
     },
     {
       label: 'Loan Status',
-      value: getStatusDisplayText(),
+      value: isOverdue ? 'Overdue' : getStatusDisplayText(),
       icon: getStatusIcon(loanDetails.status),
     },
     {
@@ -240,10 +249,10 @@ export default function PersonalLoan({ route }) {
           {/* Status Indicators */}
           <View style={styles.statusContainer}>
             <View style={styles.statusItem}>
-              <View style={[styles.statusBadge, { backgroundColor: isLoanClosed ? '#10B981' : getStatusColor(loanDetails.status) }]}>
-                <Icon name={isLoanClosed ? 'check-circle' : getStatusIcon(loanDetails.status)} size={14} color="#FFFFFF" />
+              <View style={[styles.statusBadge, { backgroundColor: getStatusColor(loanDetails.status) }]}>
+                <Icon name={getStatusIcon(loanDetails.status)} size={14} color="#FFFFFF" />
                 <Text style={styles.statusText}>
-                  {getStatusDisplayText()}
+                  {isOverdue ? 'Overdue' : getStatusDisplayText()}
                 </Text>
               </View>
               <Text style={styles.statusLabel}>Loan Status</Text>
@@ -312,18 +321,29 @@ export default function PersonalLoan({ route }) {
                     styles.progressFill, 
                     { 
                       width: `${loanAmount > 0 ? (totalPaid / loanAmount) * 100 : 0}%`,
-                      backgroundColor: isLoanClosed ? '#10B981' : '#3B82F6'
+                      backgroundColor: isOverdue ? '#EF4444' : (isLoanClosed ? '#10B981' : '#3B82F6')
                     }
                   ]} 
                 />
               </View>
               <Text style={styles.progressText}>
                 {loanAmount > 0 ? `${((totalPaid / loanAmount) * 100).toFixed(1)}%` : '0%'} Paid
+                {isOverdue && ' • Overdue'}
               </Text>
             </View>
 
+            {/* Overdue Badge */}
+            {isOverdue && (
+              <View style={styles.overdueBadge}>
+                <Icon name="alert-circle" size={20} color="#EF4444" />
+                <Text style={styles.overdueBadgeText}>
+                  Overdue - Payment was due on {moment(loanDetails.loanEndDate).format('DD MMM YYYY')}
+                </Text>
+              </View>
+            )}
+            
             {/* Loan Closed Badge */}
-            {isLoanClosed && (
+            {isLoanClosed && !isOverdue && (
               <View style={styles.closedBadge}>
                 <Icon name="check-circle" size={20} color="#10B981" />
                 <Text style={styles.closedBadgeText}>Loan Closed - All Amount Paid</Text>
@@ -454,17 +474,16 @@ const styles = StyleSheet.create({
   // Profile Card
   profileCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: m(16),
-    padding: m(20),
-    paddingVertical: m(14),
+    borderRadius: m(20),
+    padding: m(24),
     marginBottom: m(16),
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    elevation: 2,
+    elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
   },
   profileHeader: {
     flexDirection: 'row',
@@ -472,13 +491,15 @@ const styles = StyleSheet.create({
     marginBottom: m(12),
   },
   profileAvatar: {
-    width: m(50),
-    height: m(50),
-    borderRadius: m(25),
-    backgroundColor: 'black',
+    width: m(60),
+    height: m(60),
+    borderRadius: m(30),
+    backgroundColor: '#FF9800',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: m(16),
+    borderWidth: 3,
+    borderColor: '#FFF3E0',
   },
   avatarText: {
     fontSize: m(23),
@@ -486,21 +507,21 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   profileImage: {
-    width: m(50),
-    height: m(50),
+    width: m(60),
+    height: m(60),
     borderRadius: m(30),
     marginRight: m(16),
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderWidth: 3,
+    borderColor: '#EFF6FF',
   },
   profileInfo: {
     flex: 1,
   },
   profileName: {
-    fontSize: m(20),
-    fontWeight: '600',
+    fontSize: m(22),
+    fontWeight: '700',
     color: '#111827',
-    marginBottom: m(4),
+    marginBottom: m(8),
   },
   profileMeta: {
     gap: m(4),
@@ -556,8 +577,8 @@ const styles = StyleSheet.create({
     marginBottom: m(16),
   },
   sectionTitle: {
-    fontSize: m(18),
-    fontWeight: '600',
+    fontSize: m(20),
+    fontWeight: '700',
     color: '#111827',
     marginBottom: m(16),
     paddingHorizontal: m(4),
@@ -569,37 +590,41 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: m(12),
-    padding: m(13),
+    borderRadius: m(14),
+    padding: m(16),
+    marginBottom: m(10),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    elevation: 1,
+    borderColor: '#F3F4F6',
+    elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 4,
+    shadowRadius: 8,
   },
   detailIconContainer: {
-    width: m(40),
-    height: m(40),
-    borderRadius: m(10),
+    width: m(44),
+    height: m(44),
+    borderRadius: m(12),
     backgroundColor: '#EFF6FF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: m(16),
+    marginRight: m(14),
   },
   detailContent: {
     flex: 1,
   },
   detailLabel: {
-    fontSize: m(12),
-    color: '#6B7280',
-    marginBottom: m(2),
+    fontSize: m(11),
+    color: '#9CA3AF',
+    marginBottom: m(4),
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    fontWeight: '600',
   },
   detailValue: {
     fontSize: m(16),
-    fontWeight: '500',
-    color: '#374151',
+    fontWeight: '600',
+    color: '#111827',
   },
 
   // Agreement Button
@@ -699,22 +724,22 @@ const styles = StyleSheet.create({
   // Payment Summary Card
   paymentSummaryCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: m(16),
-    padding: m(20),
+    borderRadius: m(20),
+    padding: m(24),
     marginBottom: m(16),
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    elevation: 2,
+    elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
   },
   paymentSummaryTitle: {
-    fontSize: m(18),
-    fontWeight: '600',
+    fontSize: m(20),
+    fontWeight: '700',
     color: '#111827',
-    marginBottom: m(16),
+    marginBottom: m(20),
   },
   paymentSummaryRow: {
     flexDirection: 'row',
@@ -780,5 +805,23 @@ const styles = StyleSheet.create({
     fontSize: m(14),
     fontWeight: '600',
     color: '#10B981',
+  },
+  overdueBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FEE2E2',
+    borderRadius: m(8),
+    padding: m(12),
+    gap: m(8),
+    marginTop: m(8),
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+  },
+  overdueBadgeText: {
+    fontSize: m(14),
+    fontWeight: '600',
+    color: '#DC2626',
+    flex: 1,
   },
 });

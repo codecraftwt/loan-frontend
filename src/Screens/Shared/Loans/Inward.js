@@ -147,6 +147,36 @@ export default function Inward({ navigation }) {
     return `₹${numAmount.toLocaleString('en-IN')}`;
   };
 
+  // Group loans by borrower (using aadhaarNumber or name as identifier)
+  const groupLoansByBorrower = (loans) => {
+    if (!loans || loans.length === 0) return [];
+    
+    const grouped = {};
+    loans.forEach(loan => {
+      // Use aadhaarNumber as primary identifier, fallback to name
+      const borrowerId = loan.aadhaarNumber || loan.aadharCardNo || loan.name || 'unknown';
+      
+      if (!grouped[borrowerId]) {
+        grouped[borrowerId] = {
+          borrower: {
+            name: loan.name,
+            mobileNumber: loan.mobileNumber,
+            aadhaarNumber: loan.aadhaarNumber || loan.aadharCardNo,
+            profileImage: loan.profileImage,
+            address: loan.address,
+          },
+          loans: [],
+        };
+      }
+      grouped[borrowerId].loans.push(loan);
+    });
+    
+    // Sort by borrower name for consistent display
+    return Object.values(grouped).sort((a, b) => 
+      (a.borrower.name || '').localeCompare(b.borrower.name || '')
+    );
+  };
+
   const getLoanStatus = (loan) => {
     const loanAmount = typeof loan.amount === 'number' ? loan.amount : parseFloat(loan.amount) || 0;
     const totalPaid = typeof loan.totalPaid === 'number' ? loan.totalPaid : parseFloat(loan.totalPaid) || 0;
@@ -155,6 +185,14 @@ export default function Inward({ navigation }) {
     if (remainingAmount <= 0 && totalPaid > 0) {
       return 'closed';
     }
+    
+    // Check if overdue
+    if (loan.loanEndDate && 
+        moment(loan.loanEndDate).isBefore(moment(), 'day') && 
+        remainingAmount > 0) {
+      return 'overdue';
+    }
+    
     return loan?.paymentStatus?.toLowerCase() || loan?.status?.toLowerCase();
   };
 
@@ -403,168 +441,136 @@ export default function Inward({ navigation }) {
               </Text>
             </View>
           ) : (
-            lenderLoans?.map((loan, index) => {
-              const isHighlighted = highlightLoanId === loan._id;
-
+            groupLoansByBorrower(lenderLoans).map((borrowerGroup, groupIndex) => {
+              const borrower = borrowerGroup.borrower;
+              const loans = borrowerGroup.loans;
+              
+              // Calculate totals for this borrower
+              const totalLoanAmount = loans.reduce((sum, loan) => {
+                const amount = typeof loan.amount === 'number' ? loan.amount : parseFloat(loan.amount) || 0;
+                return sum + amount;
+              }, 0);
+              
+              const totalPaid = loans.reduce((sum, loan) => {
+                const paid = typeof loan.totalPaid === 'number' ? loan.totalPaid : parseFloat(loan.totalPaid) || 0;
+                return sum + paid;
+              }, 0);
+              
+              const totalRemaining = loans.reduce((sum, loan) => {
+                const remaining = typeof loan.remainingAmount === 'number' ? loan.remainingAmount : parseFloat(loan.remainingAmount) || 0;
+                return sum + remaining;
+              }, 0);
+              
+              const overdueCount = loans.filter(loan => {
+                const remaining = typeof loan.remainingAmount === 'number' ? loan.remainingAmount : parseFloat(loan.remainingAmount) || 0;
+                return loan.loanEndDate && 
+                  moment(loan.loanEndDate).isBefore(moment(), 'day') && 
+                  remaining > 0;
+              }).length;
+              
+              const hasOverdue = overdueCount > 0;
+              
               return (
-                <View
-                  key={index}
-                  ref={ref => {
-                    if (ref && loan._id) {
-                      loanCardRefs.current[loan._id] = ref;
-                    }
-                  }}>
-                  <TouchableOpacity
-                    onPress={() =>
-                      navigation.navigate('PersonalLoan', {
-                        loanDetails: loan,
-                        isEdit: false,
-                      })
-                    }
-                    activeOpacity={0.9}>
-                    <View style={[
-                      styles.loanCard,
-                      isHighlighted && styles.highlightedLoanCard
-                    ]}>
-                    {/* Card Header */}
-                    <View style={styles.cardHeader}>
-                      <View style={styles.userInfo}>
-                        {loan?.profileImage ? (
-                          <Image
-                            source={{ uri: loan.profileImage }}
-                            style={styles.userAvatar}
-                          />
-                        ) : (
-                          <View style={styles.avatarPlaceholder}>
-                            <Text style={styles.avatarText}>
-                              {(loan?.name || 'B')?.charAt(0)?.toUpperCase()}
+                <TouchableOpacity
+                  key={borrower.aadhaarNumber || borrower.name || groupIndex}
+                  style={[
+                    styles.borrowerCard,
+                    hasOverdue && styles.overdueBorrowerCard
+                  ]}
+                  onPress={() => navigation.navigate('BorrowerLoansScreen', {
+                    borrower: borrower,
+                    loans: loans,
+                  })}
+                  activeOpacity={0.8}>
+                  {hasOverdue && (
+                    <View style={styles.overdueBanner}>
+                      <Icon name="error" size={16} color="#FFFFFF" />
+                      <Text style={styles.overdueBannerText}>
+                        {overdueCount} OVERDUE LOAN{overdueCount > 1 ? 'S' : ''}
+                      </Text>
+                    </View>
+                  )}
+                  
+                  <View style={styles.borrowerCardHeader}>
+                    <View style={styles.borrowerInfo}>
+                      {borrower.profileImage ? (
+                        <Image
+                          source={{ uri: borrower.profileImage }}
+                          style={styles.borrowerAvatar}
+                        />
+                      ) : (
+                        <View style={styles.borrowerAvatarPlaceholder}>
+                          <Text style={styles.borrowerAvatarText}>
+                            {(borrower.name || 'B')?.charAt(0)?.toUpperCase()}
+                          </Text>
+                        </View>
+                      )}
+                      <View style={styles.borrowerDetails}>
+                        <Text style={styles.borrowerName} numberOfLines={1}>
+                          {borrower.name || 'Unknown Borrower'}
+                        </Text>
+                        <View style={styles.borrowerMeta}>
+                          <View style={styles.metaItem}>
+                            <Icon name="phone" size={14} color="#6B7280" />
+                            <Text style={styles.metaText}>
+                              {borrower.mobileNumber || 'N/A'}
                             </Text>
                           </View>
-                        )}
-                        <View style={styles.userDetails}>
-                          <Text style={styles.lenderName} numberOfLines={1}>
-                            {loan?.name || 'Unknown Borrower'}
-                          </Text>
-                          <Text style={styles.loanPurpose}>
-                            {loan.purpose}
-                          </Text>
+                          <View style={styles.metaItem}>
+                            <Icon name="badge" size={14} color="#6B7280" />
+                            <Text style={styles.metaText}>
+                              {borrower.aadhaarNumber || 'N/A'}
+                            </Text>
+                          </View>
                         </View>
-                      </View>
-                      <View style={styles.amountContainer}>
-                        <Text style={styles.amountText}>
-                          ₹{loan.amount?.toLocaleString('en-IN')}
-                        </Text>
-                        <Text style={styles.amountLabel}>Loan Amount</Text>
                       </View>
                     </View>
+                    <Icon name="chevron-right" size={24} color="#9CA3AF" />
+                  </View>
 
-                    {/* Loan Details */}
-                    <View style={styles.loanDetails}>
-                      <View style={styles.detailItem}>
-                        <Icon name="calendar-today" size={16} color="#6B7280" />
-                        <Text style={styles.detailLabel}>Due Date</Text>
-                        <Text style={styles.detailValue}>
-                          {formatDate(loan.loanEndDate)}
+                  <View style={styles.divider} />
+
+                  <View style={styles.borrowerSummary}>
+                    <View style={styles.summaryRow}>
+                      <View style={styles.summaryItem}>
+                        <Text style={styles.summaryLabel}>Total Loans</Text>
+                        <Text style={styles.summaryValue}>{loans.length}</Text>
+                      </View>
+                      <View style={styles.summaryDivider} />
+                      <View style={styles.summaryItem}>
+                        <Text style={styles.summaryLabel}>Total Given</Text>
+                        <Text style={[styles.summaryValue, { color: '#3B82F6' }]}>
+                          {formatCurrency(totalLoanAmount)}
                         </Text>
                       </View>
-                      <View style={styles.detailItem}>
-                        <Icon name="account-balance-wallet" size={16} color="#6B7280" />
-                        <Text style={styles.detailLabel}>Status</Text>
-                        <View style={[
-                          styles.statusBadge,
-                          { backgroundColor: getStatusColor(loan) }
-                        ]}>
-                          <Icon name={getStatusIcon(loan)} size={12} color="#FFFFFF" />
-                          <Text style={styles.statusText}>
-                            {getStatusText(loan)}
-                          </Text>
-                        </View>
+                      <View style={styles.summaryDivider} />
+                      <View style={styles.summaryItem}>
+                        <Text style={styles.summaryLabel}>Remaining</Text>
+                        <Text style={[styles.summaryValue, { color: hasOverdue ? '#EF4444' : '#F59E0B' }]}>
+                          {formatCurrency(totalRemaining)}
+                        </Text>
                       </View>
-                      {loan.loanMode && (
-                        <View style={styles.detailItem}>
-                          <Icon name={loan.loanMode === 'cash' ? 'cash' : 'credit-card'} size={16} color="#6B7280" />
-                          <Text style={styles.detailLabel}>Mode</Text>
-                          <Text style={styles.detailValue}>
-                            {loan.loanMode.charAt(0).toUpperCase() + loan.loanMode.slice(1)}
-                          </Text>
-                        </View>
-                      )}
                     </View>
-
-                    {/* Payment Summary */}
-                    {(() => {
-                      const loanAmount = typeof loan.amount === 'number' ? loan.amount : parseFloat(loan.amount) || 0;
-                      const totalPaid = typeof loan.totalPaid === 'number' ? loan.totalPaid : parseFloat(loan.totalPaid) || 0;
-                      const remainingAmount = typeof loan.remainingAmount === 'number' ? loan.remainingAmount : parseFloat(loan.remainingAmount) || loanAmount;
-                      const isLoanClosed = remainingAmount <= 0 && totalPaid > 0;
-                      const paymentPercent = loanAmount > 0 ? (totalPaid / loanAmount) * 100 : 0;
-
-                      return loanAmount > 0 ? (
-                        <View style={styles.paymentSummary}>
-                          <View style={styles.paymentSummaryRow}>
-                            <View style={styles.paymentItem}>
-                              <Text style={styles.paymentLabel}>Paid</Text>
-                              <Text style={[styles.paymentValue, styles.paidAmount]}>
-                                {formatCurrency(totalPaid)}
-                              </Text>
-                            </View>
-                            <View style={styles.paymentDivider} />
-                            <View style={styles.paymentItem}>
-                              <Text style={styles.paymentLabel}>Remaining</Text>
-                              <Text style={[styles.paymentValue, isLoanClosed ? styles.closedAmount : styles.remainingAmount]}>
-                                {isLoanClosed ? '₹0' : formatCurrency(remainingAmount)}
-                              </Text>
-                            </View>
-                          </View>
-                          <View style={styles.paymentProgressBar}>
-                            <View 
-                              style={[
-                                styles.paymentProgressFill, 
-                                { 
-                                  width: `${paymentPercent}%`,
-                                  backgroundColor: isLoanClosed ? '#10B981' : '#3B82F6'
-                                }
-                              ]} 
-                            />
-                          </View>
-                          <Text style={styles.paymentProgressText}>
-                            {paymentPercent.toFixed(1)}% Paid
-                            {isLoanClosed && ' • Loan Closed'}
-                          </Text>
-                        </View>
-                      ) : null;
-                    })()}
-
-                    {/* Card Footer */}
-                    <View style={styles.cardFooter}>
-                      <View style={styles.footerLeft}>
-                        <Icon name="access-time" size={16} color="#6B7280" />
-                        <Text style={styles.timeText}>
-                          {loan.loanStartDate ? `Started ${moment(loan.loanStartDate).fromNow()}` : 'Not started'}
+                    
+                    {hasOverdue && (
+                      <View style={styles.overdueWarning}>
+                        <Icon name="error" size={16} color="#EF4444" />
+                        <Text style={styles.overdueWarningText}>
+                          {overdueCount} loan{overdueCount > 1 ? 's' : ''} overdue
                         </Text>
                       </View>
+                    )}
+                  </View>
 
-                      {/* Loan Mode Badge */}
-                      {loan.loanMode && (
-                        <View style={[
-                          styles.borrowerStatusBadge,
-                          styles.loanModeBadge,
-                          { backgroundColor: loan.loanMode === 'cash' ? '#10B981' : '#3B82F6' }
-                        ]}>
-                          <Icon 
-                            name={loan.loanMode === 'cash' ? 'cash' : 'credit-card'} 
-                            size={12} 
-                            color="#FFFFFF" 
-                          />
-                          <Text style={styles.borrowerStatusText}>
-                            {loan.loanMode.toUpperCase()}
-                          </Text>
-                        </View>
-                      )}
+                  <View style={styles.borrowerCardFooter}>
+                    <View style={styles.footerItem}>
+                      <Icon name="account-balance-wallet" size={14} color="#6B7280" />
+                      <Text style={styles.footerText}>
+                        {loans.length} loan{loans.length > 1 ? 's' : ''} • Tap to view all
+                      </Text>
                     </View>
                   </View>
-                  </TouchableOpacity>
-                </View>
+                </TouchableOpacity>
               );
             })
           )}
@@ -638,6 +644,25 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#374151',
     marginBottom: m(8),
+  },
+  searchFilterContainer: {
+    marginBottom: m(20),
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: m(10),
+    paddingHorizontal: m(12),
+    gap: m(8),
+  },
+  searchFilterInput: {
+    flex: 1,
+    height: m(44),
+    fontSize: m(14),
+    color: '#374151',
   },
   dateFilterContainer: {
     marginBottom: m(20),
@@ -779,158 +804,167 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Loan Card
-  loanCard: {
+  // Borrower Card (Grouped)
+  borrowerCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: m(16),
-    padding: m(16),
+    borderRadius: m(20),
+    padding: m(20),
     marginBottom: m(16),
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    elevation: 2,
+    elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-  },
-  highlightedLoanCard: {
-    borderWidth: 3,
-    borderColor: '#ff6700',
-    backgroundColor: '#FFF5E6',
-    elevation: 8,
-    shadowColor: '#ff6700',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.08,
     shadowRadius: 12,
+    overflow: 'hidden',
   },
-  cardHeader: {
+  overdueBorrowerCard: {
+    borderWidth: 2,
+    borderColor: '#FCA5A5',
+    backgroundColor: '#FFF5F5',
+  },
+  overdueBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EF4444',
+    paddingVertical: m(8),
+    paddingHorizontal: m(12),
+    marginHorizontal: m(-20),
+    marginTop: m(-20),
+    marginBottom: m(16),
+    gap: m(6),
+  },
+  overdueBannerText: {
+    color: '#FFFFFF',
+    fontSize: m(12),
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  borrowerCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: m(16),
   },
-  userInfo: {
+  borrowerInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
-  userAvatar: {
-    width: m(46),
-    height: m(46),
-    borderRadius: m(24),
-    marginRight: m(12),
+  borrowerAvatar: {
+    width: m(56),
+    height: m(56),
+    borderRadius: m(28),
+    marginRight: m(14),
     borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderColor: '#F0F0F0',
   },
-  avatarPlaceholder: {
-    width: m(46),
-    height: m(46),
-    borderRadius: m(24),
-    backgroundColor: 'black',
+  borrowerAvatarPlaceholder: {
+    width: m(56),
+    height: m(56),
+    borderRadius: m(28),
+    backgroundColor: '#FF9800',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: m(12),
+    marginRight: m(14),
+    borderWidth: 2,
+    borderColor: '#FFF3E0',
   },
-  avatarText: {
-    fontSize: m(18),
-    fontWeight: '600',
+  borrowerAvatarText: {
+    fontSize: m(22),
+    fontWeight: '700',
     color: '#FFFFFF',
   },
-  userDetails: {
+  borrowerDetails: {
     flex: 1,
   },
-  lenderName: {
-    fontSize: m(16),
-    fontWeight: '600',
+  borrowerName: {
+    fontSize: m(18),
+    fontWeight: '700',
     color: '#111827',
-    marginBottom: m(2),
+    marginBottom: m(8),
   },
-  loanPurpose: {
-    fontSize: m(14),
+  borrowerMeta: {
+    gap: m(6),
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(6),
+  },
+  metaText: {
+    fontSize: m(13),
     color: '#6B7280',
   },
-  amountContainer: {
-    alignItems: 'flex-end',
+  divider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginBottom: m(16),
   },
-  amountText: {
-    fontSize: m(17),
+  borrowerSummary: {
+    marginBottom: m(12),
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  summaryItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  summaryLabel: {
+    fontSize: m(11),
+    color: '#9CA3AF',
+    marginBottom: m(4),
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    fontWeight: '600',
+  },
+  summaryValue: {
+    fontSize: m(16),
     fontWeight: '700',
     color: '#111827',
   },
-  amountLabel: {
-    fontSize: m(12),
-    color: '#6B7280',
-    marginTop: m(2),
+  summaryDivider: {
+    width: 1,
+    height: m(40),
+    backgroundColor: '#E5E7EB',
   },
-  loanDetails: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: m(12),
-    padding: m(12),
-    marginBottom: m(14),
-  },
-  detailItem: {
+  overdueWarning: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: m(8),
+    justifyContent: 'center',
+    backgroundColor: '#FEE2E2',
+    borderRadius: m(8),
+    padding: m(10),
+    marginTop: m(12),
+    gap: m(6),
   },
-  detailLabel: {
-    fontSize: m(12),
-    color: '#6B7280',
-    marginLeft: m(8),
-    marginRight: m(12),
-    width: m(70),
-  },
-  detailValue: {
-    fontSize: m(14),
-    fontWeight: '500',
-    color: '#374151',
-    flex: 1,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: m(10),
-    paddingVertical: m(4),
-    borderRadius: m(12),
-    gap: m(4),
-  },
-  statusText: {
-    fontSize: m(12),
+  overdueWarningText: {
+    fontSize: m(13),
+    color: '#DC2626',
     fontWeight: '600',
-    color: '#FFFFFF',
   },
-  cardFooter: {
+  borrowerCardFooter: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     paddingTop: m(12),
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: '#F3F4F6',
   },
-  footerLeft: {
+  footerItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: m(6),
   },
-  timeText: {
-    fontSize: m(12),
+  footerText: {
+    fontSize: m(13),
     color: '#6B7280',
-    marginLeft: m(4),
-  },
-  borrowerStatusBadge: {
-    paddingHorizontal: m(12),
-    paddingVertical: m(6),
-    borderRadius: m(20),
-  },
-  borrowerStatusText: {
-    fontSize: m(11),
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: m(0.5),
-  },
-  loanModeBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(4),
+    fontWeight: '500',
   },
 
   // Input Styles

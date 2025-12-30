@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
-import { m } from 'walstar-rn-responsive';
+import LinearGradient from 'react-native-linear-gradient';
 import Header from '../../../Components/Header';
 import { useSubscription } from '../../../hooks/useSubscription';
 import { useSelector } from 'react-redux';
@@ -18,187 +18,217 @@ import { useSelector } from 'react-redux';
 const SubscriptionScreen = ({ navigation }) => {
   const {
     plans,
-    selectedPlan,
-    hasActiveSubscription,
+    activePlan,
+    hasActivePlan,
+    expiryDate,
+    remainingDays,
     plansLoading,
     purchaseLoading,
     plansError,
     fetchPlans,
-    handleSelectPlan,
     purchaseSubscription,
+    getActivePlan,
   } = useSubscription();
 
-  // const user = useSelector((state) => state.auth.user);
-    const user = useSelector(state => state.auth.user);
-
+  const user = useSelector(state => state.auth.user);
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
     fetchPlans();
+    getActivePlan();
   }, []);
 
-  // COMMENTED OUT - Active subscription check (to be updated with plan status)
-  // useEffect(() => {
-  //   if (hasActiveSubscription) {
-  //     Alert.alert(
-  //       'Active Subscription',
-  //       'You already have an active subscription. You can view your current plan in the profile section.',
-  //       [
-  //         { 
-  //           text: 'View Profile', 
-  //           onPress: () => navigation.navigate('ProfileDetails') 
-  //         },
-  //         { 
-  //           text: 'Stay Here', 
-  //           style: 'cancel' 
-  //         },
-  //       ]
-  //     );
-  //   }
-  // }, [hasActiveSubscription]);
-
-  const handleProceedToPayment = async () => {
-    if (!selectedPlan) {
-      Alert.alert('Select a Plan', 'Please select a plan to continue.');
-      return;
-    }
-
-    // COMMENTED OUT - Active subscription check (to be updated with plan status)
-    // if (hasActiveSubscription) {
-    //   Alert.alert(
-    //     'Active Subscription',
-    //     'You already have an active subscription. Would you like to upgrade?',
-    //     [
-    //       { text: 'Cancel', style: 'cancel' },
-    //       { text: 'Upgrade', onPress: () => proceedWithPayment() },
-    //     ]
-    //   );
-    // } else {
-    //   proceedWithPayment();
-    // }
-    
-    proceedWithPayment();
-  };
-
-  const proceedWithPayment = async () => {
-    setProcessing(true);
-    
-    const result = await purchaseSubscription(selectedPlan._id, user);
-    
-    setProcessing(false);
-    
-    if (result.success) {
+  useEffect(() => {
+    if (hasActivePlan && remainingDays <= 0) {
       Alert.alert(
-        'Success!',
-        result.message,
-        [
-          { 
-            text: 'Great!', 
-            onPress: () => {
-              navigation.goBack();
-            } 
-          },
-        ]
-      );
-    } else if (result.type !== 'CANCELLED') {
-      Alert.alert(
-        'Payment Failed',
-        result.message,
-        [{ text: 'OK' }]
+        'Plan Expired',
+        'Your plan has expired. Please renew to continue creating loans.',
+        [{ text: 'OK', style: 'cancel' }]
       );
     }
-  };
+  }, [hasActivePlan, remainingDays]);
 
   const renderPlanFeatures = (features) => {
     return features?.map((feature, index) => (
       <View key={index} style={styles.featureItem}>
-        <Icon name="check-circle" size={16} color="#4CAF50" />
+        <Icon name="check" size={18} color="#FF9800" style={styles.checkIcon} />
         <Text style={styles.featureText}>{feature}</Text>
       </View>
     ));
   };
 
+  const handlePlanPress = (plan) => {
+    navigation.navigate('LenderPlanDetailsScreen', { plan, isActivePlan: false });
+  };
+
+  const handleActivePlanPress = () => {
+    if (activePlan) {
+      navigation.navigate('LenderPlanDetailsScreen', { 
+        plan: activePlan, 
+        isActivePlan: true 
+      });
+    }
+  };
+
+  const handleBuyFromCard = async (plan, event) => {
+    event?.stopPropagation?.();
+    if (!plan?._id) {
+      Alert.alert('Error', 'Plan ID is missing');
+      return;
+    }
+
+    if (hasActivePlan && remainingDays > 0) {
+      Alert.alert(
+        'Active Plan',
+        `You already have an active plan. It expires in ${remainingDays} days. Would you like to purchase a new plan?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
+    } else {
+      proceedWithPaymentFromCard(plan);
+    }
+  };
+
+  const proceedWithPaymentFromCard = async (plan) => {
+    setProcessing(true);
+    
+    try {
+      const result = await purchaseSubscription(plan._id, user);
+      
+      if (result.success) {
+        await getActivePlan();
+        
+        Alert.alert(
+          'Success!',
+          result.message || 'Plan purchased and activated successfully!',
+          [
+            { 
+              text: 'Great!', 
+              onPress: () => {}
+            },
+          ]
+        );
+      } else if (result.type !== 'CANCELLED') {
+        let errorMessage = result.message || 'Payment failed. Please try again.';
+        
+        if (result.message?.includes('signature') || result.message?.includes('verification')) {
+          errorMessage = result.message + 
+            (result.paymentId ? `\n\nPayment ID: ${result.paymentId}` : '') +
+            '\n\nPlease contact support if this issue persists.';
+        }
+        
+        Alert.alert('Payment Failed', errorMessage, [{ text: 'OK' }]);
+      }
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        error.message || 'An error occurred. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const renderPlanCard = (plan) => {
-    const isSelected = selectedPlan?._id === plan._id;
-    // Use planName (from admin plans) or name (mapped), check for popular keywords
     const planName = plan.planName || plan.name || '';
-    const isPopular = planName.toLowerCase().includes('pro') || planName.toLowerCase().includes('professional') || planName.toLowerCase().includes('premium');
 
     return (
       <TouchableOpacity
         key={plan._id}
         style={[
           styles.planCard,
-          isSelected && styles.selectedPlanCard,
-          isPopular && styles.popularPlanCard,
+         styles.popularPlanCard,
         ]}
-        onPress={() => handleSelectPlan(plan)}>
-        
-        {isPopular && (
-          <View style={styles.popularBadge}>
-            <Text style={styles.popularBadgeText}>POPULAR</Text>
+        onPress={() => handlePlanPress(plan)}
+        activeOpacity={0.9}>
+
+        <View style={styles.planCardContent}>
+          <View style={styles.planHeader}>
+            <View>
+              <Text style={styles.planName}>
+                {planName}
+              </Text>
+              <Text style={styles.planDescription}>
+                {plan.description || 'Unlimited loans with premium features'}
+              </Text>
+            </View>
+            <View style={styles.priceContainer}>
+              <Text style={styles.planPrice}>
+                ₹{plan.priceMonthly || plan.amount || 0}
+              </Text>
+              <Text style={styles.planDuration}>/{plan.duration}</Text>
+            </View>
           </View>
-        )}
-        
-        <View style={styles.planHeader}>
-          <Text style={[
-            styles.planName,
-            isSelected && styles.selectedPlanText,
-          ]}>
-            {planName}
-          </Text>
-          <Text style={[
-            styles.planPrice,
-            isSelected && styles.selectedPlanText,
-          ]}>
-            ₹{plan.priceMonthly || plan.amount || 0}
-            <Text style={styles.planDuration}> / {plan.duration}</Text>
-          </Text>
-        </View>
-        
-        <Text style={[
-          styles.planDescription,
-          isSelected && styles.selectedPlanText,
-        ]}>
-          {plan.description || 'Unlimited loans with premium features'}
-        </Text>
-        
-        <View style={styles.featuresContainer}>
-          {/* Use features array if available (mapped), otherwise build from planFeatures */}
-          {plan.features ? (
-            renderPlanFeatures(plan.features)
-          ) : (
-            <>
-              <View style={styles.featureItem}>
-                <Icon name="check-circle" size={16} color="#4CAF50" />
-                <Text style={styles.featureText}>Unlimited loans</Text>
-              </View>
-              {(plan.planFeatures?.advancedAnalytics ?? false) && (
+          
+          <View style={styles.divider} />
+          
+          <View style={styles.featuresContainer}>
+            {plan.features ? (
+              renderPlanFeatures(plan.features)
+            ) : (
+              <>
                 <View style={styles.featureItem}>
-                  <Icon name="check-circle" size={16} color="#4CAF50" />
-                  <Text style={styles.featureText}>Advanced Analytics</Text>
+                  <Icon name="check" size={18} color="#FF9800" style={styles.checkIcon} />
+                  <Text style={styles.featureText}>Unlimited loans</Text>
                 </View>
+                {(plan.planFeatures?.advancedAnalytics ?? false) && (
+                  <View style={styles.featureItem}>
+                    <Icon name="check" size={18} color="#FF9800" style={styles.checkIcon} />
+                    <Text style={styles.featureText}>Advanced Analytics</Text>
+                  </View>
+                )}
+                {(plan.planFeatures?.prioritySupport ?? false) && (
+                  <View style={styles.featureItem}>
+                    <Icon name="check" size={18} color="#FF9800" style={styles.checkIcon} />
+                    <Text style={styles.featureText}>Priority Support</Text>
+                  </View>
+                )}
+              </>
+            )}
+          </View>
+          
+          <View style={styles.loanLimitContainer}>
+            <Icon name="zap" size={16} color="#00A550" />
+            <Text style={styles.loanLimit}>Unlimited loans creation</Text>
+          </View>
+          
+          <TouchableOpacity
+            style={[
+              styles.buyButtonCard,
+              styles.popularBuyButton,
+            ]}
+            onPress={(e) => handleBuyFromCard(plan, e)}
+            disabled={purchaseLoading || processing}
+            activeOpacity={0.8}>
+            <LinearGradient
+              colors={['#ffa011ff', '#ff7722ff']}
+              style={[
+                styles.buyButtonGradient,
+                styles.popularBuyButtonGradient,
+              ]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}>
+              {purchaseLoading || processing ? (
+                <ActivityIndicator size="small" color={"#FF9800"} />
+              ) : (
+                <>
+                  <Icon 
+                    name="shopping-cart" 
+                    size={18} 
+                    color={"#FF9800"} 
+                  />
+                  <Text style={[
+                    styles.buyButtonCardText,
+                    styles.popularBuyButtonText,
+                  ]}>
+                    Get Started
+                  </Text>
+                </>
               )}
-              {(plan.planFeatures?.prioritySupport ?? false) && (
-                <View style={styles.featureItem}>
-                  <Icon name="check-circle" size={16} color="#4CAF50" />
-                  <Text style={styles.featureText}>Priority Support</Text>
-                </View>
-              )}
-            </>
-          )}
-        </View>
-        
-        <Text style={styles.loanLimit}>
-          Unlimited loans
-        </Text>
-        
-        <View style={styles.selectIndicator}>
-          {isSelected ? (
-            <Icon name="check-circle" size={24} color="#4CAF50" />
-          ) : (
-            <View style={styles.unselectedCircle} />
-          )}
+            </LinearGradient>
+          </TouchableOpacity>
         </View>
       </TouchableOpacity>
     );
@@ -207,10 +237,12 @@ const SubscriptionScreen = ({ navigation }) => {
   if (plansLoading) {
     return (
       <SafeAreaView style={styles.safeContainer}>
-        <Header title="Subscription" showBackButton />
+        <Header title="Subscription Plans" showBackButton />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4CAF50" />
-          <Text style={styles.loadingText}>Loading plans...</Text>
+          <View style={styles.loadingAnimation}>
+            <ActivityIndicator size="large" color="#FF9800" />
+          </View>
+          <Text style={styles.loadingText}>Loading premium plans...</Text>
         </View>
       </SafeAreaView>
     );
@@ -219,15 +251,25 @@ const SubscriptionScreen = ({ navigation }) => {
   if (plansError) {
     return (
       <SafeAreaView style={styles.safeContainer}>
-        <Header title="Subscription" showBackButton />
+        <Header title="Subscription Plans" showBackButton />
         <View style={styles.errorContainer}>
-          <Icon name="alert-circle" size={48} color="#e74c3c" />
-          <Text style={styles.errorText}>Failed to load plans</Text>
+          <View style={styles.errorIconContainer}>
+            <Icon name="alert-circle" size={64} color="#FF9800" />
+          </View>
+          <Text style={styles.errorTitle}>Oops!</Text>
+          <Text style={styles.errorText}>Failed to load subscription plans</Text>
           <Text style={styles.errorSubText}>{plansError}</Text>
           <TouchableOpacity 
             style={styles.retryButton}
             onPress={fetchPlans}>
-            <Text style={styles.retryButtonText}>Retry</Text>
+            <LinearGradient
+              colors={['#FF9800', '#FF5722']}
+              style={styles.retryButtonGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}>
+              <Icon name="refresh-cw" size={20} color="#FFFFFF" />
+              <Text style={styles.retryButtonText}>Try Again</Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -236,83 +278,117 @@ const SubscriptionScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safeContainer}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <Header title="Subscription" showBackButton />
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}>
+        
+        {/* Header with custom styling */}
+        <View style={styles.headerWrapper}>
+          <Header title="Upgrade Your Plan" showBackButton />
+        </View>
         
         <View style={styles.container}>
-          <Text style={styles.title}>Choose Your Plan</Text>
-          <Text style={styles.subtitle}>
-            Select a plan to unlock loan creation and premium features.
-          </Text>
-          
-          {/* COMMENTED OUT - Active subscription banner (to be updated with plan status) */}
-          {/* {hasActiveSubscription && (
-            <View style={styles.activeSubscriptionBanner}>
-              <Icon name="shield" size={20} color="#fff" />
-              <Text style={styles.activeSubscriptionText}>
-                You have an active subscription
-              </Text>
-            </View>
-          )} */}
-
-          {/* Plans List */}
-          <View style={styles.plansContainer}>
-            {plans.length > 0 ? (
-              plans.map(renderPlanCard)
-            ) : (
-              <View style={styles.noPlansContainer}>
-                <Icon name="package" size={48} color="#ccc" />
-                <Text style={styles.noPlansText}>No subscription plans available</Text>
+          {/* Hero Section */}
+          <View style={styles.heroSection}>
+            <LinearGradient
+              colors={['#FFF3E0', '#FFECB3']}
+              style={styles.heroGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}>
+              <View style={styles.heroContent}>
+                <Icon name="star" size={32} color="#FF9800" />
+                <Text style={styles.heroTitle}>Unlock Premium Features</Text>
+                <Text style={styles.heroSubtitle}>
+                  Choose a plan that grows with your lending business
+                </Text>
               </View>
-            )}
+            </LinearGradient>
           </View>
 
-          {/* Selected Plan Summary */}
-          {selectedPlan && (
-            <View style={styles.selectedPlanSummary}>
-              <Text style={styles.summaryTitle}>Selected Plan:</Text>
-              <View style={styles.summaryDetails}>
-                <Text style={styles.summaryPlanName}>
-                  {selectedPlan.planName || selectedPlan.name || 'Plan'}
-                </Text>
-                <Text style={styles.summaryPrice}>
-                  ₹{selectedPlan.priceMonthly || selectedPlan.amount || 0}
-                </Text>
-              </View>
-              <Text style={styles.summaryDuration}>
-                {selectedPlan.duration || 'N/A'}
-              </Text>
-            </View>
-          )}
-
-          {/* Action Buttons */}
-          {selectedPlan && !processing && (
+          {/* Active Plan Status */}
+          {hasActivePlan && (
             <TouchableOpacity
-              style={styles.subscribeButton}
-              onPress={handleProceedToPayment}
-              disabled={purchaseLoading || processing}>
-              {purchaseLoading || processing ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.subscribeButtonText}>
-                  Subscribe Now
-                </Text>
-              )}
+              style={styles.activePlanBanner}
+              onPress={handleActivePlanPress}
+              activeOpacity={0.9}>
+              <LinearGradient
+                colors={remainingDays > 0 ? ['#60ea64ff', '#72da78ff'] : ['#FF5722', '#FF9800']}
+                style={styles.activePlanGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}>
+                <View style={styles.activePlanContent}>
+                  <Icon 
+                    name={remainingDays > 0 ? "shield" : "alert-circle"} 
+                    size={24} 
+                    color="#fff" 
+                  />
+                  <View style={styles.activePlanTextContainer}>
+                    <Text style={styles.activePlanTitle}>
+                      {remainingDays > 0 ? 'Active Plan' : 'Plan Expired'}
+                    </Text>
+                    <Text style={styles.activePlanName}>
+                      {activePlan?.planName || activePlan?.name || 'Current Plan'}
+                    </Text>
+                    <Text style={styles.activePlanDetails}>
+                      {remainingDays > 0 
+                        ? `${remainingDays} ${remainingDays === 1 ? 'day' : 'days'} remaining • Expires ${new Date(expiryDate).toLocaleDateString()}`
+                        : 'Renew now to continue creating loans'
+                      }
+                    </Text>
+                  </View>
+                  <Icon name="chevron-right" size={24} color="#fff" />
+                </View>
+              </LinearGradient>
             </TouchableOpacity>
           )}
 
-          {/* COMMENTED OUT - Already have subscription message (to be updated with plan status) */}
-          {/* {hasActiveSubscription && !selectedPlan && (
-            <View style={styles.viewCurrentPlanButton}>
-              <TouchableOpacity
-                style={styles.currentPlanButton}
-                onPress={() => navigation.navigate('Profile')}>
-                <Text style={styles.currentPlanButtonText}>
-                  View Current Plan
-                </Text>
-              </TouchableOpacity>
+          {/* Plans Section */}
+          <View style={styles.plansSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Available Plans</Text>
+              <Text style={styles.sectionSubtitle}>
+                Select the perfect plan for your needs
+              </Text>
             </View>
-          )} */}
+            
+            <View style={styles.plansContainer}>
+              {plans.length > 0 ? (
+                plans.map(renderPlanCard)
+              ) : (
+                <View style={styles.noPlansContainer}>
+                  <View style={styles.noPlansIcon}>
+                    <Icon name="package" size={64} color="#FFD180" />
+                  </View>
+                  <Text style={styles.noPlansTitle}>No Plans Available</Text>
+                  <Text style={styles.noPlansText}>
+                    Subscription plans are currently being prepared
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+
+          {/* Features Comparison */}
+          <View style={styles.featuresSection}>
+            <Text style={styles.featuresTitle}>All Plans Include</Text>
+            <View style={styles.featuresGrid}>
+              <View style={styles.featureBox}>
+                <Icon name="shield" size={28} color="#FF9800" />
+                <Text style={styles.featureBoxTitle}>Secure</Text>
+                <Text style={styles.featureBoxText}>Bank-level security</Text>
+              </View>
+              <View style={styles.featureBox}>
+                <Icon name="clock" size={28} color="#FF9800" />
+                <Text style={styles.featureBoxTitle}>24/7 Support</Text>
+                <Text style={styles.featureBoxText}>Always available</Text>
+              </View>
+              <View style={styles.featureBox}>
+                <Icon name="trending-up" size={28} color="#FF9800" />
+                <Text style={styles.featureBoxTitle}>Analytics</Text>
+                <Text style={styles.featureBoxText}>Real-time insights</Text>
+              </View>
+            </View>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -322,248 +398,362 @@ const SubscriptionScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   safeContainer: {
     flex: 1,
-    backgroundColor: '#f7f7f7',
+    backgroundColor: 'white',
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  headerWrapper: {
+    backgroundColor: '#FF9800',
   },
   container: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingVertical: 20,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  loadingAnimation: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#FFF3E0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   loadingText: {
-    marginTop: 10,
     fontSize: 16,
     color: '#666',
+    fontFamily: 'System',
+    fontWeight: '500',
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 30,
+    backgroundColor: '#FFFFFF',
   },
-  errorText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#e74c3c',
-    marginTop: 10,
+  errorIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#FFF3E0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
   },
-  errorSubText: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 5,
-    textAlign: 'center',
-  },
-  retryButton: {
-    backgroundColor: '#4CAF50',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginTop: 20,
-  },
-  retryButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  title: {
+  errorTitle: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#333',
-    marginVertical: 16,
-    textAlign: 'center',
+    marginBottom: 8,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#777',
-    marginBottom: 24,
+  errorText: {
+    fontSize: 18,
+    color: '#666',
     textAlign: 'center',
-    lineHeight: 22,
-    paddingHorizontal: 10,
+    marginBottom: 4,
   },
-  activeSubscriptionBanner: {
-    backgroundColor: '#4CAF50',
+  errorSubText: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    marginBottom: 30,
+  },
+  retryButton: {
+    width: '80%',
+    borderRadius: 12,
+    overflow: 'hidden',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+  },
+  retryButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 12,
-    borderRadius: 8,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    gap: 10,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  heroSection: {
+    marginBottom: 24,
+    borderRadius: 16,
+    overflow: 'hidden',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+  },
+  heroGradient: {
+    padding: 24,
+  },
+  heroContent: {
+    alignItems: 'center',
+  },
+  heroTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  heroSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  activePlanBanner: {
+    marginBottom: 24,
+    borderRadius: 16,
+    overflow: 'hidden',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+  },
+  activePlanGradient: {
+    padding: 20,
+  },
+  activePlanContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  activePlanTextContainer: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  activePlanTitle: {
+    fontSize: 12,
+    color: '#fff',
+    opacity: 0.9,
+    marginBottom: 2,
+  },
+  activePlanName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  activePlanDetails: {
+    fontSize: 12,
+    color: '#fff',
+    opacity: 0.9,
+  },
+  plansSection: {
+    marginBottom: 32,
+  },
+  sectionHeader: {
     marginBottom: 20,
   },
-  activeSubscriptionText: {
-    color: '#fff',
-    marginLeft: 8,
-    fontWeight: '600',
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 6,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: '#666',
   },
   plansContainer: {
-    marginBottom: 20,
+    gap: 16,
   },
   planCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
     borderWidth: 2,
-    borderColor: '#e0e0e0',
+    borderColor: '#F0F0F0',
+    overflow: 'hidden',
     position: 'relative',
-  },
-  selectedPlanCard: {
-    borderColor: '#4CAF50',
-    backgroundColor: '#f0f9f0',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
   },
   popularPlanCard: {
     borderColor: '#FF9800',
+    elevation: 8,
+    shadowColor: '#FF9800',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
   },
-  popularBadge: {
-    position: 'absolute',
-    top: -10,
-    right: 20,
-    backgroundColor: '#FF9800',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  popularBadgeText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: 'bold',
+  planCardContent: {
+    padding: 24,
   },
   planHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
+    alignItems: 'flex-start',
+    marginBottom: 20,
   },
   planName: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
-    flex: 1,
-  },
-  planPrice: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#4CAF50',
-  },
-  planDuration: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: 'normal',
+    marginBottom: 4,
   },
   planDescription: {
     fontSize: 14,
     color: '#666',
-    marginBottom: 15,
     lineHeight: 20,
+    maxWidth: '70%',
+  },
+  priceContainer: {
+    alignItems: 'flex-end',
+  },
+  planPrice: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#FF9800',
+  },
+  planDuration: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: -4,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#F0F0F0',
+    marginBottom: 20,
   },
   featuresContainer: {
-    marginBottom: 15,
+    marginBottom: 20,
   },
   featureItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
+  },
+  checkIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#FFF3E0',
+    padding: 2,
+    marginRight: 12,
   },
   featureText: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#555',
-    marginLeft: 8,
     flex: 1,
+  },
+  loanLimitContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#D0F0C0',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginBottom: 20,
   },
   loanLimit: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#2196F3',
-    marginBottom: 10,
+    color: '#00A550',
+    marginLeft: 8,
   },
-  selectIndicator: {
-    alignItems: 'center',
-    marginTop: 5,
-  },
-  unselectedCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+  buyButtonCard: {
+    borderRadius: 14,
+    overflow: 'hidden',
     borderWidth: 2,
-    borderColor: '#ccc',
+    borderColor: '#FF9800',
   },
-  selectedPlanText: {
-    color: '#2E7D32',
+  popularBuyButton: {
+    borderColor: '#FF9800',
   },
-  selectedPlanSummary: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#4CAF50',
-    borderLeftWidth: 4,
-    borderLeftColor: '#4CAF50',
-  },
-  summaryTitle: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 5,
-  },
-  summaryDetails: {
+  buyButtonGradient: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 5,
+    justifyContent: 'center',
+    paddingVertical: 16,
+    gap: 10,
   },
-  summaryPlanName: {
+  popularBuyButtonGradient: {
+    borderWidth: 0,
+  },
+  buyButtonCardText: {
+    color: '#FF9800',
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
   },
-  summaryPrice: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#4CAF50',
-  },
-  summaryDuration: {
-    fontSize: 14,
-    color: '#666',
-  },
-  subscribeButton: {
-    backgroundColor: '#4CAF50',
-    borderRadius: m(8),
-    paddingVertical: m(16),
-    alignItems: 'center',
-    width: '100%',
-    elevation: m(5),
-  },
-  subscribeButtonText: {
+  popularBuyButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
-  },
-  viewCurrentPlanButton: {
-    marginTop: 20,
-  },
-  currentPlanButton: {
-    backgroundColor: '#2196F3',
-    borderRadius: m(8),
-    paddingVertical: m(14),
-    alignItems: 'center',
-    width: '100%',
-  },
-  currentPlanButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
   },
   noPlansContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 40,
+    padding: 60,
+    backgroundColor: '#FFFBF5',
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: '#FFF3E0',
+    borderStyle: 'dashed',
+  },
+  noPlansIcon: {
+    marginBottom: 20,
+  },
+  noPlansTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
   },
   noPlansText: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#999',
-    marginTop: 10,
+    textAlign: 'center',
+  },
+  featuresSection: {
+    marginBottom: 32,
+    backgroundColor: '#FFFBF5',
+    borderRadius: 20,
+    padding: 24,
+  },
+  featuresTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  featuresGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  featureBox: {
+    alignItems: 'center',
+    flex: 1,
+    paddingHorizontal: 10,
+  },
+  featureBoxTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  featureBoxText: {
+    fontSize: 12,
+    color: '#666',
     textAlign: 'center',
   },
 });

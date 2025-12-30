@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   TouchableWithoutFeedback,
   Animated,
+  Alert,
 } from 'react-native';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { useDispatch, useSelector } from 'react-redux';
@@ -20,6 +21,7 @@ import {
   getLoanByAadhar,
   updateLoan,
 } from '../../../Redux/Slices/loanSlice';
+import { getActivePlan } from '../../../Redux/Slices/planPurchaseSlice';
 import Toast from 'react-native-toast-message';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
@@ -70,7 +72,7 @@ export default function AddDetails({ route, navigation }) {
       loanStartDate: null,
       loanEndDate: null,
       purpose: '',
-      loanMode: 'cash', // Default to cash
+      loanMode: 'cash',
     };
   };
 
@@ -143,10 +145,72 @@ export default function AddDetails({ route, navigation }) {
     return true;
   };
 
+  // Check plan before loan creation
+  const checkPlanBeforeLoanCreation = async () => {
+    try {
+      const result = await dispatch(getActivePlan()).unwrap();
+      
+      if (!result.hasActivePlan) {
+        Alert.alert(
+          'Plan Required',
+          'You need to purchase a plan to create loans. Would you like to view plans?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'View Plans', 
+              onPress: () => navigation.navigate('SubscriptionScreen') 
+            },
+          ]
+        );
+        return false;
+      }
+
+      if (result.remainingDays <= 0) {
+        Alert.alert(
+          'Plan Expired',
+          'Your plan has expired. Please renew to continue creating loans.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'Renew Plan', 
+              onPress: () => navigation.navigate('SubscriptionScreen') 
+            },
+          ]
+        );
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error checking plan:', error);
+      // If plan check fails, show alert but allow user to proceed
+      Alert.alert(
+        'Plan Check Failed',
+        'Unable to verify your plan status. You may proceed, but ensure you have an active plan.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Proceed Anyway', 
+            onPress: () => {} 
+          },
+        ]
+      );
+      return false; // Block by default if check fails
+    }
+  };
+
   // Handle form submission
   const handleSubmit = async () => {
     Keyboard.dismiss();
     if (!validateForm()) return;
+
+    // Check plan before creating loan (only for new loans, not updates)
+    if (!loanDetails) {
+      const hasValidPlan = await checkPlanBeforeLoanCreation();
+      if (!hasValidPlan) {
+        return; // User will be redirected to plans screen
+      }
+    }
 
     const aadharNumber = formData.aadhaarNumber?.trim();
     if (!aadharNumber || aadharNumber.length !== 12) {
@@ -218,6 +282,23 @@ export default function AddDetails({ route, navigation }) {
           navigation.navigate('BottomNavigation', { screen: 'Outward' });
         }
       } else {
+        // Handle plan-related errors
+        if (response.payload?.type === 'SUBSCRIPTION_REQUIRED' || 
+            response.payload?.errorCode === 'PLAN_REQUIRED') {
+          Alert.alert(
+            'Plan Required',
+            response.payload?.message || 'You need to purchase a plan to create loans.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { 
+                text: 'View Plans', 
+                onPress: () => navigation.navigate('SubscriptionScreen') 
+              },
+            ]
+          );
+          return;
+        }
+
         let errorMsg =
           response.payload?.message ||
           response.payload?.error?.message ||

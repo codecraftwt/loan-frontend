@@ -51,7 +51,8 @@ const Header = ({
 
       {/* Gradient Status Bar */}
       <LinearGradient
-        colors={['#ff6700', '#ff7900', '#ff8500', '#ff9100']}
+        // colors={['#ff6700', '#ff7900', '#ff8500', '#ff9100']}
+        colors={['#ff6700', '#ff8800ff', '#ff9100ff', '#ffa200ff']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={styles.gradientStatusBar}>
@@ -60,7 +61,7 @@ const Header = ({
 
       {/* Main Header */}
       <LinearGradient
-        colors={['#ff6700', '#ff7900', '#ff8500', '#ff9100']}
+        colors={['#ff6700', '#ff8800ff', '#ff9100ff', '#ffa200ff']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.headerBar}>

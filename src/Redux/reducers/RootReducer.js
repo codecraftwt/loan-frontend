@@ -6,6 +6,7 @@ import borrowerReducer from '../Slices/borrowerSlice';
 import borrowerLoanReducer from '../Slices/borrowerLoanSlice';
 import lenderPaymentReducer from '../Slices/lenderPaymentSlice';
 import adminPlanReducer from '../Slices/adminPlanSlice';
+import planPurchaseReducer from '../Slices/planPurchaseSlice';
 
 const rootReducer = combineReducers({
     auth: authReducer,
@@ -15,6 +16,7 @@ const rootReducer = combineReducers({
     borrowerLoans: borrowerLoanReducer,
     lenderPayments: lenderPaymentReducer,
     adminPlans: adminPlanReducer,
+    planPurchase: planPurchaseReducer,
 });
 
 export default rootReducer;

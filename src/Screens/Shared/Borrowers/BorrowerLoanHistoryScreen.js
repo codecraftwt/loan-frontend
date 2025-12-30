@@ -19,6 +19,14 @@ import moment from 'moment';
 import { m } from 'walstar-rn-responsive';
 
 const LoanHistoryCard = ({ loan, onPress }) => {
+  // Check if loan is overdue
+  const isOverdue = loan.loanEndDate && 
+    moment(loan.loanEndDate).isBefore(moment(), 'day') && 
+    loan.remainingAmount > 0;
+  
+  // Get effective status (overdue takes priority)
+  const effectiveStatus = isOverdue ? 'overdue' : (loan.paymentStatus || 'pending');
+
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case 'paid':
@@ -26,7 +34,9 @@ const LoanHistoryCard = ({ loan, onPress }) => {
       case 'part paid':
         return '#F59E0B'; // amber
       case 'pending':
-        return '#6B7280'; // gray
+        return '#FFBF00'; // yellow
+      case 'overdue':
+        return '#EF4444'; // red
       default:
         return '#6B7280'; // gray
     }
@@ -40,71 +50,118 @@ const LoanHistoryCard = ({ loan, onPress }) => {
         return 'schedule';
       case 'pending':
         return 'help';
+      case 'overdue':
+        return 'error';
       default:
         return 'help';
     }
   };
 
   return (
-    <TouchableOpacity style={styles.loanCard} onPress={onPress}>
+    <TouchableOpacity 
+      style={[
+        styles.loanCard,
+        isOverdue && styles.overdueCard
+      ]} 
+      onPress={onPress}
+      activeOpacity={0.8}>
+      {/* Overdue Banner */}
+      {isOverdue && (
+        <View style={styles.overdueBanner}>
+          <Icon name="error" size={16} color="#FFFFFF" />
+          <Text style={styles.overdueBannerText}>OVERDUE</Text>
+        </View>
+      )}
+      
       <View style={styles.loanCardHeader}>
         <View style={styles.loanInfo}>
           <Text style={styles.loanAmount}>₹{loan.amount?.toLocaleString() || '0'}</Text>
-          <Text style={styles.loanPurpose}>Loan Amount</Text>
+          <Text style={styles.loanPurpose}>{loan.purpose || 'Loan Amount'}</Text>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(loan.paymentStatus) + '15' }]}>
+        <View style={[
+          styles.statusBadge, 
+          { 
+            backgroundColor: getStatusColor(effectiveStatus) + '20',
+            borderWidth: 1,
+            borderColor: getStatusColor(effectiveStatus) + '40',
+          }
+        ]}>
           <Icon
-            name={getStatusIcon(loan.paymentStatus)}
-            size={16}
-            color={getStatusColor(loan.paymentStatus)}
+            name={getStatusIcon(effectiveStatus)}
+            size={18}
+            color={getStatusColor(effectiveStatus)}
           />
-          <Text style={[styles.statusText, { color: getStatusColor(loan.paymentStatus) }]}>
-            {loan.paymentStatus?.charAt(0).toUpperCase() + loan.paymentStatus?.slice(1) || 'Unknown'}
+          <Text style={[styles.statusText, { color: getStatusColor(effectiveStatus) }]}>
+            {effectiveStatus?.charAt(0).toUpperCase() + effectiveStatus?.slice(1) || 'Unknown'}
           </Text>
         </View>
       </View>
 
+      <View style={styles.divider} />
+
       <View style={styles.loanDetails}>
         <View style={styles.detailRow}>
           <View style={styles.detailItem}>
-            <Icon name="check-circle" size={14} color="#10B981" />
-            <Text style={styles.detailLabel}>Paid:</Text>
-            <Text style={styles.detailValue}>
-              ₹{loan.totalPaid?.toLocaleString('en-IN') || '0'}
-            </Text>
+            <View style={[styles.detailIconContainer, { backgroundColor: '#ECFDF5' }]}>
+              <Icon name="check-circle" size={16} color="#10B981" />
+            </View>
+            <View style={styles.detailContent}>
+              <Text style={styles.detailLabel}>Paid</Text>
+              <Text style={[styles.detailValue, { color: '#10B981' }]}>
+                ₹{loan.totalPaid?.toLocaleString('en-IN') || '0'}
+              </Text>
+            </View>
           </View>
           <View style={styles.detailItem}>
-            <Icon name="schedule" size={14} color="#F59E0B" />
-            <Text style={styles.detailLabel}>Remaining:</Text>
-            <Text style={styles.detailValue}>
-              ₹{loan.remainingAmount?.toLocaleString('en-IN') || loan.amount}
-            </Text>
+            <View style={[styles.detailIconContainer, { backgroundColor: isOverdue ? '#FEE2E2' : '#FFF7ED' }]}>
+              <Icon name="schedule" size={16} color={isOverdue ? '#EF4444' : '#F59E0B'} />
+            </View>
+            <View style={styles.detailContent}>
+              <Text style={styles.detailLabel}>Remaining</Text>
+              <Text style={[styles.detailValue, { color: isOverdue ? '#EF4444' : '#F59E0B' }]}>
+                ₹{loan.remainingAmount?.toLocaleString('en-IN') || loan.amount}
+              </Text>
+            </View>
           </View>
         </View>
 
         <View style={styles.detailRow}>
           <View style={styles.detailItem}>
-            <Icon name="event" size={14} color="#6B7280" />
-            <Text style={styles.detailLabel}>Due:</Text>
-            <Text style={styles.detailValue}>
-              {moment(loan.loanEndDate).format('DD MMM YYYY')}
-            </Text>
+            <View style={[styles.detailIconContainer, { backgroundColor: '#EFF6FF' }]}>
+              <Icon name="event" size={16} color={isOverdue ? '#EF4444' : '#3B82F6'} />
+            </View>
+            <View style={styles.detailContent}>
+              <Text style={styles.detailLabel}>Due Date</Text>
+              <Text style={[styles.detailValue, { color: isOverdue ? '#EF4444' : '#374151' }]}>
+                {moment(loan.loanEndDate).format('DD MMM YYYY')}
+              </Text>
+              {isOverdue && (
+                <Text style={styles.overdueDays}>
+                  {moment(loan.loanEndDate).fromNow()}
+                </Text>
+              )}
+            </View>
           </View>
         </View>
 
         {loan.lenderId && (
           <View style={styles.lenderInfo}>
-            <Icon name="person" size={14} color="#3B82F6" />
+            <View style={[styles.detailIconContainer, { backgroundColor: '#EFF6FF' }]}>
+              <Icon name="person" size={16} color="#3B82F6" />
+            </View>
             <Text style={styles.lenderName} numberOfLines={1}>
-              {loan.lenderId.userName || 'N/A'}
+              Lender: {loan.lenderId.userName || 'N/A'}
             </Text>
           </View>
         )}
 
         <View style={styles.loanFooter}>
-          <Text style={styles.loanDate}>
-            {moment(loan.createdAt).fromNow()}
-          </Text>
+          <View style={styles.footerItem}>
+            <Icon name="access-time" size={12} color="#9CA3AF" />
+            <Text style={styles.loanDate}>
+              {moment(loan.createdAt).fromNow()}
+            </Text>
+          </View>
         </View>
       </View>
     </TouchableOpacity>
@@ -252,7 +309,7 @@ const FilterModal = ({ visible, onClose, filters, setFilters, applyFilters }) =>
 
 const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
   const dispatch = useDispatch();
-  const { borrowerId, borrowerDetails } = route.params || {};
+  const { borrowerId } = route.params || {};
   
   const {
     loans: borrowerHistory,
@@ -471,19 +528,21 @@ const styles = StyleSheet.create({
   summaryContainer: {
     backgroundColor: '#FFFFFF',
     margin: m(16),
-    padding: m(16),
-    borderRadius: m(12),
+    padding: m(20),
+    borderRadius: m(20),
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
   summaryTitle: {
-    fontSize: m(18),
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: m(16),
+    fontSize: m(20),
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: m(20),
   },
   summaryGrid: {
     flexDirection: 'row',
@@ -577,105 +636,157 @@ const styles = StyleSheet.create({
   },
   loanCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: m(12),
-    padding: m(16),
-    marginBottom: m(12),
+    borderRadius: m(16),
+    padding: m(20),
+    marginBottom: m(16),
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+    overflow: 'hidden',
+  },
+  overdueCard: {
+    borderWidth: 2,
+    borderColor: '#FCA5A5',
+    backgroundColor: '#FFF5F5',
+  },
+  overdueBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EF4444',
+    paddingVertical: m(6),
+    paddingHorizontal: m(12),
+    marginHorizontal: m(-20),
+    marginTop: m(-20),
+    marginBottom: m(16),
+    gap: m(6),
+  },
+  overdueBannerText: {
+    color: '#FFFFFF',
+    fontSize: m(12),
+    fontWeight: '700',
+    letterSpacing: 1,
   },
   loanCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: m(12),
+    marginBottom: m(16),
   },
   loanInfo: {
     flex: 1,
-    marginRight: m(8),
+    marginRight: m(12),
   },
   loanAmount: {
-    fontSize: m(24),
+    fontSize: m(28),
     fontWeight: '700',
-    color: '#1F2937',
-    marginBottom: m(4),
+    color: '#111827',
+    marginBottom: m(6),
   },
   loanPurpose: {
     fontSize: m(14),
     color: '#6B7280',
+    fontWeight: '500',
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: m(8),
-    paddingVertical: m(4),
-    borderRadius: m(16),
+    paddingHorizontal: m(12),
+    paddingVertical: m(8),
+    borderRadius: m(20),
+    gap: m(6),
   },
   statusText: {
-    fontSize: m(12),
-    fontWeight: '600',
-    marginLeft: m(4),
+    fontSize: m(13),
+    fontWeight: '700',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginBottom: m(16),
   },
   loanDetails: {
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-    paddingTop: m(12),
+    gap: m(12),
   },
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: m(12),
+    gap: m(12),
   },
   detailItem: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+    gap: m(12),
+  },
+  detailIconContainer: {
+    width: m(40),
+    height: m(40),
+    borderRadius: m(10),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  detailContent: {
+    flex: 1,
   },
   detailLabel: {
-    fontSize: m(12),
-    color: '#6B7280',
-    marginLeft: m(4),
-    marginRight: m(4),
+    fontSize: m(11),
+    color: '#9CA3AF',
+    marginBottom: m(4),
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    fontWeight: '600',
   },
   detailValue: {
-    fontSize: m(12),
-    fontWeight: '500',
-    color: '#1F2937',
+    fontSize: m(15),
+    fontWeight: '700',
+    color: '#111827',
+  },
+  overdueDays: {
+    fontSize: m(11),
+    color: '#EF4444',
+    marginTop: m(2),
+    fontWeight: '600',
   },
   lenderInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: m(12),
-    padding: m(8),
-    backgroundColor: '#F3F4F6',
-    borderRadius: m(8),
+    marginTop: m(8),
+    padding: m(12),
+    backgroundColor: '#F9FAFB',
+    borderRadius: m(12),
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: m(10),
   },
   lenderName: {
     fontSize: m(14),
-    color: '#1F2937',
-    marginLeft: m(8),
+    color: '#374151',
+    fontWeight: '600',
     flex: 1,
   },
   loanFooter: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     alignItems: 'center',
+    marginTop: m(12),
+    paddingTop: m(12),
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
   },
-  modeContainer: {
+  footerItem: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  loanMode: {
-    fontSize: m(12),
-    color: '#8B5CF6',
-    marginLeft: m(4),
-    fontWeight: '500',
+    gap: m(6),
   },
   loanDate: {
     fontSize: m(12),
     color: '#9CA3AF',
+    fontWeight: '500',
   },
   loadingContainer: {
     padding: m(40),

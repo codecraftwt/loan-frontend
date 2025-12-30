@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  ScrollView,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
@@ -16,42 +17,58 @@ import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
 import Toast from 'react-native-toast-message';
 import borrowerLoanAPI from '../../../Services/borrowerLoanService';
+import { useSelector } from 'react-redux';
 
 export default function PaymentHistory() {
   const navigation = useNavigation();
   const route = useRoute();
   const { loan, paymentHistory: initialPaymentHistory } = route.params;
+  const user = useSelector(state => state.auth.user);
 
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [paymentHistory, setPaymentHistory] = useState(initialPaymentHistory || []);
-  const [stats, setStats] = useState({
-    totalPaid: 0,
-    pendingPayments: 0,
+  const [loanSummary, setLoanSummary] = useState(null);
+  const [installmentDetails, setInstallmentDetails] = useState(null);
+  const [paymentStats, setPaymentStats] = useState({
+    totalPayments: 0,
     confirmedPayments: 0,
-    rejectedPayments: 0,
+    pendingPayments: 0,
+    pendingAmount: 0,
   });
 
   useEffect(() => {
     if (!initialPaymentHistory) {
       fetchPaymentHistory();
     } else {
-      calculateStats(initialPaymentHistory);
+      // If initial data is provided, we still need to fetch full details
+      fetchPaymentHistory();
     }
   }, []);
 
   const fetchPaymentHistory = async () => {
     try {
       setLoading(true);
-      const response = await borrowerLoanAPI.getPaymentHistory(loan._id);
-      const payments = response.data?.paymentHistory || [];
-      setPaymentHistory(payments);
-      calculateStats(payments);
+      const response = await borrowerLoanAPI.getPaymentHistory(loan._id, user?._id);
+      const data = response.data || {};
       
-      // Update loan totals from response
-      if (response.data) {
-        // Update loan data if needed
-      }
+      // New API structure: payments array (renamed from paymentHistory.allPayments)
+      setPaymentHistory(data.payments || []);
+      
+      // New API structure: paymentStats object
+      setPaymentStats(data.paymentStats || {
+        totalPayments: 0,
+        confirmedPayments: 0,
+        pendingPayments: 0,
+        pendingAmount: 0,
+      });
+      
+      // New API structure: loanSummary object
+      setLoanSummary(data.loanSummary || null);
+      
+      // New API structure: installmentDetails (null for one-time loans)
+      setInstallmentDetails(data.installmentDetails || null);
+      
     } catch (error) {
       console.error('Error fetching payment history:', error);
       Toast.show({
@@ -63,36 +80,6 @@ export default function PaymentHistory() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const calculateStats = (payments) => {
-    const stats = payments.reduce(
-      (acc, payment) => {
-        // Only count confirmed payments in totalPaid
-        if (payment.paymentStatus?.toLowerCase() === 'confirmed') {
-          // Ensure amount is parsed as number to avoid string concatenation
-          const amount = typeof payment.amount === 'number' 
-            ? payment.amount 
-            : parseFloat(payment.amount) || 0;
-          acc.totalPaid = (acc.totalPaid || 0) + amount;
-        }
-        
-        switch (payment.paymentStatus?.toLowerCase()) {
-          case 'pending':
-            acc.pendingPayments += 1;
-            break;
-          case 'confirmed':
-            acc.confirmedPayments += 1;
-            break;
-          case 'rejected':
-            acc.rejectedPayments += 1;
-            break;
-        }
-        return acc;
-      },
-      { totalPaid: 0, pendingPayments: 0, confirmedPayments: 0, rejectedPayments: 0 }
-    );
-    setStats(stats);
   };
 
   const onRefresh = async () => {
@@ -133,7 +120,9 @@ export default function PaymentHistory() {
             <Text style={styles.paymentAmount}>{formatCurrency(item.amount)}</Text>
             <View style={styles.paymentMeta}>
               <Text style={styles.paymentMode}>
-                {item.paymentMode?.charAt(0).toUpperCase() + item.paymentMode?.slice(1)} • {item.paymentType?.charAt(0).toUpperCase() + item.paymentType?.slice(1)}
+                {item.paymentMode?.charAt(0).toUpperCase() + item.paymentMode?.slice(1) || 'N/A'}
+                {item.installmentLabel && ` • ${item.installmentLabel}`}
+                {!item.installmentLabel && item.installmentNumber && ` • Installment ${item.installmentNumber}`}
               </Text>
             </View>
           </View>
@@ -191,26 +180,92 @@ export default function PaymentHistory() {
   const renderStatsCard = () => (
     <View style={styles.statsCard}>
       <Text style={styles.statsTitle}>Payment Summary</Text>
+      {loanSummary && (
+        <View style={styles.loanSummarySection}>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Total Loan:</Text>
+            <Text style={styles.summaryValue}>{formatCurrency(loanSummary.totalLoanAmount)}</Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Total Paid:</Text>
+            <Text style={[styles.summaryValue, { color: '#10B981' }]}>
+              {formatCurrency(loanSummary.totalPaid)}
+            </Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Remaining:</Text>
+            <Text style={[styles.summaryValue, { color: '#EF4444' }]}>
+              {formatCurrency(loanSummary.remainingAmount)}
+            </Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Status:</Text>
+            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(loanSummary.paymentStatus) + '20' }]}>
+              <Icon name={getStatusIcon(loanSummary.paymentStatus)} size={12} color={getStatusColor(loanSummary.paymentStatus)} />
+              <Text style={[styles.statusText, { color: getStatusColor(loanSummary.paymentStatus) }]}>
+                {loanSummary.paymentStatus?.charAt(0).toUpperCase() + loanSummary.paymentStatus?.slice(1)}
+              </Text>
+            </View>
+          </View>
+        </View>
+      )}
+      
+      {installmentDetails && (
+        <View style={styles.installmentSection}>
+          <Text style={styles.installmentTitle}>Installment Details</Text>
+          <View style={styles.installmentInfo}>
+            <View style={styles.installmentRow}>
+              <Icon name="check-circle" size={16} color="#10B981" />
+              <Text style={styles.installmentText}>
+                {installmentDetails.totalInstallmentsPaid} Installment{installmentDetails.totalInstallmentsPaid !== 1 ? 's' : ''} Paid
+              </Text>
+            </View>
+            {installmentDetails.nextDueDate && (
+              <View style={styles.installmentRow}>
+                <Icon name="calendar" size={16} color="#3B82F6" />
+                <Text style={styles.installmentText}>
+                  Next Due: {moment(installmentDetails.nextDueDate).format('DD MMM YYYY')}
+                </Text>
+              </View>
+            )}
+            {installmentDetails.frequency && (
+              <View style={styles.installmentRow}>
+                <Icon name="repeat" size={16} color="#6B7280" />
+                <Text style={styles.installmentText}>
+                  Frequency: {installmentDetails.frequency.charAt(0).toUpperCase() + installmentDetails.frequency.slice(1)}
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+      )}
+      
       <View style={styles.statsGrid}>
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>{formatCurrency(stats.totalPaid)}</Text>
-          <Text style={styles.statLabel}>Total Paid</Text>
+          <Text style={styles.statValue}>{paymentStats.totalPayments}</Text>
+          <Text style={styles.statLabel}>Total Payments</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>{stats.confirmedPayments}</Text>
+          <Text style={[styles.statValue, { color: '#10B981' }]}>{paymentStats.confirmedPayments}</Text>
           <Text style={styles.statLabel}>Confirmed</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>{stats.pendingPayments}</Text>
+          <Text style={[styles.statValue, { color: '#F59E0B' }]}>{paymentStats.pendingPayments}</Text>
           <Text style={styles.statLabel}>Pending</Text>
         </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>{stats.rejectedPayments}</Text>
-          <Text style={styles.statLabel}>Rejected</Text>
-        </View>
+        {paymentStats.pendingAmount > 0 && (
+          <>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={[styles.statValue, { color: '#EF4444' }]}>
+                {formatCurrency(paymentStats.pendingAmount)}
+              </Text>
+              <Text style={styles.statLabel}>Pending Amount</Text>
+            </View>
+          </>
+        )}
       </View>
     </View>
   );
@@ -248,13 +303,20 @@ export default function PaymentHistory() {
       <Header title="Payment History" showBackButton />
 
       {/* Loan Summary */}
-      <View style={styles.loanSummary}>
-        <Text style={styles.loanTitle} numberOfLines={1}>{loan.lenderId?.userName || 'Unknown Lender'}</Text>
-        <Text style={styles.loanAmount}>{formatCurrency(loan.amount)}</Text>
-        <Text style={styles.loanRemaining}>
-          Remaining: {formatCurrency(loan.remainingAmount)}
-        </Text>
-      </View>
+      {loanSummary && (
+        <View style={styles.loanSummary}>
+          <Text style={styles.loanTitle} numberOfLines={1}>{loan.lenderId?.userName || 'Unknown Lender'}</Text>
+          <Text style={styles.loanAmount}>{formatCurrency(loanSummary.totalLoanAmount)}</Text>
+          <Text style={styles.loanRemaining}>
+            Remaining: {formatCurrency(loanSummary.remainingAmount)}
+          </Text>
+          {loanSummary.paymentType && (
+            <Text style={styles.paymentType}>
+              {loanSummary.paymentType === 'installment' ? 'Installment Loan' : 'One-time Payment'}
+            </Text>
+          )}
+        </View>
+      )}
 
       <FlatList
         data={paymentHistory}
@@ -308,6 +370,57 @@ const styles = StyleSheet.create({
   loanRemaining: {
     fontSize: m(14),
     color: '#6B7280',
+  },
+  paymentType: {
+    fontSize: m(12),
+    color: '#9CA3AF',
+    marginTop: m(4),
+    fontStyle: 'italic',
+  },
+  loanSummarySection: {
+    marginBottom: m(16),
+    paddingBottom: m(16),
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: m(8),
+  },
+  summaryLabel: {
+    fontSize: m(14),
+    color: '#6B7280',
+  },
+  summaryValue: {
+    fontSize: m(16),
+    fontWeight: '700',
+    color: '#111827',
+  },
+  installmentSection: {
+    marginBottom: m(16),
+    paddingBottom: m(16),
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  installmentTitle: {
+    fontSize: m(16),
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: m(12),
+  },
+  installmentInfo: {
+    gap: m(8),
+  },
+  installmentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(8),
+  },
+  installmentText: {
+    fontSize: m(14),
+    color: '#374151',
   },
   listContainer: {
     padding: m(16),

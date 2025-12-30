@@ -27,10 +27,10 @@ const initialState = {
     itemsPerPage: 10,
   },
   paymentStats: {
-    totalPaid: 0,
-    pendingPayments: 0,
+    totalPayments: 0,
     confirmedPayments: 0,
-    rejectedPayments: 0,
+    pendingPayments: 0,
+    pendingAmount: 0,
   },
 };
 
@@ -109,9 +109,9 @@ export const makePayment = createAsyncThunk(
 // Get payment history
 export const getPaymentHistory = createAsyncThunk(
   'borrowerLoans/getPaymentHistory',
-  async (loanId, { rejectWithValue }) => {
+  async ({ loanId, borrowerId }, { rejectWithValue }) => {
     try {
-      const response = await borrowerLoanAPI.getPaymentHistory(loanId);
+      const response = await borrowerLoanAPI.getPaymentHistory(loanId, borrowerId);
       return response.data;
     } catch (error) {
       return rejectWithValue(
@@ -254,27 +254,18 @@ const borrowerLoanSlice = createSlice({
       })
       .addCase(getPaymentHistory.fulfilled, (state, action) => {
         state.historyLoading = false;
-        state.paymentHistory = action.payload.paymentHistory || [];
-        // Calculate payment stats
-        const stats = (action.payload.paymentHistory || []).reduce(
-          (acc, payment) => {
-            acc.totalPaid += payment.amount || 0;
-            switch (payment.paymentStatus?.toLowerCase()) {
-              case 'pending':
-                acc.pendingPayments += 1;
-                break;
-              case 'confirmed':
-                acc.confirmedPayments += 1;
-                break;
-              case 'rejected':
-                acc.rejectedPayments += 1;
-                break;
-            }
-            return acc;
-          },
-          { totalPaid: 0, pendingPayments: 0, confirmedPayments: 0, rejectedPayments: 0 }
-        );
-        state.paymentStats = stats;
+        // New API structure: payments array (renamed from paymentHistory.allPayments)
+        state.paymentHistory = action.payload.payments || [];
+        // New API structure: paymentStats object (consolidated statistics)
+        state.paymentStats = action.payload.paymentStats || initialState.paymentStats;
+        // Store loan summary and installment details for UI
+        state.currentLoan = {
+          ...state.currentLoan,
+          loanSummary: action.payload.loanSummary,
+          installmentDetails: action.payload.installmentDetails,
+          lenderInfo: action.payload.lenderInfo,
+          overdueDetails: action.payload.overdueDetails,
+        };
         state.historyError = null;
       })
       .addCase(getPaymentHistory.rejected, (state, action) => {

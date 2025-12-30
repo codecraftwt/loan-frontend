@@ -83,9 +83,18 @@ export const borrowerLoanAPI = {
   },
 
   // Get payment history for a loan
-  getPaymentHistory: async (loanId) => {
+  getPaymentHistory: async (loanId, borrowerId) => {
     try {
-      const response = await axiosInstance.get(`borrower/loans/payment-history/${loanId}`);
+      const queryParams = new URLSearchParams();
+      if (borrowerId) {
+        queryParams.append('borrowerId', borrowerId);
+      }
+      const queryString = queryParams.toString();
+      const url = `borrower/loans/payment-history/${loanId}${queryString ? `?${queryString}` : ''}`;
+      
+      console.log('Fetching payment history from:', url);
+      const response = await axiosInstance.get(url);
+      console.log('Payment history response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error fetching payment history:', error);

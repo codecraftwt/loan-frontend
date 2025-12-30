@@ -16,7 +16,7 @@ const DetailItem = ({ icon, label, value }) => {
   return (
     <View style={styles.detailItem}>
       <View style={styles.detailIconContainer}>
-        <Icon name={icon} size={20} color="#3B82F6" />
+        <Icon name={icon} size={20} color="#FF9800" />
       </View>
       <View style={styles.detailContent}>
         <Text style={styles.detailLabel}>{label}</Text>
@@ -80,18 +80,13 @@ export default function BorrowerDetailsScreen({ route, navigation }) {
       value: borrowerDetails.address,
       icon: 'location-on',
     },
-    {
-      label: 'Mobile Verified',
-      value: borrowerDetails.isMobileVerified ? 'Yes' : 'No',
-      icon: borrowerDetails.isMobileVerified ? 'verified' : 'verified-user',
-    },
   ];
 
   return (
     <View style={styles.container}>
       <Header title="Borrower Details" showBackButton />
-      
-      <ScrollView 
+
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -132,30 +127,6 @@ export default function BorrowerDetailsScreen({ route, navigation }) {
             </View>
           </View>
 
-          {/* Verification Status */}
-          <View style={styles.verificationContainer}>
-            <View style={[
-              styles.verificationBadge,
-              borrowerDetails.isMobileVerified 
-                ? styles.verifiedBadge 
-                : styles.unverifiedBadge
-            ]}>
-              <Icon 
-                name={borrowerDetails.isMobileVerified ? 'verified' : 'verified-user'} 
-                size={16} 
-                color={borrowerDetails.isMobileVerified ? '#10B981' : '#F59E0B'} 
-              />
-              <Text style={[
-                styles.verificationText,
-                borrowerDetails.isMobileVerified 
-                  ? styles.verifiedText 
-                  : styles.unverifiedText
-              ]}>
-                {borrowerDetails.isMobileVerified ? 'Mobile Verified' : 'Mobile Not Verified'}
-              </Text>
-            </View>
-          </View>
-
           {/* Loan History Button */}
           <TouchableOpacity
             style={styles.loanHistoryButton}
@@ -169,7 +140,7 @@ export default function BorrowerDetailsScreen({ route, navigation }) {
         {/* Details Card */}
         <View style={styles.detailsCard}>
           <Text style={styles.detailsTitle}>Personal Information</Text>
-          
+
           <View style={styles.detailsGrid}>
             {borrowerInfo.map((item, index) => (
               <DetailItem
@@ -263,39 +234,11 @@ const styles = StyleSheet.create({
     marginLeft: m(6),
     flex: 1,
   },
-  verificationContainer: {
-    marginBottom: m(16),
-  },
-  verificationBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: m(12),
-    paddingVertical: m(6),
-    borderRadius: m(20),
-  },
-  verifiedBadge: {
-    backgroundColor: '#10B98115',
-  },
-  unverifiedBadge: {
-    backgroundColor: '#F59E0B15',
-  },
-  verificationText: {
-    fontSize: m(12),
-    fontWeight: '500',
-    marginLeft: m(6),
-  },
-  verifiedText: {
-    color: '#10B981',
-  },
-  unverifiedText: {
-    color: '#F59E0B',
-  },
   loanHistoryButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#50C878',
     padding: m(12),
     borderRadius: m(8),
     marginTop: m(8),
@@ -330,12 +273,13 @@ const styles = StyleSheet.create({
   detailItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+    paddingVertical: m(7)
   },
   detailIconContainer: {
     width: m(32),
     height: m(32),
     borderRadius: m(16),
-    backgroundColor: '#3B82F615',
+    backgroundColor: 'rgba(255, 152, 0, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: m(12),

@@ -197,25 +197,74 @@ const Outward = ({ navigation }) => {
                         <Text style={styles.userName} numberOfLines={1}>
                           {borrower.userName}
                         </Text>
-                        <Text style={styles.userEmail} numberOfLines={1}>
-                          {borrower.email || 'N/A'}
-                        </Text>
+                        <View style={styles.userMeta}>
+                          <Icon name="mail" size={12} color="#9CA3AF" />
+                          <Text style={styles.userEmail} numberOfLines={1}>
+                            {borrower.email || 'No email'}
+                          </Text>
+                        </View>
                       </View>
                     </View>
-                    <Icon name="chevron-right" size={24} color="#6B7280" />
-                  </View>
-                  <View style={styles.borrowerDetails}>
-                    <View style={styles.detailItem}>
-                      <Icon name="phone" size={16} color="#6B7280" />
-                      <Text style={styles.detailValue}>
-                      {borrower.mobileNo ? borrower.mobileNo : 'N/A'}
-                      </Text>
+                    <View style={styles.chevronContainer}>
+                      <Icon name="chevron-right" size={20} color="#9CA3AF" />
                     </View>
-                    <View style={styles.detailItem}>
-                      <Icon name="badge" size={16} color="#6B7280" />
-                      <Text style={styles.detailValue}>
-                        {borrower.aadharCardNo || 'N/A'}
-                      </Text>
+                  </View>
+
+                  <View style={styles.divider} />
+
+                  <View style={styles.borrowerDetails}>
+                    <View style={styles.detailRow}>
+                      <View style={styles.detailItem}>
+                        <View style={styles.iconContainer}>
+                          <Icon name="phone" size={16} color="#50C878" />
+                        </View>
+                        <View style={styles.detailContent}>
+                          <Text style={styles.detailLabel}>Phone</Text>
+                          <Text style={styles.detailValue} numberOfLines={1}>
+                            {borrower.mobileNo ? borrower.mobileNo : 'Not provided'}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    <View style={styles.detailRow}>
+                      <View style={styles.detailItem}>
+                        <View style={styles.iconContainer}>
+                          <Icon name="badge" size={16} color="#50C878" />
+                        </View>
+                        <View style={styles.detailContent}>
+                          <Text style={styles.detailLabel}>Aadhar Number</Text>
+                          <Text style={styles.detailValue} numberOfLines={1}>
+                            {borrower.aadharCardNo ? borrower.aadharCardNo : 'Not provided'}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    {borrower.address && (
+                      <View style={styles.detailRow}>
+                        <View style={styles.detailItem}>
+                          <View style={styles.iconContainer}>
+                            <Icon name="home" size={16} color="#50C878" />
+                          </View>
+                          <View style={styles.detailContent}>
+                            <Text style={styles.detailLabel}>Address</Text>
+                            <Text style={styles.detailValue} numberOfLines={2}>
+                              {borrower.address}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                    )}
+                  </View>
+
+                  <View style={styles.cardFooter}>
+                    <View style={styles.footerBadge}>
+                      <Icon name="person" size={12} color="#6B7280" />
+                      <Text style={styles.footerText}>Borrower</Text>
+                    </View>
+                    <View style={styles.actionHint}>
+                      <Text style={styles.actionHintText}>Tap to view options</Text>
                     </View>
                   </View>
                 </View>
@@ -307,7 +356,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: m(6),
+    marginBottom: m(16),
   },
   userInfo: {
     flexDirection: 'row',
@@ -315,69 +364,145 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   userAvatar: {
-    width: m(46),
-    height: m(46),
-    borderRadius: m(24),
-    marginRight: m(12),
+    width: m(56),
+    height: m(56),
+    borderRadius: m(28),
+    marginRight: m(14),
+    borderWidth: 2,
+    borderColor: '#F0F0F0',
   },
   avatarPlaceholder: {
-    width: m(46),
-    height: m(46),
-    borderRadius: m(24),
-    backgroundColor: 'black',
+    width: m(56),
+    height: m(56),
+    borderRadius: m(28),
+    backgroundColor: '#FF9800',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: m(12),
+    marginRight: m(14),
+    borderWidth: 2,
+    borderColor: '#FFF3E0',
   },
   avatarText: {
-    fontSize: m(18),
-    fontWeight: '600',
+    fontSize: m(22),
+    fontWeight: '700',
     color: '#FFFFFF',
   },
   userDetails: {
     flex: 1,
   },
   userName: {
-    fontSize: m(17),
-    fontWeight: '600',
+    fontSize: m(18),
+    fontWeight: '700',
     color: '#111827',
-    marginBottom: m(2),
-  },
-  detailItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
     marginBottom: m(6),
   },
-  detailValue: {
-    fontSize: m(14),
-    fontWeight: '500',
-    color: '#374151',
-    marginLeft: m(10)
-    // flex: 1,
-  },
-  // Borrower Card Styles
-  borrowerCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(16),
-    padding: m(16),
-    marginBottom: m(12),
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-  },
-  borrowerDetails: {
-    flexDirection: 'coloum',
-    marginTop: m(12),
-    gap: m(8),
+  userMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(6),
   },
   userEmail: {
     fontSize: m(13),
     color: '#6B7280',
-    marginTop: m(2),
+    flex: 1,
+  },
+  chevronContainer: {
+    padding: m(4),
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginBottom: m(16),
+  },
+  detailRow: {
+    marginBottom: m(14),
+  },
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  iconContainer: {
+    width: m(36),
+    height: m(36),
+    borderRadius: m(10),
+    backgroundColor: '#D0F0C0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: m(12),
+  },
+  detailContent: {
+    flex: 1,
+  },
+  detailLabel: {
+    fontSize: m(11),
+    fontWeight: '500',
+    color: '#9CA3AF',
+    marginBottom: m(4),
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  detailValue: {
+    fontSize: m(14),
+    fontWeight: '600',
+    color: '#374151',
+    lineHeight: m(20),
+  },
+  // Borrower Card Styles
+  borrowerCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: m(20),
+    padding: m(20),
+    marginBottom: m(16),
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+  },
+  borrowerDetails: {
+    marginTop: m(4),
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: m(6),
+    paddingTop: m(16),
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  footerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    paddingHorizontal: m(10),
+    paddingVertical: m(6),
+    borderRadius: m(8),
+    gap: m(6),
+  },
+  footerText: {
+    fontSize: m(11),
+    fontWeight: '600',
+    color: '#6B7280',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  actionHint: {
+    alignItems: 'flex-end',
+    backgroundColor: 'rgba(255, 152, 0, 0.1)',
+    borderRadius: m(8),
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: m(10),
+    paddingVertical: m(6),
+    gap: m(6),
+  },
+  actionHintText: {
+    fontSize: m(11),
+    color: 'black',
+    fontStyle: 'italic',
   },
   // Action Modal Styles
   actionModalContent: {

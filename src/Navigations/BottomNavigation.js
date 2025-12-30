@@ -1,10 +1,10 @@
-import {StyleSheet, View} from 'react-native';
-import React, {useMemo} from 'react';
+import { StyleSheet, View } from 'react-native';
+import React, { useMemo } from 'react';
 import Feather from 'react-native-vector-icons/Feather';
-import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {useSelector} from 'react-redux';
-import {m} from 'walstar-rn-responsive';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSelector } from 'react-redux';
+import { m } from 'walstar-rn-responsive';
 
 // Lender screens
 import Home from '../Screens/Lender/Dashboard/Home';
@@ -56,7 +56,7 @@ export default function BottomNavigation() {
   // Admin Dashboard (roleId === 0)
   if (roleId === 0) {
     return (
-      <View style={{flex: 1}}>
+      <View style={{ flex: 1 }}>
         <Tab.Navigator
           initialRouteName="AdminHome"
           screenOptions={{
@@ -67,7 +67,7 @@ export default function BottomNavigation() {
             tabBarLabelStyle: {
               fontSize: m(11),
               fontFamily: 'Poppins-SemiBold',
-              paddingTop:m(5)
+              paddingTop: m(5)
             },
             tabBarStyle: {
               position: 'absolute',
@@ -77,6 +77,7 @@ export default function BottomNavigation() {
               bottom: insets.bottom - m(10),
               height: m(68),
               backgroundColor: '#e5dad1',
+              // backgroundColor: 'white',
               borderTopWidth: 0,
               paddingTop: m(5),
               paddingBottom: insets.bottom > 0 ? m(5) : 0,
@@ -87,7 +88,7 @@ export default function BottomNavigation() {
             component={AdminDashboard}
             options={{
               tabBarLabel: 'Dashboard',
-              tabBarIcon: ({color, size, focused}) =>
+              tabBarIcon: ({ color, size, focused }) =>
                 renderIcon('home', color, size, focused),
             }}
           />
@@ -96,7 +97,7 @@ export default function BottomNavigation() {
             component={PlansList}
             options={{
               tabBarLabel: 'Plans',
-              tabBarIcon: ({color, size, focused}) =>
+              tabBarIcon: ({ color, size, focused }) =>
                 renderIcon('file-text', color, size, focused),
             }}
           />
@@ -105,7 +106,7 @@ export default function BottomNavigation() {
             component={Revenue}
             options={{
               tabBarLabel: 'Revenue',
-              tabBarIcon: ({color, size, focused}) =>
+              tabBarIcon: ({ color, size, focused }) =>
                 renderIcon('dollar-sign', color, size, focused),
             }}
           />
@@ -114,7 +115,7 @@ export default function BottomNavigation() {
             component={LenderList}
             options={{
               tabBarLabel: 'Lenders',
-              tabBarIcon: ({color, size, focused}) =>
+              tabBarIcon: ({ color, size, focused }) =>
                 renderIcon('users', color, size, focused),
             }}
           />
@@ -122,7 +123,7 @@ export default function BottomNavigation() {
             name="Profile"
             component={Profile}
             options={{
-              tabBarIcon: ({color, size, focused}) =>
+              tabBarIcon: ({ color, size, focused }) =>
                 renderIcon('user', color, size, focused),
             }}
           />
@@ -134,7 +135,7 @@ export default function BottomNavigation() {
   // Borrower Dashboard (roleId === 2)
   if (roleId === 2) {
     return (
-      <View style={{flex: 1}}>
+      <View style={{ flex: 1 }}>
         <Tab.Navigator
           initialRouteName="BorrowerHome"
           screenOptions={{
@@ -145,7 +146,7 @@ export default function BottomNavigation() {
             tabBarLabelStyle: {
               fontSize: m(11),
               fontFamily: 'Poppins-SemiBold',
-              paddingTop:m(5)
+              paddingTop: m(5)
             },
             tabBarStyle: {
               position: 'absolute',
@@ -155,6 +156,7 @@ export default function BottomNavigation() {
               bottom: insets.bottom - m(10),
               height: m(69),
               backgroundColor: '#e5dad1',
+              // backgroundColor: 'white',
               borderTopWidth: 0,
               paddingTop: m(6),
               paddingBottom: insets.bottom > 0 ? m(5) : 0,
@@ -165,7 +167,7 @@ export default function BottomNavigation() {
             component={BorrowerDashboard}
             options={{
               tabBarLabel: 'Home',
-              tabBarIcon: ({color, size, focused}) =>
+              tabBarIcon: ({ color, size, focused }) =>
                 renderIcon('home', color, size, focused),
             }}
           />
@@ -174,7 +176,7 @@ export default function BottomNavigation() {
             component={MyLoans}
             options={{
               tabBarLabel: 'My Loans',
-              tabBarIcon: ({color, size, focused}) =>
+              tabBarIcon: ({ color, size, focused }) =>
                 renderIcon('file-text', color, size, focused),
             }}
           />
@@ -183,7 +185,7 @@ export default function BottomNavigation() {
             component={Inward}
             options={{
               tabBarLabel: 'Analytics',
-              tabBarIcon: ({color, size, focused}) =>
+              tabBarIcon: ({ color, size, focused }) =>
                 renderIcon('clock', color, size, focused),
             }}
           />
@@ -191,7 +193,7 @@ export default function BottomNavigation() {
             name="Profile"
             component={Profile}
             options={{
-              tabBarIcon: ({color, size, focused}) =>
+              tabBarIcon: ({ color, size, focused }) =>
                 renderIcon('user', color, size, focused),
             }}
           />
@@ -202,7 +204,7 @@ export default function BottomNavigation() {
 
   // Lender Dashboard (roleId === 1) - Default/Current Dashboard
   return (
-    <View style={{flex: 1}}>
+    <View style={{ flex: 1 }}>
       <Tab.Navigator
         initialRouteName="Home"
         screenOptions={{
@@ -213,25 +215,29 @@ export default function BottomNavigation() {
           tabBarLabelStyle: {
             fontSize: m(11),
             fontFamily: 'Poppins-SemiBold',
-            paddingTop:m(5)
+            paddingTop: m(5)
           },
           tabBarStyle: {
             position: 'absolute',
             left: m(16),
             right: m(16),
-            bottom: insets.bottom,
+            // bottom: insets.bottom,
+            bottom: insets.bottom - m(10),
+
             height: m(69),
             backgroundColor: '#e5dad1',
+            // backgroundColor: 'white',
             borderTopWidth: 0,
             paddingTop: m(10),
             paddingBottom: insets.bottom > 0 ? m(5) : 0,
+            // boederRadius: m(16),
           },
         }}>
         <Tab.Screen
           name="Home"
           component={Home}
           options={{
-            tabBarIcon: ({color, size, focused}) =>
+            tabBarIcon: ({ color, size, focused }) =>
               renderIcon('home', color, size, focused),
           }}
         />
@@ -239,7 +245,7 @@ export default function BottomNavigation() {
           name="Borrowers"
           component={Outward}
           options={{
-            tabBarIcon: ({color, size, focused}) =>
+            tabBarIcon: ({ color, size, focused }) =>
               renderIcon('arrow-up-circle', color, size, focused),
           }}
         />
@@ -247,7 +253,7 @@ export default function BottomNavigation() {
           name="Loans"
           component={Inward}
           options={{
-            tabBarIcon: ({color, size, focused}) =>
+            tabBarIcon: ({ color, size, focused }) =>
               renderIcon('arrow-down-circle', color, size, focused),
           }}
         />
@@ -255,7 +261,7 @@ export default function BottomNavigation() {
           name="Profile"
           component={Profile}
           options={{
-            tabBarIcon: ({color, size, focused}) =>
+            tabBarIcon: ({ color, size, focused }) =>
               renderIcon('user', color, size, focused),
           }}
         />

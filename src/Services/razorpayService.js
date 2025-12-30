@@ -10,7 +10,7 @@ export const initializeRazorpay = () => {
 };
 
 /**
- * Open Razorpay checkout for subscription payment
+ * Open Razorpay checkout for plan purchase
  * @param {Object} order - Order data from backend
  * @param {Object} user - User data
  * @returns {Promise} Promise with payment result
@@ -23,22 +23,24 @@ export const openRazorpayCheckout = (order, user) => {
       return;
     }
 
+    const planName = order.plan?.planName || order.plan?.name || 'Plan';
+
     const options = {
       key: RAZORPAY_KEY,
       amount: order.amount.toString(),
       currency: order.currency || 'INR',
       name: 'Loan Management App',
-      description: `Subscription: ${order.subscription?.name || 'Plan'}`,
+      description: `Plan Purchase: ${planName}`,
       order_id: order.orderId,
       prefill: {
         email: user?.email || '',
         contact: user?.mobileNo || '',
         name: user?.userName || '',
       },
-      theme: { color: '#53a20e' },
+      theme: { color: '#ff6700' },
       notes: {
-        subscriptionId: order.subscription?.id,
-        subscriptionName: order.subscription?.name,
+        planId: order.plan?._id || order.plan?.id,
+        planName: planName,
       },
     };
 
@@ -52,13 +54,15 @@ export const openRazorpayCheckout = (order, user) => {
 
     RazorpayCheckout.open(options)
       .then((data) => {
-        console.log('Payment success - Data:', data);
+        console.log('Payment success - Full Data:', JSON.stringify(data, null, 2));
         console.log('Payment ID:', data.razorpay_payment_id);
         console.log('Order ID:', data.razorpay_order_id);
         console.log('Signature:', data.razorpay_signature);
+        console.log('All data keys:', Object.keys(data));
         
         if (!data.razorpay_payment_id || !data.razorpay_order_id) {
           console.error('Missing payment or order ID');
+          console.error('Received data:', data);
           reject({
             type: 'PAYMENT_FAILED',
             message: 'Payment response incomplete',
@@ -66,15 +70,34 @@ export const openRazorpayCheckout = (order, user) => {
           return;
         }
         
-        resolve({
+        if (!data.razorpay_signature) {
+          console.error('Missing signature in payment response');
+          console.error('Received data:', data);
+          reject({
+            type: 'PAYMENT_FAILED',
+            message: 'Payment signature missing',
+          });
+          return;
+        }
+        
+        // Ensure we're using the correct order_id from the response
+        const paymentResponse = {
           success: true,
           data: {
             razorpay_payment_id: data.razorpay_payment_id,
-            razorpay_order_id: data.razorpay_order_id,
+            razorpay_order_id: data.razorpay_order_id || data.razorpay_orderId || order.orderId,
             razorpay_signature: data.razorpay_signature,
           },
           order: order,
+        };
+        
+        console.log('Resolving with payment data:', {
+          payment_id: paymentResponse.data.razorpay_payment_id,
+          order_id: paymentResponse.data.razorpay_order_id,
+          signature_present: !!paymentResponse.data.razorpay_signature,
         });
+        
+        resolve(paymentResponse);
       })
       .catch((error) => {
         console.error('Razorpay error - Full error:', error);

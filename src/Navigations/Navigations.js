@@ -16,8 +16,10 @@ import ProfileDetails from '../Screens/Shared/Profile/ProfileDetails';
 import OldHistoryPage from '../Screens/Shared/History/OldHistoryPage';
 import SettingsScreen from '../Screens/Shared/Profile/SettingsScreen';
 import SubscriptionScreen from '../Screens/Shared/Subscription/SubscriptionScreen';
+import LenderPlanDetailsScreen from '../Screens/Shared/Subscription/LenderPlanDetailsScreen';
 import HelpAndSupportScreen from '../Screens/Auth/HelpAndSupportScreen';
 import PersonalLoan from '../Screens/Shared/Loans/PersonalLoan';
+import BorrowerLoansScreen from '../Screens/Shared/Loans/BorrowerLoansScreen';
 import AnalyticsScreen from '../Screens/Lender/Analytics/AnalyticsScreen';
 // Admin screens
 import PlansList from '../Screens/Admin/Plans/PlansList';
@@ -52,11 +54,13 @@ const Navigation = () => {
       <Stack.Screen name="AddDetails" component={AddDetails} />
       <Stack.Screen name="LoanDetailScreen" component={LoanDetailScreen} />
       <Stack.Screen name="PersonalLoan" component={PersonalLoan} />
+      <Stack.Screen name="BorrowerLoansScreen" component={BorrowerLoansScreen} />
 
       <Stack.Screen name="ProfileDetails" component={ProfileDetails} />
       <Stack.Screen name="OldHistoryPage" component={OldHistoryPage} />
 
       <Stack.Screen name="SubscriptionScreen" component={SubscriptionScreen} />
+      <Stack.Screen name="LenderPlanDetailsScreen" component={LenderPlanDetailsScreen} />
       <Stack.Screen
         name="HelpAndSupportScreen"
         component={HelpAndSupportScreen}

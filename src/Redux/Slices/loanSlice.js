@@ -151,12 +151,23 @@ export const createLoan = createAsyncThunk(
     } catch (error) {
       console.error('Create loan error:', error.response?.data || error.message);
 
-      // Handle subscription-related errors
+      // Handle plan-related errors
       if (error.response?.status === 403) {
         return rejectWithValue({
           type: 'SUBSCRIPTION_REQUIRED',
-          message: error.response.data.message || 'You need an active subscription to create loans.',
-          errorCode: error.response.data.errorCode,
+          message: error.response.data.message || 'You need an active plan to create loans.',
+          errorCode: error.response.data.errorCode || 'PLAN_REQUIRED',
+        });
+      }
+      
+      // Handle plan required errors (400 with PLAN_REQUIRED error code)
+      if (error.response?.status === 400 && 
+          (error.response.data.errorCode === 'PLAN_REQUIRED' || 
+           error.response.data.message?.includes('plan'))) {
+        return rejectWithValue({
+          type: 'SUBSCRIPTION_REQUIRED',
+          message: error.response.data.message || 'You need an active plan to create loans.',
+          errorCode: 'PLAN_REQUIRED',
         });
       }
 

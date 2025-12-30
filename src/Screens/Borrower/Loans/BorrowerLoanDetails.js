@@ -14,14 +14,17 @@ import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
 import borrowerLoanAPI from '../../../Services/borrowerLoanService';
 import Toast from 'react-native-toast-message';
+import { useSelector } from 'react-redux';
 
 export default function BorrowerLoanDetails() {
   const navigation = useNavigation();
   const route = useRoute();
   const { loan } = route.params;
+  const user = useSelector(state => state.auth.user);
 
   const [loanDetails, setLoanDetails] = useState(loan);
   const [paymentHistory, setPaymentHistory] = useState([]);
+  const [installmentDetails, setInstallmentDetails] = useState(null);
   const [loanStats, setLoanStats] = useState({
     totalPaid: loan.totalPaid || 0,
     remainingAmount: loan.remainingAmount || loan.amount || 0,
@@ -41,22 +44,29 @@ export default function BorrowerLoanDetails() {
   const fetchPaymentHistory = async () => {
     try {
       // Fetch payment history for this loan
-      const response = await borrowerLoanAPI.getPaymentHistory(loan._id);
+      const borrowerId = user?._id || loan.borrowerId || loan.borrower?._id;
+      const response = await borrowerLoanAPI.getPaymentHistory(loan._id, borrowerId);
       const paymentData = response.data || {};
-      setPaymentHistory(paymentData.paymentHistory || []);
       
-      // Update loan details with latest totals from API
-      if (paymentData.totalPaid !== undefined) {
+      // New API structure: payments array (renamed from paymentHistory.allPayments)
+      setPaymentHistory(paymentData.payments || []);
+      
+      // New API structure: installmentDetails (null for one-time loans)
+      setInstallmentDetails(paymentData.installmentDetails || null);
+      
+      // Update loan details with latest totals from API (new structure: loanSummary)
+      if (paymentData.loanSummary) {
         setLoanDetails(prev => ({
           ...prev,
           // Ensure amounts are numbers, not strings
-          totalPaid: typeof paymentData.totalPaid === 'number' 
-            ? paymentData.totalPaid 
-            : parseFloat(paymentData.totalPaid) || 0,
-          remainingAmount: typeof paymentData.remainingAmount === 'number'
-            ? paymentData.remainingAmount
-            : parseFloat(paymentData.remainingAmount) || 0,
-          paymentStatus: paymentData.paymentStatus,
+          totalPaid: typeof paymentData.loanSummary.totalPaid === 'number' 
+            ? paymentData.loanSummary.totalPaid 
+            : parseFloat(paymentData.loanSummary.totalPaid) || 0,
+          remainingAmount: typeof paymentData.loanSummary.remainingAmount === 'number'
+            ? paymentData.loanSummary.remainingAmount
+            : parseFloat(paymentData.loanSummary.remainingAmount) || 0,
+          paymentStatus: paymentData.loanSummary.paymentStatus,
+          paymentType: paymentData.loanSummary.paymentType,
         }));
       }
     } catch (error) {
@@ -149,7 +159,11 @@ export default function BorrowerLoanDetails() {
       <View style={styles.paymentHeader}>
         <View style={styles.paymentAmount}>
           <Text style={styles.paymentAmountText}>{formatCurrency(item.amount)}</Text>
-          <Text style={styles.paymentMode}>{item.paymentMode} • {item.paymentType}</Text>
+          <Text style={styles.paymentMode}>
+            {item.paymentMode?.charAt(0).toUpperCase() + item.paymentMode?.slice(1) || 'N/A'}
+            {item.installmentLabel && ` • ${item.installmentLabel}`}
+            {!item.installmentLabel && item.installmentNumber && ` • Installment ${item.installmentNumber}`}
+          </Text>
         </View>
         <View style={[styles.paymentStatusBadge, { backgroundColor: getStatusColor(item.paymentStatus) + '20' }]}>
           <Icon name={getStatusIcon(item.paymentStatus)} size={12} color={getStatusColor(item.paymentStatus)} />
@@ -165,11 +179,6 @@ export default function BorrowerLoanDetails() {
         {item.confirmedAt && (
           <Text style={styles.confirmedDate}>
             Confirmed: {moment(item.confirmedAt).format('DD MMM YYYY, hh:mm A')}
-          </Text>
-        )}
-        {item.rejectedAt && item.reason && (
-          <Text style={styles.rejectedDate}>
-            Rejected: {item.reason}
           </Text>
         )}
         {item.notes && (
@@ -287,8 +296,55 @@ export default function BorrowerLoanDetails() {
               value={loanDetails.paymentStatus}
               isStatus
             />
+            {loanDetails.paymentType && (
+              <DetailItem
+                icon="repeat"
+                label="Payment Type"
+                value={loanDetails.paymentType === 'installment' ? 'Installment' : 'One-time'}
+              />
+            )}
           </View>
         </View>
+
+        {/* Installment Details */}
+        {installmentDetails && (
+          <View style={styles.infoCard}>
+            <Text style={styles.cardTitle}>Installment Details</Text>
+            <View style={styles.installmentContainer}>
+              <View style={styles.installmentRow}>
+                <Icon name="check-circle" size={20} color="#10B981" />
+                <View style={styles.installmentContent}>
+                  <Text style={styles.installmentLabel}>Installments Paid</Text>
+                  <Text style={styles.installmentValue}>
+                    {installmentDetails.totalInstallmentsPaid} Installment{installmentDetails.totalInstallmentsPaid !== 1 ? 's' : ''}
+                  </Text>
+                </View>
+              </View>
+              {installmentDetails.nextDueDate && (
+                <View style={styles.installmentRow}>
+                  <Icon name="calendar" size={20} color="#3B82F6" />
+                  <View style={styles.installmentContent}>
+                    <Text style={styles.installmentLabel}>Next Due Date</Text>
+                    <Text style={styles.installmentValue}>
+                      {moment(installmentDetails.nextDueDate).format('DD MMM YYYY')}
+                    </Text>
+                  </View>
+                </View>
+              )}
+              {installmentDetails.frequency && (
+                <View style={styles.installmentRow}>
+                  <Icon name="repeat" size={20} color="#6B7280" />
+                  <View style={styles.installmentContent}>
+                    <Text style={styles.installmentLabel}>Frequency</Text>
+                    <Text style={styles.installmentValue}>
+                      {installmentDetails.frequency.charAt(0).toUpperCase() + installmentDetails.frequency.slice(1)}
+                    </Text>
+                  </View>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
 
         {/* Recent Payments */}
         {paymentHistory.length > 0 && (
@@ -622,6 +678,27 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: m(12),
     color: '#9CA3AF',
+  },
+  installmentContainer: {
+    gap: m(16),
+  },
+  installmentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(12),
+  },
+  installmentContent: {
+    flex: 1,
+  },
+  installmentLabel: {
+    fontSize: m(12),
+    color: '#6B7280',
+    marginBottom: m(4),
+  },
+  installmentValue: {
+    fontSize: m(16),
+    fontWeight: '600',
+    color: '#111827',
   },
 });
 
