@@ -20,17 +20,21 @@ import {
   createLoan,
   getLoanByAadhar,
   updateLoan,
+  checkFraudStatus,
+  clearFraudStatus,
 } from '../../../Redux/Slices/loanSlice';
 import { getActivePlan } from '../../../Redux/Slices/planPurchaseSlice';
 import Toast from 'react-native-toast-message';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
 import LoanOTPVerification from '../../../Components/LoanOTPVerification';
+import FraudStatusBadge from '../../../Components/FraudStatusBadge';
+import FraudWarningModal from '../../../Components/FraudWarningModal';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 export default function AddDetails({ route, navigation }) {
   const dispatch = useDispatch();
-  const { error, aadharError, loading } = useSelector(
+  const { error, aadharError, loading, fraudStatus, fraudLoading } = useSelector(
     state => state.loans,
   );
   const { loanDetails, borrowerData } = route.params || {};
@@ -84,6 +88,8 @@ export default function AddDetails({ route, navigation }) {
   const [isFocused, setIsFocused] = useState({});
   const [isOTPModalVisible, setIsOTPModalVisible] = useState(false);
   const [createdLoanData, setCreatedLoanData] = useState(null);
+  const [showFraudWarning, setShowFraudWarning] = useState(false);
+  const [pendingLoanData, setPendingLoanData] = useState(null);
 
   // Focus animation
   const focusAnim = new Animated.Value(0);
@@ -195,7 +201,7 @@ export default function AddDetails({ route, navigation }) {
           },
         ]
       );
-      return false; // Block by default if check fails
+      return false; 
     }
   };
 
@@ -232,12 +238,25 @@ export default function AddDetails({ route, navigation }) {
       aadharCardNo: aadharNumber,
       address: formData.address.trim(),
       amount: parseFloat(formData.amount),
-      loanGivenDate: loanStartDate, // New API uses loanGivenDate
+      loanGivenDate: loanStartDate,
       loanEndDate: loanEndDate,
       purpose: formData.purpose.trim(),
       loanMode: formData.loanMode || 'cash',
     };
 
+    // Check if fraud warning should be shown before proceeding
+    if (!loanDetails && fraudStatus && fraudStatus.riskLevel && fraudStatus.riskLevel !== 'low') {
+      setPendingLoanData(newData);
+      setShowFraudWarning(true);
+      return;
+    }
+
+    // Proceed with loan creation
+    await proceedWithLoanCreation(newData);
+  };
+
+  // Proceed with loan creation (after fraud warning if shown)
+  const proceedWithLoanCreation = async (newData) => {
     try {
       const action = loanDetails
         ? updateLoan({ ...newData, id: loanDetails._id })
@@ -248,10 +267,20 @@ export default function AddDetails({ route, navigation }) {
         createLoan.fulfilled.match(response) ||
         updateLoan.fulfilled.match(response)
       ) {
+        // Check for fraud warning in response
+        const responsePayload = response.payload;
+        if (responsePayload?.warning && responsePayload.warning.fraudDetected && !loanDetails) {
+          // Show fraud warning even after loan creation
+          Alert.alert(
+            'Fraud Alert',
+            responsePayload.warning.recommendation || 'Fraud risk detected for this borrower.',
+            [{ text: 'OK' }]
+          );
+        }
+
         // For new loans, show OTP verification modal
         if (!loanDetails && createLoan.fulfilled.match(response)) {
           // Handle API response structure: response.payload.data or response.payload
-          const responsePayload = response.payload;
           const loanData = responsePayload?.data || responsePayload;
           
           if (loanData && loanData._id) {
@@ -350,6 +379,38 @@ export default function AddDetails({ route, navigation }) {
     });
     setErrorMessage('');
     setShowOldHistoryButton(false);
+    dispatch(clearFraudStatus());
+  };
+
+  // Handle fraud warning modal actions
+  const handleFraudWarningProceed = () => {
+    setShowFraudWarning(false);
+    if (pendingLoanData) {
+      proceedWithLoanCreation(pendingLoanData);
+      setPendingLoanData(null);
+    }
+  };
+
+  const handleFraudWarningCancel = () => {
+    setShowFraudWarning(false);
+    setPendingLoanData(null);
+  };
+
+  const handleFraudWarningViewHistory = () => {
+    setShowFraudWarning(false);
+    // Navigate to loan history page
+    if (formData.aadhaarNumber && formData.aadhaarNumber.length === 12) {
+      navigation.navigate('OldHistoryPage', {
+        aadhaarNumber: formData.aadhaarNumber,
+      });
+    } else {
+      // Show error if Aadhaar number is not valid
+      Alert.alert(
+        'Invalid Aadhaar Number',
+        'Please enter a valid 12-digit Aadhaar number to view history.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   // Handle Aadhar number change
@@ -357,7 +418,15 @@ export default function AddDetails({ route, navigation }) {
     if (!/^\d{0,12}$/.test(text)) return;
     setFormData({ ...formData, aadhaarNumber: text });
     setShowOldHistoryButton(text.length === 12);
-    if (text.length === 12) dispatch(getLoanByAadhar({ aadhaarNumber: text }));
+    // Clear previous fraud status when Aadhaar changes
+    if (text.length !== 12) {
+      dispatch(clearFraudStatus());
+    }
+    if (text.length === 12) {
+      dispatch(getLoanByAadhar({ aadhaarNumber: text }));
+      // Check fraud status when Aadhaar is complete
+      dispatch(checkFraudStatus(text));
+    }
   };
 
   // Handle contact number change
@@ -499,16 +568,35 @@ export default function AddDetails({ route, navigation }) {
                     </Text>
                   </View>
                 ) : (
-                  <TouchableOpacity
-                    style={styles.oldHistoryButton}
-                    onPress={() =>
-                      navigation.navigate('OldHistoryPage', {
-                        aadharNo: formData.aadhaarNumber,
-                      })
-                    }>
-                    <Icon name="history" size={20} color="#FFF" />
-                    <Text style={styles.oldHistoryButtonText}>View Loan History</Text>
-                  </TouchableOpacity>
+                  <>
+                    <TouchableOpacity
+                      style={styles.oldHistoryButton}
+                      onPress={() =>
+                        navigation.navigate('OldHistoryPage', {
+                          aadhaarNumber: formData.aadhaarNumber,
+                        })
+                      }>
+                      <Icon name="history" size={20} color="#FFF" />
+                      <Text style={styles.oldHistoryButtonText}>View Loan History</Text>
+                    </TouchableOpacity>
+                    
+                    {/* Fraud Status Badge */}
+                    {fraudStatus && fraudStatus.success && (
+                      <View style={styles.fraudBadgeContainer}>
+                        {fraudLoading ? (
+                          <View style={styles.fraudLoadingContainer}>
+                            <ActivityIndicator size="small" color="#ff7900" />
+                            <Text style={styles.fraudLoadingText}>Checking fraud status...</Text>
+                          </View>
+                        ) : fraudStatus.riskLevel && fraudStatus.riskLevel !== 'low' ? (
+                          <FraudStatusBadge 
+                            fraudScore={fraudStatus.fraudScore} 
+                            riskLevel={fraudStatus.riskLevel} 
+                          />
+                        ) : null}
+                      </View>
+                    )}
+                  </>
                 )}
               </View>
             )}
@@ -756,6 +844,15 @@ export default function AddDetails({ route, navigation }) {
             onClose={handleOTPClose}
           />
         )}
+
+        {/* Fraud Warning Modal */}
+        <FraudWarningModal
+          visible={showFraudWarning}
+          fraudData={fraudStatus}
+          onProceed={handleFraudWarningProceed}
+          onCancel={handleFraudWarningCancel}
+          onViewHistory={handleFraudWarningViewHistory}
+        />
       </KeyboardAvoidingView>
     </TouchableWithoutFeedback>
   );
@@ -1084,5 +1181,22 @@ const styles = StyleSheet.create({
   },
   loanModeButtonTextActive: {
     color: '#FFFFFF',
+  },
+  fraudBadgeContainer: {
+    marginTop: m(12),
+  },
+  fraudLoadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: m(12),
+    backgroundColor: '#f8fafc',
+    borderRadius: m(12),
+    gap: m(10),
+  },
+  fraudLoadingText: {
+    fontSize: m(13),
+    color: '#64748b',
+    fontFamily: 'Montserrat-Regular',
   },
 });

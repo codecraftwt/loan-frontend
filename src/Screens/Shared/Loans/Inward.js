@@ -14,7 +14,9 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   getLoanByLender,
+  checkFraudStatus,
 } from '../../../Redux/Slices/loanSlice';
+import FraudStatusBadge from '../../../Components/FraudStatusBadge';
 import { useFocusEffect, useRoute } from '@react-navigation/native';
 import moment from 'moment';
 import LoaderSkeleton from '../../../Components/LoaderSkeleton';
@@ -147,6 +149,26 @@ export default function Inward({ navigation }) {
     return `₹${numAmount.toLocaleString('en-IN')}`;
   };
 
+  // Fetch fraud status for a borrower
+  const fetchFraudStatus = async (aadhaarNumber) => {
+    if (!aadhaarNumber || aadhaarNumber.length !== 12) return;
+    
+    // Check if we already have fraud status for this borrower
+    if (borrowerFraudStatus[aadhaarNumber]) return;
+    
+    try {
+      const result = await dispatch(checkFraudStatus(aadhaarNumber));
+      if (checkFraudStatus.fulfilled.match(result)) {
+        setBorrowerFraudStatus(prev => ({
+          ...prev,
+          [aadhaarNumber]: result.payload,
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching fraud status:', error);
+    }
+  };
+
   // Group loans by borrower (using aadhaarNumber or name as identifier)
   const groupLoansByBorrower = (loans) => {
     if (!loans || loans.length === 0) return [];
@@ -155,18 +177,24 @@ export default function Inward({ navigation }) {
     loans.forEach(loan => {
       // Use aadhaarNumber as primary identifier, fallback to name
       const borrowerId = loan.aadhaarNumber || loan.aadharCardNo || loan.name || 'unknown';
+      const aadhaarNumber = loan.aadhaarNumber || loan.aadharCardNo;
       
       if (!grouped[borrowerId]) {
         grouped[borrowerId] = {
           borrower: {
             name: loan.name,
             mobileNumber: loan.mobileNumber,
-            aadhaarNumber: loan.aadhaarNumber || loan.aadharCardNo,
+            aadhaarNumber: aadhaarNumber,
             profileImage: loan.profileImage,
             address: loan.address,
           },
           loans: [],
         };
+        
+        // Fetch fraud status for borrower when grouping
+        if (aadhaarNumber && aadhaarNumber.length === 12) {
+          fetchFraudStatus(aadhaarNumber);
+        }
       }
       grouped[borrowerId].loans.push(loan);
     });
@@ -470,12 +498,17 @@ export default function Inward({ navigation }) {
               
               const hasOverdue = overdueCount > 0;
               
+              // Get fraud status for this borrower
+              const fraudData = borrower.aadhaarNumber ? borrowerFraudStatus[borrower.aadhaarNumber] : null;
+              const hasFraudRisk = fraudData && fraudData.success && fraudData.riskLevel && fraudData.riskLevel !== 'low';
+              
               return (
                 <TouchableOpacity
                   key={borrower.aadhaarNumber || borrower.name || groupIndex}
                   style={[
                     styles.borrowerCard,
-                    hasOverdue && styles.overdueBorrowerCard
+                    hasOverdue && styles.overdueBorrowerCard,
+                    hasFraudRisk && styles.fraudRiskBorrowerCard
                   ]}
                   onPress={() => navigation.navigate('BorrowerLoansScreen', {
                     borrower: borrower,
@@ -487,6 +520,20 @@ export default function Inward({ navigation }) {
                       <Icon name="error" size={16} color="#FFFFFF" />
                       <Text style={styles.overdueBannerText}>
                         {overdueCount} OVERDUE LOAN{overdueCount > 1 ? 'S' : ''}
+                      </Text>
+                    </View>
+                  )}
+                  
+                  {hasFraudRisk && !hasOverdue && (
+                    <View style={[
+                      styles.fraudBanner,
+                      { backgroundColor: fraudData.riskLevel === 'critical' ? '#dc3545' : 
+                                       fraudData.riskLevel === 'high' ? '#fd7e14' : 
+                                       fraudData.riskLevel === 'medium' ? '#ffc107' : '#28a745' }
+                    ]}>
+                      <Icon name="shield-alert" size={16} color="#FFFFFF" />
+                      <Text style={styles.fraudBannerText}>
+                        {fraudData.riskLevel?.toUpperCase()} FRAUD RISK
                       </Text>
                     </View>
                   )}
@@ -506,9 +553,19 @@ export default function Inward({ navigation }) {
                         </View>
                       )}
                       <View style={styles.borrowerDetails}>
-                        <Text style={styles.borrowerName} numberOfLines={1}>
-                          {borrower.name || 'Unknown Borrower'}
-                        </Text>
+                        <View style={styles.borrowerNameRow}>
+                          <Text style={styles.borrowerName} numberOfLines={1}>
+                            {borrower.name || 'Unknown Borrower'}
+                          </Text>
+                          {hasFraudRisk && (
+                            <View style={styles.fraudBadgeContainer}>
+                              <FraudStatusBadge 
+                                fraudScore={fraudData.fraudScore} 
+                                riskLevel={fraudData.riskLevel} 
+                              />
+                            </View>
+                          )}
+                        </View>
                         <View style={styles.borrowerMeta}>
                           <View style={styles.metaItem}>
                             <Icon name="phone" size={14} color="#6B7280" />
@@ -557,6 +614,32 @@ export default function Inward({ navigation }) {
                         <Icon name="error" size={16} color="#EF4444" />
                         <Text style={styles.overdueWarningText}>
                           {overdueCount} loan{overdueCount > 1 ? 's' : ''} overdue
+                        </Text>
+                      </View>
+                    )}
+                    
+                    {hasFraudRisk && !hasOverdue && (
+                      <View style={[
+                        styles.fraudWarning,
+                        { backgroundColor: fraudData.riskLevel === 'critical' ? '#FEE2E2' : 
+                                         fraudData.riskLevel === 'high' ? '#FED7AA' : 
+                                         fraudData.riskLevel === 'medium' ? '#FEF3C7' : '#D1FAE5' }
+                      ]}>
+                        <Icon 
+                          name="shield-alert" 
+                          size={16} 
+                          color={fraudData.riskLevel === 'critical' ? '#DC2626' : 
+                                fraudData.riskLevel === 'high' ? '#EA580C' : 
+                                fraudData.riskLevel === 'medium' ? '#D97706' : '#059669'} 
+                        />
+                        <Text style={[
+                          styles.fraudWarningText,
+                          { color: fraudData.riskLevel === 'critical' ? '#DC2626' : 
+                                  fraudData.riskLevel === 'high' ? '#EA580C' : 
+                                  fraudData.riskLevel === 'medium' ? '#D97706' : '#059669' }
+                        ]}>
+                          {fraudData.details?.pendingLoansCount || 0} pending loans • 
+                          {fraudData.details?.overdueLoansCount || 0} overdue loans
                         </Text>
                       </View>
                     )}
@@ -823,6 +906,51 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#FCA5A5',
     backgroundColor: '#FFF5F5',
+  },
+  fraudRiskBorrowerCard: {
+    borderWidth: 2,
+    borderColor: '#FED7AA',
+    backgroundColor: '#FFFBEB',
+  },
+  fraudBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: m(8),
+    paddingHorizontal: m(12),
+    marginHorizontal: m(-20),
+    marginTop: m(-20),
+    marginBottom: m(16),
+    gap: m(6),
+  },
+  fraudBannerText: {
+    color: '#FFFFFF',
+    fontSize: m(12),
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  borrowerNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: m(8),
+    gap: m(8),
+  },
+  fraudBadgeContainer: {
+    marginLeft: m(8),
+  },
+  fraudWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: m(8),
+    padding: m(10),
+    marginTop: m(12),
+    gap: m(6),
+  },
+  fraudWarningText: {
+    fontSize: m(13),
+    fontWeight: '600',
   },
   overdueBanner: {
     flexDirection: 'row',

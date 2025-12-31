@@ -283,14 +283,6 @@ const OldHistoryPage = ({ route, navigation }) => {
                         <Icon name="file-text" size={18} color="#fff" />
                         <Text style={styles.actionButtonText}>View Agreement</Text>
                       </TouchableOpacity>
-                      
-                      <TouchableOpacity
-                        style={[styles.actionButton, { backgroundColor: '#2196F3' }]}
-                        onPress={() => {/* Add payment action */}}
-                      >
-                        <Icon name="dollar-sign" size={18} color="#fff" />
-                        <Text style={styles.actionButtonText}>Make Payment</Text>
-                      </TouchableOpacity>
                     </View>
                   </Animated.View>
                 )}

@@ -216,6 +216,77 @@ class NotificationService {
 
     const { data } = remoteMessage;
 
+    // Handle fraud alert notifications first
+    if (data && data.type === 'fraud_alert') {
+      const navigationParams = {};
+      
+      if (data.notificationId) {
+        navigationParams.notificationId = data.notificationId;
+      }
+      navigationParams.notificationType = 'fraud_alert';
+      navigationParams.fraudScore = data.fraudScore;
+      navigationParams.riskLevel = data.riskLevel;
+      navigationParams.borrowerName = data.borrowerName;
+      
+      // Navigate based on screen specified in notification
+      if (data.screen) {
+        switch (data.screen) {
+          case 'CreateLoan':
+            // Navigate to AddDetails screen
+            try {
+              this.navigation.navigate('AddDetails', navigationParams);
+            } catch (error) {
+              console.error('Navigation error (CreateLoan):', error);
+              this.navigation.navigate('BottomNavigation');
+            }
+            break;
+          case 'LoanDetails':
+            // Navigate to loan details if loanId is provided
+            if (data.loanId) {
+              try {
+                // Navigate to loan details screen
+                this.navigation.navigate('LoanDetailScreen', {
+                  loanDetails: { _id: data.loanId },
+                  fraudAlert: true,
+                  fraudData: {
+                    fraudScore: data.fraudScore,
+                    riskLevel: data.riskLevel,
+                    borrowerName: data.borrowerName,
+                  },
+                });
+              } catch (error) {
+                console.error('Navigation error (LoanDetails):', error);
+                // Fallback to Outward screen
+                this.navigation.navigate('Outward', navigationParams);
+              }
+            } else {
+              this.navigation.navigate('Outward', navigationParams);
+            }
+            break;
+          case 'LoansList':
+          case 'Outward':
+            // Navigate to Outward screen (loans list)
+            try {
+              this.navigation.navigate('Outward', navigationParams);
+            } catch (error) {
+              console.error('Navigation error (LoansList/Outward):', error);
+              this.navigation.navigate('BottomNavigation');
+            }
+            break;
+          default:
+            // Default to Outward screen
+            try {
+              this.navigation.navigate('Outward', navigationParams);
+            } catch (error) {
+              this.navigation.navigate('BottomNavigation');
+            }
+        }
+      } else {
+        // Default navigation for fraud alerts
+        this.navigation.navigate('Outward', navigationParams);
+      }
+      return;
+    }
     
     if (data) {
       // Navigate based on notification data
@@ -522,7 +593,6 @@ class NotificationService {
         const registerResult = await this.registerToken(userId, token);
         if (!registerResult.success) {
           console.warn('Failed to register token:', registerResult.error);
-          // Don't fail initialization if registration fails, token might still work
         } else {
           console.log('Token registered with backend');
         }
@@ -541,9 +611,6 @@ class NotificationService {
     }
   }
 
-  /**
-   * Cleanup
-   */
   cleanup() {
     if (this.foregroundUnsubscribe) {
       this.foregroundUnsubscribe();

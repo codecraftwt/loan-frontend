@@ -24,6 +24,43 @@ const initialState = {
   },
 };
 
+export const checkFraudStatus = createAsyncThunk(
+  'loans/checkFraudStatus',
+  async (aadhaarNumber, { rejectWithValue }) => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        return rejectWithValue('User is not authenticated');
+      }
+
+      if (!aadhaarNumber || aadhaarNumber.length !== 12) {
+        return rejectWithValue('Valid Aadhaar number (12 digits) is required');
+      }
+
+      const response = await instance.get(`lender/loans/check-fraud/${aadhaarNumber}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('Check fraud error:', error.response?.data || error.message);
+      
+      if (error.response?.status === 400) {
+        return rejectWithValue(error.response.data.message || 'Invalid Aadhaar number');
+      }
+
+      if (error.response?.status === 404) {
+        // Borrower not found - not necessarily an error
+        return rejectWithValue('Borrower not found');
+      }
+
+      return rejectWithValue(error.response?.data?.message || error.message || 'Failed to check fraud status');
+    }
+  }
+);
+
 export const getLoanByAadhar = createAsyncThunk(
   'loans/getLoanByAadhar',
   async ({ aadhaarNumber, filters = {} }, { rejectWithValue }) => {
@@ -551,8 +588,31 @@ const loanSlice = createSlice({
         state.loading = false;
         state.error = action.payload || 'Error fetching lender statistics';
         state.lenderStatistics = null;
+      })
+      
+      // Handling checkFraudStatus
+      .addCase(checkFraudStatus.pending, state => {
+        state.fraudLoading = true;
+        state.fraudError = null;
+      })
+      .addCase(checkFraudStatus.fulfilled, (state, action) => {
+        state.fraudLoading = false;
+        state.fraudStatus = action.payload;
+        state.fraudError = null;
+      })
+      .addCase(checkFraudStatus.rejected, (state, action) => {
+        state.fraudLoading = false;
+        state.fraudError = action.payload;
+        // Don't clear fraudStatus on error, keep last known status
       });
+  },
+  reducers: {
+    clearFraudStatus: (state) => {
+      state.fraudStatus = null;
+      state.fraudError = null;
+    },
   },
 });
 
+export const { clearFraudStatus } = loanSlice.actions;
 export default loanSlice.reducer;

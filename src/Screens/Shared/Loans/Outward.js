@@ -15,6 +15,8 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useDispatch, useSelector } from 'react-redux';
 import { getAllBorrowers, searchBorrowers } from '../../../Redux/Slices/borrowerSlice';
+import { checkFraudStatus } from '../../../Redux/Slices/loanSlice';
+import FraudStatusBadge from '../../../Components/FraudStatusBadge';
 import LoaderSkeleton from '../../../Components/LoaderSkeleton';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
@@ -29,6 +31,7 @@ const Outward = ({ navigation, route }) => {
   const [borrowerActionModalVisible, setBorrowerActionModalVisible] = useState(false);
   const [highlightedBorrowerId, setHighlightedBorrowerId] = useState(null);
   const [pendingHighlightParams, setPendingHighlightParams] = useState(null);
+  const [borrowerFraudStatus, setBorrowerFraudStatus] = useState({});
 
   const scrollViewRef = React.useRef(null);
 
@@ -185,6 +188,38 @@ const Outward = ({ navigation, route }) => {
   }, [debouncedSearch, dispatch]);
 
 
+  // Fetch fraud status for a borrower
+  const fetchFraudStatus = async (aadhaarNumber) => {
+    if (!aadhaarNumber || aadhaarNumber.length !== 12) return;
+    
+    // Check if we already have fraud status for this borrower
+    if (borrowerFraudStatus[aadhaarNumber]) return;
+    
+    try {
+      const result = await dispatch(checkFraudStatus(aadhaarNumber));
+      if (checkFraudStatus.fulfilled.match(result)) {
+        setBorrowerFraudStatus(prev => ({
+          ...prev,
+          [aadhaarNumber]: result.payload,
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching fraud status:', error);
+    }
+  };
+
+  // Fetch fraud status for all borrowers when they load
+  useEffect(() => {
+    if (borrowers && borrowers.length > 0) {
+      borrowers.forEach(borrower => {
+        const aadhaarNumber = borrower.aadharCardNo;
+        if (aadhaarNumber && aadhaarNumber.length === 12) {
+          fetchFraudStatus(aadhaarNumber);
+        }
+      });
+    }
+  }, [borrowers]);
+
   // Fetch borrowers on initial mount
   useEffect(() => {
     dispatch(getAllBorrowers());
@@ -303,6 +338,9 @@ const Outward = ({ navigation, route }) => {
           ) : (
             borrowers?.map((borrower, index) => {
               const isHighlighted = highlightedBorrowerId === borrower._id;
+              const fraudData = borrower.aadharCardNo ? borrowerFraudStatus[borrower.aadharCardNo] : null;
+              const hasFraudRisk = fraudData && fraudData.success && fraudData.riskLevel && fraudData.riskLevel !== 'low';
+              
               return (
               <TouchableOpacity
                 key={borrower._id || index}
@@ -310,8 +348,22 @@ const Outward = ({ navigation, route }) => {
                 activeOpacity={0.9}>
                 <View style={[
                   styles.borrowerCard,
-                  isHighlighted && styles.highlightedBorrowerCard
+                  isHighlighted && styles.highlightedBorrowerCard,
+                  hasFraudRisk && styles.fraudRiskBorrowerCard
                 ]}>
+                  {hasFraudRisk && (
+                    <View style={[
+                      styles.fraudBanner,
+                      { backgroundColor: fraudData.riskLevel === 'critical' ? '#dc3545' : 
+                                       fraudData.riskLevel === 'high' ? '#fd7e14' : 
+                                       fraudData.riskLevel === 'medium' ? '#ffc107' : '#28a745' }
+                    ]}>
+                      <Icon name="pending" size={16} color="#FFFFFF" />
+                      <Text style={styles.fraudBannerText}>
+                        {fraudData.riskLevel?.toUpperCase()} FRAUD RISK
+                      </Text>
+                    </View>
+                  )}
                   <View style={styles.cardHeader}>
                     <View style={styles.userInfo}>
                       {borrower?.profileImage ? (
@@ -327,9 +379,19 @@ const Outward = ({ navigation, route }) => {
                         </View>
                       )}
                       <View style={styles.userDetails}>
-                        <Text style={styles.userName} numberOfLines={1}>
-                          {borrower.userName}
-                        </Text>
+                        <View style={styles.userNameRow}>
+                          <Text style={styles.userName} numberOfLines={1}>
+                            {borrower.userName}
+                          </Text>
+                          {hasFraudRisk && (
+                            <View style={styles.fraudBadgeContainer}>
+                              <FraudStatusBadge 
+                                fraudScore={fraudData.fraudScore} 
+                                riskLevel={fraudData.riskLevel} 
+                              />
+                            </View>
+                          )}
+                        </View>
                         <View style={styles.userMeta}>
                           <Icon name="mail" size={12} color="#9CA3AF" />
                           <Text style={styles.userEmail} numberOfLines={1}>
@@ -396,9 +458,35 @@ const Outward = ({ navigation, route }) => {
                       <Icon name="person" size={12} color="#6B7280" />
                       <Text style={styles.footerText}>Borrower</Text>
                     </View>
-                    <View style={styles.actionHint}>
-                      <Text style={styles.actionHintText}>Tap to view options</Text>
-                    </View>
+                    {hasFraudRisk && (
+                      <View style={[
+                        styles.fraudWarning,
+                        { backgroundColor: fraudData.riskLevel === 'critical' ? '#FEE2E2' : 
+                                         fraudData.riskLevel === 'high' ? '#FED7AA' : 
+                                         fraudData.riskLevel === 'medium' ? '#FEF3C7' : '#D1FAE5' }
+                      ]}>
+                        {/* <Icon 
+                          name="shield-alert" 
+                          size={14} 
+                          color={fraudData.riskLevel === 'critical' ? '#DC2626' : 
+                                fraudData.riskLevel === 'high' ? '#EA580C' : 
+                                fraudData.riskLevel === 'medium' ? '#D97706' : '#059669'} 
+                        /> */}
+                        <Text style={[
+                          styles.fraudWarningText,
+                          { color: fraudData.riskLevel === 'critical' ? '#DC2626' : 
+                                  fraudData.riskLevel === 'high' ? '#EA580C' : 
+                                  fraudData.riskLevel === 'medium' ? '#D97706' : '#059669' }
+                        ]}>
+                          {fraudData.details?.pendingLoansCount || 0} pending • {fraudData.details?.overdueLoansCount || 0} overdue
+                        </Text>
+                      </View>
+                    )}
+                    {!hasFraudRisk && (
+                      <View style={styles.actionHint}>
+                        <Text style={styles.actionHintText}>Tap to view options</Text>
+                      </View>
+                    )}
                   </View>
                 </View>
               </TouchableOpacity>
@@ -542,6 +630,7 @@ const styles = StyleSheet.create({
   },
   chevronContainer: {
     padding: m(4),
+    marginLeft: m(13),
   },
   divider: {
     height: 1,
@@ -647,6 +736,52 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+  },
+  fraudRiskBorrowerCard: {
+    borderWidth: 2,
+    borderColor: '#FED7AA',
+    backgroundColor: '#FFFBEB',
+  },
+  fraudBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: m(8),
+    paddingHorizontal: m(12),
+    marginHorizontal: m(-20),
+    marginTop: m(-20),
+    marginBottom: m(16),
+    gap: m(6),
+    borderTopLeftRadius: m(17),
+    borderTopRightRadius: m(17),
+  },
+  fraudBannerText: {
+    color: '#FFFFFF',
+    fontSize: m(12),
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  userNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: m(6),
+    gap: m(8),
+  },
+  fraudBadgeContainer: {
+    marginLeft: m(8),
+  },
+  fraudWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: m(8),
+    paddingHorizontal: m(10),
+    paddingVertical: m(6),
+    gap: m(6),
+  },
+  fraudWarningText: {
+    fontSize: m(11),
+    fontWeight: '600',
   },
   // Action Modal Styles
   actionModalContent: {

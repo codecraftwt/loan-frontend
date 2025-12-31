@@ -179,6 +179,17 @@ export const borrowerLoanAPI = {
       throw error;
     }
   },
+
+  // Get borrower loan statistics
+  getBorrowerStatistics: async () => {
+    try {
+      const response = await axiosInstance.get('borrower/loans/statistics');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching borrower statistics:', error);
+      throw error;
+    }
+  },
 };
 
 export default borrowerLoanAPI;

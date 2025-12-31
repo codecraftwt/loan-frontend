@@ -14,6 +14,9 @@ const initialState = {
     totalAmountPaid: 0,
     totalAmountRemaining: 0,
   },
+  borrowerStatistics: null,
+  statisticsLoading: false,
+  statisticsError: null,
   loading: false,
   paymentLoading: false,
   historyLoading: false,
@@ -131,6 +134,21 @@ export const updatePaymentProof = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || error.message || 'Failed to update payment proof'
+      );
+    }
+  }
+);
+
+// Get borrower statistics
+export const getBorrowerStatistics = createAsyncThunk(
+  'borrowerLoans/getBorrowerStatistics',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await borrowerLoanAPI.getBorrowerStatistics();
+      return response;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || error.message || 'Failed to fetch statistics'
       );
     }
   }
@@ -294,6 +312,22 @@ const borrowerLoanSlice = createSlice({
       .addCase(updatePaymentProof.rejected, (state, action) => {
         state.paymentLoading = false;
         state.paymentError = action.payload;
+      })
+
+      // Get borrower statistics
+      .addCase(getBorrowerStatistics.pending, (state) => {
+        state.statisticsLoading = true;
+        state.statisticsError = null;
+      })
+      .addCase(getBorrowerStatistics.fulfilled, (state, action) => {
+        state.statisticsLoading = false;
+        state.borrowerStatistics = action.payload.data;
+        state.statisticsError = null;
+      })
+      .addCase(getBorrowerStatistics.rejected, (state, action) => {
+        state.statisticsLoading = false;
+        state.statisticsError = action.payload;
+        state.borrowerStatistics = null;
       });
   },
 });

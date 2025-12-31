@@ -20,6 +20,7 @@ import LenderList from '../Screens/Admin/Lenders/LenderList';
 // Borrower screens
 import BorrowerDashboard from '../Screens/Borrower/Dashboard/BorrowerDashboard';
 import MyLoans from '../Screens/Borrower/Loans/MyLoans';
+import BorrowerAnalyticsScreen from '../Screens/Borrower/Analytics/BorrowerAnalyticsScreen';
 
 // Shared screens
 import Profile from '../Screens/Shared/Profile/Profile';
@@ -182,11 +183,11 @@ export default function BottomNavigation() {
           />
           <Tab.Screen
             name="History"
-            component={Inward}
+            component={BorrowerAnalyticsScreen}
             options={{
               tabBarLabel: 'Analytics',
               tabBarIcon: ({ color, size, focused }) =>
-                renderIcon('clock', color, size, focused),
+                renderIcon('bar-chart-2', color, size, focused),
             }}
           />
           <Tab.Screen
