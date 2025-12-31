@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,26 +6,35 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
 import LinearGradient from 'react-native-linear-gradient';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
 import moment from 'moment';
 
-const DetailItem = ({ icon, label, value }) => {
-  return (
-    <View style={styles.detailItem}>
-      <View style={styles.detailIconContainer}>
-        <Icon name={icon} size={20} color="#ff6700" />
-      </View>
-      <View style={styles.detailContent}>
-        <Text style={styles.detailLabel}>{label}</Text>
-        <Text style={styles.detailValue}>{value || 'N/A'}</Text>
-      </View>
+/**
+ * DetailItem Component
+ * Renders a detail row with icon, label, and value
+ */
+const DetailItem = ({ icon, label, value }) => (
+  <View style={styles.detailItem}>
+    <View style={styles.detailIconContainer}>
+      <Icon name={icon} size={20} color="#ff6700" />
     </View>
-  );
-};
+    <View style={styles.detailContent}>
+      <Text style={styles.detailLabel}>{label}</Text>
+      <Text style={styles.detailValue} numberOfLines={2}>
+        {value || 'N/A'}
+      </Text>
+    </View>
+  </View>
+);
 
+/**
+ * FeatureBadge Component
+ * Renders a feature badge if enabled
+ */
 const FeatureBadge = ({ label, enabled }) => {
   if (!enabled) return null;
   return (
@@ -36,9 +45,62 @@ const FeatureBadge = ({ label, enabled }) => {
   );
 };
 
-export default function PlanDetailsScreen({ route, navigation }) {
+/**
+ * PlanDetailsScreen Component
+ * Displays detailed information about a subscription plan
+ */
+export default function PlanDetailsScreen() {
+  const navigation = useNavigation();
+  const route = useRoute();
   const { plan } = route.params || {};
 
+  // Handle navigation to edit screen
+  const handleEditPlan = useCallback(() => {
+    navigation.navigate('CreateEditPlan', { plan, mode: 'edit' });
+  }, [navigation, plan]);
+
+  // Memoized plan information array
+  const planInfo = useMemo(() => {
+    if (!plan) return [];
+    return [
+      {
+        icon: 'tag',
+        label: 'Plan Name',
+        value: plan.planName,
+      },
+      {
+        icon: 'clock',
+        label: 'Duration',
+        value: plan.duration,
+      },
+      {
+        icon: 'dollar-sign',
+        label: 'Monthly Price',
+        value: `₹${plan.priceMonthly?.toLocaleString('en-IN') || '0'}`,
+      },
+      {
+        icon: 'calendar',
+        label: 'Created At',
+        value: plan.createdAt
+          ? moment(plan.createdAt).format('DD MMM YYYY, hh:mm A')
+          : 'N/A',
+      },
+      {
+        icon: 'edit',
+        label: 'Last Updated',
+        value: plan.updatedAt
+          ? moment(plan.updatedAt).format('DD MMM YYYY, hh:mm A')
+          : 'N/A',
+      },
+      {
+        icon: 'credit-card',
+        label: 'Razorpay Plan ID',
+        value: plan.razorpayPlanId || 'Not configured',
+      },
+    ];
+  }, [plan]);
+
+  // Error state - plan not found
   if (!plan) {
     return (
       <View style={styles.container}>
@@ -50,43 +112,6 @@ export default function PlanDetailsScreen({ route, navigation }) {
       </View>
     );
   }
-
-  const planInfo = [
-    {
-      icon: 'tag',
-      label: 'Plan Name',
-      value: plan.planName,
-    },
-    {
-      icon: 'clock',
-      label: 'Duration',
-      value: plan.duration,
-    },
-    {
-      icon: 'dollar-sign',
-      label: 'Monthly Price',
-      value: `₹${plan.priceMonthly?.toLocaleString() || '0'}`,
-    },
-    {
-      icon: 'calendar',
-      label: 'Created At',
-      value: plan.createdAt
-        ? moment(plan.createdAt).format('DD MMM YYYY, hh:mm A')
-        : 'N/A',
-    },
-    {
-      icon: 'edit',
-      label: 'Last Updated',
-      value: plan.updatedAt
-        ? moment(plan.updatedAt).format('DD MMM YYYY, hh:mm A')
-        : 'N/A',
-    },
-    {
-      icon: 'credit-card',
-      label: 'Razorpay Plan ID',
-      value: plan.razorpayPlanId || 'Not configured',
-    },
-  ];
 
   return (
     <View style={styles.container}>
@@ -102,7 +127,9 @@ export default function PlanDetailsScreen({ route, navigation }) {
               <Icon name="package" size={32} color="#ff6700" />
             </View>
             <View style={styles.planHeaderInfo}>
-              <Text style={styles.planName}>{plan.planName}</Text>
+              <Text style={styles.planName} numberOfLines={2}>
+                {plan.planName}
+              </Text>
               <View style={styles.planMeta}>
                 <View style={styles.metaItem}>
                   <Icon name="clock" size={14} color="#666" />
@@ -112,7 +139,7 @@ export default function PlanDetailsScreen({ route, navigation }) {
                 <View style={styles.metaItem}>
                   <Icon name="dollar-sign" size={14} color="#666" />
                   <Text style={styles.metaText}>
-                    ₹{plan.priceMonthly?.toLocaleString()}/month
+                    ₹{plan.priceMonthly?.toLocaleString('en-IN')}/month
                   </Text>
                 </View>
               </View>
@@ -146,7 +173,7 @@ export default function PlanDetailsScreen({ route, navigation }) {
           <View style={styles.detailsGrid}>
             {planInfo.map((item, index) => (
               <DetailItem
-                key={index}
+                key={`${item.label}-${index}`}
                 icon={item.icon}
                 label={item.label}
                 value={item.value}
@@ -210,9 +237,8 @@ export default function PlanDetailsScreen({ route, navigation }) {
         <View style={styles.actionsContainer}>
           <TouchableOpacity
             style={styles.editButton}
-            onPress={() =>
-              navigation.navigate('CreateEditPlan', { plan, mode: 'edit' })
-            }>
+            onPress={handleEditPlan}
+            activeOpacity={0.8}>
             <LinearGradient
               colors={['#ff6700', '#ff7900']}
               style={styles.editGradient}
@@ -249,6 +275,7 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: m(16),
     color: '#666',
+    fontWeight: '500',
   },
   headerCard: {
     backgroundColor: '#FFFFFF',
@@ -283,6 +310,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#333',
     marginBottom: m(8),
+    letterSpacing: 0.3,
   },
   planMeta: {
     flexDirection: 'row',
@@ -332,6 +360,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     marginBottom: m(16),
+    letterSpacing: 0.3,
   },
   detailsGrid: {
     gap: m(12),
@@ -359,6 +388,7 @@ const styles = StyleSheet.create({
     fontSize: m(12),
     color: '#666',
     marginBottom: m(4),
+    fontWeight: '500',
   },
   detailValue: {
     fontSize: m(14),
@@ -381,6 +411,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     marginBottom: m(16),
+    letterSpacing: 0.3,
   },
   featuresList: {
     gap: m(12),
@@ -408,6 +439,7 @@ const styles = StyleSheet.create({
   featureDescription: {
     fontSize: m(12),
     color: '#666',
+    lineHeight: m(16),
   },
   featuresGrid: {
     flexDirection: 'row',
@@ -478,6 +510,6 @@ const styles = StyleSheet.create({
     fontSize: m(16),
     fontWeight: '600',
     color: '#FFFFFF',
+    letterSpacing: 0.3,
   },
 });
-

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,15 +9,26 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { m } from 'walstar-rn-responsive';
+import { useRoute } from '@react-navigation/native';
 import Header from '../../../Components/Header';
 import LinearGradient from 'react-native-linear-gradient';
 
+/**
+ * Format currency value to Indian Rupee format
+ * @param {number} value - The amount to format
+ * @returns {string} Formatted currency string
+ */
 const formatCurrency = value => {
   if (!value) return '₹0';
   const num = Number(value) || 0;
   return `₹${num.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 };
 
+/**
+ * Format date string to readable format
+ * @param {string} dateString - ISO date string
+ * @returns {string} Formatted date string
+ */
 const formatDate = dateString => {
   if (!dateString) return 'N/A';
   try {
@@ -161,11 +172,56 @@ const PlanCard = ({ plan, planDetails, isExpanded, onToggle, isActive }) => {
   );
 };
 
-export default function LenderDetailsScreen({ route, navigation }) {
+/**
+ * LenderDetailsScreen Component
+ * Displays detailed information about a lender including their plans
+ */
+export default function LenderDetailsScreen() {
+  const route = useRoute();
   const { lenderData } = route.params || {};
   const [expandedPlans, setExpandedPlans] = useState({});
 
-  if (!lenderData) {
+  // Memoized lender data
+  const lenderInfo = useMemo(() => {
+    if (!lenderData) return null;
+    const lender = lenderData.lender || {};
+    const currentPlan = lenderData.currentPlan || null;
+    const planPurchaseDetails = lenderData.planPurchaseDetails || null;
+
+    // Build plans array
+    const plans = [];
+    if (currentPlan && planPurchaseDetails) {
+      plans.push({
+        plan: currentPlan,
+        planDetails: planPurchaseDetails,
+        isActive: planPurchaseDetails.isPlanActive,
+      });
+    }
+
+    return { lender, plans };
+  }, [lenderData]);
+
+  // Get user initials helper
+  const getInitials = useCallback((name) => {
+    if (!name) return 'L';
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  }, []);
+
+  // Toggle plan expansion
+  const togglePlan = useCallback((index) => {
+    setExpandedPlans(prev => ({
+      ...prev,
+      [index]: !prev[index],
+    }));
+  }, []);
+
+  // Error state - lender data not available
+  if (!lenderData || !lenderInfo) {
     return (
       <View style={styles.container}>
         <Header title="Lender Details" showBackButton />
@@ -177,36 +233,7 @@ export default function LenderDetailsScreen({ route, navigation }) {
     );
   }
 
-  const lender = lenderData.lender || {};
-  const currentPlan = lenderData.currentPlan || null;
-  const planPurchaseDetails = lenderData.planPurchaseDetails || null;
-
-  // For now, we only have current plan. If API provides plan history, we can add it here
-  const plans = [];
-  if (currentPlan && planPurchaseDetails) {
-    plans.push({
-      plan: currentPlan,
-      planDetails: planPurchaseDetails,
-      isActive: planPurchaseDetails.isPlanActive,
-    });
-  }
-
-  const togglePlan = (index) => {
-    setExpandedPlans(prev => ({
-      ...prev,
-      [index]: !prev[index],
-    }));
-  };
-
-  const getInitials = (name) => {
-    if (!name) return 'L';
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .substring(0, 2);
-  };
+  const { lender, plans } = lenderInfo;
 
   return (
     <View style={styles.container}>
@@ -215,7 +242,7 @@ export default function LenderDetailsScreen({ route, navigation }) {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
-        
+
         {/* Lender Profile Card */}
         <View style={styles.profileCard}>
           <LinearGradient
@@ -228,6 +255,7 @@ export default function LenderDetailsScreen({ route, navigation }) {
                 <Image
                   source={{ uri: lender.profileImage }}
                   style={styles.profileImage}
+                  resizeMode="cover"
                 />
               ) : (
                 <View style={styles.profileAvatar}>
@@ -321,20 +349,20 @@ export default function LenderDetailsScreen({ route, navigation }) {
               Subscription Plans {plans.length > 0 && `(${plans.length})`}
             </Text>
           </View>
-           {plans.length > 0 ? (
-             <View style={styles.plansContainer}>
-               {plans.map((planData, index) => (
-                 <PlanCard
-                   key={index}
-                   plan={planData.plan}
-                   planDetails={planData.planDetails}
-                   isExpanded={expandedPlans[index] || false}
-                   onToggle={() => togglePlan(index)}
-                   isActive={planData.isActive}
-                 />
-               ))}
-             </View>
-           ) : (
+          {plans.length > 0 ? (
+            <View style={styles.plansContainer}>
+              {plans.map((planData, index) => (
+                <PlanCard
+                  key={`plan-${index}`}
+                  plan={planData.plan}
+                  planDetails={planData.planDetails}
+                  isExpanded={expandedPlans[index] || false}
+                  onToggle={() => togglePlan(index)}
+                  isActive={planData.isActive}
+                />
+              ))}
+            </View>
+          ) : (
             <View style={styles.noPlansContainer}>
               <Icon name="package" size={48} color="#CCC" />
               <Text style={styles.noPlansText}>No plans found</Text>

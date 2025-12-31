@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -19,12 +19,22 @@ import {
   resetRevenueFilters,
 } from '../../../Redux/Slices/adminRevenueSlice';
 
+/**
+ * Format currency value to Indian Rupee format
+ * @param {number} value - The amount to format
+ * @returns {string} Formatted currency string
+ */
 const formatCurrency = value => {
   if (!value) return '₹0';
   const num = Number(value) || 0;
   return `₹${num.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 };
 
+/**
+ * Format date string to readable format
+ * @param {string} dateString - ISO date string
+ * @returns {string} Formatted date string
+ */
 const formatDate = dateString => {
   if (!dateString) return 'N/A';
   try {
@@ -38,6 +48,18 @@ const formatDate = dateString => {
   }
 };
 
+// Group by filter options
+const GROUP_BY_OPTIONS = [
+  { value: 'all', label: 'All Data' },
+  { value: 'plan', label: 'By Plan' },
+  { value: 'month', label: 'By Month' },
+  { value: 'year', label: 'By Year' },
+];
+
+/**
+ * Revenue Component
+ * Displays revenue statistics with filtering and grouping options
+ */
 export default function Revenue() {
   const dispatch = useDispatch();
   const { revenueData, loading, error, filters } = useSelector(
@@ -51,15 +73,22 @@ export default function Revenue() {
     groupBy: filters.groupBy,
   });
 
-  const loadRevenue = useCallback(async (customFilters = null) => {
-    const activeFilters = customFilters || filters;
-    await dispatch(getRevenueStatistics(activeFilters));
-  }, [dispatch, filters]);
+  // Load revenue data
+  const loadRevenue = useCallback(
+    async (customFilters = null) => {
+      const activeFilters = customFilters || filters;
+      await dispatch(getRevenueStatistics(activeFilters));
+    },
+    [dispatch, filters],
+  );
 
+  // Initial load
   useEffect(() => {
     loadRevenue();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Update temp filters when modal opens
   useEffect(() => {
     if (showFilters) {
       setTempFilters({
@@ -70,136 +99,165 @@ export default function Revenue() {
     }
   }, [showFilters, filters]);
 
-  const onRefresh = async () => {
+  // Handle refresh
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await loadRevenue();
     setRefreshing(false);
-  };
+  }, [loadRevenue]);
 
-  const handleApplyFilters = () => {
+  // Handle filter application
+  const handleApplyFilters = useCallback(() => {
     dispatch(setRevenueFilters(tempFilters));
     setShowFilters(false);
     loadRevenue(tempFilters);
-  };
+  }, [dispatch, tempFilters, loadRevenue]);
 
-  const handleClearFilters = () => {
+  // Handle filter clearing
+  const handleClearFilters = useCallback(() => {
+    const resetFilters = {
+      startDate: null,
+      endDate: null,
+      groupBy: 'all',
+    };
     dispatch(resetRevenueFilters());
-    setTempFilters({
-      startDate: null,
-      endDate: null,
-      groupBy: 'all',
-    });
+    setTempFilters(resetFilters);
     setShowFilters(false);
-    loadRevenue({
-      startDate: null,
-      endDate: null,
-      groupBy: 'all',
-    });
-  };
+    loadRevenue(resetFilters);
+  }, [dispatch, loadRevenue]);
 
-  const summary = revenueData?.summary || {};
-  const revenueByPlan = revenueData?.revenueByPlan || [];
-  const revenueByMonth = revenueData?.revenueByMonth || [];
-  const revenueByYear = revenueData?.revenueByYear || [];
-  const purchaseDetails = revenueData?.purchaseDetails || [];
+  // Memoized revenue data
+  const revenueSummary = useMemo(() => {
+    const summary = revenueData?.summary || {};
+    const revenueByPlan = revenueData?.revenueByPlan || [];
+    const revenueByMonth = revenueData?.revenueByMonth || [];
+    const revenueByYear = revenueData?.revenueByYear || [];
+    const purchaseDetails = revenueData?.purchaseDetails || [];
 
-  const maxRevenue = Math.max(
-    ...revenueByMonth.map(item => item.totalRevenue || 0),
-    1
-  );
+    const maxRevenue = Math.max(
+      ...revenueByMonth.map(item => item.totalRevenue || 0),
+      1,
+    );
 
-  const renderFilterModal = () => (
-    <Modal
-      visible={showFilters}
-      transparent={true}
-      animationType="slide"
-      onRequestClose={() => setShowFilters(false)}>
-      <View style={styles.modalOverlay}>
-        <TouchableOpacity
-          style={StyleSheet.absoluteFill}
-          activeOpacity={1}
-          onPress={() => setShowFilters(false)}
-        />
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Filters</Text>
-            <TouchableOpacity onPress={() => setShowFilters(false)}>
-              <Icon name="x" size={24} color="#333" />
-            </TouchableOpacity>
-          </View>
+    return {
+      summary,
+      revenueByPlan,
+      revenueByMonth,
+      revenueByYear,
+      purchaseDetails,
+      maxRevenue,
+    };
+  }, [revenueData]);
 
-          <ScrollView
-            style={styles.modalBody}
-            contentContainerStyle={styles.modalBodyContent}
-            showsVerticalScrollIndicator={true}
-            nestedScrollEnabled={true}>
-            {/* Group By Filter */}
-            <View style={styles.filterSection}>
-              <View style={styles.filterSectionHeader}>
-                <Icon name="filter" size={18} color="#ff6700" />
-                <Text style={styles.filterLabel}>Group By</Text>
-              </View>
-              <View style={styles.filterOptionsContainer}>
-                {[
-                  { value: 'all', label: 'All Data' },
-                  { value: 'plan', label: 'By Plan' },
-                  { value: 'month', label: 'By Month' },
-                  { value: 'year', label: 'By Year' },
-                ].map(option => (
-                  <TouchableOpacity
-                    key={option.value}
-                    style={[
-                      styles.filterOption,
-                      tempFilters.groupBy === option.value &&
-                        styles.filterOptionActive,
-                    ]}
-                    onPress={() =>
-                      setTempFilters({ ...tempFilters, groupBy: option.value })
-                    }>
-                    <View style={styles.filterOptionContent}>
-                      <View
-                        style={[
-                          styles.radioButton,
-                          tempFilters.groupBy === option.value &&
-                            styles.radioButtonActive,
-                        ]}>
-                        {tempFilters.groupBy === option.value && (
-                          <View style={styles.radioButtonInner} />
-                        )}
-                      </View>
-                      <Text
-                        style={[
-                          styles.filterOptionText,
-                          tempFilters.groupBy === option.value &&
-                            styles.filterOptionTextActive,
-                        ]}>
-                        {option.label}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </View>
+  // Memoized filter button text
+  const filterButtonText = useMemo(() => {
+    if (filters.groupBy === 'all') return 'All Data';
+    return filters.groupBy.charAt(0).toUpperCase() + filters.groupBy.slice(1);
+  }, [filters.groupBy]);
+
+  // Check if filters are active
+  const hasActiveFilters = useMemo(() => {
+    return (
+      filters.startDate || filters.endDate || filters.groupBy !== 'all'
+    );
+  }, [filters]);
+
+  // Render filter modal
+  const renderFilterModal = useCallback(
+    () => (
+      <Modal
+        visible={showFilters}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowFilters(false)}>
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => setShowFilters(false)}
+          />
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Filters</Text>
+              <TouchableOpacity
+                onPress={() => setShowFilters(false)}
+                activeOpacity={0.7}>
+                <Icon name="x" size={24} color="#333" />
+              </TouchableOpacity>
             </View>
-          </ScrollView>
 
-          {/* Modal Footer */}
-          <View style={styles.modalFooter}>
-            <TouchableOpacity
-              style={styles.clearButton}
-              onPress={handleClearFilters}>
-              <Icon name="x-circle" size={18} color="#666" />
-              <Text style={styles.clearButtonText}>Clear</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.applyButton}
-              onPress={handleApplyFilters}>
-              <Text style={styles.applyButtonText}>Apply Filters</Text>
-              <Icon name="check" size={18} color="#FFFFFF" />
-            </TouchableOpacity>
+            <ScrollView
+              style={styles.modalBody}
+              contentContainerStyle={styles.modalBodyContent}
+              showsVerticalScrollIndicator={true}
+              nestedScrollEnabled={true}>
+              {/* Group By Filter */}
+              <View style={styles.filterSection}>
+                <View style={styles.filterSectionHeader}>
+                  <Icon name="filter" size={18} color="#ff6700" />
+                  <Text style={styles.filterLabel}>Group By</Text>
+                </View>
+                <View style={styles.filterOptionsContainer}>
+                  {GROUP_BY_OPTIONS.map(option => (
+                    <TouchableOpacity
+                      key={option.value}
+                      style={[
+                        styles.filterOption,
+                        tempFilters.groupBy === option.value &&
+                          styles.filterOptionActive,
+                      ]}
+                      onPress={() =>
+                        setTempFilters({ ...tempFilters, groupBy: option.value })
+                      }
+                      activeOpacity={0.7}>
+                      <View style={styles.filterOptionContent}>
+                        <View
+                          style={[
+                            styles.radioButton,
+                            tempFilters.groupBy === option.value &&
+                              styles.radioButtonActive,
+                          ]}>
+                          {tempFilters.groupBy === option.value && (
+                            <View style={styles.radioButtonInner} />
+                          )}
+                        </View>
+                        <Text
+                          style={[
+                            styles.filterOptionText,
+                            tempFilters.groupBy === option.value &&
+                              styles.filterOptionTextActive,
+                          ]}>
+                          {option.label}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </ScrollView>
+
+            {/* Modal Footer */}
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={styles.clearButton}
+                onPress={handleClearFilters}
+                activeOpacity={0.7}>
+                <Icon name="x-circle" size={18} color="#666" />
+                <Text style={styles.clearButtonText}>Clear</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.applyButton}
+                onPress={handleApplyFilters}
+                activeOpacity={0.8}>
+                <Text style={styles.applyButtonText}>Apply Filters</Text>
+                <Icon name="check" size={18} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
+    ),
+    [showFilters, tempFilters, handleApplyFilters, handleClearFilters],
   );
 
   return (
@@ -215,17 +273,11 @@ export default function Revenue() {
         <View style={styles.filterContainer}>
           <TouchableOpacity
             style={styles.filterButton}
-            onPress={() => setShowFilters(true)}>
+            onPress={() => setShowFilters(true)}
+            activeOpacity={0.7}>
             <Icon name="filter" size={20} color="#ff6700" />
-            <Text style={styles.filterButtonText}>
-              {filters.groupBy === 'all'
-                ? 'All Data'
-                : filters.groupBy.charAt(0).toUpperCase() +
-                  filters.groupBy.slice(1)}
-            </Text>
-            {(filters.startDate || filters.endDate || filters.groupBy !== 'all') && (
-              <View style={styles.filterBadge} />
-            )}
+            <Text style={styles.filterButtonText}>{filterButtonText}</Text>
+            {hasActiveFilters && <View style={styles.filterBadge} />}
           </TouchableOpacity>
         </View>
 
@@ -244,7 +296,8 @@ export default function Revenue() {
             <Text style={styles.errorText}>{error}</Text>
             <TouchableOpacity
               style={styles.retryButton}
-              onPress={() => loadRevenue()}>
+              onPress={() => loadRevenue()}
+              activeOpacity={0.8}>
               <Text style={styles.retryButtonText}>Retry</Text>
             </TouchableOpacity>
           </View>
@@ -258,14 +311,14 @@ export default function Revenue() {
                 <Icon name="dollar-sign" size={24} color="#4CAF50" />
                 <Text style={styles.summaryLabel}>Total Revenue</Text>
                 <Text style={styles.summaryValue}>
-                  {formatCurrency(summary.totalRevenue)}
+                  {formatCurrency(revenueSummary.summary.totalRevenue)}
                 </Text>
               </View>
               <View style={styles.summaryCard}>
                 <Icon name="shopping-cart" size={24} color="#2196F3" />
                 <Text style={styles.summaryLabel}>Total Purchases</Text>
                 <Text style={styles.summaryValue}>
-                  {summary.totalPurchases || 0}
+                  {revenueSummary.summary.totalPurchases || 0}
                 </Text>
               </View>
             </View>
@@ -275,39 +328,44 @@ export default function Revenue() {
                 <Icon name="trending-up" size={24} color="#FF9800" />
                 <Text style={styles.summaryLabel}>Avg. Per Purchase</Text>
                 <Text style={styles.summaryValue}>
-                  {formatCurrency(summary.averageRevenuePerPurchase)}
+                  {formatCurrency(
+                    revenueSummary.summary.averageRevenuePerPurchase,
+                  )}
                 </Text>
               </View>
               <View style={styles.summaryCard}>
                 <Icon name="check-circle" size={24} color="#4CAF50" />
                 <Text style={styles.summaryLabel}>Active Plans</Text>
                 <Text style={styles.summaryValue}>
-                  {summary.activePlansCount || 0}
+                  {revenueSummary.summary.activePlansCount || 0}
                 </Text>
               </View>
             </View>
 
             {/* Revenue by Plan */}
             {(filters.groupBy === 'all' || filters.groupBy === 'plan') &&
-              revenueByPlan.length > 0 && (
+              revenueSummary.revenueByPlan.length > 0 && (
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Revenue by Plan</Text>
-                  {revenueByPlan.map((item, index) => {
+                  {revenueSummary.revenueByPlan.map((item, index) => {
                     const percentage =
-                      summary.totalRevenue > 0
-                        ? (item.totalRevenue / summary.totalRevenue) * 100
+                      revenueSummary.summary.totalRevenue > 0
+                        ? (item.totalRevenue /
+                            revenueSummary.summary.totalRevenue) *
+                          100
                         : 0;
                     return (
-                      <View key={index} style={styles.planCard}>
+                      <View key={`plan-${index}`} style={styles.planCard}>
                         <View style={styles.planHeader}>
                           <View style={styles.planHeaderLeft}>
                             <Icon name="package" size={20} color="#ff6700" />
                             <View style={styles.planInfo}>
-                              <Text style={styles.planName}>
+                              <Text style={styles.planName} numberOfLines={1}>
                                 {item.planName}
                               </Text>
                               <Text style={styles.planPrice}>
-                                {formatCurrency(item.priceMonthly)}/{item.duration}
+                                {formatCurrency(item.priceMonthly)}/
+                                {item.duration}
                               </Text>
                             </View>
                           </View>
@@ -317,10 +375,7 @@ export default function Revenue() {
                         </View>
                         <View style={styles.barContainer}>
                           <View
-                            style={[
-                              styles.bar,
-                              { width: `${percentage}%` },
-                            ]}
+                            style={[styles.bar, { width: `${percentage}%` }]}
                           />
                         </View>
                         <View style={styles.planStats}>
@@ -335,7 +390,7 @@ export default function Revenue() {
                             <Text
                               style={[
                                 styles.planStatValue,
-                                { color: '#4CAF50' },
+                                styles.activeText,
                               ]}>
                               {item.activePurchases}
                             </Text>
@@ -345,7 +400,7 @@ export default function Revenue() {
                             <Text
                               style={[
                                 styles.planStatValue,
-                                { color: '#F44336' },
+                                styles.expiredText,
                               ]}>
                               {item.expiredPurchases}
                             </Text>
@@ -353,7 +408,9 @@ export default function Revenue() {
                           <View style={styles.planStatItem}>
                             <Text style={styles.planStatLabel}>Avg.</Text>
                             <Text style={styles.planStatValue}>
-                              {formatCurrency(item.averageRevenuePerPurchase)}
+                              {formatCurrency(
+                                item.averageRevenuePerPurchase,
+                              )}
                             </Text>
                           </View>
                         </View>
@@ -365,16 +422,16 @@ export default function Revenue() {
 
             {/* Revenue by Month */}
             {(filters.groupBy === 'all' || filters.groupBy === 'month') &&
-              revenueByMonth.length > 0 && (
+              revenueSummary.revenueByMonth.length > 0 && (
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Monthly Revenue</Text>
-                  {revenueByMonth.map((item, index) => {
+                  {revenueSummary.revenueByMonth.map((item, index) => {
                     const percentage =
-                      maxRevenue > 0
-                        ? (item.totalRevenue / maxRevenue) * 100
+                      revenueSummary.maxRevenue > 0
+                        ? (item.totalRevenue / revenueSummary.maxRevenue) * 100
                         : 0;
                     return (
-                      <View key={index} style={styles.monthCard}>
+                      <View key={`month-${index}`} style={styles.monthCard}>
                         <View style={styles.monthHeader}>
                           <Text style={styles.monthName}>
                             {item.monthName} {item.year}
@@ -385,10 +442,7 @@ export default function Revenue() {
                         </View>
                         <View style={styles.barContainer}>
                           <View
-                            style={[
-                              styles.bar,
-                              { width: `${percentage}%` },
-                            ]}
+                            style={[styles.bar, { width: `${percentage}%` }]}
                           />
                         </View>
                         <View style={styles.monthDetails}>
@@ -407,20 +461,20 @@ export default function Revenue() {
 
             {/* Revenue by Year */}
             {(filters.groupBy === 'all' || filters.groupBy === 'year') &&
-              revenueByYear.length > 0 && (
+              revenueSummary.revenueByYear.length > 0 && (
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Yearly Revenue</Text>
-                  {revenueByYear.map((item, index) => {
-                    const totalYearRevenue = revenueByYear.reduce(
+                  {revenueSummary.revenueByYear.map((item, index) => {
+                    const totalYearRevenue = revenueSummary.revenueByYear.reduce(
                       (sum, y) => sum + (y.totalRevenue || 0),
-                      0
+                      0,
                     );
                     const percentage =
                       totalYearRevenue > 0
                         ? (item.totalRevenue / totalYearRevenue) * 100
                         : 0;
                     return (
-                      <View key={index} style={styles.yearCard}>
+                      <View key={`year-${index}`} style={styles.yearCard}>
                         <View style={styles.yearHeader}>
                           <Text style={styles.yearName}>{item.year}</Text>
                           <Text style={styles.yearAmount}>
@@ -429,10 +483,7 @@ export default function Revenue() {
                         </View>
                         <View style={styles.barContainer}>
                           <View
-                            style={[
-                              styles.bar,
-                              { width: `${percentage}%` },
-                            ]}
+                            style={[styles.bar, { width: `${percentage}%` }]}
                           />
                         </View>
                         <View style={styles.yearDetails}>
@@ -449,13 +500,13 @@ export default function Revenue() {
 
             {/* Purchase Details */}
             {filters.groupBy === 'all' &&
-              purchaseDetails.length > 0 && (
+              revenueSummary.purchaseDetails.length > 0 && (
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>
-                    Recent Purchases ({purchaseDetails.length})
+                    Recent Purchases ({revenueSummary.purchaseDetails.length})
                   </Text>
-                  {purchaseDetails.slice(0, 10).map((item, index) => (
-                    <View key={index} style={styles.purchaseCard}>
+                  {revenueSummary.purchaseDetails.slice(0, 10).map((item, index) => (
+                    <View key={`purchase-${index}`} style={styles.purchaseCard}>
                       <View style={styles.purchaseHeader}>
                         <View style={styles.purchaseHeaderLeft}>
                           <View
@@ -467,7 +518,7 @@ export default function Revenue() {
                             ]}
                           />
                           <View style={styles.purchaseInfo}>
-                            <Text style={styles.purchasePlanName}>
+                            <Text style={styles.purchasePlanName} numberOfLines={1}>
                               {item.planName}
                             </Text>
                             <Text style={styles.purchaseDate}>
@@ -492,7 +543,7 @@ export default function Revenue() {
                             <Text
                               style={[
                                 styles.purchaseDetailText,
-                                { color: '#4CAF50' },
+                                styles.remainingDaysText,
                               ]}>
                               {item.remainingDays} days remaining
                             </Text>
@@ -535,6 +586,11 @@ const styles = StyleSheet.create({
     paddingVertical: m(12),
     gap: m(8),
     position: 'relative',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
   filterButtonText: {
     fontSize: m(14),
@@ -559,6 +615,7 @@ const styles = StyleSheet.create({
     marginTop: m(12),
     fontSize: m(16),
     color: '#666',
+    fontWeight: '500',
   },
   errorContainer: {
     padding: m(40),
@@ -570,6 +627,7 @@ const styles = StyleSheet.create({
     fontSize: m(16),
     color: '#F44336',
     textAlign: 'center',
+    fontWeight: '500',
   },
   retryButton: {
     marginTop: m(16),
@@ -577,10 +635,16 @@ const styles = StyleSheet.create({
     paddingVertical: m(12),
     backgroundColor: '#ff6700',
     borderRadius: m(8),
+    elevation: 2,
+    shadowColor: '#ff6700',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   retryButtonText: {
     color: '#FFFFFF',
     fontWeight: '600',
+    fontSize: m(14),
   },
   summaryRow: {
     flexDirection: 'row',
@@ -604,6 +668,7 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: m(8),
     marginBottom: m(4),
+    fontWeight: '500',
   },
   summaryValue: {
     fontSize: m(18),
@@ -618,6 +683,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#333',
     marginBottom: m(16),
+    letterSpacing: 0.3,
   },
   planCard: {
     backgroundColor: '#FFFFFF',
@@ -641,6 +707,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
     gap: m(12),
+    marginRight: m(12),
   },
   planInfo: {
     flex: 1,
@@ -683,11 +750,18 @@ const styles = StyleSheet.create({
     fontSize: m(11),
     color: '#666',
     marginBottom: m(4),
+    fontWeight: '500',
   },
   planStatValue: {
     fontSize: m(14),
     fontWeight: '600',
     color: '#333',
+  },
+  activeText: {
+    color: '#4CAF50',
+  },
+  expiredText: {
+    color: '#F44336',
   },
   monthCard: {
     backgroundColor: '#FFFFFF',
@@ -790,6 +864,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
     gap: m(12),
+    marginRight: m(12),
   },
   purchaseStatusIndicator: {
     width: m(12),
@@ -824,6 +899,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: m(16),
+    flexWrap: 'wrap',
   },
   purchaseDetailItem: {
     flexDirection: 'row',
@@ -833,6 +909,10 @@ const styles = StyleSheet.create({
   purchaseDetailText: {
     fontSize: m(12),
     color: '#666',
+  },
+  remainingDaysText: {
+    color: '#4CAF50',
+    fontWeight: '600',
   },
   modalOverlay: {
     flex: 1,
@@ -867,6 +947,7 @@ const styles = StyleSheet.create({
     fontSize: m(20),
     fontWeight: '700',
     color: '#333',
+    letterSpacing: 0.3,
   },
   modalBody: {
     width: '100%',
@@ -972,5 +1053,6 @@ const styles = StyleSheet.create({
     fontSize: m(16),
     fontWeight: '700',
     color: '#FFFFFF',
+    letterSpacing: 0.3,
   },
 });

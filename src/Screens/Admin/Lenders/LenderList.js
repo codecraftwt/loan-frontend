@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -23,12 +23,22 @@ import {
   resetFilters,
 } from '../../../Redux/Slices/adminLendersSlice';
 
+/**
+ * Format currency value to Indian Rupee format
+ * @param {number} value - The amount to format
+ * @returns {string} Formatted currency string
+ */
 const formatCurrency = value => {
   if (!value) return '₹0';
   const num = Number(value) || 0;
   return `₹${num.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 };
 
+/**
+ * Format date string to readable format
+ * @param {string} dateString - ISO date string
+ * @returns {string} Formatted date string
+ */
 const formatDate = dateString => {
   if (!dateString) return 'N/A';
   try {
@@ -42,6 +52,13 @@ const formatDate = dateString => {
   }
 };
 
+// Plan status filter options
+const PLAN_STATUS_OPTIONS = ['all', 'active', 'expired'];
+
+/**
+ * LenderList Component
+ * Displays list of lenders with their plan purchase details, search, and filtering
+ */
 export default function LenderList() {
   const dispatch = useDispatch();
   const { lenders, loading, error, pagination, filters, limit } = useSelector(
@@ -91,35 +108,29 @@ export default function LenderList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.planStatus, filters.sortBy, filters.sortOrder, limit]);
 
-  const onRefresh = async () => {
+  // Handle refresh
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await loadLenders();
     setRefreshing(false);
-  };
+  }, [loadLenders]);
 
-  // const handlePageChange = newPage => {
-  //   if (newPage >= 1 && newPage <= pagination.totalPages) {
-  //     dispatch(getLendersWithPlans({ ...filters, page: newPage, limit }));
-  //   }
-  // };
-
-  const handleTempFilterChange = (key, value) => {
+  // Handle temporary filter changes
+  const handleTempFilterChange = useCallback((key, value) => {
     setTempFilters(prev => ({ ...prev, [key]: value }));
-  };
+  }, []);
 
-  // const handleTempLimitChange = newLimit => {
-  //   setTempLimit(newLimit);
-  // };
-
-  const handleApplyFilters = () => {
+  // Handle filter application
+  const handleApplyFilters = useCallback(() => {
     dispatch(setFilters(tempFilters));
     dispatch(setLimit(tempLimit));
     setShowFilters(false);
     // Reset to page 1 when filters change
     dispatch(getLendersWithPlans({ ...tempFilters, limit: tempLimit, page: 1 }));
-  };
+  }, [dispatch, tempFilters, tempLimit]);
 
-  const handleClearFilters = () => {
+  // Handle filter clearing
+  const handleClearFilters = useCallback(() => {
     dispatch(resetFilters());
     dispatch(setLimit(10));
     setTempFilters({
@@ -137,9 +148,10 @@ export default function LenderList() {
       limit: 10,
       page: 1 
     }));
-  };
+  }, [dispatch, filters.search]);
 
-  const handleClearAllFilters = () => {
+  // Handle clearing all filters including search
+  const handleClearAllFilters = useCallback(() => {
     dispatch(resetFilters());
     dispatch(setLimit(10));
     setSearchQuery('');
@@ -157,7 +169,7 @@ export default function LenderList() {
       limit: 10,
       page: 1 
     }));
-  };
+  }, [dispatch]);
 
   // Update temp filters when modal opens
   useEffect(() => {
@@ -171,13 +183,41 @@ export default function LenderList() {
     }
   }, [showFilters, filters, limit]);
 
-  const handleViewDetails = lender => {
-    navigation.navigate('LenderDetailsScreen', {
-      lenderData: lender,
-    });
-  };
+  // Handle navigation to lender details
+  const handleViewDetails = useCallback(
+    lender => {
+      navigation.navigate('LenderDetailsScreen', {
+        lenderData: lender,
+      });
+    },
+    [navigation],
+  );
 
-  const renderLenderItem = ({ item }) => {
+  // Memoized lender statistics
+  const lenderStats = useMemo(() => {
+    const activeLenders = lenders.filter(
+      l => l.planPurchaseDetails?.planStatus === 'active',
+    );
+    const expiredLenders = lenders.filter(
+      l => l.planPurchaseDetails?.planStatus === 'expired',
+    );
+    return { activeLenders, expiredLenders };
+  }, [lenders]);
+
+  // Check if filters are active
+  const hasActiveFilters = useMemo(() => {
+    return (
+      filters.planStatus !== 'all' ||
+      filters.sortBy !== 'planPurchaseDate' ||
+      filters.sortOrder !== 'desc' ||
+      limit !== 10 ||
+      searchQuery.length > 0
+    );
+  }, [filters, limit, searchQuery]);
+
+  // Render lender item
+  const renderLenderItem = useCallback(
+    ({ item }) => {
     const lender = item.lender || {};
     const plan = item.currentPlan || {};
     const planDetails = item.planPurchaseDetails || {};
@@ -185,45 +225,45 @@ export default function LenderList() {
     const isPlanActive = planDetails.isPlanActive || false;
 
     return (
-      <View style={styles.lenderCard}>
-        <View style={styles.lenderHeader}>
-          <View style={styles.lenderAvatar}>
+    <View style={styles.lenderCard}>
+      <View style={styles.lenderHeader}>
+        <View style={styles.lenderAvatar}>
             {lender.profileImage ? (
               <Text style={styles.avatarText}>IMG</Text>
             ) : (
-              <Text style={styles.avatarText}>
+          <Text style={styles.avatarText}>
                 {lender.userName
                   ?.split(' ')
-                  .map(n => n[0])
-                  .join('')
+              .map(n => n[0])
+              .join('')
                   .toUpperCase()
                   .substring(0, 2) || 'L'}
-              </Text>
+          </Text>
             )}
-          </View>
-          <View style={styles.lenderInfo}>
+        </View>
+        <View style={styles.lenderInfo}>
             <Text style={styles.lenderName}>{lender.userName || 'N/A'}</Text>
             <Text style={styles.lenderEmail}>{lender.email || 'N/A'}</Text>
             <Text style={styles.lenderMobile}>
               {lender.mobileNo || 'N/A'}
             </Text>
-          </View>
-          <View
-            style={[
-              styles.statusBadge,
-              {
-                backgroundColor: isPlanActive ? '#E8F5E9' : '#FFEBEE',
-              },
-            ]}>
-            <Text
-              style={[
-                styles.statusText,
-                { color: isPlanActive ? '#4CAF50' : '#F44336' },
-              ]}>
-              {planStatus === 'active' ? 'Active Plan' : 'Expired'}
-            </Text>
-          </View>
         </View>
+        <View
+          style={[
+            styles.statusBadge,
+            {
+                backgroundColor: isPlanActive ? '#E8F5E9' : '#FFEBEE',
+            },
+          ]}>
+          <Text
+            style={[
+              styles.statusText,
+                { color: isPlanActive ? '#4CAF50' : '#F44336' },
+            ]}>
+              {planStatus === 'active' ? 'Active Plan' : 'Expired'}
+          </Text>
+        </View>
+      </View>
 
         {/* Plan Details Section */}
         {plan.planName && (
@@ -249,7 +289,7 @@ export default function LenderList() {
                   <Text style={styles.planValue}>
                     {formatDate(planDetails.planPurchaseDate)}
                   </Text>
-                </View>
+        </View>
               )}
               {planDetails.planExpiryDate && (
                 <View style={styles.planRow}>
@@ -261,36 +301,44 @@ export default function LenderList() {
                     ]}>
                     {formatDate(planDetails.planExpiryDate)}
                   </Text>
-                </View>
+        </View>
               )}
               {isPlanActive && planDetails.remainingDays !== undefined && (
                 <View style={styles.planRow}>
                   <Text style={styles.planLabel}>Remaining:</Text>
                   <Text style={[styles.planValue, styles.remainingDays]}>
                     {planDetails.remainingDays} days
-                  </Text>
+          </Text>
                 </View>
               )}
-            </View>
-          </View>
+        </View>
+      </View>
         )}
 
-        <View style={styles.lenderFooter}>
-          <Text style={styles.joinDate}>
+      <View style={styles.lenderFooter}>
+        <Text style={styles.joinDate}>
             Joined: {formatDate(lender.createdAt)}
-          </Text>
+        </Text>
           <TouchableOpacity
             style={styles.viewButton}
             onPress={() => handleViewDetails(item)}>
-            <Text style={styles.viewButtonText}>View Details</Text>
-            <Icon name="chevron-right" size={16} color="#ff6700" />
-          </TouchableOpacity>
-        </View>
+          <Text style={styles.viewButtonText}>View Details</Text>
+          <Icon name="chevron-right" size={16} color="#ff6700" />
+        </TouchableOpacity>
       </View>
+    </View>
     );
-  };
+  }, [handleViewDetails]);
 
-  const renderFilterModal = () => (
+  // Memoized key extractor
+  const keyExtractor = useCallback(
+    item => item.lender?._id || `lender-${Math.random()}`,
+    [],
+  );
+
+  // Render filter modal
+  const renderFilterModal = useCallback(
+    () => (
     <Modal
       visible={showFilters}
       transparent={true}
@@ -322,7 +370,7 @@ export default function LenderList() {
                 <Text style={styles.filterLabel}>Plan Status</Text>
               </View>
               <View style={styles.filterOptionsContainer}>
-                {['all', 'active', 'expired'].map(status => (
+                {PLAN_STATUS_OPTIONS.map(status => (
                   <TouchableOpacity
                     key={status}
                     style={[
@@ -372,14 +420,8 @@ export default function LenderList() {
         </View>
       </View>
     </Modal>
-  );
-
-
-  const activeLenders = lenders.filter(
-    l => l.planPurchaseDetails?.planStatus === 'active',
-  );
-  const expiredLenders = lenders.filter(
-    l => l.planPurchaseDetails?.planStatus === 'expired',
+  ),
+    [showFilters, tempFilters, handleApplyFilters, handleClearFilters, handleTempFilterChange],
   );
 
   return (
@@ -410,21 +452,12 @@ export default function LenderList() {
             style={styles.filterButton}
             onPress={() => setShowFilters(true)}>
             <Icon name="filter" size={20} color="#ff6700" />
-            {(filters.planStatus !== 'all' ||
-              filters.sortBy !== 'planPurchaseDate' ||
-              filters.sortOrder !== 'desc' ||
-              limit !== 10) && (
-              <View style={styles.filterBadge} />
-            )}
+            {hasActiveFilters && <View style={styles.filterBadge} />}
           </TouchableOpacity>
         </View>
 
         {/* Active Filters Indicator */}
-        {(filters.planStatus !== 'all' ||
-          filters.sortBy !== 'planPurchaseDate' ||
-          filters.sortOrder !== 'desc' ||
-          limit !== 10 ||
-          searchQuery.length > 0) && (
+        {hasActiveFilters && (
           <View style={styles.activeFiltersContainer}>
             <View style={styles.activeFiltersContent}>
               <Icon name="filter" size={16} color="#ff6700" />
@@ -449,14 +482,14 @@ export default function LenderList() {
           </View>
           <View style={styles.summaryItem}>
             <Text style={styles.summaryLabel}>Active Plans</Text>
-            <Text style={[styles.summaryValue, { color: '#4CAF50' }]}>
-              {activeLenders.length}
+            <Text style={[styles.summaryValue, styles.activePlansText]}>
+              {lenderStats.activeLenders.length}
             </Text>
           </View>
           <View style={styles.summaryItem}>
             <Text style={styles.summaryLabel}>Expired Plans</Text>
-            <Text style={[styles.summaryValue, { color: '#F44336' }]}>
-              {expiredLenders.length}
+            <Text style={[styles.summaryValue, styles.expiredPlansText]}>
+              {lenderStats.expiredLenders.length}
             </Text>
           </View>
         </View>
@@ -484,54 +517,25 @@ export default function LenderList() {
 
         {/* Lender List */}
         {!loading && !error && (
-          <FlatList
+        <FlatList
             data={lenders}
-            renderItem={renderLenderItem}
-            keyExtractor={item => item.lender?._id || Math.random().toString()}
-            scrollEnabled={false}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Icon name="users" size={48} color="#CCC" />
-                <Text style={styles.emptyText}>No lenders found</Text>
+          renderItem={renderLenderItem}
+            keyExtractor={keyExtractor}
+          scrollEnabled={false}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Icon name="users" size={48} color="#CCC" />
+              <Text style={styles.emptyText}>No lenders found</Text>
                 {filters.search && (
                   <Text style={styles.emptySubtext}>
                     Try adjusting your search or filters
                   </Text>
                 )}
-              </View>
-            }
-          />
+            </View>
+          }
+        />
         )}
 
-        {/* Pagination */}
-        {/* {pagination.totalPages > 1 && (
-          <View style={styles.paginationContainer}>
-            <TouchableOpacity
-              style={[
-                styles.paginationButton,
-                pagination.currentPage === 1 && styles.paginationButtonDisabled,
-              ]}
-              onPress={() => handlePageChange(pagination.currentPage - 1)}
-              disabled={pagination.currentPage === 1}>
-              <Icon name="chevron-left" size={20} color="#ff6700" />
-            </TouchableOpacity>
-
-            <Text style={styles.paginationText}>
-              Page {pagination.currentPage} of {pagination.totalPages}
-            </Text>
-
-            <TouchableOpacity
-              style={[
-                styles.paginationButton,
-                pagination.currentPage === pagination.totalPages &&
-                  styles.paginationButtonDisabled,
-              ]}
-              onPress={() => handlePageChange(pagination.currentPage + 1)}
-              disabled={pagination.currentPage === pagination.totalPages}>
-              <Icon name="chevron-right" size={20} color="#ff6700" />
-            </TouchableOpacity>
-          </View>
-        )} */}
       </ScrollView>
 
       {renderFilterModal()}
@@ -608,6 +612,12 @@ const styles = StyleSheet.create({
     fontSize: m(18),
     fontWeight: '700',
     color: '#ff6700',
+  },
+  activePlansText: {
+    color: '#4CAF50',
+  },
+  expiredPlansText: {
+    color: '#F44336',
   },
   loadingContainer: {
     padding: m(40),
@@ -775,24 +785,6 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: m(4),
   },
-  // paginationContainer: {
-  //   flexDirection: 'row',
-  //   justifyContent: 'center',
-  //   alignItems: 'center',
-  //   marginTop: m(20),
-  //   gap: m(16),
-  // },
-  // paginationButton: {
-  //   padding: m(8),
-  // },
-  // paginationButtonDisabled: {
-  //   opacity: 0.3,
-  // },
-  // paginationText: {
-  //   fontSize: m(14),
-  //   color: '#666',
-  //   fontWeight: '600',
-  // },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',

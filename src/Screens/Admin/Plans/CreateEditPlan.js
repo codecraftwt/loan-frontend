@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { Picker } from '@react-native-picker/picker';
 import { useDispatch, useSelector } from 'react-redux';
 import Icon from 'react-native-vector-icons/Feather';
@@ -21,6 +22,7 @@ import {
   clearErrors,
 } from '../../../Redux/Slices/adminPlanSlice';
 
+// Duration options for plan selection
 const DURATION_OPTIONS = [
   { label: '1 month', value: '1 month' },
   { label: '2 months', value: '2 months' },
@@ -29,7 +31,13 @@ const DURATION_OPTIONS = [
   { label: '1 year', value: '1 year' },
 ];
 
-export default function CreateEditPlan({ route, navigation }) {
+/**
+ * CreateEditPlan Component
+ * Form for creating or editing subscription plans
+ */
+export default function CreateEditPlan() {
+  const navigation = useNavigation();
+  const route = useRoute();
   const dispatch = useDispatch();
   const { creating, updating, createError, updateError } = useSelector(
     state => state.adminPlans,
@@ -38,7 +46,7 @@ export default function CreateEditPlan({ route, navigation }) {
   const { plan, mode } = route.params || {};
   const isEditMode = mode === 'edit' && plan;
 
-  // Form fields
+  // Form state
   const [planName, setPlanName] = useState('');
   const [duration, setDuration] = useState('1 month');
   const [priceMonthly, setPriceMonthly] = useState('');
@@ -48,6 +56,7 @@ export default function CreateEditPlan({ route, navigation }) {
   const [prioritySupport, setPrioritySupport] = useState(false);
   const [isActive, setIsActive] = useState(true);
 
+  // Initialize form with plan data in edit mode
   useEffect(() => {
     if (isEditMode && plan) {
       setPlanName(plan.planName || '');
@@ -73,7 +82,8 @@ export default function CreateEditPlan({ route, navigation }) {
     }
   }, [createError, updateError, dispatch]);
 
-  const validateForm = () => {
+  // Form validation
+  const validateForm = useCallback(() => {
     if (!planName.trim()) {
       Alert.alert('Error', 'Plan name is required');
       return false;
@@ -82,14 +92,16 @@ export default function CreateEditPlan({ route, navigation }) {
       Alert.alert('Error', 'Duration is required');
       return false;
     }
-    if (!priceMonthly || isNaN(parseFloat(priceMonthly)) || parseFloat(priceMonthly) <= 0) {
+    const price = parseFloat(priceMonthly);
+    if (!priceMonthly || isNaN(price) || price <= 0) {
       Alert.alert('Error', 'Valid monthly price is required');
       return false;
     }
     return true;
-  };
+  }, [planName, duration, priceMonthly]);
 
-  const handleSubmit = async () => {
+  // Handle form submission
+  const handleSubmit = useCallback(async () => {
     if (!validateForm()) return;
 
     const planData = {
@@ -113,9 +125,7 @@ export default function CreateEditPlan({ route, navigation }) {
         Alert.alert('Success', 'Plan updated successfully!', [
           {
             text: 'OK',
-            onPress: () => {
-              navigation.goBack();
-            },
+            onPress: () => navigation.goBack(),
           },
         ]);
       }
@@ -125,35 +135,59 @@ export default function CreateEditPlan({ route, navigation }) {
         Alert.alert('Success', 'Plan created successfully!', [
           {
             text: 'OK',
-            onPress: () => {
-              navigation.goBack();
-            },
+            onPress: () => navigation.goBack(),
           },
         ]);
       }
     }
-  };
+  }, [
+    validateForm,
+    planName,
+    duration,
+    priceMonthly,
+    description,
+    razorpayPlanId,
+    advancedAnalytics,
+    prioritySupport,
+    isActive,
+    isEditMode,
+    plan,
+    dispatch,
+    navigation,
+  ]);
 
-  const renderToggle = (label, value, onToggle) => (
-    <TouchableOpacity
-      style={styles.toggleContainer}
-      onPress={onToggle}
-      activeOpacity={0.7}>
-      <Text style={styles.toggleLabel}>{label}</Text>
-      <View
-        style={[
-          styles.toggleSwitch,
-          value ? styles.toggleSwitchActive : styles.toggleSwitchInactive,
-        ]}>
+  // Toggle component renderer
+  const renderToggle = useCallback(
+    (label, value, onToggle) => (
+      <TouchableOpacity
+        style={styles.toggleContainer}
+        onPress={onToggle}
+        activeOpacity={0.7}>
+        <Text style={styles.toggleLabel}>{label}</Text>
         <View
           style={[
-            styles.toggleThumb,
-            value ? styles.toggleThumbActive : styles.toggleThumbInactive,
-          ]}
-        />
-      </View>
-    </TouchableOpacity>
+            styles.toggleSwitch,
+            value ? styles.toggleSwitchActive : styles.toggleSwitchInactive,
+          ]}>
+          <View
+            style={[
+              styles.toggleThumb,
+              value ? styles.toggleThumbActive : styles.toggleThumbInactive,
+            ]}
+          />
+        </View>
+      </TouchableOpacity>
+    ),
+    [],
   );
+
+  // Memoized submit button text
+  const submitButtonText = useMemo(() => {
+    if (creating || updating) return 'Processing...';
+    return isEditMode ? 'Update Plan' : 'Create Plan';
+  }, [creating, updating, isEditMode]);
+
+  const isLoading = creating || updating;
 
   return (
     <View style={styles.container}>
@@ -163,7 +197,8 @@ export default function CreateEditPlan({ route, navigation }) {
       />
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}>
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}>
         <View style={styles.formCard}>
           <Text style={styles.formTitle}>
             {isEditMode ? 'Edit Plan Details' : 'Create New Plan'}
@@ -182,6 +217,7 @@ export default function CreateEditPlan({ route, navigation }) {
               onChangeText={setPlanName}
               placeholder="e.g., Premium Plan - 1 Month"
               placeholderTextColor="#999"
+              editable={!isLoading}
             />
           </View>
 
@@ -192,7 +228,8 @@ export default function CreateEditPlan({ route, navigation }) {
                 selectedValue={duration}
                 onValueChange={setDuration}
                 style={styles.picker}
-                dropdownIconColor="#666">
+                dropdownIconColor="#666"
+                enabled={!isLoading}>
                 {DURATION_OPTIONS.map(option => (
                   <Picker.Item
                     key={option.value}
@@ -213,6 +250,7 @@ export default function CreateEditPlan({ route, navigation }) {
               keyboardType="decimal-pad"
               placeholder="e.g., 999.00"
               placeholderTextColor="#999"
+              editable={!isLoading}
             />
           </View>
 
@@ -226,6 +264,7 @@ export default function CreateEditPlan({ route, navigation }) {
               multiline
               numberOfLines={4}
               placeholderTextColor="#999"
+              editable={!isLoading}
             />
           </View>
 
@@ -237,6 +276,7 @@ export default function CreateEditPlan({ route, navigation }) {
               onChangeText={setRazorpayPlanId}
               placeholder="e.g., plan_123"
               placeholderTextColor="#999"
+              editable={!isLoading}
             />
           </View>
 
@@ -269,16 +309,17 @@ export default function CreateEditPlan({ route, navigation }) {
           <TouchableOpacity
             style={[
               styles.submitButton,
-              (creating || updating) && styles.submitButtonDisabled,
+              isLoading && styles.submitButtonDisabled,
             ]}
             onPress={handleSubmit}
-            disabled={creating || updating}>
+            disabled={isLoading}
+            activeOpacity={0.8}>
             <LinearGradient
               colors={['#ff6700', '#ff7900']}
               style={styles.submitGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}>
-              {creating || updating ? (
+              {isLoading ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <Icon
@@ -287,13 +328,7 @@ export default function CreateEditPlan({ route, navigation }) {
                   color="#FFFFFF"
                 />
               )}
-              <Text style={styles.submitButtonText}>
-                {creating || updating
-                  ? 'Processing...'
-                  : isEditMode
-                  ? 'Update Plan'
-                  : 'Create Plan'}
-              </Text>
+              <Text style={styles.submitButtonText}>{submitButtonText}</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -329,11 +364,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#333',
     marginBottom: m(8),
+    letterSpacing: 0.3,
   },
   formSubtitle: {
     fontSize: m(14),
     color: '#666',
     marginBottom: m(24),
+    lineHeight: m(20),
   },
   inputGroup: {
     marginBottom: m(20),
@@ -388,6 +425,7 @@ const styles = StyleSheet.create({
   featuresNoteText: {
     fontSize: m(12),
     color: '#666',
+    flex: 1,
   },
   toggleContainer: {
     flexDirection: 'row',
@@ -450,6 +488,6 @@ const styles = StyleSheet.create({
     fontSize: m(16),
     fontWeight: '600',
     color: '#FFFFFF',
+    letterSpacing: 0.3,
   },
 });
-

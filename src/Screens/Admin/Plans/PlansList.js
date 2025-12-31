@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -21,21 +21,26 @@ import {
   clearErrors,
 } from '../../../Redux/Slices/adminPlanSlice';
 
-export default function PlansList({ navigation }) {
+/**
+ * PlansList Component
+ * Displays all subscription plans with ability to create, view, and edit plans
+ */
+export default function PlansList() {
+  const navigation = useNavigation();
   const dispatch = useDispatch();
   const { plans, loading, error } = useSelector(state => state.adminPlans);
-
   const [refreshing, setRefreshing] = useState(false);
 
+  // Fetch plans on component mount
   useEffect(() => {
     dispatch(getAdminPlans());
   }, [dispatch]);
 
   // Refresh plans when screen comes into focus
   useFocusEffect(
-    React.useCallback(() => {
+    useCallback(() => {
       dispatch(getAdminPlans());
-    }, [dispatch])
+    }, [dispatch]),
   );
 
   // Handle errors
@@ -46,82 +51,99 @@ export default function PlansList({ navigation }) {
     }
   }, [error, dispatch]);
 
-  const handleRefresh = () => {
+  // Handle refresh
+  const handleRefresh = useCallback(() => {
     setRefreshing(true);
     dispatch(getAdminPlans()).finally(() => {
       setRefreshing(false);
     });
-  };
+  }, [dispatch]);
 
-  const handlePlanPress = plan => {
-    navigation.navigate('PlanDetailsScreen', { plan });
-  };
-
-  const handleCreatePlan = () => {
-    navigation.navigate('CreateEditPlan', { mode: 'create' });
-  };
-
-  const handleEditPlan = plan => {
-    navigation.navigate('CreateEditPlan', { plan, mode: 'edit' });
-  };
-
-  const renderPlanItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.planCard}
-      onPress={() => handlePlanPress(item)}
-      activeOpacity={0.7}>
-      <View style={styles.planHeader}>
-        <View style={styles.planInfo}>
-          <Text style={styles.planName}>{item.planName}</Text>
-          <Text style={styles.planDetails}>
-            {item.duration} • ₹{item.priceMonthly?.toLocaleString()}/month
-          </Text>
-        </View>
-        <View style={styles.planActions}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => handleEditPlan(item)}
-            activeOpacity={0.7}>
-            <Icon name="edit" size={18} color="#2196F3" />
-          </TouchableOpacity>
-        </View>
-      </View>
-      <View style={styles.planAmounts}>
-        <View style={styles.featuresContainer}>
-          {(item.planFeatures?.advancedAnalytics ?? false) && (
-            <View style={styles.featureBadge}>
-              <Text style={styles.featureText}>Analytics</Text>
-            </View>
-          )}
-          {(item.planFeatures?.prioritySupport ?? false) && (
-            <View style={styles.featureBadge}>
-              <Text style={styles.featureText}>Priority</Text>
-            </View>
-          )}
-          <View style={styles.featureBadge}>
-            <Text style={styles.featureText}>Unlimited Loans</Text>
-          </View>
-        </View>
-        <View
-          style={[
-            styles.statusBadge,
-            {
-              backgroundColor: item.isActive ? '#E8F5E9' : '#FFEBEE',
-            },
-          ]}>
-          <Text
-            style={[
-              styles.statusText,
-              { color: item.isActive ? '#4CAF50' : '#F44336' },
-            ]}>
-            {item.isActive ? 'Active' : 'Inactive'}
-          </Text>
-        </View>
-      </View>
-    </TouchableOpacity>
+  // Navigation handlers
+  const handlePlanPress = useCallback(
+    plan => {
+      navigation.navigate('PlanDetailsScreen', { plan });
+    },
+    [navigation],
   );
 
+  const handleCreatePlan = useCallback(() => {
+    navigation.navigate('CreateEditPlan', { mode: 'create' });
+  }, [navigation]);
 
+  const handleEditPlan = useCallback(
+    plan => {
+      navigation.navigate('CreateEditPlan', { plan, mode: 'edit' });
+    },
+    [navigation],
+  );
+
+  // Memoized plan item renderer
+  const renderPlanItem = useCallback(
+    ({ item }) => (
+      <TouchableOpacity
+        style={styles.planCard}
+        onPress={() => handlePlanPress(item)}
+        activeOpacity={0.7}>
+        <View style={styles.planHeader}>
+          <View style={styles.planInfo}>
+            <Text style={styles.planName} numberOfLines={1}>
+              {item.planName}
+            </Text>
+            <Text style={styles.planDetails}>
+              {item.duration} • ₹{item.priceMonthly?.toLocaleString('en-IN')}/month
+            </Text>
+          </View>
+          <View style={styles.planActions}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => handleEditPlan(item)}
+              activeOpacity={0.7}>
+              <Icon name="edit" size={18} color="#2196F3" />
+            </TouchableOpacity>
+          </View>
+        </View>
+        <View style={styles.planAmounts}>
+          <View style={styles.featuresContainer}>
+            {(item.planFeatures?.advancedAnalytics ?? false) && (
+              <View style={styles.featureBadge}>
+                <Text style={styles.featureText}>Analytics</Text>
+              </View>
+            )}
+            {(item.planFeatures?.prioritySupport ?? false) && (
+              <View style={styles.featureBadge}>
+                <Text style={styles.featureText}>Priority</Text>
+              </View>
+            )}
+            <View style={styles.featureBadge}>
+              <Text style={styles.featureText}>Unlimited Loans</Text>
+            </View>
+          </View>
+          <View
+            style={[
+              styles.statusBadge,
+              {
+                backgroundColor: item.isActive ? '#E8F5E9' : '#FFEBEE',
+              },
+            ]}>
+            <Text
+              style={[
+                styles.statusText,
+                { color: item.isActive ? '#4CAF50' : '#F44336' },
+              ]}>
+              {item.isActive ? 'Active' : 'Inactive'}
+            </Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    ),
+    [handlePlanPress, handleEditPlan],
+  );
+
+  // Memoized key extractor
+  const keyExtractor = useCallback(item => item._id, []);
+
+  // Loading state
   if (loading && !refreshing) {
     return (
       <View style={styles.container}>
@@ -147,7 +169,8 @@ export default function PlansList({ navigation }) {
           <Text style={styles.sectionTitle}>All Plans</Text>
           <TouchableOpacity
             style={styles.createButton}
-            onPress={handleCreatePlan}>
+            onPress={handleCreatePlan}
+            activeOpacity={0.8}>
             <LinearGradient
               colors={['#4CAF50', '#66BB6A']}
               style={styles.createGradient}
@@ -171,7 +194,7 @@ export default function PlansList({ navigation }) {
           <FlatList
             data={plans}
             renderItem={renderPlanItem}
-            keyExtractor={item => item._id}
+            keyExtractor={keyExtractor}
             scrollEnabled={false}
           />
         )}
@@ -201,6 +224,7 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: m(16),
     color: '#666',
+    fontWeight: '500',
   },
   headerSection: {
     flexDirection: 'row',
@@ -212,10 +236,16 @@ const styles = StyleSheet.create({
     fontSize: m(18),
     fontWeight: '700',
     color: '#333',
+    letterSpacing: 0.3,
   },
   createButton: {
     borderRadius: m(8),
     overflow: 'hidden',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   createGradient: {
     flexDirection: 'row',
@@ -229,6 +259,7 @@ const styles = StyleSheet.create({
     fontSize: m(14),
     fontWeight: '600',
     color: '#FFFFFF',
+    letterSpacing: 0.2,
   },
   emptyContainer: {
     alignItems: 'center',
@@ -244,6 +275,7 @@ const styles = StyleSheet.create({
   emptySubtext: {
     fontSize: m(14),
     color: '#999',
+    textAlign: 'center',
   },
   planCard: {
     backgroundColor: '#FFFFFF',
@@ -266,6 +298,7 @@ const styles = StyleSheet.create({
   },
   planInfo: {
     flex: 1,
+    marginRight: m(12),
   },
   planName: {
     fontSize: m(16),
@@ -283,6 +316,7 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     padding: m(8),
+    borderRadius: m(8),
   },
   planAmounts: {
     flexDirection: 'row',
@@ -318,6 +352,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-
-
-
