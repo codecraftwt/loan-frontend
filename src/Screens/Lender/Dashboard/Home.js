@@ -13,8 +13,9 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
 import Ionicons from 'react-native-vector-icons/Ionicons'; import LinearGradient from 'react-native-linear-gradient';
-import { getLenderStatistics, getRecentActivities } from '../../../Redux/Slices/loanSlice';
+import { getLenderStatistics } from '../../../Redux/Slices/loanSlice';
 import { getPendingPayments } from '../../../Redux/Slices/lenderPaymentSlice';
+import { getLenderRecentActivities } from '../../../Redux/Slices/lenderActivitiesSlice';
 import { useDispatch, useSelector } from 'react-redux';
 import useFetchUserFromStorage from '../../../Redux/hooks/useFetchUserFromStorage';
 import { m } from 'walstar-rn-responsive';
@@ -36,7 +37,9 @@ export default function Home() {
 
   const user = useSelector(state => state.auth.user);
   const lenderStatistics = useSelector(state => state.loans.lenderStatistics);
-  const recentActivities = useSelector(state => state.loans.recentActivities || []);
+  const { activities: recentActivities, loading: activitiesLoading } = useSelector(
+    state => state.lenderActivities,
+  );
   const { pendingPayments} = useSelector(state => state.lenderPayments);
 
   // Debug: Log pending payments
@@ -85,7 +88,7 @@ export default function Home() {
   useFocusEffect(
     React.useCallback(() => {
       dispatch(getLenderStatistics());
-      dispatch(getRecentActivities(5));
+      dispatch(getLenderRecentActivities({ limit: 10 }));
       // Fetch pending payments for lender
       dispatch(getPendingPayments({ page: 1, limit: 10 })).then((result) => {
         console.log('Pending payments fetched:', result);
@@ -124,7 +127,7 @@ export default function Home() {
     setRefreshing(true);
     await Promise.all([
       dispatch(getLenderStatistics()),
-      dispatch(getRecentActivities(5)),
+      dispatch(getLenderRecentActivities({ limit: 10 })),
       dispatch(getPendingPayments({ page: 1, limit: 10 })),
     ]);
     setRefreshing(false);
@@ -145,33 +148,47 @@ export default function Home() {
 
   // Helper function to map activity type to UI properties
   const getActivityProperties = (activity) => {
-    const isLoanGiven = activity.type === 'loan_given';
-    const shortMessage = activity.shortMessage || '';
+    const activityType = activity.type || '';
     
     let icon = 'clock';
     let color = '#34495e';
     let gradient = ['#2c3e50', '#34495e'];
     
-    if (shortMessage.includes('Repaid') || shortMessage.includes('Paid')) {
-      icon = 'check-circle';
-      color = '#27ae60';
-      gradient = ['#27ae60', '#2ecc71'];
-    } else if (shortMessage.includes('Accepted')) {
-      icon = 'check-circle';
-      color = '#10B981';
-      gradient = ['#10B981', '#34D399'];
-    } else if (shortMessage.includes('Rejected')) {
-      icon = 'x-circle';
-      color = '#EF4444';
-      gradient = ['#EF4444', '#F87171'];
-    } else if (isLoanGiven) {
-      icon = 'arrow-up-right';
-      color = '#ff6700';
-      gradient = ['#ff8a00', '#ff6700'];
-    } else {
-      icon = 'arrow-down-left';
-      color = '#34495e';
-      gradient = ['#2c3e50', '#34495e'];
+    switch (activityType) {
+      case 'payment_received':
+        icon = 'dollar-sign';
+        color = '#27ae60';
+        gradient = ['#27ae60', '#2ecc71'];
+        break;
+      case 'loan_paid':
+        icon = 'check-circle';
+        color = '#10B981';
+        gradient = ['#10B981', '#34D399'];
+        break;
+      case 'loan_accepted':
+        icon = 'check-circle';
+        color = '#10B981';
+        gradient = ['#10B981', '#34D399'];
+        break;
+      case 'loan_rejected':
+        icon = 'x-circle';
+        color = '#EF4444';
+        gradient = ['#EF4444', '#F87171'];
+        break;
+      case 'loan_created':
+        icon = 'arrow-up-right';
+        color = '#ff6700';
+        gradient = ['#ff8a00', '#ff6700'];
+        break;
+      case 'loan_overdue':
+        icon = 'alert-circle';
+        color = '#F59E0B';
+        gradient = ['#F59E0B', '#F97316'];
+        break;
+      default:
+        icon = 'clock';
+        color = '#34495e';
+        gradient = ['#2c3e50', '#34495e'];
     }
     
     return { icon, color, gradient };
@@ -179,12 +196,9 @@ export default function Home() {
 
   // Handle activity card press
   const handleActivityPress = (activity) => {
-    if (activity.type === 'loan_given') {
-      // Navigate to Given (Outward) tab screen
+    if (activity.loanId) {
+      // Navigate to Outward (Given) tab screen for loan-related activities
       navigation.navigate('Given', { highlightLoanId: activity.loanId });
-    } else if (activity.type === 'loan_taken') {
-      // Navigate to Taken (Inward) tab screen
-      navigation.navigate('Taken', { highlightLoanId: activity.loanId });
     }
   };
 
@@ -594,7 +608,7 @@ export default function Home() {
               const activityProps = getActivityProperties(activity);
               return (
                 <TouchableOpacity
-                  key={activity.loanId || index}
+                  key={activity._id || activity.loanId || activity.timestamp || index}
                   activeOpacity={0.7}
                   onPress={() => handleActivityPress(activity)}>
                   <Animated.View

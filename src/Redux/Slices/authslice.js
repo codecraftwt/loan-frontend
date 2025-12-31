@@ -198,7 +198,6 @@ export const updateUser = createAsyncThunk(
       });
       return response.data;
     } catch (error) {
-      console.log(error, 'error');
       return rejectWithValue(
         error.response ? error.response.data : error.message,
       );

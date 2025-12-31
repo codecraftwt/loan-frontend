@@ -63,6 +63,23 @@ export const lenderLoanAPI = {
       throw error;
     }
   },
+
+  // Get lender recent activities
+  getLenderRecentActivities: async (params = {}) => {
+    try {
+      const queryParams = new URLSearchParams();
+      if (params.limit) queryParams.append('limit', params.limit.toString());
+
+      const queryString = queryParams.toString();
+      const url = `lender/loans/recent-activities${queryString ? `?${queryString}` : ''}`;
+
+      const response = await axiosInstance.get(url);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching lender recent activities:', error);
+      throw error;
+    }
+  },
 };
 
 export default lenderLoanAPI;

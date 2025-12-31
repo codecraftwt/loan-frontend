@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,31 +6,58 @@ import {
   ScrollView,
   TouchableOpacity,
   FlatList,
+  ActivityIndicator,
+  Image
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
 import LinearGradient from 'react-native-linear-gradient';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
+import { getRevenueStatistics } from '../../../Redux/Slices/adminRevenueSlice';
+import { getAdminRecentActivities } from '../../../Redux/Slices/adminActivitiesSlice';
+
+const formatCurrency = value => {
+  if (!value) return '₹0';
+  const num = Number(value) || 0;
+  return `₹${num.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+};
 
 export default function AdminDashboard() {
   const navigation = useNavigation();
+  const dispatch = useDispatch();
   const user = useSelector(state => state.auth.user);
+  const { revenueData, loading: revenueLoading } = useSelector(
+    state => state.adminRevenue,
+  );
+  const { activities: recentActivities, loading: activitiesLoading } = useSelector(
+    state => state.adminActivities,
+  );
 
-  // Static data for revenue
-  const revenueData = [
-    { month: 'January', amount: 125000, loans: 45 },
-    { month: 'February', amount: 142000, loans: 52 },
-    { month: 'March', amount: 158000, loans: 58 },
-    { month: 'April', amount: 165000, loans: 61 },
-    { month: 'May', amount: 178000, loans: 65 },
-    { month: 'June', amount: 192000, loans: 70 },
-  ];
+  useEffect(() => {
+    // Fetch revenue statistics for dashboard (summary only)
+    dispatch(getRevenueStatistics({ groupBy: 'all' }));
+    // Fetch recent activities
+    dispatch(getAdminRecentActivities({ limit: 10 }));
+  }, [dispatch]);
 
-  const totalRevenue = revenueData.reduce((sum, item) => sum + item.amount, 0);
-  const avgRevenue = Math.round(totalRevenue / revenueData.length);
-  const growthRate = '+12.5%';
+  const summary = revenueData?.summary || {};
+  const revenueByMonth = revenueData?.revenueByMonth || [];
+
+  // Calculate growth rate (compare last 2 months if available)
+  const calculateGrowthRate = () => {
+    if (revenueByMonth.length < 2) return null;
+    const lastMonth = revenueByMonth[revenueByMonth.length - 1]?.totalRevenue || 0;
+    const prevMonth = revenueByMonth[revenueByMonth.length - 2]?.totalRevenue || 0;
+    if (prevMonth === 0) return null;
+    const growth = ((lastMonth - prevMonth) / prevMonth) * 100;
+    return growth > 0 ? `+${growth.toFixed(1)}%` : `${growth.toFixed(1)}%`;
+  };
+
+  const growthRate = calculateGrowthRate();
+  const totalRevenue = summary.totalRevenue || 0;
+  const avgRevenue = summary.averageRevenuePerPurchase || 0;
 
   const quickActions = [
     {
@@ -43,22 +70,6 @@ export default function AdminDashboard() {
     },
     {
       id: 2,
-      title: 'Edit Plan',
-      icon: 'edit-2',
-      screen: 'Plans',
-      gradient: ['#4ECDC4', '#6AE0D8'],
-      iconBg: 'rgba(78, 205, 196, 0.15)',
-    },
-    {
-      id: 3,
-      title: 'Revenue',
-      icon: 'bar-chart-2',
-      screen: 'Revenue',
-      gradient: ['#45B7D1', '#67C9E0'],
-      iconBg: 'rgba(69, 183, 209, 0.15)',
-    },
-    {
-      id: 4,
       title: 'Lender List',
       icon: 'users',
       screen: 'Lenders',
@@ -67,35 +78,19 @@ export default function AdminDashboard() {
     },
   ];
 
-  const recentActivities = [
-    {
-      id: 1,
-      title: 'New Lender Added',
-      description: 'John Doe joined as new lender',
-      time: '2 hours ago',
-      icon: 'user-plus',
-      iconColor: '#4CAF50',
-      iconBg: 'rgba(76, 175, 80, 0.15)',
-    },
-    {
-      id: 2,
-      title: 'Plan Updated',
-      description: 'Business Loan plan modified',
-      time: '5 hours ago',
-      icon: 'edit',
-      iconColor: '#2196F3',
-      iconBg: 'rgba(33, 150, 243, 0.15)',
-    },
-    {
-      id: 3,
-      title: 'Revenue Report',
-      description: 'June revenue report generated',
-      time: '1 day ago',
-      icon: 'dollar-sign',
-      iconColor: '#FF9800',
-      iconBg: 'rgba(255, 152, 0, 0.15)',
-    },
-  ];
+  // Helper function to get activity icon and colors based on type
+  const getActivityIcon = (type) => {
+    switch (type) {
+      case 'subscription_purchased':
+        return { name: 'shopping-cart', color: '#4CAF50', bg: 'rgba(76, 175, 80, 0.15)' };
+      case 'plan_updated':
+        return { name: 'edit', color: '#2196F3', bg: 'rgba(33, 150, 243, 0.15)' };
+      case 'plan_created':
+        return { name: 'plus-circle', color: '#FF9800', bg: 'rgba(255, 152, 0, 0.15)' };
+      default:
+        return { name: 'activity', color: '#666', bg: 'rgba(102, 102, 102, 0.15)' };
+    }
+  };
 
   const renderQuickAction = ({ item, index }) => (
     <TouchableOpacity
@@ -121,20 +116,23 @@ export default function AdminDashboard() {
     </TouchableOpacity>
   );
 
-  const renderActivityItem = ({ item }) => (
-    <View style={styles.activityItem}>
-      <View style={[styles.activityIcon, { backgroundColor: item.iconBg }]}>
-        <Icon name={item.icon} size={18} color={item.iconColor} />
-      </View>
-      <View style={styles.activityContent}>
-        <View style={styles.activityHeader}>
-          <Text style={styles.activityTitle}>{item.title}</Text>
-          <Text style={styles.activityTime}>{item.time}</Text>
+  const renderActivityItem = ({ item }) => {
+    const iconInfo = getActivityIcon(item.type);
+    return (
+      <View style={styles.activityItem}>
+        <View style={[styles.activityIcon, { backgroundColor: iconInfo.bg }]}>
+          <Icon name={iconInfo.name} size={18} color={iconInfo.color} />
         </View>
-        <Text style={styles.activityDescription}>{item.description}</Text>
+        <View style={styles.activityContent}>
+          <View style={styles.activityHeader}>
+            <Text style={styles.activityTitle}>{item.shortMessage || item.type}</Text>
+            <Text style={styles.activityTime}>{item.relativeTime || 'N/A'}</Text>
+          </View>
+          <Text style={styles.activityDescription}>{item.message || ''}</Text>
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -156,7 +154,10 @@ export default function AdminDashboard() {
               <Text style={styles.userName}>{user?.userName || 'Admin'}</Text>
             </View>
             <View style={styles.avatarContainer}>
-              <Icon name="user" size={24} color="#FFFFFF" />
+              <Image
+                source={{ uri: user?.profileImage }}
+                style={{ height: 55, width: 55, borderRadius: 28 }}
+              />
             </View>
           </View>
           <Text style={styles.welcomeSubtitle}>Manage your Subscriptions</Text>
@@ -191,29 +192,69 @@ export default function AdminDashboard() {
               <Icon name="chevron-right" size={16} color="#667eea" />
             </TouchableOpacity>
           </View>
-          <LinearGradient
-            colors={['#f8f9ff', '#ffffff']}
-            style={styles.revenueCard}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}>
-            <View style={styles.revenueHeader}>
-              <View>
-                <Text style={styles.revenueTotalLabel}>Total Revenue</Text>
-                <Text style={styles.revenueTotalAmount}>₹{totalRevenue.toLocaleString()}</Text>
-              </View>
-              <View style={styles.growthBadge}>
-                <Icon name="trending-up" size={14} color="#4CAF50" />
-                <Text style={styles.growthText}>{growthRate}</Text>
-              </View>
+          {false ? (
+            <View style={[styles.revenueCard, styles.loadingCard]}>
+              <ActivityIndicator size="large" color="#ff6700" />
+              <Text style={styles.loadingText}>Loading revenue data...</Text>
             </View>
-            <View style={styles.revenueDetails}>
-              <View style={styles.revenueDetailItem}>
-                <Text style={styles.revenueDetailLabel}>Monthly Average</Text>
-                <Text style={styles.revenueDetailValue}>₹{avgRevenue.toLocaleString()}</Text>
+          ) : (
+            <LinearGradient
+              colors={['#f8f9ff', '#ffffff']}
+              style={styles.revenueCard}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}>
+              <View style={styles.revenueHeader}>
+                <View>
+                  <Text style={styles.revenueTotalLabel}>Total Revenue</Text>
+                  <Text style={styles.revenueTotalAmount}>
+                    {formatCurrency(totalRevenue)}
+                  </Text>
+                </View>
+                {growthRate && (
+                  <View
+                    style={[
+                      styles.growthBadge,
+                      growthRate.startsWith('-') && styles.growthBadgeNegative,
+                    ]}>
+                    <Icon
+                      name={growthRate.startsWith('+') ? 'trending-up' : 'trending-down'}
+                      size={14}
+                      color={growthRate.startsWith('+') ? '#4CAF50' : '#F44336'}
+                    />
+                    <Text
+                      style={[
+                        styles.growthText,
+                        growthRate.startsWith('-') && styles.growthTextNegative,
+                      ]}>
+                      {growthRate}
+                    </Text>
+                  </View>
+                )}
               </View>
-              <View style={styles.revenueDivider} />
-            </View>
-          </LinearGradient>
+              <View style={styles.revenueDetails}>
+                <View style={styles.revenueDetailItem}>
+                  <Text style={styles.revenueDetailLabel}>Total Purchases</Text>
+                  <Text style={styles.revenueDetailValue}>
+                    {summary.totalPurchases || 0}
+                  </Text>
+                </View>
+                <View style={styles.revenueDivider} />
+                <View style={styles.revenueDetailItem}>
+                  <Text style={styles.revenueDetailLabel}>Avg. Per Purchase</Text>
+                  <Text style={styles.revenueDetailValue}>
+                    {formatCurrency(avgRevenue)}
+                  </Text>
+                </View>
+                <View style={styles.revenueDivider} />
+                <View style={styles.revenueDetailItem}>
+                  <Text style={styles.revenueDetailLabel}>Active Plans</Text>
+                  <Text style={[styles.revenueDetailValue, { color: '#4CAF50' }]}>
+                    {summary.activePlansCount || 0}
+                  </Text>
+                </View>
+              </View>
+            </LinearGradient>
+          )}
         </View>
 
         {/* Recent Activity */}
@@ -225,13 +266,24 @@ export default function AdminDashboard() {
             </TouchableOpacity>
           </View>
           <View style={styles.activityCard}>
-            <FlatList
-              data={recentActivities}
-              renderItem={renderActivityItem}
-              keyExtractor={item => item.id.toString()}
-              scrollEnabled={false}
-              ItemSeparatorComponent={() => <View style={styles.separator} />}
-            />
+            {activitiesLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color="#ff6700" />
+                <Text style={styles.loadingText}>Loading activities...</Text>
+              </View>
+            ) : recentActivities.length > 0 ? (
+              <FlatList
+                data={recentActivities}
+                renderItem={renderActivityItem}
+                keyExtractor={(item, index) => item._id || item.id || index.toString()}
+                scrollEnabled={false}
+                ItemSeparatorComponent={() => <View style={styles.separator} />}
+              />
+            ) : (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>No recent activities</Text>
+              </View>
+            )}
           </View>
         </View>
       </ScrollView>
@@ -284,9 +336,9 @@ const styles = StyleSheet.create({
     fontFamily: 'System',
   },
   avatarContainer: {
-    width: m(48),
-    height: m(48),
-    borderRadius: m(24),
+    width: m(55),
+    height: m(55),
+    borderRadius: m(28),
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -356,7 +408,7 @@ const styles = StyleSheet.create({
   revenueCard: {
     borderRadius: m(20),
     padding: m(20),
-    elevation: 4,
+    elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
@@ -391,11 +443,28 @@ const styles = StyleSheet.create({
     paddingVertical: m(6),
     borderRadius: m(20),
   },
+  growthBadgeNegative: {
+    backgroundColor: 'rgba(244, 67, 54, 0.1)',
+  },
   growthText: {
     fontSize: m(12),
     color: '#4CAF50',
     fontWeight: '700',
     marginLeft: m(4),
+  },
+  growthTextNegative: {
+    color: '#F44336',
+  },
+  loadingCard: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: m(40),
+  },
+  loadingText: {
+    marginTop: m(12),
+    fontSize: m(14),
+    color: '#666',
+    textAlign: 'center',
   },
   revenueDetails: {
     flexDirection: 'row',
@@ -480,5 +549,19 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#f1f5f9',
     marginHorizontal: m(16),
+  },
+  loadingContainer: {
+    padding: m(20),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyContainer: {
+    padding: m(20),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    fontSize: m(14),
+    color: '#94a3b8',
   },
 });

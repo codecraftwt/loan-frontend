@@ -28,6 +28,7 @@ import CreateEditPlan from '../Screens/Admin/Plans/CreateEditPlan';
 import PlanDetailsScreen from '../Screens/Admin/Plans/PlanDetailsScreen';
 import Revenue from '../Screens/Admin/Revenue/Revenue';
 import LenderList from '../Screens/Admin/Lenders/LenderList';
+import LenderDetailsScreen from '../Screens/Admin/Lenders/LenderDetailsScreen';
 import BorrowerLoanHistoryScreen from '../Screens/Shared/Borrowers/BorrowerLoanHistoryScreen';
 // Borrower Loan Screens
 import MyLoans from '../Screens/Borrower/Loans/MyLoans';
@@ -82,6 +83,7 @@ const Navigation = () => {
       <Stack.Screen name="PlanDetailsScreen" component={PlanDetailsScreen} />
       <Stack.Screen name="Revenue" component={Revenue} />
       <Stack.Screen name="LenderList" component={LenderList} />
+      <Stack.Screen name="LenderDetailsScreen" component={LenderDetailsScreen} />
 
       {/* Borrower Loan Screens */}
       <Stack.Screen name="MyLoans" component={MyLoans} />

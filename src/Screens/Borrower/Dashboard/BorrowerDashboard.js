@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   FlatList,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
@@ -13,23 +14,28 @@ import { useSelector, useDispatch } from 'react-redux';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
 import { getBorrowerLoans, clearLoans } from '../../../Redux/Slices/borrowerLoanSlice';
+import { getBorrowerRecentActivities } from '../../../Redux/Slices/borrowerActivitiesSlice';
 
 export default function BorrowerDashboard() {
   const navigation = useNavigation();
   const dispatch = useDispatch();
   const user = useSelector(state => state.auth.user);
   const { loans, summary } = useSelector(state => state.borrowerLoans);
+  const { activities: recentActivities, loading: activitiesLoading } = useSelector(
+    state => state.borrowerActivities,
+  );
 
   useEffect(() => {
     if (user?._id) {
       dispatch(getBorrowerLoans({ borrowerId: user._id }));
+      dispatch(getBorrowerRecentActivities({ limit: 10 }));
     }
     return () => {
       dispatch(clearLoans());
     };
   }, [user?._id, dispatch]);
 
-  const myLoans = loans.slice(0, 2); // Show only first 2 loans on dashboard
+  const myLoans = loans.slice(0, 2);
 
   const quickActions = [
     {
@@ -186,6 +192,72 @@ export default function BorrowerDashboard() {
             />
           </View>
         )}
+
+        {/* Recent Activities */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Recent Activity</Text>
+          </View>
+          {activitiesLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color="#ff6700" />
+              <Text style={styles.loadingText}>Loading activities...</Text>
+            </View>
+          ) : recentActivities.length > 0 ? (
+            <View style={styles.activityCard}>
+              {recentActivities.slice(0, 5).map((activity, index) => {
+                const getActivityIcon = (type) => {
+                  switch (type) {
+                    case 'payment_made':
+                      return { name: 'dollar-sign', color: '#4CAF50' };
+                    case 'loan_paid':
+                      return { name: 'check-circle', color: '#4CAF50' };
+                    case 'loan_accepted':
+                      return { name: 'check-circle', color: '#2196F3' };
+                    case 'loan_rejected':
+                      return { name: 'x-circle', color: '#F44336' };
+                    case 'loan_received':
+                      return { name: 'arrow-down', color: '#FF9800' };
+                    case 'loan_overdue':
+                      return { name: 'alert-circle', color: '#F44336' };
+                    default:
+                      return { name: 'activity', color: '#666' };
+                  }
+                };
+                const iconInfo = getActivityIcon(activity.type);
+                const isLast = index === Math.min(recentActivities.length - 1, 4);
+                return (
+                  <View 
+                    key={activity._id || activity.loanId || index} 
+                    style={[
+                      styles.activityItem,
+                      isLast && styles.activityItemLast
+                    ]}>
+                    <View style={[styles.activityIcon, { backgroundColor: iconInfo.color + '20' }]}>
+                      <Icon name={iconInfo.name} size={16} color={iconInfo.color} />
+                    </View>
+                    <View style={styles.activityContent}>
+                      <Text style={styles.activityTitle}>{activity.shortMessage || activity.type}</Text>
+                      <Text style={styles.activityDescription} numberOfLines={2}>
+                        {activity.message || ''}
+                      </Text>
+                      <Text style={styles.activityTime}>{activity.relativeTime || 'Recently'}</Text>
+                    </View>
+                    {activity.amount && (
+                      <Text style={styles.activityAmount}>
+                        ₹{activity.amount.toLocaleString('en-IN')}
+                      </Text>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No recent activities</Text>
+            </View>
+          )}
+        </View>
       </ScrollView>
     </View>
   );
@@ -352,7 +424,73 @@ const styles = StyleSheet.create({
   loanFooterText: {
     fontSize: m(12),
     color: '#666',
-  }
+  },
+  activityCard: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: m(12),
+    padding: m(12),
+  },
+  activityItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: m(12),
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  activityItemLast: {
+    borderBottomWidth: 0,
+  },
+  activityIcon: {
+    width: m(32),
+    height: m(32),
+    borderRadius: m(16),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: m(12),
+  },
+  activityContent: {
+    flex: 1,
+  },
+  activityTitle: {
+    fontSize: m(14),
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: m(4),
+  },
+  activityDescription: {
+    fontSize: m(12),
+    color: '#666',
+    marginBottom: m(4),
+  },
+  activityTime: {
+    fontSize: m(11),
+    color: '#999',
+  },
+  activityAmount: {
+    fontSize: m(14),
+    fontWeight: '700',
+    color: '#ff6700',
+    marginLeft: m(8),
+  },
+  loadingContainer: {
+    padding: m(20),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: m(8),
+    fontSize: m(12),
+    color: '#666',
+  },
+  emptyContainer: {
+    padding: m(20),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    fontSize: m(14),
+    color: '#999',
+  },
 });
 
 
