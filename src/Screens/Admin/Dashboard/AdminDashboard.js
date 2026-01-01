@@ -88,16 +88,16 @@ export default function AdminDashboard() {
         title: 'Add Plan',
         icon: 'plus-circle',
         screen: 'CreateEditPlan',
-        gradient: ['#FF6B6B', '#FF8E8E'],
-        iconBg: 'rgba(255, 107, 107, 0.15)',
+        gradient: ['#96CEB4', '#AEDCC1'],
+        iconBg: 'rgba(255, 255, 255, 0.22)',
       },
       {
         id: 2,
         title: 'Lender List',
         icon: 'users',
         screen: 'Lenders',
-        gradient: ['#96CEB4', '#AEDCC1'],
-        iconBg: 'rgba(150, 206, 180, 0.15)',
+        gradient: ['#FF6B6B', '#FF8E8E'],
+        iconBg: 'rgba(255, 255, 255, 0.22)',
       },
     ],
     [],
@@ -201,8 +201,6 @@ export default function AdminDashboard() {
           style={styles.avatarImage}
           resizeMode="cover"
           onError={() => {
-            // Commented out for production - uncomment for debugging
-            // console.log('Avatar image failed to load, using placeholder');
             setAvatarError(true);
           }}
         />
@@ -280,12 +278,16 @@ export default function AdminDashboard() {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}>
               <View style={styles.revenueHeader}>
-                <View>
-                  <Text style={styles.revenueTotalLabel}>Total Revenue</Text>
-                  <Text style={styles.revenueTotalAmount}>
-                    {formatCurrency(revenueSummary.totalRevenue)}
-                  </Text>
+                <View style={styles.container1}>
+                  <View style={styles.labelContainer}>
+                    <Text style={styles.revenueTotalLabel}>Total Revenue</Text>
+                    <Text style={styles.revenueTotalAmount}>
+                      {formatCurrency(revenueSummary.totalRevenue)}
+                    </Text>
+                  </View>
+                  <Icon name="trending-up" size={30} color="orange" style={styles.icon} />
                 </View>
+
                 {revenueSummary.growthRate && (
                   <View
                     style={[
@@ -486,7 +488,7 @@ const styles = StyleSheet.create({
     borderRadius: m(20),
     overflow: 'hidden',
     elevation: 4,
-    shadowColor: '#000',
+    shadowColor: '#000000ff',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -539,6 +541,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: m(20),
+  },
+  container1: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  labelContainer: {
+    flexDirection: 'column',
+    marginRight: m(10),
   },
   revenueTotalLabel: {
     fontSize: m(13),

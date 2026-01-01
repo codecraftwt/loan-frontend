@@ -578,7 +578,7 @@ class NotificationService {
       // Request permission first
       const hasPermission = await this.requestPermission();
       if (!hasPermission) {
-        console.warn('⚠️ Notification permission not granted');
+        console.warn('Notification permission not granted');
         return { success: false, error: 'Permission denied' };
       }
 

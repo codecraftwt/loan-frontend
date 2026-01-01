@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import {
   View,
@@ -21,10 +21,6 @@ import {
   clearErrors,
 } from '../../../Redux/Slices/adminPlanSlice';
 
-/**
- * PlansList Component
- * Displays all subscription plans with ability to create, view, and edit plans
- */
 export default function PlansList() {
   const navigation = useNavigation();
   const dispatch = useDispatch();
@@ -99,7 +95,7 @@ export default function PlansList() {
               style={styles.actionButton}
               onPress={() => handleEditPlan(item)}
               activeOpacity={0.7}>
-              <Icon name="edit" size={18} color="#2196F3" />
+              <Icon name="edit" size={18} color="orange" />
             </TouchableOpacity>
           </View>
         </View>
@@ -172,7 +168,7 @@ export default function PlansList() {
             onPress={handleCreatePlan}
             activeOpacity={0.8}>
             <LinearGradient
-              colors={['#4CAF50', '#66BB6A']}
+              colors={['#ACE1AF', '#ACE1AF']}
               style={styles.createGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}>

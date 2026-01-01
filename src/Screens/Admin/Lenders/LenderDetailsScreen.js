@@ -11,7 +11,6 @@ import Icon from 'react-native-vector-icons/Feather';
 import { m } from 'walstar-rn-responsive';
 import { useRoute } from '@react-navigation/native';
 import Header from '../../../Components/Header';
-import LinearGradient from 'react-native-linear-gradient';
 
 /**
  * Format currency value to Indian Rupee format
@@ -245,32 +244,28 @@ export default function LenderDetailsScreen() {
 
         {/* Lender Profile Card */}
         <View style={styles.profileCard}>
-          <LinearGradient
-            colors={['#ff6700', '#ff8533']}
-            style={styles.profileGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}>
-            <View style={styles.profileContent}>
-              {lender.profileImage ? (
-                <Image
-                  source={{ uri: lender.profileImage }}
-                  style={styles.profileImage}
-                  resizeMode="cover"
-                />
-              ) : (
-                <View style={styles.profileAvatar}>
-                  <Text style={styles.profileAvatarText}>
-                    {getInitials(lender.userName)}
-                  </Text>
-                </View>
-              )}
+          <View style={styles.profileHeader}>
+            {lender.profileImage ? (
+              <Image
+                source={{ uri: lender.profileImage }}
+                style={styles.profileImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={styles.profileAvatar}>
+                <Text style={styles.profileAvatarText}>
+                  {getInitials(lender.userName)}
+                </Text>
+              </View>
+            )}
+            <View style={styles.profileInfo}>
               <Text style={styles.profileName}>{lender.userName || 'N/A'}</Text>
               <View style={styles.profileBadge}>
                 <Icon name="user" size={14} color="#FFFFFF" />
                 <Text style={styles.profileBadgeText}>Lender</Text>
               </View>
             </View>
-          </LinearGradient>
+          </View>
         </View>
 
         {/* Lender Information Section */}
@@ -402,23 +397,20 @@ const styles = StyleSheet.create({
     borderRadius: m(20),
     overflow: 'hidden',
     marginBottom: m(20),
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-  },
-  profileGradient: {
+    backgroundColor: 'black',
     padding: m(24),
+    alignItems: 'flex-start',
   },
-  profileContent: {
+  profileHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: m(28),
   },
   profileImage: {
-    width: m(80),
-    height: m(80),
+    width: m(76),
+    height: m(76),
     borderRadius: m(40),
-    marginBottom: m(12),
+    marginBottom: 0,
   },
   profileAvatar: {
     width: m(80),
@@ -427,18 +419,21 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: m(12),
   },
   profileAvatarText: {
     fontSize: m(32),
     fontWeight: '700',
     color: '#FFFFFF',
   },
+  profileInfo: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
   profileName: {
     fontSize: m(24),
     fontWeight: '700',
     color: '#FFFFFF',
-    marginBottom: m(8),
+    marginBottom: m(4),
   },
   profileBadge: {
     flexDirection: 'row',

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -24,6 +24,8 @@ export default function BorrowerDashboard() {
   const { activities: recentActivities, loading: activitiesLoading } = useSelector(
     state => state.borrowerActivities,
   );
+
+  const [showAllActivities, setShowAllActivities] = useState(false);
 
   useEffect(() => {
     if (user?._id) {
@@ -197,6 +199,15 @@ export default function BorrowerDashboard() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Recent Activity</Text>
+            {recentActivities.length > 3 && (
+              <TouchableOpacity
+                onPress={() => setShowAllActivities(!showAllActivities)}
+                activeOpacity={0.7}>
+                <Text style={styles.viewAllText}>
+                  {showAllActivities ? 'Show Less' : 'See All'}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
           {activitiesLoading ? (
             <View style={styles.loadingContainer}>
@@ -205,30 +216,38 @@ export default function BorrowerDashboard() {
             </View>
           ) : recentActivities.length > 0 ? (
             <View style={styles.activityCard}>
-              {recentActivities.slice(0, 5).map((activity, index) => {
-                const getActivityIcon = (type) => {
-                  switch (type) {
-                    case 'payment_made':
-                      return { name: 'dollar-sign', color: '#4CAF50' };
-                    case 'loan_paid':
-                      return { name: 'check-circle', color: '#4CAF50' };
-                    case 'loan_accepted':
-                      return { name: 'check-circle', color: '#2196F3' };
-                    case 'loan_rejected':
-                      return { name: 'x-circle', color: '#F44336' };
-                    case 'loan_received':
-                      return { name: 'arrow-down', color: '#FF9800' };
-                    case 'loan_overdue':
-                      return { name: 'alert-circle', color: '#F44336' };
-                    default:
-                      return { name: 'activity', color: '#666' };
-                  }
-                };
-                const iconInfo = getActivityIcon(activity.type);
-                const isLast = index === Math.min(recentActivities.length - 1, 4);
+              {(() => {
+                const displayedActivities = showAllActivities ? recentActivities : recentActivities.slice(0, 3);
+                return displayedActivities.map((activity, index) => {
+                  const getActivityIcon = (type) => {
+                    switch (type) {
+                      case 'payment_made':
+                        return { name: 'dollar-sign', color: '#4CAF50' };
+                      case 'loan_paid':
+                        return { name: 'check-circle', color: '#4CAF50' };
+                      case 'loan_accepted':
+                        return { name: 'check-circle', color: '#2196F3' };
+                      case 'loan_rejected':
+                        return { name: 'x-circle', color: '#F44336' };
+                      case 'loan_received':
+                        return { name: 'arrow-down', color: '#FF9800' };
+                      case 'loan_overdue':
+                        return { name: 'alert-circle', color: '#F44336' };
+                      default:
+                        return { name: 'activity', color: '#666' };
+                    }
+                  };
+                  const iconInfo = getActivityIcon(activity.type);
+                  const isLast = index === displayedActivities.length - 1;
+                // Create unique key by combining multiple identifiers
+                const uniqueKey = activity._id 
+                  ? `${activity._id}-${index}` 
+                  : activity.loanId 
+                    ? `${activity.loanId}-${index}` 
+                    : `activity-${index}-${activity.type || 'unknown'}`;
                 return (
                   <View 
-                    key={activity._id || activity.loanId || index} 
+                    key={uniqueKey} 
                     style={[
                       styles.activityItem,
                       isLast && styles.activityItemLast
@@ -250,7 +269,8 @@ export default function BorrowerDashboard() {
                     )}
                   </View>
                 );
-              })}
+                });
+              })()}
             </View>
           ) : (
             <View style={styles.emptyContainer}>
