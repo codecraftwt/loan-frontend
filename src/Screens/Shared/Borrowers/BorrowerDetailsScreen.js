@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
   detailItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    paddingVertical: m(7)
+    paddingVertical: m(3)
   },
   detailIconContainer: {
     width: m(32),

@@ -40,7 +40,7 @@ export default function MakePayment() {
   const [paymentProof, setPaymentProof] = useState(null);
 
   const paymentModes = [
-    { id: 'cash', label: 'Cash', icon: 'cash', description: 'Pay directly to lender (requires confirmation)' },
+    { id: 'cash', label: 'Cash', icon: 'dollar-sign', description: 'Pay directly to lender (requires confirmation)' },
     { id: 'online', label: 'Online Payment', icon: 'credit-card', description: 'Pay via Razorpay (requires confirmation)' },
   ];
 
@@ -733,7 +733,7 @@ export default function MakePayment() {
         </TouchableOpacity>
 
         {/* Important Notes */}
-        <View style={styles.notesCard}>
+        {/* <View style={styles.notesCard}>
           <Icon name="info" size={20} color="#F59E0B" />
           <View style={styles.notesContent}>
             <Text style={styles.notesTitle}>Important Notes</Text>
@@ -754,7 +754,7 @@ export default function MakePayment() {
               )}
             </Text>
           </View>
-        </View>
+        </View> */}
       </ScrollView>
     </View>
   );

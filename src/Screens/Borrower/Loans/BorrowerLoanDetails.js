@@ -211,11 +211,11 @@ export default function BorrowerLoanDetails() {
             Confirmed: {moment(item.confirmedAt).format('DD MMM YYYY, hh:mm A')}
           </Text>
         )}
-        {item.notes && (
+        {/* {item.notes && (
           <Text style={styles.paymentNotes}>
             Note: {item.notes}
           </Text>
-        )}
+        )} */}
       </View>
     </View>
   );
@@ -558,7 +558,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: m(16),
+    marginBottom: m(10),
   },
   cardTitle: {
     fontSize: m(18),
@@ -603,14 +603,14 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   detailsGrid: {
-    gap: m(12),
+    gap: m(9),
   },
   detailItem: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F9FAFB',
     borderRadius: m(12),
-    padding: m(12),
+    padding: m(10.2),
   },
   detailIconContainer: {
     width: m(40),
@@ -635,7 +635,7 @@ const styles = StyleSheet.create({
     color: '#374151',
   },
   paymentHistoryItem: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#f2f7fcff',
     borderRadius: m(12),
     padding: m(12),
     marginBottom: m(8),

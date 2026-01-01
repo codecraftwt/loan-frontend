@@ -208,60 +208,6 @@ export default function Inward({ navigation }) {
     );
   };
 
-  const getLoanStatus = (loan) => {
-    const loanAmount = typeof loan.amount === 'number' ? loan.amount : parseFloat(loan.amount) || 0;
-    const totalPaid = typeof loan.totalPaid === 'number' ? loan.totalPaid : parseFloat(loan.totalPaid) || 0;
-    const remainingAmount = typeof loan.remainingAmount === 'number' ? loan.remainingAmount : parseFloat(loan.remainingAmount) || loanAmount;
-    
-    if (remainingAmount <= 0 && totalPaid > 0) {
-      return 'closed';
-    }
-    
-    // Check if overdue
-    if (loan.loanEndDate && 
-        moment(loan.loanEndDate).isBefore(moment(), 'day') && 
-        remainingAmount > 0) {
-      return 'overdue';
-    }
-    
-    return loan?.paymentStatus?.toLowerCase() || loan?.status?.toLowerCase();
-  };
-
-  const getStatusColor = (loan) => {
-    const status = getLoanStatus(loan);
-    switch (status) {
-      case 'accepted': return '#10B981';
-      case 'rejected': return '#EF4444';
-      case 'pending': return '#F59E0B';
-      case 'paid': return '#10B981';
-      case 'closed': return '#10B981';
-      case 'part paid': return '#F59E0B';
-      case 'overdue': return '#EF4444';
-      default: return '#6B7280';
-    }
-  };
-
-  const getStatusIcon = (loan) => {
-    const status = getLoanStatus(loan);
-    switch (status) {
-      case 'accepted': return 'check-circle';
-      case 'rejected': return 'cancel';
-      case 'paid': return 'check-circle';
-      case 'closed': return 'check-circle';
-      case 'part paid': return 'pending';
-      case 'overdue': return 'error';
-      default: return 'pending';
-    }
-  };
-
-  const getStatusText = (loan) => {
-    const status = getLoanStatus(loan);
-    if (status === 'closed') {
-      return 'Closed';
-    }
-    return (loan?.paymentStatus || loan?.status)?.charAt(0).toUpperCase() + (loan?.paymentStatus || loan?.status)?.slice(1);
-  };
-
   return (
     <View style={styles.container}>
       <Header title="Given Loans" />

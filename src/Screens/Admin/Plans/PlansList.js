@@ -168,7 +168,7 @@ export default function PlansList() {
             onPress={handleCreatePlan}
             activeOpacity={0.8}>
             <LinearGradient
-              colors={['#ACE1AF', '#ACE1AF']}
+              colors={['#a0e2a3ff', '#97e09aff']}
               style={styles.createGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}>

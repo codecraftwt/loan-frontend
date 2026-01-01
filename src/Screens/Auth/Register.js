@@ -498,7 +498,7 @@ export default function Register({ navigation }) {
 
   const renderStep2 = () => (
     <>
-      <Text style={styles.stepTitle}>Identity & Numbers</Text>
+      <Text style={styles.stepTitle}>Identity Details</Text>
       <Text style={styles.stepSubtitle}>Enter your identification details</Text>
 
       <View style={styles.inputGroup}>
@@ -624,7 +624,7 @@ export default function Register({ navigation }) {
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>Account Type *</Text>
         <View style={styles.roleContainer}>
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={[
               styles.roleOption,
               roleId === 0 && styles.roleOptionSelected,
@@ -642,7 +642,7 @@ export default function Register({ navigation }) {
               ]}>
               Admin
             </Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
           <TouchableOpacity
             style={[
               styles.roleOption,

@@ -644,7 +644,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: m(16),
+    marginBottom: m(10),
   },
   userInfo: {
     flexDirection: 'row',
@@ -682,7 +682,7 @@ const styles = StyleSheet.create({
     fontSize: m(18),
     fontWeight: '700',
     color: '#111827',
-    marginBottom: m(6),
+    marginBottom: m(3),
   },
   userMeta: {
     flexDirection: 'row',
@@ -701,7 +701,7 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: '#F3F4F6',
-    marginBottom: m(16),
+    marginBottom: m(8),
   },
   detailRow: {
     marginBottom: m(14),
@@ -740,7 +740,7 @@ const styles = StyleSheet.create({
   borrowerCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: m(20),
-    padding: m(20),
+    padding: m(18),
     marginBottom: m(16),
     borderWidth: 1,
     borderColor: '#F0F0F0',
@@ -751,14 +751,14 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
   },
   borrowerDetails: {
-    marginTop: m(4),
+    marginTop: m(2),
   },
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: m(6),
-    paddingTop: m(16),
+    paddingTop: m(13),
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
   },
