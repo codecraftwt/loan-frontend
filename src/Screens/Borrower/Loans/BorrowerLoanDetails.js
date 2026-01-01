@@ -25,10 +25,11 @@ export default function BorrowerLoanDetails() {
   const [loanDetails, setLoanDetails] = useState(loan);
   const [paymentHistory, setPaymentHistory] = useState([]);
   const [installmentDetails, setInstallmentDetails] = useState(null);
-  const [loanStats, setLoanStats] = useState({
-    totalPaid: loan.totalPaid || 0,
-    remainingAmount: loan.remainingAmount || loan.amount || 0,
-  });
+  const [hasPendingPayment, setHasPendingPayment] = useState(false);
+  // const [loanStats, setLoanStats] = useState({
+  //   totalPaid: loan.totalPaid || 0,
+  //   remainingAmount: loan.remainingAmount || loan.amount || 0,
+  // });
 
   useEffect(() => {
     fetchPaymentHistory();
@@ -49,7 +50,14 @@ export default function BorrowerLoanDetails() {
       const paymentData = response.data || {};
       
       // New API structure: payments array (renamed from paymentHistory.allPayments)
-      setPaymentHistory(paymentData.payments || []);
+      const payments = paymentData.payments || [];
+      setPaymentHistory(payments);
+      
+      // Check for pending payments
+      const pending = payments.find(
+        payment => payment.paymentStatus?.toLowerCase() === 'pending'
+      );
+      setHasPendingPayment(!!pending);
       
       // New API structure: installmentDetails (null for one-time loans)
       setInstallmentDetails(paymentData.installmentDetails || null);
@@ -121,8 +129,30 @@ export default function BorrowerLoanDetails() {
     return totalAmount > 0 ? (totalPaid / totalAmount) * 100 : 0;
   };
 
-  const isLoanActive = () => {
-    return loanDetails.paymentStatus !== 'paid' && loanDetails.remainingAmount > 0;
+  // const isLoanActive = () => {
+  //   // Check if loan is paid
+  //   if (loanDetails.paymentStatus === 'paid') return false;
+    
+  //   // Check if remaining amount is greater than 0
+  //   if (loanDetails.remainingAmount <= 0) return false;
+    
+  //   // Check if loan end date has passed
+  //   if (loanDetails.loanEndDate) {
+  //     const endDate = moment(loanDetails.loanEndDate);
+  //     const today = moment();
+  //     if (endDate.isBefore(today, 'day')) {
+  //       return false; // Loan has expired
+  //     }
+  //   }
+    
+  //   return true;
+  // };
+
+  const isLoanExpired = () => {
+    if (!loanDetails.loanEndDate) return false;
+    const endDate = moment(loanDetails.loanEndDate);
+    const today = moment();
+    return endDate.isBefore(today, 'day');
   };
 
   const handleMakePayment = () => {
@@ -363,13 +393,40 @@ export default function BorrowerLoanDetails() {
 
         {/* Action Buttons */}
         <View style={styles.actionsContainer}>
-          {isLoanActive() && (
+          {loanDetails.paymentStatus !== 'paid' && loanDetails.remainingAmount > 0 && (
             <TouchableOpacity
-              style={[styles.actionButton, styles.primaryButton]}
-              onPress={handleMakePayment}>
+              style={[
+                styles.actionButton, 
+                styles.primaryButton,
+                (hasPendingPayment || isLoanExpired()) && styles.disabledButton
+              ]}
+              onPress={handleMakePayment}
+              disabled={hasPendingPayment || isLoanExpired()}>
               <Ionicons name="cash-outline" size={20} color="#FFFFFF" />
-              <Text style={styles.primaryButtonText}>Make Payment</Text>
+              <Text style={styles.primaryButtonText}>
+                {isLoanExpired() 
+                  ? 'Loan Expired' 
+                  : hasPendingPayment 
+                    ? 'Payment Pending' 
+                    : 'Make Payment'}
+              </Text>
             </TouchableOpacity>
+          )}
+          {hasPendingPayment && (
+            <View style={styles.pendingPaymentBanner}>
+              <Icon name="clock" size={16} color="#92400E" />
+              <Text style={styles.pendingPaymentBannerText}>
+                You have a pending payment. Please wait for lender confirmation.
+              </Text>
+            </View>
+          )}
+          {isLoanExpired() && !hasPendingPayment && (
+            <View style={styles.expiredLoanBanner}>
+              <Icon name="alert-circle" size={16} color="#DC2626" />
+              <Text style={styles.expiredLoanBannerText}>
+                The loan end date has passed. Please contact your lender to extend the loan before making a payment.
+              </Text>
+            </View>
           )}
 
           <TouchableOpacity
@@ -699,6 +756,42 @@ const styles = StyleSheet.create({
     fontSize: m(16),
     fontWeight: '600',
     color: '#111827',
+  },
+  disabledButton: {
+    backgroundColor: '#9CA3AF',
+    opacity: 0.6,
+  },
+  pendingPaymentBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF7ED',
+    borderRadius: m(12),
+    padding: m(12),
+    gap: m(8),
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  pendingPaymentBannerText: {
+    fontSize: m(14),
+    color: '#92400E',
+    fontWeight: '500',
+    flex: 1,
+  },
+  expiredLoanBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEE2E2',
+    borderRadius: m(12),
+    padding: m(12),
+    gap: m(8),
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+  },
+  expiredLoanBannerText: {
+    fontSize: m(14),
+    color: '#DC2626',
+    fontWeight: '500',
+    flex: 1,
   },
 });
 

@@ -27,7 +27,7 @@ import DatePicker from 'react-native-date-picker';
 export default function Inward({ navigation }) {
   const dispatch = useDispatch();
   const route = useRoute();
-  const user = useSelector(state => state.auth.user);
+  // const user = useSelector(state => state.auth.user);
   const { lenderLoans, loading } = useSelector(
     state => state.loans,
   );
@@ -50,6 +50,9 @@ export default function Inward({ navigation }) {
 
   // Add debounced search state
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  
+  // Fraud status state for borrowers
+  const [borrowerFraudStatus, setBorrowerFraudStatus] = useState({});
 
   const formatDate = date => moment(date).format('DD MMM, YYYY');
 

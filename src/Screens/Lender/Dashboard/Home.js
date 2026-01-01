@@ -143,8 +143,8 @@ export default function Home() {
                          (lenderStatistics?.counts?.overdueLoans || 0);
   
   // Calculate remaining amount (pending + overdue)
-  const remainingAmount = (lenderStatistics?.totalPendingAmount || 0) + 
-                          (lenderStatistics?.totalOverdueAmount || 0);
+  // const remainingAmount = (lenderStatistics?.totalPendingAmount || 0) + 
+  //                         (lenderStatistics?.totalOverdueAmount || 0);
 
   // Helper function to map activity type to UI properties
   const getActivityProperties = (activity) => {
@@ -1258,7 +1258,7 @@ const styles = StyleSheet.create({
   // Pending Payments Notification Card
   pendingPaymentCard: {
     marginHorizontal: m(16),
-    marginBottom: m(16),
+    marginBottom: m(13),
     borderRadius: m(16),
     overflow: 'hidden',
     elevation: 4,
@@ -1266,6 +1266,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
+    marginTop: m(16),
   },
   pendingPaymentGradient: {
     borderRadius: m(16),

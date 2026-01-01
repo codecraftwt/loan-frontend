@@ -63,9 +63,9 @@ const SubscriptionScreen = ({ navigation }) => {
 
   const handleActivePlanPress = () => {
     if (activePlan) {
-      navigation.navigate('LenderPlanDetailsScreen', { 
-        plan: activePlan, 
-        isActivePlan: true 
+      navigation.navigate('LenderPlanDetailsScreen', {
+        plan: activePlan,
+        isActivePlan: true
       });
     }
   };
@@ -92,32 +92,32 @@ const SubscriptionScreen = ({ navigation }) => {
 
   const proceedWithPaymentFromCard = async (plan) => {
     setProcessing(true);
-    
+
     try {
       const result = await purchaseSubscription(plan._id, user);
-      
+
       if (result.success) {
         await getActivePlan();
-        
+
         Alert.alert(
           'Success!',
           result.message || 'Plan purchased and activated successfully!',
           [
-            { 
-              text: 'Great!', 
-              onPress: () => {}
+            {
+              text: 'Great!',
+              onPress: () => { }
             },
           ]
         );
       } else if (result.type !== 'CANCELLED') {
         let errorMessage = result.message || 'Payment failed. Please try again.';
-        
+
         if (result.message?.includes('signature') || result.message?.includes('verification')) {
-          errorMessage = result.message + 
+          errorMessage = result.message +
             (result.paymentId ? `\n\nPayment ID: ${result.paymentId}` : '') +
             '\n\nPlease contact support if this issue persists.';
         }
-        
+
         Alert.alert('Payment Failed', errorMessage, [{ text: 'OK' }]);
       }
     } catch (error) {
@@ -139,7 +139,7 @@ const SubscriptionScreen = ({ navigation }) => {
         key={plan._id}
         style={[
           styles.planCard,
-         styles.popularPlanCard,
+          styles.popularPlanCard,
         ]}
         onPress={() => handlePlanPress(plan)}
         activeOpacity={0.9}>
@@ -161,9 +161,9 @@ const SubscriptionScreen = ({ navigation }) => {
               <Text style={styles.planDuration}>/{plan.duration}</Text>
             </View>
           </View>
-          
+
           <View style={styles.divider} />
-          
+
           <View style={styles.featuresContainer}>
             {plan.features ? (
               renderPlanFeatures(plan.features)
@@ -188,12 +188,12 @@ const SubscriptionScreen = ({ navigation }) => {
               </>
             )}
           </View>
-          
+
           <View style={styles.loanLimitContainer}>
             <Icon name="zap" size={16} color="#00A550" />
             <Text style={styles.loanLimit}>Unlimited loans creation</Text>
           </View>
-          
+
           <TouchableOpacity
             style={[
               styles.buyButtonCard,
@@ -214,10 +214,10 @@ const SubscriptionScreen = ({ navigation }) => {
                 <ActivityIndicator size="small" color={"#FF9800"} />
               ) : (
                 <>
-                  <Icon 
-                    name="shopping-cart" 
-                    size={18} 
-                    color={"#FF9800"} 
+                  <Icon
+                    name="shopping-cart"
+                    size={18}
+                    color={"white"}
                   />
                   <Text style={[
                     styles.buyButtonCardText,
@@ -259,7 +259,7 @@ const SubscriptionScreen = ({ navigation }) => {
           <Text style={styles.errorTitle}>Oops!</Text>
           <Text style={styles.errorText}>Failed to load subscription plans</Text>
           <Text style={styles.errorSubText}>{plansError}</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.retryButton}
             onPress={fetchPlans}>
             <LinearGradient
@@ -278,15 +278,15 @@ const SubscriptionScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safeContainer}>
-      <ScrollView 
+      {/* Header with custom styling */}
+      <View style={styles.headerWrapper}>
+        <Header title="Upgrade Your Plan" showBackButton />
+      </View>
+      <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}>
-        
-        {/* Header with custom styling */}
-        <View style={styles.headerWrapper}>
-          <Header title="Upgrade Your Plan" showBackButton />
-        </View>
-        
+
+
         <View style={styles.container}>
           {/* Hero Section */}
           <View style={styles.heroSection}>
@@ -296,7 +296,7 @@ const SubscriptionScreen = ({ navigation }) => {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}>
               <View style={styles.heroContent}>
-                <Icon name="star" size={32} color="#FF9800" />
+                <Icon name="star" size={30} color="#FF9800" />
                 <Text style={styles.heroTitle}>Unlock Premium Features</Text>
                 <Text style={styles.heroSubtitle}>
                   Choose a plan that grows with your lending business
@@ -317,10 +317,10 @@ const SubscriptionScreen = ({ navigation }) => {
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}>
                 <View style={styles.activePlanContent}>
-                  <Icon 
-                    name={remainingDays > 0 ? "shield" : "alert-circle"} 
-                    size={24} 
-                    color="#fff" 
+                  <Icon
+                    name={remainingDays > 0 ? "shield" : "alert-circle"}
+                    size={24}
+                    color="#fff"
                   />
                   <View style={styles.activePlanTextContainer}>
                     <Text style={styles.activePlanTitle}>
@@ -330,7 +330,7 @@ const SubscriptionScreen = ({ navigation }) => {
                       {activePlan?.planName || activePlan?.name || 'Current Plan'}
                     </Text>
                     <Text style={styles.activePlanDetails}>
-                      {remainingDays > 0 
+                      {remainingDays > 0
                         ? `${remainingDays} ${remainingDays === 1 ? 'day' : 'days'} remaining • Expires ${new Date(expiryDate).toLocaleDateString()}`
                         : 'Renew now to continue creating loans'
                       }
@@ -350,7 +350,7 @@ const SubscriptionScreen = ({ navigation }) => {
                 Select the perfect plan for your needs
               </Text>
             </View>
-            
+
             <View style={styles.plansContainer}>
               {plans.length > 0 ? (
                 plans.map(renderPlanCard)
@@ -506,7 +506,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   heroTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#333',
     marginTop: 12,
@@ -563,13 +563,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 6,
   },
   sectionSubtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#666',
   },
   plansContainer: {
@@ -603,7 +603,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 20,
+    marginBottom: 19,
   },
   planName: {
     fontSize: 20,
@@ -621,7 +621,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   planPrice: {
-    fontSize: 32,
+    fontSize: 29,
     fontWeight: 'bold',
     color: '#FF9800',
   },
@@ -684,7 +684,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
+    paddingVertical: 14,
     gap: 10,
   },
   popularBuyButtonGradient: {

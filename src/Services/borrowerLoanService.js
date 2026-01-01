@@ -207,6 +207,56 @@ export const borrowerLoanAPI = {
       throw error;
     }
   },
+
+  // Create Razorpay order for loan repayment
+  createRazorpayOrder: async (loanId, paymentData) => {
+    try {
+      const response = await axiosInstance.post(
+        `borrower/loans/payment/${loanId}/razorpay/order`,
+        paymentData,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error creating Razorpay order:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+      });
+      throw error;
+    }
+  },
+
+  // Verify Razorpay payment and process repayment
+  verifyRazorpayPayment: async (loanId, paymentData) => {
+    try {
+      const response = await axiosInstance.post(
+        `borrower/loans/payment/${loanId}/razorpay/verify`,
+        paymentData,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error verifying Razorpay payment:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+      });
+      throw error;
+    }
+  },
 };
 
 export default borrowerLoanAPI;

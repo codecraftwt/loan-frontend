@@ -14,11 +14,13 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useDispatch, useSelector } from 'react-redux';
 import { getBorrowerLoansById } from '../../../Redux/Slices/borrowerLoanSlice';
+import { getPendingPayments } from '../../../Redux/Slices/lenderPaymentSlice';
 import Header from '../../../Components/Header';
 import moment from 'moment';
 import { m } from 'walstar-rn-responsive';
+import { useFocusEffect } from '@react-navigation/native';
 
-const LoanHistoryCard = ({ loan, onPress }) => {
+const LoanHistoryCard = ({ loan, onPress, pendingPaymentInfo }) => {
   // Check if loan is overdue
   const isOverdue = loan.loanEndDate && 
     moment(loan.loanEndDate).isBefore(moment(), 'day') && 
@@ -61,10 +63,20 @@ const LoanHistoryCard = ({ loan, onPress }) => {
     <TouchableOpacity 
       style={[
         styles.loanCard,
-        isOverdue && styles.overdueCard
+        isOverdue && styles.overdueCard,
+        pendingPaymentInfo && styles.pendingPaymentCard
       ]} 
       onPress={onPress}
       activeOpacity={0.8}>
+      {/* Pending Payment Banner */}
+      {pendingPaymentInfo && (
+        <View style={styles.pendingPaymentBanner}>
+          <Icon name="notifications" size={16} color="#FFFFFF" />
+          <Text style={styles.pendingPaymentBannerText}>
+            {pendingPaymentInfo.count} Pending Payment{pendingPaymentInfo.count !== 1 ? 's' : ''} - ₹{pendingPaymentInfo.amount?.toLocaleString('en-IN')}
+          </Text>
+        </View>
+      )}
       {/* Overdue Banner */}
       {isOverdue && (
         <View style={styles.overdueBanner}>
@@ -318,6 +330,7 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
     summary: historySummary,
     pagination: historyPagination,
   } = useSelector(state => state.borrowerLoans);
+  const { pendingPayments } = useSelector(state => state.lenderPayments);
 
   const [refreshing, setRefreshing] = useState(false);
   const [filters, setFilters] = useState({
@@ -347,6 +360,35 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
   useEffect(() => {
     loadHistory();
   }, [loadHistory]);
+
+  // Fetch pending payments when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      dispatch(getPendingPayments({ page: 1, limit: 100 }));
+    }, [dispatch])
+  );
+
+  // Helper function to get pending payments for a specific loan
+  const getLoanPendingPayments = (loanId) => {
+    if (!pendingPayments || pendingPayments.length === 0) return null;
+    
+    const loanPending = pendingPayments.find(
+      loan => loan.loanId === loanId || loan._id === loanId
+    );
+    
+    if (!loanPending || !loanPending.pendingPayments || loanPending.pendingPayments.length === 0) {
+      return null;
+    }
+    
+    const totalAmount = loanPending.pendingPayments.reduce((sum, payment) => {
+      return sum + (typeof payment.amount === 'number' ? payment.amount : parseFloat(payment.amount) || 0);
+    }, 0);
+    
+    return {
+      count: loanPending.pendingPayments.length,
+      amount: totalAmount,
+    };
+  };
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -485,13 +527,17 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
           </View>
         ) : (
           <>
-            {borrowerHistory.map((loan, index) => (
-              <LoanHistoryCard
-                key={loan._id || index}
-                loan={loan}
-                onPress={() => handleLoanCardPress(loan)}
-              />
-            ))}
+            {borrowerHistory.map((loan, index) => {
+              const pendingPaymentInfo = getLoanPendingPayments(loan._id);
+              return (
+                <LoanHistoryCard
+                  key={loan._id || index}
+                  loan={loan}
+                  onPress={() => handleLoanCardPress(loan)}
+                  pendingPaymentInfo={pendingPaymentInfo}
+                />
+              );
+            })}
             {historyPagination.currentPage < historyPagination.totalPages && (
               <TouchableOpacity
                 style={styles.loadMoreButton}
@@ -653,6 +699,11 @@ const styles = StyleSheet.create({
     borderColor: '#FCA5A5',
     backgroundColor: '#FFF5F5',
   },
+  pendingPaymentCard: {
+    borderWidth: 2,
+    borderColor: '#FDE68A',
+    backgroundColor: '#FFFBF5',
+  },
   overdueBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -670,6 +721,24 @@ const styles = StyleSheet.create({
     fontSize: m(12),
     fontWeight: '700',
     letterSpacing: 1,
+  },
+  pendingPaymentBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F59E0B',
+    paddingVertical: m(6),
+    paddingHorizontal: m(12),
+    marginHorizontal: m(-20),
+    marginTop: m(-20),
+    marginBottom: m(16),
+    gap: m(6),
+  },
+  pendingPaymentBannerText: {
+    color: '#FFFFFF',
+    fontSize: m(12),
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   loanCardHeader: {
     flexDirection: 'row',

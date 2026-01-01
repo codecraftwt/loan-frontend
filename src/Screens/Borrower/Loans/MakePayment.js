@@ -17,16 +17,21 @@ import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
 import Toast from 'react-native-toast-message';
 import borrowerLoanAPI from '../../../Services/borrowerLoanService';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { getBorrowerLoans } from '../../../Redux/Slices/borrowerLoanSlice';
+import { openRazorpayCheckoutForLoan } from '../../../Services/razorpayService';
+import moment from 'moment';
 
 export default function MakePayment() {
   const navigation = useNavigation();
   const route = useRoute();
   const { loan } = route.params;
   const dispatch = useDispatch();
+  const user = useSelector(state => state.auth.user);
 
   const [loading, setLoading] = useState(false);
+  const [checkingPending, setCheckingPending] = useState(true);
+  const [pendingPayment, setPendingPayment] = useState(null);
   const [paymentMode, setPaymentMode] = useState('');
   const [paymentType, setPaymentType] = useState('');
   const [amount, setAmount] = useState('');
@@ -35,8 +40,8 @@ export default function MakePayment() {
   const [paymentProof, setPaymentProof] = useState(null);
 
   const paymentModes = [
-    { id: 'cash', label: 'Cash', icon: 'cash', description: 'Pay directly to lender' },
-    { id: 'online', label: 'Online', icon: 'credit-card', description: 'Bank transfer, UPI, etc.' },
+    { id: 'cash', label: 'Cash', icon: 'cash', description: 'Pay directly to lender (requires confirmation)' },
+    { id: 'online', label: 'Online Payment', icon: 'credit-card', description: 'Pay via Razorpay (requires confirmation)' },
   ];
 
   const paymentTypes = [
@@ -45,13 +50,55 @@ export default function MakePayment() {
   ];
 
   useEffect(() => {
+    // Check for pending payments when component mounts
+    checkForPendingPayment();
+  }, []);
+
+  useEffect(() => {
     // If one-time payment is selected, set amount to remaining amount
     if (paymentType === 'one-time') {
       setAmount(loan.remainingAmount?.toString() || '');
     }
   }, [paymentType]);
 
+  const checkForPendingPayment = async () => {
+    try {
+      setCheckingPending(true);
+      const response = await borrowerLoanAPI.getPaymentHistory(loan._id, user?._id);
+      const data = response.data || {};
+      const payments = data.payments || [];
+      
+      // Find pending payment (status === 'pending')
+      const pending = payments.find(
+        payment => payment.paymentStatus?.toLowerCase() === 'pending'
+      );
+      
+      if (pending) {
+        setPendingPayment(pending);
+      } else {
+        setPendingPayment(null);
+      }
+    } catch (error) {
+      console.error('Error checking for pending payment:', error);
+      // Don't block the form if there's an error checking
+      setPendingPayment(null);
+    } finally {
+      setCheckingPending(false);
+    }
+  };
+
   const validateForm = () => {
+    // Check for pending payment first
+    if (pendingPayment) {
+      Toast.show({
+        type: 'error',
+        position: 'top',
+        text1: 'Pending Payment',
+        text2: 'You have a pending payment. Please wait for lender confirmation.',
+      });
+      return false;
+    }
+
     if (!paymentMode) {
       Toast.show({
         type: 'error',
@@ -95,15 +142,8 @@ export default function MakePayment() {
       return false;
     }
 
-    if (paymentMode === 'online' && !transactionId.trim()) {
-      Toast.show({
-        type: 'error',
-        position: 'top',
-        text1: 'Error',
-        text2: 'Transaction ID is required for online payments',
-      });
-      return false;
-    }
+    // Transaction ID is not required for Razorpay online payments
+    // It's only needed for manual online payments (if we add that option later)
 
     return true;
   };
@@ -111,6 +151,13 @@ export default function MakePayment() {
   const handleSubmitPayment = async () => {
     if (!validateForm()) return;
 
+    // If online payment mode, handle Razorpay flow
+    if (paymentMode === 'online') {
+      await handleOnlinePayment();
+      return;
+    }
+
+    // For cash payments, show confirmation dialog
     Alert.alert(
       'Confirm Payment',
       `Are you sure you want to submit this payment?\n\nAmount: ₹${amount}\nMode: ${paymentMode}\nType: ${paymentType}`,
@@ -119,6 +166,176 @@ export default function MakePayment() {
         { text: 'Confirm', onPress: submitPayment },
       ]
     );
+  };
+
+  const handleOnlinePayment = async () => {
+    setLoading(true);
+    try {
+      const paymentAmount = parseFloat(amount);
+
+      // Step 1: Create Razorpay order
+      const orderResponse = await borrowerLoanAPI.createRazorpayOrder(loan._id, {
+        paymentType: paymentType,
+        amount: paymentAmount,
+      });
+
+      if (!orderResponse.success) {
+        throw new Error(orderResponse.message || 'Failed to create payment order');
+      }
+
+      // Step 2: Open Razorpay checkout
+      let paymentResult;
+      try {
+        paymentResult = await openRazorpayCheckoutForLoan(orderResponse, user, loan);
+      } catch (razorpayError) {
+        setLoading(false);
+        
+        // Handle user cancellation
+        if (razorpayError.type === 'USER_CANCELLED' || razorpayError.code === 2) {
+          Toast.show({
+            type: 'info',
+            position: 'top',
+            text1: 'Payment Cancelled',
+            text2: 'Payment was cancelled by you',
+          });
+          return;
+        }
+        
+        // Handle other Razorpay errors
+        Toast.show({
+          type: 'error',
+          position: 'top',
+          text1: 'Payment Failed',
+          text2: razorpayError.message || 'Payment failed. Please try again.',
+        });
+        return;
+      }
+
+      if (!paymentResult.success) {
+        setLoading(false);
+        Toast.show({
+          type: 'error',
+          position: 'top',
+          text1: 'Payment Failed',
+          text2: 'Payment failed. Please try again.',
+        });
+        return;
+      }
+
+      // Step 3: Verify payment
+      if (!paymentResult.data.razorpay_payment_id || !paymentResult.data.razorpay_order_id || !paymentResult.data.razorpay_signature) {
+        throw new Error('Payment response incomplete');
+      }
+
+      const verifyResponse = await borrowerLoanAPI.verifyRazorpayPayment(loan._id, {
+        razorpay_payment_id: paymentResult.data.razorpay_payment_id,
+        razorpay_order_id: paymentResult.data.razorpay_order_id,
+        razorpay_signature: paymentResult.data.razorpay_signature,
+        paymentType: paymentType,
+        notes: notes.trim() || undefined,
+      });
+
+      if (!verifyResponse.success) {
+        const errorMsg = verifyResponse.message || 'Payment verification failed';
+        // Check if error is due to pending payment
+        if (errorMsg.includes('pending payment') || verifyResponse.data?.pendingPayment) {
+          const pendingPaymentData = verifyResponse.data?.pendingPayment || { amount: parseFloat(amount) };
+          setPendingPayment(pendingPaymentData);
+          throw new Error(errorMsg);
+        }
+        throw new Error(errorMsg);
+      }
+
+      // Payment verified - now pending lender confirmation
+      setLoading(false);
+      
+      // Show success message with lender confirmation status
+      const confirmationMessage = verifyResponse.data?.lenderConfirmationMessage 
+        || 'Payment verified successfully! Lender confirmation pending.';
+      
+      Toast.show({
+        type: 'success',
+        position: 'top',
+        text1: 'Payment Verified',
+        text2: verifyResponse.message || confirmationMessage,
+      });
+
+      // Refresh loan list and navigate back
+      if (user?._id) {
+        await dispatch(getBorrowerLoans({ borrowerId: user._id })).unwrap();
+      }
+
+      // Navigate back to loan details - use current loanSummary (before confirmation)
+      // Loan totals will be updated only after lender confirms
+      navigation.navigate('BorrowerLoanDetails', { 
+        loan: {
+          ...loan,
+          // Use loanSummary for current values (before lender confirmation)
+          totalPaid: verifyResponse.data?.loanSummary?.currentPaidAmount ?? loan.totalPaid,
+          remainingAmount: verifyResponse.data?.loanSummary?.currentRemainingAmount ?? loan.remainingAmount,
+          paymentStatus: verifyResponse.data?.loanSummary?.loanStatus || loan.paymentStatus,
+        }
+      });
+
+    } catch (error) {
+      setLoading(false);
+      console.error('Online payment error:', error);
+      console.error('Error details:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message,
+      });
+      
+      // Check if error is due to pending payment
+      const errorMessage = error.response?.data?.message || error.message || '';
+      const errorDetail = error.response?.data?.error || '';
+      const statusCode = error.response?.status;
+      const fullErrorMessage = errorDetail || errorMessage;
+      
+      if (errorMessage.includes('pending payment') || error.response?.data?.pendingPayment) {
+        const pendingPaymentData = error.response?.data?.pendingPayment;
+        setPendingPayment(pendingPaymentData || { amount: parseFloat(amount) });
+        Toast.show({
+          type: 'error',
+          position: 'top',
+          text1: 'Pending Payment',
+          text2: errorMessage || 'You have a pending payment. Please wait for lender confirmation.',
+        });
+      } else if (errorDetail?.includes('Loan end date is already passed') || errorDetail?.includes('loanEndDate')) {
+        // Loan has expired
+        Toast.show({
+          type: 'error',
+          position: 'top',
+          text1: 'Loan Expired',
+          text2: 'The loan end date has passed. Please contact your lender to extend the loan before making a payment.',
+          visibilityTime: 5000,
+        });
+      } else if (statusCode === 500) {
+        // Server error - provide helpful message
+        Toast.show({
+          type: 'error',
+          position: 'top',
+          text1: 'Server Error',
+          text2: fullErrorMessage || 'A server error occurred. Please try again later or contact support if the problem persists.',
+        });
+      } else if (statusCode === 400) {
+        // Bad request - validation error
+        Toast.show({
+          type: 'error',
+          position: 'top',
+          text1: 'Invalid Request',
+          text2: fullErrorMessage || 'Please check your payment details and try again.',
+        });
+      } else {
+        Toast.show({
+          type: 'error',
+          position: 'top',
+          text1: 'Payment Failed',
+          text2: fullErrorMessage || 'Payment failed. Please try again.',
+        });
+      }
+    }
   };
 
   const submitPayment = async () => {
@@ -163,12 +380,62 @@ export default function MakePayment() {
       });
     } catch (error) {
       console.error('Payment submission error:', error);
-      Toast.show({
-        type: 'error',
-        position: 'top',
-        text1: 'Payment Failed',
-        text2: error.response?.data?.message || error.message || 'Failed to submit payment. Please try again.',
+      console.error('Error details:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message,
       });
+      
+      // Check if error is due to pending payment
+      const errorMessage = error.response?.data?.message || error.message || '';
+      const errorDetail = error.response?.data?.error || '';
+      const statusCode = error.response?.status;
+      const fullErrorMessage = errorDetail || errorMessage;
+      
+      if (errorMessage.includes('pending payment') || error.response?.data?.pendingPayment) {
+        const pendingPaymentData = error.response?.data?.pendingPayment;
+        setPendingPayment(pendingPaymentData || { amount: parseFloat(amount) });
+        Toast.show({
+          type: 'error',
+          position: 'top',
+          text1: 'Pending Payment',
+          text2: errorMessage || 'You have a pending payment. Please wait for lender confirmation.',
+        });
+      } else if (errorDetail?.includes('Loan end date is already passed') || errorDetail?.includes('loanEndDate')) {
+        // Loan has expired
+        Toast.show({
+          type: 'error',
+          position: 'top',
+          text1: 'Loan Expired',
+          text2: 'The loan end date has passed. Please contact your lender to extend the loan before making a payment.',
+          visibilityTime: 5000,
+        });
+      } else if (statusCode === 500) {
+        // Server error - provide helpful message
+        Toast.show({
+          type: 'error',
+          position: 'top',
+          text1: 'Server Error',
+          text2: fullErrorMessage || 'A server error occurred. Please try again later or contact support if the problem persists.',
+        });
+      } else if (statusCode === 400) {
+        // Bad request - validation error
+        Toast.show({
+          type: 'error',
+          position: 'top',
+          text1: 'Invalid Request',
+          text2: fullErrorMessage || 'Please check your payment details and try again.',
+        });
+      } else {
+        // Other errors
+        Toast.show({
+          type: 'error',
+          position: 'top',
+          text1: 'Payment Failed',
+          text2: fullErrorMessage || 'Failed to submit payment. Please try again.',
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -195,7 +462,8 @@ export default function MakePayment() {
         styles.optionCard,
         paymentMode === mode.id && styles.selectedOptionCard,
       ]}
-      onPress={() => setPaymentMode(mode.id)}
+      onPress={() => !pendingPayment && setPaymentMode(mode.id)}
+      disabled={pendingPayment}
     >
       <View style={styles.optionIcon}>
         <Icon name={mode.icon} size={24} color={paymentMode === mode.id ? '#FFFFFF' : '#3B82F6'} />
@@ -229,7 +497,8 @@ export default function MakePayment() {
         styles.optionCard,
         paymentType === type.id && styles.selectedOptionCard,
       ]}
-      onPress={() => setPaymentType(type.id)}
+      onPress={() => !pendingPayment && setPaymentType(type.id)}
+      disabled={pendingPayment}
     >
       <View style={styles.optionIcon}>
         <Icon name={type.icon} size={24} color={paymentType === type.id ? '#FFFFFF' : '#10B981'} />
@@ -290,26 +559,82 @@ export default function MakePayment() {
           </View>
         </View>
 
+        {/* Pending Payment Warning */}
+        {checkingPending ? (
+          <View style={styles.pendingCheckCard}>
+            <ActivityIndicator size="small" color="#F59E0B" />
+            <Text style={styles.pendingCheckText}>Checking for pending payments...</Text>
+          </View>
+        ) : pendingPayment ? (
+          <View style={styles.pendingPaymentCard}>
+            <View style={styles.pendingPaymentHeader}>
+              <Icon name="clock" size={24} color="#F59E0B" />
+              <Text style={styles.pendingPaymentTitle}>Payment Pending</Text>
+            </View>
+            <Text style={styles.pendingPaymentMessage}>
+              You have a pending payment request. Please wait for the lender to confirm or reject this payment before making a new payment.
+            </Text>
+            <View style={styles.pendingPaymentDetails}>
+              <View style={styles.pendingDetailRow}>
+                <Text style={styles.pendingDetailLabel}>Amount:</Text>
+                <Text style={styles.pendingDetailValue}>
+                  {formatCurrency(pendingPayment.amount)}
+                </Text>
+              </View>
+              <View style={styles.pendingDetailRow}>
+                <Text style={styles.pendingDetailLabel}>Mode:</Text>
+                <Text style={styles.pendingDetailValue}>
+                  {pendingPayment.paymentMode?.charAt(0).toUpperCase() + pendingPayment.paymentMode?.slice(1) || 'N/A'}
+                </Text>
+              </View>
+              {pendingPayment.paymentDate && (
+                <View style={styles.pendingDetailRow}>
+                  <Text style={styles.pendingDetailLabel}>Date:</Text>
+                  <Text style={styles.pendingDetailValue}>
+                    {moment(pendingPayment.paymentDate).format('DD MMM YYYY, hh:mm A')}
+                  </Text>
+                </View>
+              )}
+              {pendingPayment.installmentNumber && (
+                <View style={styles.pendingDetailRow}>
+                  <Text style={styles.pendingDetailLabel}>Installment:</Text>
+                  <Text style={styles.pendingDetailValue}>
+                    #{pendingPayment.installmentNumber}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+        ) : null}
+
         {/* Payment Mode Selection */}
-        <View style={styles.section}>
+        <View style={[styles.section, pendingPayment && styles.disabledSection]}>
           <Text style={styles.sectionTitle}>Payment Mode</Text>
           <Text style={styles.sectionSubtitle}>Choose how you want to make the payment</Text>
           <View style={styles.optionsGrid}>
-            {paymentModes.map(renderPaymentModeCard)}
+            {paymentModes.map(mode => (
+              <View key={mode.id} style={{ opacity: pendingPayment ? 0.5 : 1 }}>
+                {renderPaymentModeCard(mode)}
+              </View>
+            ))}
           </View>
         </View>
 
         {/* Payment Type Selection */}
-        <View style={styles.section}>
+        <View style={[styles.section, pendingPayment && styles.disabledSection]}>
           <Text style={styles.sectionTitle}>Payment Type</Text>
           <Text style={styles.sectionSubtitle}>Select payment structure</Text>
           <View style={styles.optionsGrid}>
-            {paymentTypes.map(renderPaymentTypeCard)}
+            {paymentTypes.map(type => (
+              <View key={type.id} style={{ opacity: pendingPayment ? 0.5 : 1 }}>
+                {renderPaymentTypeCard(type)}
+              </View>
+            ))}
           </View>
         </View>
 
         {/* Amount Input */}
-        <View style={styles.section}>
+        <View style={[styles.section, pendingPayment && styles.disabledSection]}>
           <Text style={styles.sectionTitle}>Payment Amount</Text>
           <View style={styles.inputContainer}>
             <Text style={styles.currencySymbol}>₹</Text>
@@ -319,7 +644,7 @@ export default function MakePayment() {
               keyboardType="numeric"
               value={amount}
               onChangeText={setAmount}
-              editable={paymentType !== 'one-time'}
+              editable={!pendingPayment && paymentType !== 'one-time'}
               placeholderTextColor="#9CA3AF"
             />
           </View>
@@ -330,25 +655,23 @@ export default function MakePayment() {
           )}
         </View>
 
-        {/* Transaction ID (for online payments) */}
+        {/* Online Payment Info (for Razorpay) */}
         {paymentMode === 'online' && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Transaction Details</Text>
-            <View style={styles.inputContainer}>
-              <Icon name="hash" size={20} color="#6B7280" style={styles.inputIcon} />
-              <TextInput
-                style={styles.textInput}
-                placeholder="Transaction ID / UTR Number"
-                value={transactionId}
-                onChangeText={setTransactionId}
-                placeholderTextColor="#9CA3AF"
-              />
+            <View style={styles.infoCard}>
+              <Icon name="info" size={20} color="#3B82F6" />
+              <View style={styles.infoContent}>
+                <Text style={styles.infoTitle}>Online Payment via Razorpay</Text>
+                <Text style={styles.infoText}>
+                  You will be redirected to Razorpay secure payment gateway. Payment will be verified and then submitted for lender confirmation.
+                </Text>
+              </View>
             </View>
           </View>
         )}
 
         {/* Notes */}
-        <View style={styles.section}>
+        <View style={[styles.section, pendingPayment && styles.disabledSection]}>
           <Text style={styles.sectionTitle}>Additional Notes (Optional)</Text>
           <TextInput
             style={styles.notesInput}
@@ -357,45 +680,54 @@ export default function MakePayment() {
             numberOfLines={3}
             value={notes}
             onChangeText={setNotes}
+            editable={!pendingPayment}
             placeholderTextColor="#9CA3AF"
           />
         </View>
 
-        {/* Payment Proof Upload */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Payment Proof (Optional)</Text>
-          <Text style={styles.sectionSubtitle}>
-            Upload receipt, bank statement, or payment screenshot
-          </Text>
-          <TouchableOpacity
-            style={styles.uploadButton}
-            onPress={selectImage}
-          >
-            <Ionicons name="cloud-upload-outline" size={24} color="#6B7280" />
-            <Text style={styles.uploadText}>
-              {paymentProof ? 'Change Proof' : 'Upload Payment Proof'}
+        {/* Payment Proof Upload (Only for Cash payments) */}
+        {paymentMode === 'cash' && (
+          <View style={[styles.section, pendingPayment && styles.disabledSection]}>
+            <Text style={styles.sectionTitle}>Payment Proof (Optional)</Text>
+            <Text style={styles.sectionSubtitle}>
+              Upload receipt, bank statement, or payment screenshot
             </Text>
-          </TouchableOpacity>
-          {paymentProof && (
-            <View style={styles.proofPreview}>
-              <Image source={{ uri: paymentProof.uri }} style={styles.proofImage} />
-              <Text style={styles.proofName}>{paymentProof.fileName}</Text>
-            </View>
-          )}
-        </View>
+            <TouchableOpacity
+              style={[styles.uploadButton, pendingPayment && styles.disabledButton]}
+              onPress={selectImage}
+              disabled={pendingPayment}
+            >
+              <Ionicons name="cloud-upload-outline" size={24} color={pendingPayment ? "#9CA3AF" : "#6B7280"} />
+              <Text style={[styles.uploadText, pendingPayment && { color: "#9CA3AF" }]}>
+                {paymentProof ? 'Change Proof' : 'Upload Payment Proof'}
+              </Text>
+            </TouchableOpacity>
+            {paymentProof && (
+              <View style={styles.proofPreview}>
+                <Image source={{ uri: paymentProof.uri }} style={styles.proofImage} />
+                <Text style={styles.proofName}>{paymentProof.fileName}</Text>
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Submit Button */}
         <TouchableOpacity
-          style={[styles.submitButton, loading && styles.disabledButton]}
+          style={[
+            styles.submitButton, 
+            (loading || pendingPayment || checkingPending) && styles.disabledButton
+          ]}
           onPress={handleSubmitPayment}
-          disabled={loading}
+          disabled={loading || pendingPayment || checkingPending}
         >
           {loading ? (
             <ActivityIndicator color="#FFFFFF" size="small" />
           ) : (
             <>
               <Ionicons name="cash-outline" size={20} color="#FFFFFF" />
-              <Text style={styles.submitButtonText}>Submit Payment</Text>
+              <Text style={styles.submitButtonText}>
+                {pendingPayment ? 'Payment Pending' : 'Submit Payment'}
+              </Text>
             </>
           )}
         </TouchableOpacity>
@@ -406,9 +738,20 @@ export default function MakePayment() {
           <View style={styles.notesContent}>
             <Text style={styles.notesTitle}>Important Notes</Text>
             <Text style={styles.notesText}>
-              • Payment will be reviewed by the lender before confirmation{'\n'}
-              • You will receive a notification once payment is confirmed{'\n'}
-              • Keep payment proof safe until confirmation
+              {paymentMode === 'online' ? (
+                <>
+                  • Payment will be verified via Razorpay after successful transaction{'\n'}
+                  • Lender confirmation is required before payment is finalized{'\n'}
+                  • You will receive a notification once payment is confirmed{'\n'}
+                  • Loan totals will be updated after lender confirms the payment
+                </>
+              ) : (
+                <>
+                  • Payment will be reviewed by the lender before confirmation{'\n'}
+                  • You will receive a notification once payment is confirmed{'\n'}
+                  • Keep payment proof safe until confirmation
+                </>
+              )}
             </Text>
           </View>
         </View>
@@ -674,6 +1017,96 @@ const styles = StyleSheet.create({
     fontSize: m(14),
     color: '#92400E',
     lineHeight: m(20),
+  },
+  infoCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#EFF6FF',
+    borderRadius: m(12),
+    padding: m(16),
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    gap: m(12),
+  },
+  infoContent: {
+    flex: 1,
+  },
+  infoTitle: {
+    fontSize: m(16),
+    fontWeight: '600',
+    color: '#1E40AF',
+    marginBottom: m(8),
+  },
+  infoText: {
+    fontSize: m(14),
+    color: '#1E40AF',
+    lineHeight: m(20),
+  },
+  pendingCheckCard: {
+    backgroundColor: '#FFFBF5',
+    borderRadius: m(12),
+    padding: m(16),
+    marginBottom: m(16),
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: m(12),
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  pendingCheckText: {
+    fontSize: m(14),
+    color: '#92400E',
+    fontWeight: '500',
+  },
+  pendingPaymentCard: {
+    backgroundColor: '#FFF7ED',
+    borderRadius: m(12),
+    padding: m(20),
+    marginBottom: m(16),
+    borderWidth: 2,
+    borderColor: '#F59E0B',
+  },
+  pendingPaymentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(12),
+    marginBottom: m(12),
+  },
+  pendingPaymentTitle: {
+    fontSize: m(18),
+    fontWeight: '700',
+    color: '#92400E',
+  },
+  pendingPaymentMessage: {
+    fontSize: m(14),
+    color: '#92400E',
+    lineHeight: m(20),
+    marginBottom: m(16),
+  },
+  pendingPaymentDetails: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: m(8),
+    padding: m(12),
+    gap: m(8),
+  },
+  pendingDetailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  pendingDetailLabel: {
+    fontSize: m(14),
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  pendingDetailValue: {
+    fontSize: m(14),
+    color: '#111827',
+    fontWeight: '600',
+  },
+  disabledSection: {
+    opacity: 0.6,
   },
 });
 

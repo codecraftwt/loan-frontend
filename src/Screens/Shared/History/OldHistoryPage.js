@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Image,
   Animated,
   Dimensions,
 } from 'react-native';
@@ -18,11 +17,7 @@ import AgreementModal from '../../PromptBox/AgreementModal';
 import Header from '../../../Components/Header';
 import { LinearGradient } from 'react-native-linear-gradient';
 
-const { width } = Dimensions.get('window');
-const ITEM_HEIGHT = 80;
-const EXPANDED_HEIGHT = 300;
-
-const OldHistoryPage = ({ route, navigation }) => {
+const OldHistoryPage = ({ route }) => {
   const { aadhaarNumber } = route.params;
   const [expandedLoanIndex, setExpandedLoanIndex] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
