@@ -14,7 +14,13 @@ class NotificationService {
   }
 
   async requestPermission() {
-    try {      
+    try {
+      // Check if Firebase messaging is available
+      if (!messaging) {
+        console.error('Firebase messaging is not available');
+        return false;
+      }
+      
       if (Platform.OS === 'android') {
         // For Android 13+ (API 33+), explicit permission is required
         if (Platform.Version >= 33) {
@@ -30,16 +36,25 @@ class NotificationService {
           );
           
           if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+            console.warn('Notification permission denied by user');
             return false;
           }
-        } else {
-          // For Android < 13, notifications are enabled by default
-          // But we still need to request Firebase permission
-          try {
-            const authStatus = await messaging().requestPermission();
-          } catch (err) {
-            console.log('Firebase permission request failed, but notifications may still work');
+        }
+        
+        // For all Android versions, request Firebase permission
+        try {
+          const authStatus = await messaging().requestPermission();
+          const enabled =
+            authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+            authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+          
+          if (!enabled) {
+            console.warn('Firebase notification permission not granted');
+            return false;
           }
+        } catch (err) {
+          console.warn('Firebase permission request failed:', err);
+          // Continue anyway as notifications might still work
         }
       } else {
         // For iOS
@@ -65,18 +80,68 @@ class NotificationService {
   }
 
   /**
-   * Get FCM token
+   * Get FCM token with retry logic
    */
-  async getFCMToken() {
+  async getFCMToken(retryCount = 0, maxRetries = 3) {
     try {
+      // Check if Firebase is properly initialized (iOS only)
+      if (Platform.OS === 'ios') {
+        try {
+          const isRegistered = messaging().isDeviceRegisteredForRemoteMessages;
+          if (!isRegistered) {
+            console.warn('iOS device not registered for remote messages, attempting to register...');
+            await messaging().registerDeviceForRemoteMessages();
+          }
+        } catch (iosError) {
+          // Ignore iOS-specific errors, continue with token retrieval
+          console.warn('iOS registration check failed, continuing anyway:', iosError);
+        }
+      }
+
       const token = await messaging().getToken();
+      
+      if (!token) {
+        throw new Error('FCM token is null or undefined');
+      }
       
       // Store token locally
       await AsyncStorage.setItem('fcm_token', token);
+      console.log('✅ FCM token retrieved successfully');
       
       return token;
     } catch (error) {
       console.error('Error getting FCM token:', error);
+      
+      // Provide helpful error messages based on error type
+      if (error.code === 'messaging/unknown' || error.message?.includes('AUTHENTICATION_FAILED')) {
+        console.error('❌ FCM Authentication Failed. Common causes:');
+        console.error('1. SHA-1/SHA-256 fingerprints not registered in Firebase Console');
+        console.error('2. Firebase Cloud Messaging API not enabled');
+        console.error('3. Incorrect google-services.json file');
+        console.error('4. Package name mismatch');
+        console.error('\n📋 To fix this:');
+        console.error('1. Get your SHA-1 fingerprint:');
+        console.error('   For debug: keytool -list -v -keystore android/app/debug.keystore -alias androiddebugkey -storepass android -keypass android');
+        console.error('2. Add SHA-1 and SHA-256 to Firebase Console > Project Settings > Your Android App');
+        console.error('3. Download the updated google-services.json and replace android/app/google-services.json');
+        console.error('4. Ensure Cloud Messaging API is enabled in Google Cloud Console');
+        
+        // Retry with exponential backoff for transient errors
+        if (retryCount < maxRetries) {
+          const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+          console.log(`Retrying FCM token retrieval in ${delay}ms... (attempt ${retryCount + 1}/${maxRetries})`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return this.getFCMToken(retryCount + 1, maxRetries);
+        }
+      } else if (error.code === 'messaging/registration-token-not-ready') {
+        console.warn('FCM registration token not ready yet, will retry...');
+        if (retryCount < maxRetries) {
+          const delay = 2000; // 2 seconds
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return this.getFCMToken(retryCount + 1, maxRetries);
+        }
+      }
+      
       return null;
     }
   }
@@ -566,6 +631,35 @@ class NotificationService {
   }
 
   /**
+   * Check Firebase configuration
+   */
+  async checkFirebaseConfiguration() {
+    try {
+      // Check if messaging is available
+      if (!messaging) {
+        return { valid: false, error: 'Firebase messaging module not found' };
+      }
+
+      // Try to check if device is registered (iOS only)
+      if (Platform.OS === 'ios') {
+        try {
+          const isRegistered = messaging().isDeviceRegisteredForRemoteMessages;
+          if (!isRegistered) {
+            console.warn('iOS device not registered for remote messages');
+          }
+        } catch (iosError) {
+          // Ignore iOS-specific errors
+          console.warn('iOS registration check failed:', iosError);
+        }
+      }
+
+      return { valid: true };
+    } catch (error) {
+      return { valid: false, error: error.message };
+    }
+  }
+
+  /**
    * Initialize notifications
    */
   async initialize(userId, navigation) {
@@ -575,6 +669,13 @@ class NotificationService {
         this.setNavigation(navigation);
       }
 
+      // Check Firebase configuration
+      const configCheck = await this.checkFirebaseConfiguration();
+      if (!configCheck.valid) {
+        console.error('Firebase configuration check failed:', configCheck.error);
+        // Continue anyway as it might still work
+      }
+
       // Request permission first
       const hasPermission = await this.requestPermission();
       if (!hasPermission) {
@@ -582,10 +683,13 @@ class NotificationService {
         return { success: false, error: 'Permission denied' };
       }
 
-      // Get token after permission is granted
+      // Get token after permission is granted (with retry logic)
       const token = await this.getFCMToken();
       if (!token) {
-        return { success: false, error: 'Failed to get FCM token' };
+        return { 
+          success: false, 
+          error: 'Failed to get FCM token. Please check Firebase configuration and ensure SHA-1/SHA-256 fingerprints are registered in Firebase Console.' 
+        };
       }
 
       // Register with backend
@@ -593,8 +697,9 @@ class NotificationService {
         const registerResult = await this.registerToken(userId, token);
         if (!registerResult.success) {
           console.warn('Failed to register token:', registerResult.error);
+          // Don't fail initialization if registration fails - token is still valid
         } else {
-          console.log('Token registered with backend');
+          console.log('✅ Token registered with backend');
         }
       }
 
