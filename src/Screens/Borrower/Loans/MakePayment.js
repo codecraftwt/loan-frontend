@@ -9,6 +9,8 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  Platform,
+  PermissionsAndroid,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
@@ -21,6 +23,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { getBorrowerLoans } from '../../../Redux/Slices/borrowerLoanSlice';
 import { openRazorpayCheckoutForLoan } from '../../../Services/razorpayService';
 import moment from 'moment';
+import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 
 export default function MakePayment() {
   const navigation = useNavigation();
@@ -117,8 +120,8 @@ export default function MakePayment() {
       Toast.show({
         type: 'error',
         position: 'top',
-        text1: 'Error',
-        text2: 'Please select payment mode',
+        text1: 'Payment Mode Required',
+        text2: 'Please select a payment mode (Cash or Online Payment)',
       });
       return false;
     }
@@ -127,38 +130,45 @@ export default function MakePayment() {
       Toast.show({
         type: 'error',
         position: 'top',
-        text1: 'Error',
-        text2: 'Please select payment type',
+        text1: 'Payment Type Required',
+        text2: 'Please select a payment type (One-time Payment or Installment)',
       });
       return false;
     }
 
-    if (!amount || parseFloat(amount) <= 0) {
+    if (!amount || amount.trim() === '') {
       Toast.show({
         type: 'error',
         position: 'top',
-        text1: 'Error',
-        text2: 'Please enter valid amount',
+        text1: 'Amount Required',
+        text2: 'Please enter the payment amount',
       });
       return false;
     }
 
     const amountNum = parseFloat(amount);
+
+    if (isNaN(amountNum) || amountNum <= 0) {
+      Toast.show({
+        type: 'error',
+        position: 'top',
+        text1: 'Invalid Amount',
+        text2: 'Please enter a valid amount greater than zero',
+      });
+      return false;
+    }
+
     const remainingAmount = loan.remainingAmount || 0;
 
     if (amountNum > remainingAmount) {
       Toast.show({
         type: 'error',
         position: 'top',
-        text1: 'Error',
-        text2: 'Amount cannot exceed remaining balance',
+        text1: 'Amount Exceeds Balance',
+        text2: `Payment amount (₹${amountNum.toLocaleString('en-IN')}) cannot exceed remaining balance (₹${remainingAmount.toLocaleString('en-IN')})`,
       });
       return false;
     }
-
-    // Transaction ID is not required for Razorpay online payments
-    // It's only needed for manual online payments (if we add that option later)
-
     return true;
   };
 
@@ -188,13 +198,51 @@ export default function MakePayment() {
       const paymentAmount = parseFloat(amount);
 
       // Step 1: Create Razorpay order
-      const orderResponse = await borrowerLoanAPI.createRazorpayOrder(loan._id, {
+      let orderResponse;
+      try {
+        orderResponse = await borrowerLoanAPI.createRazorpayOrder(loan._id, {
         paymentType: paymentType,
         amount: paymentAmount,
       });
+      } catch (orderError) {
+        setLoading(false);
+        const orderErrorResponse = orderError.response?.data || {};
+        const orderErrorMessage = orderErrorResponse.message || orderErrorResponse.error || orderError.message || '';
+        
+        if (orderErrorMessage.includes('amount') || orderErrorResponse.error?.includes('amount')) {
+          Toast.show({
+            type: 'error',
+            position: 'top',
+            text1: 'Amount Error',
+            text2: orderErrorMessage || 'Invalid payment amount. Please check and try again.',
+          });
+        } else if (orderErrorMessage.includes('payment type') || orderErrorResponse.error?.includes('paymentType')) {
+          Toast.show({
+            type: 'error',
+            position: 'top',
+            text1: 'Payment Type Error',
+            text2: orderErrorMessage || 'Invalid payment type selected.',
+          });
+        } else {
+          Toast.show({
+            type: 'error',
+            position: 'top',
+            text1: 'Order Creation Failed',
+            text2: orderErrorMessage || 'Failed to create payment order. Please try again.',
+          });
+        }
+        return;
+      }
 
-      if (!orderResponse.success) {
-        throw new Error(orderResponse.message || 'Failed to create payment order');
+      if (!orderResponse || !orderResponse.success) {
+        setLoading(false);
+        Toast.show({
+          type: 'error',
+          position: 'top',
+          text1: 'Order Creation Failed',
+          text2: orderResponse?.message || 'Failed to create payment order. Please try again.',
+        });
+        return;
       }
 
       // Step 2: Open Razorpay checkout
@@ -241,23 +289,76 @@ export default function MakePayment() {
         throw new Error('Payment response incomplete');
       }
 
-      const verifyResponse = await borrowerLoanAPI.verifyRazorpayPayment(loan._id, {
+      let verifyResponse;
+      try {
+        verifyResponse = await borrowerLoanAPI.verifyRazorpayPayment(loan._id, {
         razorpay_payment_id: paymentResult.data.razorpay_payment_id,
         razorpay_order_id: paymentResult.data.razorpay_order_id,
         razorpay_signature: paymentResult.data.razorpay_signature,
         paymentType: paymentType,
         notes: notes.trim() || undefined,
       });
-
-      if (!verifyResponse.success) {
-        const errorMsg = verifyResponse.message || 'Payment verification failed';
-        // Check if error is due to pending payment
-        if (errorMsg.includes('pending payment') || verifyResponse.data?.pendingPayment) {
-          const pendingPaymentData = verifyResponse.data?.pendingPayment || { amount: parseFloat(amount) };
+      } catch (verifyError) {
+        setLoading(false);
+        const verifyErrorResponse = verifyError.response?.data || {};
+        const verifyErrorMessage = verifyErrorResponse.message || verifyErrorResponse.error || verifyError.message || '';
+        
+        if (verifyErrorMessage.includes('pending payment') || verifyErrorResponse?.pendingPayment) {
+          const pendingPaymentData = verifyErrorResponse?.pendingPayment || { amount: parseFloat(amount) };
           setPendingPayment(pendingPaymentData);
-          throw new Error(errorMsg);
+          Toast.show({
+            type: 'error',
+            position: 'top',
+            text1: 'Pending Payment',
+            text2: verifyErrorMessage || 'You have a pending payment. Please wait for lender confirmation.',
+          });
+        } else if (verifyErrorMessage.includes('signature') || verifyErrorResponse.error?.includes('signature')) {
+          Toast.show({
+            type: 'error',
+            position: 'top',
+            text1: 'Verification Failed',
+            text2: verifyErrorMessage || 'Payment signature verification failed. Please contact support.',
+          });
+        } else if (verifyErrorMessage.includes('payment') || verifyErrorResponse.error?.includes('payment')) {
+          Toast.show({
+            type: 'error',
+            position: 'top',
+            text1: 'Payment Verification Failed',
+            text2: verifyErrorMessage || 'Failed to verify payment. Please contact support.',
+          });
+        } else {
+          Toast.show({
+            type: 'error',
+            position: 'top',
+            text1: 'Verification Error',
+            text2: verifyErrorMessage || 'Payment verification failed. Please try again or contact support.',
+          });
         }
-        throw new Error(errorMsg);
+        return;
+      }
+
+      if (!verifyResponse || !verifyResponse.success) {
+        setLoading(false);
+        const errorMsg = verifyResponse?.message || verifyResponse?.error || 'Payment verification failed';
+        
+        if (errorMsg.includes('pending payment') || verifyResponse?.data?.pendingPayment) {
+          const pendingPaymentData = verifyResponse?.data?.pendingPayment || { amount: parseFloat(amount) };
+          setPendingPayment(pendingPaymentData);
+          Toast.show({
+            type: 'error',
+            position: 'top',
+            text1: 'Pending Payment',
+            text2: errorMsg || 'You have a pending payment. Please wait for lender confirmation.',
+          });
+        } else {
+          Toast.show({
+            type: 'error',
+            position: 'top',
+            text1: 'Verification Failed',
+            text2: errorMsg || 'Payment verification failed. Please try again.',
+          });
+        }
+        return;
       }
 
       // Payment verified - now pending lender confirmation
@@ -301,14 +402,44 @@ export default function MakePayment() {
         message: error.message,
       });
       
-      // Check if error is due to pending payment
-      const errorMessage = error.response?.data?.message || error.message || '';
-      const errorDetail = error.response?.data?.error || '';
+      // Extract error information
+      const errorResponse = error.response?.data || {};
+      const errorMessage = errorResponse.message || error.message || '';
+      const errorDetail = errorResponse.error || errorResponse.details || '';
       const statusCode = error.response?.status;
-      const fullErrorMessage = errorDetail || errorMessage;
       
-      if (errorMessage.includes('pending payment') || error.response?.data?.pendingPayment) {
-        const pendingPaymentData = error.response?.data?.pendingPayment;
+      // Combine error messages (prefer detail over message)
+      let fullErrorMessage = errorDetail || errorMessage;
+      
+      // If no specific message, provide default based on status code
+      if (!fullErrorMessage) {
+        switch (statusCode) {
+          case 400:
+            fullErrorMessage = 'Invalid payment data. Please check all fields and try again.';
+            break;
+          case 401:
+            fullErrorMessage = 'Authentication failed. Please login again.';
+            break;
+          case 403:
+            fullErrorMessage = 'You do not have permission to make this payment.';
+            break;
+          case 404:
+            fullErrorMessage = 'Loan not found. Please refresh and try again.';
+            break;
+          case 422:
+            fullErrorMessage = 'Validation failed. Please check all required fields.';
+            break;
+          case 500:
+            fullErrorMessage = 'Server error occurred. Please try again later.';
+            break;
+          default:
+            fullErrorMessage = 'Payment failed. Please try again.';
+        }
+      }
+      
+      // Check for specific error cases
+      if (errorMessage.includes('pending payment') || errorResponse?.pendingPayment) {
+        const pendingPaymentData = errorResponse?.pendingPayment;
         setPendingPayment(pendingPaymentData || { amount: parseFloat(amount) });
         Toast.show({
           type: 'error',
@@ -316,8 +447,7 @@ export default function MakePayment() {
           text1: 'Pending Payment',
           text2: errorMessage || 'You have a pending payment. Please wait for lender confirmation.',
         });
-      } else if (errorDetail?.includes('Loan end date is already passed') || errorDetail?.includes('loanEndDate')) {
-        // Loan has expired
+      } else if (errorDetail?.includes('Loan end date is already passed') || errorDetail?.includes('loanEndDate') || errorMessage.includes('loan end date')) {
         Toast.show({
           type: 'error',
           position: 'top',
@@ -325,21 +455,33 @@ export default function MakePayment() {
           text2: 'The loan end date has passed. Please contact your lender to extend the loan before making a payment.',
           visibilityTime: 5000,
         });
+      } else if (errorMessage.includes('amount') || errorDetail?.includes('amount')) {
+        Toast.show({
+          type: 'error',
+          position: 'top',
+          text1: 'Amount Error',
+          text2: fullErrorMessage || 'Invalid payment amount. Please check and try again.',
+        });
+      } else if (errorMessage.includes('payment type') || errorDetail?.includes('paymentType')) {
+        Toast.show({
+          type: 'error',
+          position: 'top',
+          text1: 'Payment Type Error',
+          text2: fullErrorMessage || 'Invalid payment type selected.',
+        });
+      } else if (statusCode === 400 || statusCode === 422) {
+        Toast.show({
+          type: 'error',
+          position: 'top',
+          text1: 'Validation Error',
+          text2: fullErrorMessage || 'Please check all required fields and try again.',
+        });
       } else if (statusCode === 500) {
-        // Server error - provide helpful message
         Toast.show({
           type: 'error',
           position: 'top',
           text1: 'Server Error',
-          text2: fullErrorMessage || 'A server error occurred. Please try again later or contact support if the problem persists.',
-        });
-      } else if (statusCode === 400) {
-        // Bad request - validation error
-        Toast.show({
-          type: 'error',
-          position: 'top',
-          text1: 'Invalid Request',
-          text2: fullErrorMessage || 'Please check your payment details and try again.',
+          text2: fullErrorMessage || 'A server error occurred. Please try again later or contact support.',
         });
       } else {
         Toast.show({
@@ -401,14 +543,44 @@ export default function MakePayment() {
         message: error.message,
       });
       
-      // Check if error is due to pending payment
-      const errorMessage = error.response?.data?.message || error.message || '';
-      const errorDetail = error.response?.data?.error || '';
+      // Extract error information
+      const errorResponse = error.response?.data || {};
+      const errorMessage = errorResponse.message || error.message || '';
+      const errorDetail = errorResponse.error || errorResponse.details || '';
       const statusCode = error.response?.status;
-      const fullErrorMessage = errorDetail || errorMessage;
       
-      if (errorMessage.includes('pending payment') || error.response?.data?.pendingPayment) {
-        const pendingPaymentData = error.response?.data?.pendingPayment;
+      // Combine error messages (prefer detail over message)
+      let fullErrorMessage = errorDetail || errorMessage;
+      
+      // If no specific message, provide default based on status code
+      if (!fullErrorMessage) {
+        switch (statusCode) {
+          case 400:
+            fullErrorMessage = 'Invalid payment data. Please check all fields and try again.';
+            break;
+          case 401:
+            fullErrorMessage = 'Authentication failed. Please login again.';
+            break;
+          case 403:
+            fullErrorMessage = 'You do not have permission to make this payment.';
+            break;
+          case 404:
+            fullErrorMessage = 'Loan not found. Please refresh and try again.';
+            break;
+          case 422:
+            fullErrorMessage = 'Validation failed. Please check all required fields.';
+            break;
+          case 500:
+            fullErrorMessage = 'Server error occurred. Please try again later.';
+            break;
+          default:
+            fullErrorMessage = 'Failed to submit payment. Please try again.';
+        }
+      }
+      
+      // Check for specific error cases
+      if (errorMessage.includes('pending payment') || errorResponse?.pendingPayment) {
+        const pendingPaymentData = errorResponse?.pendingPayment;
         setPendingPayment(pendingPaymentData || { amount: parseFloat(amount) });
         Toast.show({
           type: 'error',
@@ -416,8 +588,7 @@ export default function MakePayment() {
           text1: 'Pending Payment',
           text2: errorMessage || 'You have a pending payment. Please wait for lender confirmation.',
         });
-      } else if (errorDetail?.includes('Loan end date is already passed') || errorDetail?.includes('loanEndDate')) {
-        // Loan has expired
+      } else if (errorDetail?.includes('Loan end date is already passed') || errorDetail?.includes('loanEndDate') || errorMessage.includes('loan end date')) {
         Toast.show({
           type: 'error',
           position: 'top',
@@ -425,24 +596,35 @@ export default function MakePayment() {
           text2: 'The loan end date has passed. Please contact your lender to extend the loan before making a payment.',
           visibilityTime: 5000,
         });
+      } else if (errorMessage.includes('payment mode') || errorDetail?.includes('paymentMode')) {
+        Toast.show({
+          type: 'error',
+          position: 'top',
+          text1: 'Payment Mode Error',
+          text2: fullErrorMessage || 'Please select a valid payment mode.',
+        });
+      } else if (errorMessage.includes('amount') || errorDetail?.includes('amount')) {
+        Toast.show({
+          type: 'error',
+          position: 'top',
+          text1: 'Amount Error',
+          text2: fullErrorMessage || 'Please enter a valid payment amount.',
+        });
+      } else if (statusCode === 400 || statusCode === 422) {
+        Toast.show({
+          type: 'error',
+          position: 'top',
+          text1: 'Validation Error',
+          text2: fullErrorMessage || 'Please check all required fields and try again.',
+        });
       } else if (statusCode === 500) {
-        // Server error - provide helpful message
         Toast.show({
           type: 'error',
           position: 'top',
           text1: 'Server Error',
-          text2: fullErrorMessage || 'A server error occurred. Please try again later or contact support if the problem persists.',
-        });
-      } else if (statusCode === 400) {
-        // Bad request - validation error
-        Toast.show({
-          type: 'error',
-          position: 'top',
-          text1: 'Invalid Request',
-          text2: fullErrorMessage || 'Please check your payment details and try again.',
+          text2: fullErrorMessage || 'A server error occurred. Please try again later or contact support.',
         });
       } else {
-        // Other errors
         Toast.show({
           type: 'error',
           position: 'top',
@@ -455,18 +637,195 @@ export default function MakePayment() {
     }
   };
 
+  const requestCameraPermission = async () => {
+    if (Platform.OS !== 'android') {
+      return true; // iOS handles permissions differently
+    }
+    
+    try {
+      // Check Android version - react-native-image-picker handles permissions automatically on Android 13+
+      // For older versions, we need to request manually
+      const androidVersion = Platform.Version;
+      
+      // For Android 13+ (API 33+), let the library handle permissions
+      if (androidVersion >= 33) {
+        return true;
+      }
+
+      // For older Android versions, check and request permission
+      const checkResult = await PermissionsAndroid.check(
+        PermissionsAndroid.PERMISSIONS.CAMERA
+      );
+      
+      if (checkResult) {
+        return true; // Permission already granted
+      }
+
+      // Request permission if not granted
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.CAMERA,
+        {
+          title: 'Camera Permission Required',
+          message: 'This app needs access to your camera to take a payment proof photo.',
+          buttonNeutral: 'Ask Me Later',
+          buttonNegative: 'Cancel',
+          buttonPositive: 'Allow',
+        }
+      );
+
+      if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+        return true;
+      } else if (granted === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) {
+        Alert.alert(
+          'Camera Permission Denied',
+          'Camera permission is required to take photos. Please enable it in your device settings (Settings > Apps > Loanhub > Permissions > Camera).',
+          [{ text: 'OK' }]
+        );
+        return false;
+      } else {
+        return false;
+      }
+    } catch (err) {
+      console.warn('Camera permission error:', err);
+      return false;
+    }
+  };
+
   const selectImage = () => {
-    // For now, we'll use a placeholder - in real implementation,
-    // you'd use react-native-image-picker or similar
     Alert.alert(
       'Upload Payment Proof',
-      'This feature requires image picker implementation',
-      [{ text: 'OK' }]
+      'Choose an option to upload payment proof',
+      [
+        {
+          text: 'Camera',
+          onPress: async () => {
+            try {
+              // For Android, check permission first (only for older versions)
+              if (Platform.OS === 'android' && Platform.Version < 33) {
+                const hasPermission = await requestCameraPermission();
+                if (!hasPermission) {
+                  return; // Error message is already shown in requestCameraPermission
+                }
+              }
+
+              // Launch camera - react-native-image-picker will handle permissions on Android 13+
+              launchCamera(
+                {
+                  mediaType: 'photo',
+                  quality: 0.8,
+                  saveToPhotos: true,
+                },
+                (response) => {
+                  if (response.didCancel) {
+                    return;
+                  }
+                  if (response.errorCode) {
+                    let errorMessage = 'Failed to open camera.';
+                    if (response.errorCode === 'permission') {
+                      errorMessage = 'Camera permission is required. Please grant permission in your device settings.';
+                    } else if (response.errorMessage) {
+                      errorMessage = response.errorMessage;
+                    }
+                    Toast.show({
+                      type: 'error',
+                      position: 'top',
+                      text1: 'Camera Error',
+                      text2: errorMessage,
+                    });
+                    return;
+                  }
+                  if (response.assets && response.assets[0]) {
+                    const asset = response.assets[0];
+                    setPaymentProof({
+                      uri: asset.uri,
+                      type: asset.type || 'image/jpeg',
+                      fileName: asset.fileName || `payment_proof_${Date.now()}.jpg`,
+                    });
+                    Toast.show({
+                      type: 'success',
+                      position: 'top',
+                      text1: 'Image Selected',
+                      text2: 'Payment proof image has been selected.',
+                    });
+                  }
+                }
+              );
+            } catch (error) {
+              console.error('Error launching camera:', error);
+              Toast.show({
+                type: 'error',
+                position: 'top',
+                text1: 'Camera Error',
+                text2: 'Failed to open camera. Please try again.',
+              });
+            }
+          },
+        },
+        {
+          text: 'Gallery',
+          onPress: () => {
+            launchImageLibrary(
+              {
+                mediaType: 'photo',
+                quality: 0.8,
+              },
+              (response) => {
+                if (response.didCancel) {
+                  return;
+                }
+                if (response.errorCode) {
+                  Toast.show({
+                    type: 'error',
+                    position: 'top',
+                    text1: 'Gallery Error',
+                    text2: response.errorMessage || 'Failed to open gallery.',
+                  });
+                  return;
+                }
+                if (response.assets && response.assets[0]) {
+                  const asset = response.assets[0];
+                  setPaymentProof({
+                    uri: asset.uri,
+                    type: asset.type || 'image/jpeg',
+                    fileName: asset.fileName || `payment_proof_${Date.now()}.jpg`,
+                  });
+                  Toast.show({
+                    type: 'success',
+                    position: 'top',
+                    text1: 'Image Selected',
+                    text2: 'Payment proof image has been selected.',
+                  });
+                }
+              }
+            );
+          },
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+      ]
     );
   };
 
   const formatCurrency = (value) => {
     return `₹${value?.toLocaleString('en-IN') || 0}`;
+  };
+
+  const handleAmountChange = (text) => {
+    // Only allow numbers and decimal point
+    // Remove any non-numeric characters except decimal point
+    const numericValue = text.replace(/[^0-9.]/g, '');
+    
+    // Prevent multiple decimal points
+    const parts = numericValue.split('.');
+    let filteredValue = parts[0];
+    if (parts.length > 1) {
+      // Only allow one decimal point and max 2 decimal places
+      filteredValue = parts[0] + '.' + parts.slice(1).join('').substring(0, 2);
+    }
+    
+    setAmount(filteredValue);
   };
 
   const renderPaymentModeCard = (mode) => (
@@ -657,7 +1016,7 @@ export default function MakePayment() {
               placeholder="Enter amount"
               keyboardType="numeric"
               value={amount}
-              onChangeText={setAmount}
+              onChangeText={handleAmountChange}
               editable={!pendingPayment && paymentType !== 'one-time'}
               placeholderTextColor="#9CA3AF"
             />
@@ -700,7 +1059,6 @@ export default function MakePayment() {
         </View>
 
         {/* Payment Proof Upload (Only for Cash payments) */}
-        {paymentMode === 'cash' && (
           <View style={[styles.section, pendingPayment && styles.disabledSection]}>
             <Text style={styles.sectionTitle}>Payment Proof (Optional)</Text>
             <Text style={styles.sectionSubtitle}>
@@ -718,12 +1076,28 @@ export default function MakePayment() {
             </TouchableOpacity>
             {paymentProof && (
               <View style={styles.proofPreview}>
+                <View style={styles.proofImageContainer}>
                 <Image source={{ uri: paymentProof.uri }} style={styles.proofImage} />
+                  <TouchableOpacity
+                    style={styles.removeProofButton}
+                    onPress={() => {
+                      setPaymentProof(null);
+                      Toast.show({
+                        type: 'info',
+                        position: 'top',
+                        text1: 'Image Removed',
+                        text2: 'Payment proof image has been removed.',
+                      });
+                    }}
+                    disabled={pendingPayment}
+                  >
+                    <Icon name="x" size={18} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
                 <Text style={styles.proofName}>{paymentProof.fileName}</Text>
               </View>
             )}
           </View>
-        )}
 
         {/* Submit Button */}
         <TouchableOpacity
@@ -745,30 +1119,6 @@ export default function MakePayment() {
             </>
           )}
         </TouchableOpacity>
-
-        {/* Important Notes */}
-        {/* <View style={styles.notesCard}>
-          <Icon name="info" size={20} color="#F59E0B" />
-          <View style={styles.notesContent}>
-            <Text style={styles.notesTitle}>Important Notes</Text>
-            <Text style={styles.notesText}>
-              {paymentMode === 'online' ? (
-                <>
-                  • Payment will be verified via Razorpay after successful transaction{'\n'}
-                  • Lender confirmation is required before payment is finalized{'\n'}
-                  • You will receive a notification once payment is confirmed{'\n'}
-                  • Loan totals will be updated after lender confirms the payment
-                </>
-              ) : (
-                <>
-                  • Payment will be reviewed by the lender before confirmation{'\n'}
-                  • You will receive a notification once payment is confirmed{'\n'}
-                  • Keep payment proof safe until confirmation
-                </>
-              )}
-            </Text>
-          </View>
-        </View> */}
       </ScrollView>
     </View>
   );
@@ -975,11 +1325,30 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E0F2FE',
   },
+  proofImageContainer: {
+    position: 'relative',
+    marginBottom: m(8),
+  },
   proofImage: {
     width: '100%',
     height: m(150),
     borderRadius: m(8),
-    marginBottom: m(8),
+  },
+  removeProofButton: {
+    position: 'absolute',
+    top: m(8),
+    right: m(8),
+    width: m(32),
+    height: m(32),
+    borderRadius: m(16),
+    backgroundColor: '#EF4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   proofName: {
     fontSize: m(14),
@@ -1007,30 +1376,6 @@ const styles = StyleSheet.create({
     fontSize: m(18),
     fontWeight: '600',
     color: '#FFFFFF',
-  },
-  notesCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: '#FFFBEB',
-    borderRadius: m(12),
-    padding: m(16),
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-    gap: m(12),
-  },
-  notesContent: {
-    flex: 1,
-  },
-  notesTitle: {
-    fontSize: m(16),
-    fontWeight: '600',
-    color: '#92400E',
-    marginBottom: m(8),
-  },
-  notesText: {
-    fontSize: m(14),
-    color: '#92400E',
-    lineHeight: m(20),
   },
   infoCard: {
     flexDirection: 'row',

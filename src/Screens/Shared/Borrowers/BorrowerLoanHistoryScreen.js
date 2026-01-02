@@ -1,5 +1,4 @@
-// BorrowerLoanHistoryScreen.js
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,35 +9,57 @@ import {
   TextInput,
   Modal,
   ActivityIndicator,
+  Animated,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useDispatch, useSelector } from 'react-redux';
 import { getBorrowerLoansById } from '../../../Redux/Slices/borrowerLoanSlice';
 import Header from '../../../Components/Header';
+import BorrowerReputationCard from '../../../Components/BorrowerReputationCard';
 import moment from 'moment';
 import { m } from 'walstar-rn-responsive';
 
+// Orange Theme Colors
+const ORANGE_THEME = {
+  primary: '#FF6B35', // Vibrant orange
+  primaryLight: '#FFF7F4',
+  primaryDark: '#E55A2B',
+  secondary: '#FF9E6D',
+  accent: '#FFD166',
+  background: '#FFF9F5',
+  card: '#FFFFFF',
+  text: '#2D3748',
+  textLight: '#718096',
+  border: '#FFE4D6',
+  success: '#10B981',
+  warning: '#F59E0B',
+  error: '#EF4444',
+  info: '#3B82F6',
+};
+
 const LoanHistoryCard = ({ loan, onPress }) => {
+  const [scaleAnim] = useState(new Animated.Value(1));
+  
   // Check if loan is overdue
   const isOverdue = loan.loanEndDate &&
     moment(loan.loanEndDate).isBefore(moment(), 'day') &&
     loan.remainingAmount > 0;
   
-  // Get effective status (overdue takes priority)
+  // Get effective status
   const effectiveStatus = isOverdue ? 'overdue' : (loan.paymentStatus || 'pending');
 
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case 'paid':
-        return '#10B981'; // green
+        return ORANGE_THEME.success;
       case 'part paid':
-        return '#F59E0B'; // amber
+        return ORANGE_THEME.warning;
       case 'pending':
-        return '#FFBF00'; // yellow
+        return ORANGE_THEME.accent;
       case 'overdue':
-        return '#EF4444'; // red
+        return ORANGE_THEME.error;
       default:
-        return '#6B7280'; // gray
+        return ORANGE_THEME.textLight;
     }
   };
 
@@ -49,7 +70,7 @@ const LoanHistoryCard = ({ loan, onPress }) => {
       case 'part paid':
         return 'schedule';
       case 'pending':
-        return 'help';
+        return 'hourglass-empty';
       case 'overdue':
         return 'error';
       default:
@@ -57,115 +78,137 @@ const LoanHistoryCard = ({ loan, onPress }) => {
     }
   };
 
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.98,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+    }).start();
+  };
+
   return (
-    <TouchableOpacity
-      style={[
-        styles.loanCard,
-        isOverdue && styles.overdueCard
-      ]}
-      onPress={onPress}
-      activeOpacity={0.8}>
-      {/* Overdue Banner */}
-      {isOverdue && (
-        <View style={styles.overdueBanner}>
-          <Icon name="error" size={16} color="#FFFFFF" />
-          <Text style={styles.overdueBannerText}>OVERDUE</Text>
-        </View>
-      )}
-
-      <View style={styles.loanCardHeader}>
-        <View style={styles.loanInfo}>
-          <Text style={styles.loanAmount}>₹{loan.amount?.toLocaleString() || '0'}</Text>
-          <Text style={styles.loanPurpose}>{loan.purpose || 'Loan Amount'}</Text>
-        </View>
-        <View style={[
-          styles.statusBadge,
-          {
-            backgroundColor: getStatusColor(effectiveStatus) + '20',
-            borderWidth: 1,
-            borderColor: getStatusColor(effectiveStatus) + '40',
-          }
-        ]}>
-          <Icon
-            name={getStatusIcon(effectiveStatus)}
-            size={18}
-            color={getStatusColor(effectiveStatus)}
-          />
-          <Text style={[styles.statusText, { color: getStatusColor(effectiveStatus) }]}>
-            {effectiveStatus?.charAt(0).toUpperCase() + effectiveStatus?.slice(1) || 'Unknown'}
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.divider} />
-
-      <View style={styles.loanDetails}>
-        <View style={styles.detailRow}>
-          <View style={styles.detailItem}>
-            <View style={[styles.detailIconContainer, { backgroundColor: '#dbfdf2ff' }]}>
-              {/* backgroundColor:'#95f2d3ff'  */}
-              <Icon name="check-circle" size={16} color="#10B981" />
-            </View>
-            <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Paid</Text>
-              <Text style={[styles.detailValue, { color: '#10B981'}]}>
-                ₹{loan.totalPaid?.toLocaleString('en-IN') || '0'}
-              </Text>
-            </View>
-          </View>
-          <View style={styles.detailItem}>
-            <View style={[styles.detailIconContainer, { backgroundColor: isOverdue ? '#FEE2E2' : '#FFF7ED' }]}>
-              <Icon name="schedule" size={16} color={isOverdue ? '#EF4444' : '#F59E0B'} />
-            </View>
-            <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Remaining</Text>
-              <Text style={[styles.detailValue, { color: isOverdue ? '#EF4444' : '#F59E0B' }]}>
-                ₹{loan.remainingAmount?.toLocaleString('en-IN') || loan.amount}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.detailRow}>
-          <View style={styles.detailItem}>
-            <View style={[styles.detailIconContainer, { backgroundColor: '#EFF6FF' }]}>
-              <Icon name="event" size={16} color={isOverdue ? '#EF4444' : '#3B82F6'} />
-            </View>
-            <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Due Date</Text>
-              <Text style={[styles.detailValue, { color: isOverdue ? '#EF4444' : '#374151' }]}>
-                {moment(loan.loanEndDate).format('DD MMM YYYY')}
-              </Text>
-              {isOverdue && (
-                <Text style={styles.overdueDays}>
-                  {moment(loan.loanEndDate).fromNow()}
-                </Text>
-              )}
-            </View>
-          </View>
-        </View>
-
-        {loan.lenderId && (
-          <View style={styles.lenderInfo}>
-            <View style={[styles.detailIconContainer, { backgroundColor: '#afccf4ff' }]}>
-              <Icon name="person" size={18} color="#699ff6ff" />
-            </View>
-            <Text style={styles.lenderName} numberOfLines={1}>
-              Lender: {loan.lenderId.userName || 'N/A'}
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <TouchableOpacity
+        style={[
+          styles.loanCard,
+          isOverdue && styles.overdueCard,
+          { borderLeftColor: getStatusColor(effectiveStatus) }
+        ]}
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        activeOpacity={0.9}>
+        
+        {/* Overdue Banner */}
+        {isOverdue && (
+          <View style={styles.overdueBanner}>
+            <Icon name="error" size={16} color="#FFFFFF" />
+            <Text style={styles.overdueBannerText}>OVERDUE</Text>
+            <Text style={styles.overdueDays}>
+              {moment(loan.loanEndDate).fromNow()}
             </Text>
           </View>
         )}
 
-        <View style={styles.loanFooter}>
-          <View style={styles.footerItem}>
-            <Icon name="access-time" size={12} color="#9CA3AF" />
-            <Text style={styles.loanDate}>
-              {moment(loan.createdAt).fromNow()}
+        <View style={styles.loanCardHeader}>
+          <View style={styles.loanInfo}>
+            <View style={styles.amountContainer}>
+              <Icon name="account-balance-wallet" size={20} color={ORANGE_THEME.primary} />
+              <Text style={styles.loanAmount}>₹{loan.amount?.toLocaleString() || '0'}</Text>
+            </View>
+            <Text style={styles.loanPurpose}>{loan.purpose || 'Loan Amount'}</Text>
+          </View>
+          <View style={[
+            styles.statusBadge,
+            {
+              backgroundColor: getStatusColor(effectiveStatus) + '15',
+              borderLeftWidth: 4,
+              borderLeftColor: getStatusColor(effectiveStatus),
+            }
+          ]}>
+            <Icon
+              name={getStatusIcon(effectiveStatus)}
+              size={18}
+              color={getStatusColor(effectiveStatus)}
+            />
+            <Text style={[styles.statusText, { color: getStatusColor(effectiveStatus) }]}>
+              {effectiveStatus?.charAt(0).toUpperCase() + effectiveStatus?.slice(1) || 'Unknown'}
             </Text>
           </View>
         </View>
-      </View>
-    </TouchableOpacity>
+
+        <View style={styles.loanDetails}>
+          <View style={styles.progressContainer}>
+            <View style={styles.progressBar}>
+              <View 
+                style={[
+                  styles.progressFill,
+                  { 
+                    width: `${((loan.totalPaid || 0) / loan.amount) * 100}%`,
+                    backgroundColor: getStatusColor(effectiveStatus)
+                  }
+                ]} 
+              />
+            </View>
+            <View style={styles.progressLabels}>
+              <Text style={[styles.progressLabel, { color: ORANGE_THEME.success }]}>
+                Paid: ₹{loan.totalPaid?.toLocaleString('en-IN') || '0'}
+              </Text>
+              <Text style={[styles.progressLabel, { color: isOverdue ? ORANGE_THEME.error : ORANGE_THEME.warning }]}>
+                Remaining: ₹{loan.remainingAmount?.toLocaleString('en-IN') || loan.amount}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.detailRow}>
+            <View style={styles.detailItem}>
+              <View style={styles.detailIconContainer}>
+                <Icon name="event" size={16} color={isOverdue ? ORANGE_THEME.error : ORANGE_THEME.text} />
+              </View>
+              <View style={styles.detailContent}>
+                <Text style={styles.detailLabel}>Due Date</Text>
+                <Text style={[styles.detailValue, { color: isOverdue ? ORANGE_THEME.error : ORANGE_THEME.text }]}>
+                  {moment(loan.loanEndDate).format('DD MMM YYYY')}
+                </Text>
+              </View>
+            </View>
+            
+            {loan.lenderId && (
+              <View style={styles.detailItem}>
+                <View style={styles.detailIconContainer}>
+                  <Icon name="person" size={16} color={ORANGE_THEME.info} />
+                </View>
+                <View style={styles.detailContent}>
+                  <Text style={styles.detailLabel}>Lender</Text>
+                  <Text style={styles.detailValue} numberOfLines={1}>
+                    {loan.lenderId.userName || 'N/A'}
+                  </Text>
+                </View>
+              </View>
+            )}
+          </View>
+
+          <View style={styles.loanFooter}>
+            <View style={styles.dateContainer}>
+              <Icon name="access-time" size={14} color={ORANGE_THEME.textLight} />
+              <Text style={styles.loanDate}>
+                {moment(loan.createdAt).format('DD MMM YYYY')}
+              </Text>
+            </View>
+            <TouchableOpacity style={styles.viewButton}>
+              <Text style={styles.viewButtonText}>View Details</Text>
+              <Icon name="arrow-forward" size={16} color={ORANGE_THEME.primary} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </TouchableOpacity>
+    </Animated.View>
   );
 };
 
@@ -190,11 +233,19 @@ const FilterModal = ({ visible, onClose, filters, setFilters, applyFilters }) =>
     onClose();
   };
 
+  const statusOptions = [
+    { label: 'All', value: '' },
+    { label: 'Part Paid', value: 'part paid' },
+    { label: 'Paid', value: 'paid' },
+    { label: 'Pending', value: 'pending' },
+    { label: 'Overdue', value: 'overdue' },
+  ];
+
   return (
     <Modal
       visible={visible}
       transparent={true}
-      animationType="slide"
+      animationType="fade"
       onRequestClose={onClose}>
       <TouchableOpacity
         style={styles.filterModalOverlay}
@@ -202,30 +253,38 @@ const FilterModal = ({ visible, onClose, filters, setFilters, applyFilters }) =>
         onPress={onClose}>
         <View style={styles.filterModalContent}>
           <View style={styles.filterModalHeader}>
-            <Text style={styles.filterModalTitle}>Filter Loans</Text>
-            <TouchableOpacity onPress={onClose}>
-              <Icon name="close" size={24} color="#6B7280" />
+            <View style={styles.filterHeaderLeft}>
+              <Icon name="filter-list" size={24} color={ORANGE_THEME.primary} />
+              <Text style={styles.filterModalTitle}>Filter Loans</Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.closeButton}
+              onPress={onClose}>
+              <Icon name="close" size={24} color={ORANGE_THEME.textLight} />
             </TouchableOpacity>
           </View>
 
           <ScrollView style={styles.filterScroll} showsVerticalScrollIndicator={false}>
             {/* Status Filter */}
             <View style={styles.filterSection}>
-              <Text style={styles.filterLabel}>Status</Text>
-              <View style={styles.statusFilterOptions}>
-                {['', 'part paid', 'paid'].map((status) => (
+              <View style={styles.sectionHeader}>
+                <Icon name="label" size={18} color={ORANGE_THEME.primary} />
+                <Text style={styles.filterLabel}>Status</Text>
+              </View>
+              <View style={styles.statusFilterGrid}>
+                {statusOptions.map((option) => (
                   <TouchableOpacity
-                    key={status}
+                    key={option.value}
                     style={[
                       styles.statusOption,
-                      localFilters.status === status && styles.statusOptionSelected,
+                      localFilters.status === option.value && styles.statusOptionSelected,
                     ]}
-                    onPress={() => setLocalFilters({ ...localFilters, status })}>
+                    onPress={() => setLocalFilters({ ...localFilters, status: option.value })}>
                     <Text style={[
                       styles.statusOptionText,
-                      localFilters.status === status && styles.statusOptionTextSelected,
+                      localFilters.status === option.value && styles.statusOptionTextSelected,
                     ]}>
-                      {status === '' ? 'All' : status.charAt(0).toUpperCase() + status.slice(1)}
+                      {option.label}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -234,57 +293,72 @@ const FilterModal = ({ visible, onClose, filters, setFilters, applyFilters }) =>
 
             {/* Amount Range */}
             <View style={styles.filterSection}>
-              <Text style={styles.filterLabel}>Amount Range</Text>
+              <View style={styles.sectionHeader}>
+                <Icon name="attach-money" size={18} color={ORANGE_THEME.primary} />
+                <Text style={styles.filterLabel}>Amount Range</Text>
+              </View>
               <View style={styles.amountInputRow}>
                 <View style={styles.amountInputContainer}>
-                  <Text style={styles.amountInputLabel}>Min</Text>
-                  <TextInput
-                    style={styles.amountInput}
-                    placeholder="₹0"
-                    value={localFilters.minAmount}
-                    onChangeText={(text) => setLocalFilters({ ...localFilters, minAmount: text })}
-                    keyboardType="numeric"
-                    placeholderTextColor="#9CA3AF"
-                  />
+                  <View style={styles.inputWithIcon}>
+                    <Icon name="arrow-downward" size={16} color={ORANGE_THEME.textLight} />
+                    <TextInput
+                      style={styles.amountInput}
+                      placeholder="Min"
+                      value={localFilters.minAmount}
+                      onChangeText={(text) => setLocalFilters({ ...localFilters, minAmount: text })}
+                      keyboardType="numeric"
+                      placeholderTextColor="#9CA3AF"
+                    />
+                  </View>
                 </View>
-                <Text style={styles.amountRangeSeparator}>-</Text>
+                <Icon name="remove" size={20} color={ORANGE_THEME.primary} style={styles.rangeSeparator} />
                 <View style={styles.amountInputContainer}>
-                  <Text style={styles.amountInputLabel}>Max</Text>
-                  <TextInput
-                    style={styles.amountInput}
-                    placeholder="₹0"
-                    value={localFilters.maxAmount}
-                    onChangeText={(text) => setLocalFilters({ ...localFilters, maxAmount: text })}
-                    keyboardType="numeric"
-                    placeholderTextColor="#9CA3AF"
-                  />
+                  <View style={styles.inputWithIcon}>
+                    <Icon name="arrow-upward" size={16} color={ORANGE_THEME.textLight} />
+                    <TextInput
+                      style={styles.amountInput}
+                      placeholder="Max"
+                      value={localFilters.maxAmount}
+                      onChangeText={(text) => setLocalFilters({ ...localFilters, maxAmount: text })}
+                      keyboardType="numeric"
+                      placeholderTextColor="#9CA3AF"
+                    />
+                  </View>
                 </View>
               </View>
             </View>
 
             {/* Date Range */}
             <View style={styles.filterSection}>
-              <Text style={styles.filterLabel}>Date Range</Text>
+              <View style={styles.sectionHeader}>
+                <Icon name="calendar-today" size={18} color={ORANGE_THEME.primary} />
+                <Text style={styles.filterLabel}>Date Range</Text>
+              </View>
               <View style={styles.dateInputRow}>
                 <View style={styles.dateInputContainer}>
-                  <Text style={styles.dateInputLabel}>From</Text>
-                  <TextInput
-                    style={styles.dateInput}
-                    placeholder="YYYY-MM-DD"
-                    value={localFilters.startDate}
-                    onChangeText={(text) => setLocalFilters({ ...localFilters, startDate: text })}
-                    placeholderTextColor="#9CA3AF"
-                  />
+                  <View style={styles.inputWithIcon}>
+                    <Icon name="event" size={16} color={ORANGE_THEME.textLight} />
+                    <TextInput
+                      style={styles.dateInput}
+                      placeholder="Start Date"
+                      value={localFilters.startDate}
+                      onChangeText={(text) => setLocalFilters({ ...localFilters, startDate: text })}
+                      placeholderTextColor="#9CA3AF"
+                    />
+                  </View>
                 </View>
+                <Icon name="arrow-right-alt" size={20} color={ORANGE_THEME.primary} style={styles.rangeSeparator} />
                 <View style={styles.dateInputContainer}>
-                  <Text style={styles.dateInputLabel}>To</Text>
-                  <TextInput
-                    style={styles.dateInput}
-                    placeholder="YYYY-MM-DD"
-                    value={localFilters.endDate}
-                    onChangeText={(text) => setLocalFilters({ ...localFilters, endDate: text })}
-                    placeholderTextColor="#9CA3AF"
-                  />
+                  <View style={styles.inputWithIcon}>
+                    <Icon name="event" size={16} color={ORANGE_THEME.textLight} />
+                    <TextInput
+                      style={styles.dateInput}
+                      placeholder="End Date"
+                      value={localFilters.endDate}
+                      onChangeText={(text) => setLocalFilters({ ...localFilters, endDate: text })}
+                      placeholderTextColor="#9CA3AF"
+                    />
+                  </View>
                 </View>
               </View>
             </View>
@@ -294,11 +368,13 @@ const FilterModal = ({ visible, onClose, filters, setFilters, applyFilters }) =>
             <TouchableOpacity
               style={[styles.filterButton, styles.resetButton]}
               onPress={handleReset}>
+              <Icon name="refresh" size={18} color={ORANGE_THEME.textLight} />
               <Text style={styles.resetButtonText}>Reset</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.filterButton, styles.applyButton]}
               onPress={handleApply}>
+              <Icon name="check" size={18} color="#FFFFFF" />
               <Text style={styles.applyButtonText}>Apply Filters</Text>
             </TouchableOpacity>
           </View>
@@ -310,7 +386,7 @@ const FilterModal = ({ visible, onClose, filters, setFilters, applyFilters }) =>
 
 const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
   const dispatch = useDispatch();
-  const { borrowerId } = route.params || {};
+  const { borrowerId, borrowerDetails } = route.params || {};
 
   const {
     loans: borrowerHistory,
@@ -330,23 +406,45 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
   });
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [showReputation, setShowReputation] = useState(false);
+
+  const aadhaarNumber = borrowerDetails?.aadharCardNo || 
+                       borrowerDetails?.aadhaarNumber ||
+                       (borrowerHistory && borrowerHistory.length > 0 ? 
+                        (borrowerHistory[0].aadhaarNumber || borrowerHistory[0].aadharCardNo) : null);
+
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 500); // 500ms delay
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const loadHistory = useCallback((page = 1) => {
     if (!borrowerId) return;
 
+    const params = {
+      page,
+      limit: 10,
+      ...filters,
+    };
+
+    // Only add search if it's not empty
+    if (debouncedSearchQuery && debouncedSearchQuery.trim()) {
+      params.search = debouncedSearchQuery.trim();
+    }
+
     dispatch(getBorrowerLoansById({
       borrowerId,
-      params: {
-        page,
-        limit: 10,
-        ...filters,
-        search: searchQuery,
-      }
+      params,
     }));
-  }, [borrowerId, dispatch, filters, searchQuery]);
+  }, [borrowerId, dispatch, filters, debouncedSearchQuery]);
 
   useEffect(() => {
-    loadHistory();
+    loadHistory(1); // Reset to page 1 when filters or search change
   }, [loadHistory]);
 
   const onRefresh = useCallback(async () => {
@@ -376,8 +474,13 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
   if (!borrowerId) {
     return (
       <View style={styles.container}>
-        <Header title="Loan History" showBackButton />
+        <Header 
+          title="Loan History" 
+          showBackButton 
+          headerStyle={{ backgroundColor: ORANGE_THEME.primary }}
+        />
         <View style={styles.errorContainer}>
+          <Icon name="error-outline" size={60} color={ORANGE_THEME.error} />
           <Text style={styles.errorText}>Borrower ID is required</Text>
         </View>
       </View>
@@ -386,103 +489,226 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
 
   return (
     <View style={styles.container}>
-      <Header title="Loan History" showBackButton />
-
-      {/* Summary Section */}
-      {historySummary && (
-        <View style={styles.summaryContainer}>
-          <Text style={styles.summaryTitle}>Loan Summary</Text>
-          <View style={styles.summaryGrid}>
-            <View style={styles.summaryCard}>
-              <Text style={[styles.summaryNumber, { color: '#50C878', backgroundColor: '#D0F0C0' }]}>{historySummary.totalLoans || 0}</Text>
-              <Text style={styles.summaryLabel}>Total Loans</Text>
-            </View>
-            <View style={styles.summaryCard}>
-              <Text style={[styles.summaryNumber, { color: 'blue', backgroundColor: '#a9c8f9ff' }]}>
-                {historySummary.activeLoans || 0}
-              </Text>
-              <Text style={styles.summaryLabel}>Active</Text>
-            </View>
-            <View style={styles.summaryCard}>
-              <Text style={[styles.summaryNumber, { color: '#F59E0B', backgroundColor: 'rgba(251, 188, 71, 0.5)' }]}>
-                {historySummary.completedLoans || 0}
-              </Text>
-              <Text style={styles.summaryLabel}>Completed</Text>
-            </View>
-          </View>
-          <View style={styles.amountSummary}>
-            <View style={styles.amountItem}>
-              <Text style={styles.amountLabel}>Total Borrowed:</Text>
-              <Text style={[styles.amountValue, { color: '#3B82F6' }]}>
-                {formatCurrency(historySummary.totalAmountBorrowed)}
-              </Text>
-            </View>
-            <View style={styles.amountItem}>
-              <Text style={styles.amountLabel}>Total Paid:</Text>
-              <Text style={[styles.amountValue, { color: '#10B981' }]}>
-                {formatCurrency(historySummary.totalAmountPaid)}
-              </Text>
-            </View>
-            <View style={styles.amountItem}>
-              <Text style={styles.amountLabel}>Remaining:</Text>
-              <Text style={[styles.amountValue, { color: '#EF4444' }]}>
-                {formatCurrency(historySummary.totalAmountRemaining)}
-              </Text>
-            </View>
-          </View>
-        </View>
-      )}
+      <Header 
+        title="Loan History" 
+        showBackButton 
+        headerStyle={{ backgroundColor: ORANGE_THEME.primary }}
+      />
 
       {/* Search and Filter Bar */}
       <View style={styles.searchFilterContainer}>
         <View style={styles.searchContainer}>
-          <Icon name="search" size={20} color="#6B7280" style={styles.searchIcon} />
+          <Icon name="search" size={22} color={ORANGE_THEME.primary} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search loans..."
+            placeholder="Search loans by purpose, lender..."
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={ORANGE_THEME.textLight}
           />
+          {searchQuery ? (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Icon name="close" size={20} color={ORANGE_THEME.textLight} />
+            </TouchableOpacity>
+          ) : null}
         </View>
         <TouchableOpacity
           style={styles.filterButtonContainer}
           onPress={() => setFilterModalVisible(true)}>
-          <Icon name="filter-list" size={24} color="#3B82F6" />
+          <Icon name="tune" size={24} color={ORANGE_THEME.primary} />
           {(filters.status || filters.startDate || filters.endDate || filters.minAmount || filters.maxAmount) && (
-            <View style={styles.filterIndicator} />
+            <View style={styles.filterIndicator}>
+              <Icon name="circle" size={8} color={ORANGE_THEME.primary} />
+            </View>
           )}
         </TouchableOpacity>
       </View>
 
-      {/* Loans List */}
+      {/* Scrollable Content */}
       <ScrollView
-        style={styles.loansContainer}
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            colors={[ORANGE_THEME.primary]}
+            tintColor={ORANGE_THEME.primary}
+          />
         }
         showsVerticalScrollIndicator={false}>
+        
+        {/* Summary Section - Hide when searching */}
+        {historySummary && !debouncedSearchQuery && (
+          <View style={styles.summaryContainer}>
+            <View style={styles.summaryHeader}>
+              <View style={styles.summaryTitleContainer}>
+                <Icon name="analytics" size={24} color={ORANGE_THEME.primary} />
+                <Text style={styles.summaryTitle}>Loan Overview</Text>
+              </View>
+              <TouchableOpacity style={styles.refreshButton} onPress={onRefresh}>
+                <Icon name="refresh" size={20} color={ORANGE_THEME.primary} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.summaryCards}>
+              <View style={[styles.summaryCard, { backgroundColor: ORANGE_THEME.primaryLight }]}>
+                <View style={[styles.summaryIconContainer, { backgroundColor: ORANGE_THEME.primary + '20' }]}>
+                  <Icon name="receipt" size={20} color={ORANGE_THEME.primary} />
+                </View>
+                <Text style={styles.summaryNumber}>{historySummary.totalLoans || 0}</Text>
+                <Text style={styles.summaryLabel}>Total Loans</Text>
+              </View>
+              
+              <View style={[styles.summaryCard, { backgroundColor: '#EFF6FF' }]}>
+                <View style={[styles.summaryIconContainer, { backgroundColor: ORANGE_THEME.info + '20' }]}>
+                  <Icon name="trending-up" size={20} color={ORANGE_THEME.info} />
+                </View>
+                <Text style={[styles.summaryNumber, { color: ORANGE_THEME.info }]}>
+                  {historySummary.activeLoans || 0}
+                </Text>
+                <Text style={styles.summaryLabel}>Active</Text>
+              </View>
+              
+              <View style={[styles.summaryCard, { backgroundColor: '#FEF3C7' }]}>
+                <View style={[styles.summaryIconContainer, { backgroundColor: ORANGE_THEME.warning + '20' }]}>
+                  <Icon name="check-circle" size={20} color={ORANGE_THEME.warning} />
+                </View>
+                <Text style={[styles.summaryNumber, { color: ORANGE_THEME.warning }]}>
+                  {historySummary.completedLoans || 0}
+                </Text>
+                <Text style={styles.summaryLabel}>Completed</Text>
+              </View>
+            </View>
+
+            <View style={styles.amountSummary}>
+              <View style={styles.amountSummaryCard}>
+                <View style={styles.amountHeader}>
+                  <Icon name="account-balance" size={18} color={ORANGE_THEME.info} />
+                  <Text style={styles.amountLabel}>Total Borrowed</Text>
+                </View>
+                <Text style={[styles.amountValue, { color: ORANGE_THEME.info }]}>
+                  {formatCurrency(historySummary.totalAmountBorrowed)}
+                </Text>
+              </View>
+              
+              <View style={styles.amountSummaryCard}>
+                <View style={styles.amountHeader}>
+                  <Icon name="payments" size={18} color={ORANGE_THEME.success} />
+                  <Text style={styles.amountLabel}>Total Paid</Text>
+                </View>
+                <Text style={[styles.amountValue, { color: ORANGE_THEME.success }]}>
+                  {formatCurrency(historySummary.totalAmountPaid)}
+                </Text>
+              </View>
+              
+              <View style={styles.amountSummaryCard}>
+                <View style={styles.amountHeader}>
+                  <Icon name="pending-actions" size={18} color={ORANGE_THEME.error} />
+                  <Text style={styles.amountLabel}>Remaining</Text>
+                </View>
+                <Text style={[styles.amountValue, { color: ORANGE_THEME.error }]}>
+                  {formatCurrency(historySummary.totalAmountRemaining)}
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* Reputation Score Section - Hide when searching */}
+        {aadhaarNumber && aadhaarNumber.length === 12 && !debouncedSearchQuery && (
+          <View style={styles.reputationContainer}>
+            <TouchableOpacity
+              style={styles.reputationToggle}
+              onPress={() => setShowReputation(!showReputation)}
+              activeOpacity={0.8}>
+              <View style={styles.reputationHeader}>
+                <View style={styles.reputationTitleContainer}>
+                  <View style={styles.reputationIconContainer}>
+                    <Icon name="verified" size={24} color={ORANGE_THEME.primary} />
+                  </View>
+                  <View>
+                    <Text style={styles.reputationTitle}>Credit Reputation</Text>
+                    <Text style={styles.reputationSubtitle}>View reliability score & insights</Text>
+                  </View>
+                </View>
+                <Icon
+                  name={showReputation ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
+                  size={28}
+                  color={ORANGE_THEME.primary}
+                />
+              </View>
+            </TouchableOpacity>
+            
+            {showReputation && (
+              <View style={styles.reputationCardWrapper}>
+                <BorrowerReputationCard 
+                  aadhaarNumber={aadhaarNumber} 
+                  compact={false}
+                />
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Loans List Header */}
+        <View style={styles.loansHeader}>
+          <Text style={styles.loansTitle}>
+            {debouncedSearchQuery ? 'Search Results' : 'Loan History'}
+          </Text>
+          <Text style={styles.loansCount}>
+            {borrowerHistory.length} {borrowerHistory.length === 1 ? 'loan' : 'loans'}
+            {debouncedSearchQuery && ` for "${debouncedSearchQuery}"`}
+          </Text>
+        </View>
+
+        {/* Loans List */}
         {false && !refreshing ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#3B82F6" />
-            <Text style={styles.loadingText}>Loading history...</Text>
+            <ActivityIndicator size="large" color={ORANGE_THEME.primary} />
+            <Text style={styles.loadingText}>Loading loan history...</Text>
           </View>
         ) : historyError ? (
           <View style={styles.errorState}>
-            <Icon name="error-outline" size={60} color="#EF4444" />
-            <Text style={styles.errorStateTitle}>Error Loading History</Text>
+            <View style={styles.errorIconContainer}>
+              <Icon name="error-outline" size={50} color={ORANGE_THEME.error} />
+            </View>
+            <Text style={styles.errorStateTitle}>Unable to Load History</Text>
             <Text style={styles.errorStateMessage}>{historyError}</Text>
             <TouchableOpacity style={styles.retryButton} onPress={onRefresh}>
-              <Text style={styles.retryButtonText}>Retry</Text>
+              <Icon name="refresh" size={18} color="#FFFFFF" />
+              <Text style={styles.retryButtonText}>Try Again</Text>
             </TouchableOpacity>
           </View>
         ) : borrowerHistory.length === 0 ? (
           <View style={styles.emptyState}>
-            <Icon name="history" size={60} color="#E5E7EB" />
-            <Text style={styles.emptyTitle}>No Loan History</Text>
+            <View style={styles.emptyIconContainer}>
+              <Icon name="history" size={60} color={ORANGE_THEME.border} />
+            </View>
+            <Text style={styles.emptyTitle}>No Loan History Found</Text>
             <Text style={styles.emptySubtitle}>
-              {searchQuery || filters.status ? 'No loans match your criteria' : 'This borrower has no loan history'}
+              {debouncedSearchQuery || filters.status || filters.startDate || filters.endDate || filters.minAmount || filters.maxAmount ? 
+                'No loans match your search criteria. Try adjusting your filters.' : 
+                'This borrower has no loan history yet'}
             </Text>
+            {(debouncedSearchQuery || filters.status || filters.startDate || filters.endDate || filters.minAmount || filters.maxAmount) && (
+              <TouchableOpacity 
+                style={styles.clearFilterButton}
+                onPress={() => {
+                  setSearchQuery('');
+                  setDebouncedSearchQuery('');
+                  applyFilters({
+                    status: '',
+                    startDate: '',
+                    endDate: '',
+                    minAmount: '',
+                    maxAmount: '',
+                  });
+                }}>
+                <Icon name="clear" size={16} color={ORANGE_THEME.primary} />
+                <Text style={styles.clearFilterText}>Clear All Filters</Text>
+              </TouchableOpacity>
+            )}
           </View>
         ) : (
           <>
@@ -499,9 +725,12 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
                 onPress={handleLoadMore}
                 disabled={historyLoading}>
                 {historyLoading ? (
-                  <ActivityIndicator size="small" color="#3B82F6" />
+                  <ActivityIndicator size="small" color={ORANGE_THEME.primary} />
                 ) : (
-                  <Text style={styles.loadMoreText}>Load More</Text>
+                  <>
+                    <Text style={styles.loadMoreText}>Load More Loans</Text>
+                    <Icon name="expand-more" size={20} color={ORANGE_THEME.primary} />
+                  </>
                 )}
               </TouchableOpacity>
             )}
@@ -524,161 +753,208 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: 'white',
   },
+  // Summary Section
   summaryContainer: {
-    backgroundColor: '#FFFFFF',
-    margin: m(16),
+    backgroundColor: ORANGE_THEME.card,
+    marginHorizontal: m(16),
+    marginTop: m(12),
+    marginBottom: m(16),
     padding: m(20),
     borderRadius: m(20),
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 6,
+  },
+  summaryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: m(10),
+  },
+  summaryTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(10),
   },
   summaryTitle: {
     fontSize: m(20),
     fontWeight: '700',
-    color: '#111827',
-    marginBottom: m(10),
+    color: ORANGE_THEME.text,
   },
-  summaryGrid: {
+  refreshButton: {
+    width: m(36),
+    height: m(36),
+    borderRadius: m(18),
+    backgroundColor: ORANGE_THEME.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  summaryCards: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: m(10),
+    marginBottom: m(20),
   },
   summaryCard: {
-    alignItems: 'center',
     flex: 1,
+    alignItems: 'center',
+    padding: m(12),
+    borderRadius: m(16),
     marginHorizontal: m(4),
   },
-  summaryNumber: {
-    fontSize: m(24),
-    fontWeight: '700',
-    color: '#1F2937',
-    marginBottom: m(4),
-    borderRadius: m(23),
-    height: m(46),
-    width: m(46),
-    textAlign: 'center',
-    lineHeight: m(46),
+  summaryIconContainer: {
+    width: m(40),
+    height: m(40),
+    borderRadius: m(12),
     justifyContent: 'center',
-    alignItems: 'center', 
-    display: 'flex', 
-  },
-  summaryLabel: {
-    fontSize: m(12),
-    color: '#6B7280',
-    textAlign: 'center',
-  },
-  amountSummary: {
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    paddingTop: m(16),
-  },
-  amountItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: m(8),
   },
+  summaryNumber: {
+    fontSize: m(24),
+    fontWeight: '800',
+    color: ORANGE_THEME.primary,
+    marginBottom: m(2),
+  },
+  summaryLabel: {
+    fontSize: m(12),
+    color: ORANGE_THEME.textLight,
+    fontWeight: '500',
+  },
+  amountSummary: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: m(16),
+    padding: m(16),
+  },
+  amountSummaryCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: m(12),
+  },
+  amountHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(8),
+  },
   amountLabel: {
     fontSize: m(14),
-    color: '#6B7280',
+    color: ORANGE_THEME.textLight,
+    fontWeight: '500',
   },
   amountValue: {
     fontSize: m(16),
-    fontWeight: '600',
+    fontWeight: '700',
   },
+  // Search and Filter
   searchFilterContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: m(16),
-    marginBottom: m(16),
+    paddingVertical: m(12),
+    backgroundColor: ORANGE_THEME.card,
+    borderBottomWidth: 1,
+    borderBottomColor: ORANGE_THEME.border,
   },
   searchContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(8),
-    paddingHorizontal: m(12),
+    backgroundColor:'white',
+    borderRadius: m(12),
+    paddingHorizontal: m(14),
     marginRight: m(12),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: ORANGE_THEME.border,
   },
   searchIcon: {
-    marginRight: m(8),
+    marginRight: m(10),
   },
   searchInput: {
     flex: 1,
     height: m(44),
-    fontSize: m(16),
-    color: '#1F2937',
+    fontSize: m(15),
+    color: ORANGE_THEME.text,
+    fontWeight: '500',
+  },
+  clearSearchButton: {
+    padding: m(4),
+    marginLeft: m(4),
   },
   filterButtonContainer: {
     width: m(44),
     height: m(44),
-    borderRadius: m(8),
-    backgroundColor: '#FFFFFF',
+    borderRadius: m(12),
+    // backgroundColor: ORANGE_THEME.primaryLight,
+    backgroundColor: 'white',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: ORANGE_THEME.border,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
   },
   filterIndicator: {
     position: 'absolute',
-    top: m(8),
-    right: m(8),
-    width: m(8),
-    height: m(8),
-    borderRadius: m(4),
-    backgroundColor: '#3B82F6',
+    top: m(6),
+    right: m(6),
   },
-  loansContainer: {
+  // Scroll Content
+  scrollContainer: {
     flex: 1,
-    paddingHorizontal: m(16),
   },
+  scrollContent: {
+    paddingBottom: m(30),
+  },
+  // Loan Card
   loanCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(16),
+    backgroundColor: ORANGE_THEME.card,
+    borderRadius: m(18),
     padding: m(20),
-    marginBottom: m(16),
+    marginHorizontal: m(16),
+    marginBottom: m(14),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: ORANGE_THEME.border,
+    borderLeftWidth: 6,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
-    shadowRadius: 8,
+    shadowRadius: 12,
     elevation: 4,
-    overflow: 'hidden',
+    paddingBottom: m(10),
   },
   overdueCard: {
-    borderWidth: 2,
-    borderColor: '#FCA5A5',
     backgroundColor: '#FFF5F5',
+    borderColor: ORANGE_THEME.error + '40',
+    borderLeftColor: ORANGE_THEME.error,
   },
   overdueBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EF4444',
-    paddingVertical: m(6),
-    paddingHorizontal: m(12),
+    backgroundColor: ORANGE_THEME.error,
+    paddingVertical: m(8),
+    paddingHorizontal: m(16),
     marginHorizontal: m(-20),
     marginTop: m(-20),
     marginBottom: m(16),
-    gap: m(6),
+    borderTopLeftRadius: m(18),
+    borderTopRightRadius: m(18),
+    gap: m(8),
   },
   overdueBannerText: {
     color: '#FFFFFF',
     fontSize: m(12),
     fontWeight: '700',
-    letterSpacing: 1,
+    letterSpacing: 0.5,
+  },
+  overdueDays: {
+    color: '#FFFFFF',
+    fontSize: m(11),
+    fontWeight: '500',
+    marginLeft: 'auto',
   },
   loanCardHeader: {
     flexDirection: 'row',
@@ -688,17 +964,21 @@ const styles = StyleSheet.create({
   },
   loanInfo: {
     flex: 1,
-    marginRight: m(12),
+  },
+  amountContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(10),
+    marginBottom: m(2),
   },
   loanAmount: {
-    fontSize: m(26),
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: m(6),
+    fontSize: m(22.4),
+    fontWeight: '800',
+    color: ORANGE_THEME.text,
   },
   loanPurpose: {
     fontSize: m(14),
-    color: '#6B7280',
+    color: ORANGE_THEME.textLight,
     fontWeight: '500',
   },
   statusBadge: {
@@ -706,20 +986,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: m(12),
     paddingVertical: m(8),
-    borderRadius: m(20),
+    borderRadius: m(12),
     gap: m(6),
+    borderWidth: 1,
+    borderColor: ORANGE_THEME.border,
   },
   statusText: {
-    fontSize: m(13),
+    fontSize: m(12),
     fontWeight: '700',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#F3F4F6',
-    marginBottom: m(16),
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   loanDetails: {
-    gap: m(12),
+    gap: m(16),
+  },
+  progressContainer: {
+    gap: m(8),
+  },
+  progressBar: {
+    height: m(6),
+    backgroundColor: ORANGE_THEME.primaryLight,
+    borderRadius: m(3),
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: m(3),
+  },
+  progressLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  progressLabel: {
+    fontSize: m(12),
+    fontWeight: '600',
   },
   detailRow: {
     flexDirection: 'row',
@@ -730,12 +1030,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    gap: m(12),
+    gap: m(10),
   },
   detailIconContainer: {
-    width: m(40),
-    height: m(40),
+    width: m(36),
+    height: m(36),
     borderRadius: m(10),
+    backgroundColor: ORANGE_THEME.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -744,8 +1045,8 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: m(11),
-    color: '#9CA3AF',
-    marginBottom: m(4),
+    color: ORANGE_THEME.textLight,
+    marginBottom: m(2),
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     fontWeight: '600',
@@ -753,82 +1054,106 @@ const styles = StyleSheet.create({
   detailValue: {
     fontSize: m(14),
     fontWeight: '700',
-    color: '#111827',
-  },
-  overdueDays: {
-    fontSize: m(11),
-    color: '#EF4444',
-    marginTop: m(2),
-    fontWeight: '600',
-  },
-  lenderInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: m(8),
-    padding: m(12),
-    paddingVertical: m(8),
-    backgroundColor: '#eef4faff',
-    borderRadius: m(12),
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    gap: m(10),
-  },
-  lenderName: {
-    fontSize: m(14.4),
-    color: '#374151',
-    fontWeight: '600',
-    flex: 1,
+    color: ORANGE_THEME.text,
   },
   loanFooter: {
     flexDirection: 'row',
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: m(4),
-    paddingTop: m(12),
+    paddingTop: m(5),
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: ORANGE_THEME.border,
   },
-  footerItem: {
+  dateContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: m(6),
   },
   loanDate: {
     fontSize: m(12),
-    color: '#9CA3AF',
+    color: ORANGE_THEME.textLight,
     fontWeight: '500',
   },
+  viewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(4),
+    paddingHorizontal: m(12),
+    paddingVertical: m(6),
+  },
+  viewButtonText: {
+    fontSize: m(13),
+    color: ORANGE_THEME.primary,
+    fontWeight: '600',
+  },
+  // Loans Header
+  loansHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: m(16),
+    marginTop: m(8),
+    marginBottom: m(16),
+  },
+  loansTitle: {
+    fontSize: m(20),
+    fontWeight: '700',
+    color: ORANGE_THEME.text,
+  },
+  loansCount: {
+    fontSize: m(14),
+    color: ORANGE_THEME.primary,
+    fontWeight: '600',
+    backgroundColor: ORANGE_THEME.primaryLight,
+    paddingHorizontal: m(12),
+    paddingVertical: m(4),
+    borderRadius: m(12),
+  },
+  // Loading States
   loadingContainer: {
-    padding: m(40),
+    padding: m(60),
     alignItems: 'center',
   },
   loadingText: {
-    marginTop: m(12),
+    marginTop: m(16),
     fontSize: m(14),
-    color: '#6B7280',
+    color: ORANGE_THEME.textLight,
+    fontWeight: '500',
   },
   errorState: {
     padding: m(40),
     alignItems: 'center',
   },
+  errorIconContainer: {
+    width: m(80),
+    height: m(80),
+    borderRadius: m(40),
+    backgroundColor: ORANGE_THEME.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: m(16),
+  },
   errorStateTitle: {
     fontSize: m(18),
-    fontWeight: '600',
-    color: '#1F2937',
-    marginTop: m(16),
+    fontWeight: '700',
+    color: ORANGE_THEME.text,
     marginBottom: m(8),
   },
   errorStateMessage: {
     fontSize: m(14),
-    color: '#6B7280',
+    color: ORANGE_THEME.textLight,
     textAlign: 'center',
     marginBottom: m(24),
+    lineHeight: m(20),
   },
   retryButton: {
-    backgroundColor: '#3B82F6',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(8),
+    backgroundColor: ORANGE_THEME.primary,
     paddingHorizontal: m(24),
     paddingVertical: m(12),
-    borderRadius: m(8),
+    borderRadius: m(12),
   },
   retryButtonText: {
     color: '#FFFFFF',
@@ -839,93 +1164,195 @@ const styles = StyleSheet.create({
     padding: m(40),
     alignItems: 'center',
   },
+  emptyIconContainer: {
+    width: m(100),
+    height: m(100),
+    borderRadius: m(50),
+    backgroundColor: ORANGE_THEME.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: m(20),
+  },
   emptyTitle: {
     fontSize: m(18),
-    fontWeight: '600',
-    color: '#1F2937',
-    marginTop: m(16),
+    fontWeight: '700',
+    color: ORANGE_THEME.text,
     marginBottom: m(8),
   },
   emptySubtitle: {
     fontSize: m(14),
-    color: '#6B7280',
+    color: ORANGE_THEME.textLight,
     textAlign: 'center',
+    marginBottom: m(20),
+    lineHeight: m(20),
   },
-  loadMoreButton: {
-    backgroundColor: '#FFFFFF',
-    padding: m(16),
-    borderRadius: m(8),
+  clearFilterButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: m(16),
+    gap: m(8),
+    backgroundColor: ORANGE_THEME.primaryLight,
+    paddingHorizontal: m(20),
+    paddingVertical: m(12),
+    borderRadius: m(12),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: ORANGE_THEME.border,
   },
-  loadMoreText: {
-    color: '#3B82F6',
+  clearFilterText: {
+    color: ORANGE_THEME.primary,
     fontSize: m(14),
     fontWeight: '600',
   },
+  loadMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: m(8),
+    backgroundColor: ORANGE_THEME.card,
+    padding: m(16),
+    borderRadius: m(12),
+    marginHorizontal: m(16),
+    marginTop: m(8),
+    marginBottom: m(16),
+    borderWidth: 1,
+    borderColor: ORANGE_THEME.border,
+  },
+  loadMoreText: {
+    color: ORANGE_THEME.primary,
+    fontSize: m(14),
+    fontWeight: '600',
+  },
+  // Reputation Section
+  reputationContainer: {
+    backgroundColor: ORANGE_THEME.card,
+    marginHorizontal: m(16),
+    marginBottom: m(16),
+    borderRadius: m(18),
+    borderWidth: 1,
+    borderColor: ORANGE_THEME.border,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  reputationToggle: {
+    padding: m(20),
+  },
+  reputationHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  reputationTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(12),
+  },
+  reputationIconContainer: {
+    width: m(48),
+    height: m(48),
+    borderRadius: m(14),
+    backgroundColor: ORANGE_THEME.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  reputationTitle: {
+    fontSize: m(17),
+    fontWeight: '700',
+    color: ORANGE_THEME.text,
+    marginBottom: m(2),
+  },
+  reputationSubtitle: {
+    fontSize: m(12),
+    color: ORANGE_THEME.textLight,
+  },
+  reputationCardWrapper: {
+    paddingHorizontal: m(16),
+    paddingBottom: m(16),
+  },
+  // Filter Modal
   filterModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
   filterModalContent: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: m(20),
-    borderTopRightRadius: m(20),
-    maxHeight: '80%',
+    backgroundColor: ORANGE_THEME.card,
+    borderTopLeftRadius: m(24),
+    borderTopRightRadius: m(24),
+    maxHeight: '85%',
   },
   filterModalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: m(16),
+    padding: m(20),
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: ORANGE_THEME.border,
+  },
+  filterHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(10),
   },
   filterModalTitle: {
-    fontSize: m(18),
-    fontWeight: '600',
-    color: '#1F2937',
+    fontSize: m(20),
+    fontWeight: '700',
+    color: ORANGE_THEME.text,
+  },
+  closeButton: {
+    width: m(36),
+    height: m(36),
+    borderRadius: m(18),
+    backgroundColor: ORANGE_THEME.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   filterScroll: {
-    maxHeight: m(400),
+    paddingHorizontal: m(20),
   },
   filterSection: {
-    padding: m(16),
+    paddingVertical: m(20),
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: ORANGE_THEME.border,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(8),
+    marginBottom: m(16),
   },
   filterLabel: {
-    fontSize: m(14),
+    fontSize: m(16),
     fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: m(12),
+    color: ORANGE_THEME.text,
   },
-  statusFilterOptions: {
+  statusFilterGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    gap: m(8),
   },
   statusOption: {
     paddingHorizontal: m(16),
-    paddingVertical: m(8),
-    borderRadius: m(20),
+    paddingVertical: m(10),
+    borderRadius: m(12),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    marginRight: m(8),
-    marginBottom: m(8),
+    borderColor: ORANGE_THEME.border,
+    backgroundColor: ORANGE_THEME.primaryLight,
   },
   statusOptionSelected: {
-    backgroundColor: '#3B82F6',
-    borderColor: '#3B82F6',
+    backgroundColor: ORANGE_THEME.primary,
+    borderColor: ORANGE_THEME.primary,
   },
   statusOptionText: {
     fontSize: m(14),
-    color: '#6B7280',
+    color: ORANGE_THEME.text,
+    fontWeight: '500',
   },
   statusOptionTextSelected: {
     color: '#FFFFFF',
+    fontWeight: '600',
   },
   amountInputRow: {
     flexDirection: 'row',
@@ -935,82 +1362,84 @@ const styles = StyleSheet.create({
   amountInputContainer: {
     flex: 1,
   },
-  amountInputLabel: {
-    fontSize: m(12),
-    color: '#6B7280',
-    marginBottom: m(4),
+  inputWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: ORANGE_THEME.primaryLight,
+    borderRadius: m(12),
+    paddingHorizontal: m(12),
+    borderWidth: 1,
+    borderColor: ORANGE_THEME.border,
   },
   amountInput: {
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: m(8),
-    padding: m(8),
-    fontSize: m(14),
-    color: '#1F2937',
+    flex: 1,
+    height: m(48),
+    fontSize: m(15),
+    color: ORANGE_THEME.text,
+    paddingHorizontal: m(8),
   },
-  amountRangeSeparator: {
-    fontSize: m(18),
-    color: '#6B7280',
-    marginHorizontal: m(8),
+  rangeSeparator: {
+    marginHorizontal: m(12),
   },
   dateInputRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
   },
   dateInputContainer: {
     flex: 1,
-    marginRight: m(8),
-  },
-  dateInputLabel: {
-    fontSize: m(12),
-    color: '#6B7280',
-    marginBottom: m(4),
   },
   dateInput: {
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: m(8),
-    padding: m(8),
-    fontSize: m(14),
-    color: '#1F2937',
+    flex: 1,
+    height: m(48),
+    fontSize: m(15),
+    color: ORANGE_THEME.text,
+    paddingHorizontal: m(8),
   },
   filterModalActions: {
     flexDirection: 'row',
-    padding: m(16),
+    padding: m(20),
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: ORANGE_THEME.border,
+    gap: m(12),
   },
   filterButton: {
     flex: 1,
-    padding: m(12),
-    borderRadius: m(8),
+    flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: m(4),
+    justifyContent: 'center',
+    gap: m(8),
+    padding: m(14),
+    borderRadius: m(12),
   },
   resetButton: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: ORANGE_THEME.primaryLight,
   },
   resetButtonText: {
-    color: '#6B7280',
-    fontSize: m(14),
+    color: ORANGE_THEME.text,
+    fontSize: m(15),
     fontWeight: '600',
   },
   applyButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: ORANGE_THEME.primary,
   },
   applyButtonText: {
     color: '#FFFFFF',
-    fontSize: m(14),
+    fontSize: m(15),
     fontWeight: '600',
   },
+  // Error Container
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: m(40),
   },
   errorText: {
     fontSize: m(16),
-    color: '#EF4444',
+    color: ORANGE_THEME.error,
+    fontWeight: '600',
+    marginTop: m(16),
   },
 });
 

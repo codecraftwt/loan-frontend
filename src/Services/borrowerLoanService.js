@@ -75,6 +75,46 @@ export const borrowerLoanAPI = {
     }
   },
 
+  // Create Razorpay order for loan payment
+  createRazorpayOrder: async (loanId, orderData) => {
+    try {
+      const response = await axiosInstance.post(
+        `borrower/loans/razorpay/create-order/${loanId}`,
+        orderData
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error creating Razorpay order:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+      });
+      throw error;
+    }
+  },
+
+  // Verify Razorpay payment for loan
+  verifyRazorpayPayment: async (loanId, paymentData) => {
+    try {
+      const response = await axiosInstance.post(
+        `borrower/loans/razorpay/verify-payment/${loanId}`,
+        paymentData
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error verifying Razorpay payment:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+      });
+      throw error;
+    }
+  },
+
   // Get payment history for a loan
   getPaymentHistory: async (loanId, borrowerId) => {
     try {

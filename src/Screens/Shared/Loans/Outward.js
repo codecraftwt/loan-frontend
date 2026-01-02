@@ -19,6 +19,7 @@ import { checkFraudStatus } from '../../../Redux/Slices/loanSlice';
 import { getPendingPayments } from '../../../Redux/Slices/lenderPaymentSlice';
 import { useFocusEffect } from '@react-navigation/native';
 import FraudStatusBadge from '../../../Components/FraudStatusBadge';
+import BorrowerReputationCard from '../../../Components/BorrowerReputationCard';
 import LoaderSkeleton from '../../../Components/LoaderSkeleton';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
@@ -129,24 +130,6 @@ const Outward = ({ navigation, route }) => {
       }
     }
   }, [borrowers, pendingHighlightParams]);
-
-  // Mark notification as read
-  const markNotificationAsRead = async (notificationId) => {
-    try {
-      const readNotifications = await AsyncStorage.getItem('read_notifications');
-      let readList = readNotifications ? JSON.parse(readNotifications) : [];
-      
-      if (!readList.includes(notificationId)) {
-        readList.push(notificationId);
-        if (readList.length > 100) {
-          readList = readList.slice(-100);
-        }
-        await AsyncStorage.setItem('read_notifications', JSON.stringify(readList));
-      }
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
-    }
-  };
 
   // Scroll to specific borrower
   const scrollToBorrower = (borrowerId) => {
@@ -508,6 +491,16 @@ const Outward = ({ navigation, route }) => {
                     )}
                   </View>
 
+                  {/* Reputation Score Card */}
+                  {borrower.aadharCardNo && borrower.aadharCardNo.length === 12 && (
+                    <View style={styles.reputationContainer}>
+                      <BorrowerReputationCard 
+                        aadhaarNumber={borrower.aadharCardNo} 
+                        compact={true}
+                      />
+                    </View>
+                  )}
+
                   <View style={styles.cardFooter}>
                     <View style={styles.footerBadge}>
                       <Icon name="person" size={12} color="#6B7280" />
@@ -528,13 +521,6 @@ const Outward = ({ navigation, route }) => {
                                          fraudData.riskLevel === 'high' ? '#FED7AA' : 
                                          fraudData.riskLevel === 'medium' ? '#FEF3C7' : '#D1FAE5' }
                       ]}>
-                        {/* <Icon 
-                          name="shield-alert" 
-                          size={14} 
-                          color={fraudData.riskLevel === 'critical' ? '#DC2626' : 
-                                fraudData.riskLevel === 'high' ? '#EA580C' : 
-                                fraudData.riskLevel === 'medium' ? '#D97706' : '#059669'} 
-                        /> */}
                         <Text style={[
                           styles.fraudWarningText,
                           { color: fraudData.riskLevel === 'critical' ? '#DC2626' : 
@@ -750,6 +736,10 @@ const styles = StyleSheet.create({
   borrowerDetails: {
     marginTop: m(2),
   },
+  reputationContainer: {
+    marginTop: m(12),
+    marginBottom: m(8),
+  },
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -911,7 +901,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: m(16),
     borderRadius: m(12),
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#d8e5f1ff',
     marginBottom: m(12),
     gap: m(12),
   },

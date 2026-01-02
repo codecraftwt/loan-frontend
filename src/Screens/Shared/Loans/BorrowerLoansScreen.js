@@ -12,6 +12,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import moment from 'moment';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
+import BorrowerReputationCard from '../../../Components/BorrowerReputationCard';
 
 const LoanCard = ({ loan, onPress }) => {
   const loanAmount = typeof loan.amount === 'number' ? loan.amount : parseFloat(loan.amount) || 0;
@@ -284,6 +285,15 @@ export default function BorrowerLoansScreen({ route, navigation }) {
             </View>
           </View>
         </View>
+
+        {/* Reputation Score Card */}
+        {(borrower.aadhaarNumber || borrower.aadharCardNo) && 
+         (borrower.aadhaarNumber || borrower.aadharCardNo).length === 12 && (
+          <BorrowerReputationCard 
+            aadhaarNumber={borrower.aadhaarNumber || borrower.aadharCardNo}
+            compact={false}
+          />
+        )}
 
         {/* Summary Card */}
         <View style={styles.summaryCard}>
