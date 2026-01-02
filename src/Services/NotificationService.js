@@ -14,7 +14,7 @@ class NotificationService {
   }
 
   async requestPermission() {
-    try {      
+    try {    
       // Check if Firebase messaging is available
       if (!messaging) {
         console.error('Firebase messaging is not available');
@@ -376,9 +376,8 @@ class NotificationService {
     }
   }
 
-  /**
-   * Handle overdue loan notification
-   */
+  //Handle overdue loan notification
+
   handleOverdueLoanNotification(data) {
     const navigationParams = {
       notificationId: data.notificationId,
@@ -401,9 +400,7 @@ class NotificationService {
     }
   }
 
-  /**
-   * Handle pending payment notification
-   */
+  // Handle pending payment notification
   handlePendingPaymentNotification(data) {
     const navigationParams = {
       notificationId: data.notificationId,
@@ -791,10 +788,7 @@ class NotificationService {
         if (user) {
           const userData = JSON.parse(user);
           if (userData._id) {
-            const result = await this.registerToken(userData._id, token);
-            if (result.success) {
-              console.log('Token refreshed and re-registered successfully');
-            }
+            await this.registerToken(userData._id, token);
           }
         }
       } catch (error) {
@@ -859,9 +853,9 @@ class NotificationService {
       // Get token after permission is granted (with retry logic)
       const token = await this.getFCMToken();
       if (!token) {
-        return { 
-          success: false, 
-          error: 'Failed to get FCM token. Please check Firebase configuration and ensure SHA-1/SHA-256 fingerprints are registered in Firebase Console.' 
+        return {
+          success: false,
+          error: 'Failed to get FCM token. Please check Firebase configuration and ensure SHA-1/SHA-256 fingerprints are registered in Firebase Console.'
         };
       }
 
@@ -871,8 +865,6 @@ class NotificationService {
         if (!registerResult.success) {
           console.warn('Failed to register token:', registerResult.error);
           // Don't fail initialization if registration fails - token is still valid
-        } else {
-          console.log('✅ Token registered with backend');
         }
       }
 

@@ -17,9 +17,7 @@ const registerDeviceToken = async userId => {
     const token = await NotificationService.getFCMToken();
     if (token && userId) {
       const result = await NotificationService.registerToken(userId, token);
-      if (result.success) {
-        console.log('Device token registered successfully');
-      } else {
+      if (!result.success) {
         console.warn('Failed to register device token:', result.error);
       }
     }
@@ -34,9 +32,7 @@ const removeDeviceToken = async () => {
     const token = await AsyncStorage.getItem('fcm_token');
     if (token) {
       const result = await NotificationService.removeToken(token);
-      if (result.success) {
-        console.log('Device token removed successfully');
-      } else {
+      if (!result.success) {
         console.warn('Failed to remove device token:', result.error);
       }
       // Remove token from local storage

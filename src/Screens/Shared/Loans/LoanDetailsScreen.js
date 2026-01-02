@@ -140,9 +140,7 @@ export default function LoanDetailScreen({ route, navigation }) {
         }
       } catch (apiError) {
         // Handle 500 error gracefully - API endpoint might not be available
-        if (apiError.response?.status === 500) {
-          console.log('Lender loan details endpoint returned 500, using fallback');
-        }
+        // Using fallback strategy
       }
 
       // Strategy 2: Try pending payments endpoint (handles 500 gracefully)

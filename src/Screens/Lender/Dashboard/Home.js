@@ -90,9 +90,7 @@ export default function Home() {
       dispatch(getLenderStatistics());
       dispatch(getLenderRecentActivities({ limit: 10 }));
       // Fetch pending payments for lender
-      dispatch(getPendingPayments({ page: 1, limit: 10 })).then((result) => {
-        console.log('Pending payments fetched:', result);
-      });
+      dispatch(getPendingPayments({ page: 1, limit: 10 }));
 
       // Reset animations
       fadeAnim.setValue(0);

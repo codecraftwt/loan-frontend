@@ -10,7 +10,6 @@ import {
 import {m} from 'walstar-rn-responsive';
 
 const AgreementModal = ({isVisible, agreement, onClose}) => {
-  console.info('Agreement', agreement);
   return (
     <Modal
       visible={isVisible}

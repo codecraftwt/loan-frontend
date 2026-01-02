@@ -9,11 +9,9 @@ export const setupFirebaseNotifications = () => {
       const enabled =
         authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
         authStatus === messaging.AuthorizationStatus.PROVISIONAL;
-      if (enabled) {
-        console.log('Notification permission granted:', authStatus);
-      } else {
-        console.log('Notification permission NOT granted:', authStatus);
-      }
+      // Permission status handled silently
     })
-    .catch(error => console.log('Notification permission error:', error));
+    .catch(error => {
+      // Error handled silently
+    });
 };

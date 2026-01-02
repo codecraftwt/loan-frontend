@@ -83,11 +83,7 @@ const Outward = ({ navigation, route }) => {
           } else {
             console.warn('Borrower not found with mobile number:', highlightMobileNumber);
           }
-        } else {
-          console.log('No highlightBorrowerId or highlightMobileNumber provided');
         }
-      } else {
-        console.log('Borrowers list not loaded yet, will retry when loaded...');
       }
 
       // Clear route params after processing

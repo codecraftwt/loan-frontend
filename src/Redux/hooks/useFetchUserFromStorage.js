@@ -47,8 +47,6 @@ const useFetchUserFromStorage = () => {
 
           // Optionally, store the updated user data in AsyncStorage if you want it available locally
           await AsyncStorage.setItem('user', JSON.stringify(userData));
-        } else {
-          console.log('No token found in AsyncStorage');
         }
       } catch (error) {
         console.error('Error fetching user from API:', error);
