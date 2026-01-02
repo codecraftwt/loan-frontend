@@ -3,19 +3,19 @@ import { View, Text, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { m } from 'walstar-rn-responsive';
 
-const FraudStatusBadge = ({ fraudScore, riskLevel }) => {
+const FraudStatusBadge = ({riskLevel }) => {
   const getColor = () => {
     switch (riskLevel?.toLowerCase()) {
       case 'critical':
-        return '#dc3545'; // Red
+        return '#dc3545';
       case 'high':
-        return '#fd7e14'; // Orange
+        return '#fd7e14';
       case 'medium':
-        return '#ffc107'; // Yellow
+        return '#ffc107';
       case 'low':
-        return '#28a745'; // Green
+        return '#28a745';
       default:
-        return '#6c757d'; // Gray
+        return '#6c757d';
     }
   };
 
@@ -63,5 +63,6 @@ const styles = StyleSheet.create({
 });
 
 export default FraudStatusBadge;
+
 
 

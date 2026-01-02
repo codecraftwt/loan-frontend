@@ -438,7 +438,7 @@ export default function LenderList() {
           <Icon name="search" size={20} color="#666" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search by name, email, or mobile..."
+            placeholder="Search by name, email, or mobile"
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholderTextColor="#999"

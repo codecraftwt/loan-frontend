@@ -36,14 +36,14 @@ const PromptBox = ({visible, message, onConfirm, onCancel}) => {
                 styles.button,
                 {
                   backgroundColor:
-                    clicked === 'confirm' ? '#b80266' : '#ededed',
+                    clicked === 'confirm' ? 'orange' : '#ededed',
                 },
               ]}
               onPress={() => handleButtonClick('confirm')}>
               <Text
                 style={[
                   styles.buttonText,
-                  {color: clicked === 'confirm' ? '#FFF' : '#b80266'}, // Change text color based on button color
+                  {color: clicked === 'confirm' ? '#FFF' : 'orange'},
                 ]}>
                 Confirm
               </Text>
@@ -51,13 +51,13 @@ const PromptBox = ({visible, message, onConfirm, onCancel}) => {
             <TouchableOpacity
               style={[
                 styles.button,
-                {backgroundColor: clicked === 'cancel' ? '#b80266' : '#ededed'},
+                {backgroundColor: clicked === 'cancel' ? 'orange' : '#ededed'},
               ]}
               onPress={() => handleButtonClick('cancel')}>
               <Text
                 style={[
                   styles.buttonText,
-                  {color: clicked === 'cancel' ? '#FFF' : '#b80266'},
+                  {color: clicked === 'cancel' ? '#FFF' : 'orange'},
                 ]}>
                 Cancel
               </Text>

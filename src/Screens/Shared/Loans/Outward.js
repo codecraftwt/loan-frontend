@@ -315,7 +315,7 @@ const Outward = ({ navigation, route }) => {
           <Icon name="search" size={20} color="#6B7280" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search borrowers..."
+            placeholder="Search borrowers"
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholderTextColor="#9CA3AF"

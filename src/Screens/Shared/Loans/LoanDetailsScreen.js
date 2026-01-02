@@ -23,6 +23,7 @@ import PromptBox from '../../PromptBox/Prompt';
 import Header from '../../../Components/Header';
 import { useFocusEffect } from '@react-navigation/native';
 import lenderLoanAPI from '../../../Services/lenderLoanService';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 const DetailItem = ({ icon, label, value, isStatus, onStatusChange }) => {
   const isAccepted = value?.toLowerCase() === 'accepted';
@@ -78,7 +79,7 @@ export default function LoanDetailScreen({ route, navigation }) {
 
   useEffect(() => {
     if (!isLender) return;
-    
+
     // Strategy 1: Check currentLoanDetails (from API)
     if (currentLoanDetails?.pendingConfirmations?.payments) {
       const payments = currentLoanDetails.pendingConfirmations.payments;
@@ -87,7 +88,7 @@ export default function LoanDetailScreen({ route, navigation }) {
         return;
       }
     }
-    
+
     // Strategy 2: Check pendingPayments from Redux
     if (pendingPayments && pendingPayments.length > 0) {
       const loanPendingPayments = pendingPayments.find(
@@ -98,7 +99,7 @@ export default function LoanDetailScreen({ route, navigation }) {
         return;
       }
     }
-    
+
     // Strategy 3: Check paymentHistory for pending payments
     if (loanDetails?.paymentHistory && Array.isArray(loanDetails.paymentHistory)) {
       const pendingFromHistory = loanDetails.paymentHistory.filter(
@@ -109,7 +110,7 @@ export default function LoanDetailScreen({ route, navigation }) {
         return;
       }
     }
-    
+
     // Strategy 4: Check original loanDetails
     if (loanDetails?.pendingConfirmations?.payments) {
       const payments = loanDetails.pendingConfirmations.payments;
@@ -118,12 +119,12 @@ export default function LoanDetailScreen({ route, navigation }) {
         return;
       }
     }
-      setPendingPaymentsForLoan([]);
+    setPendingPaymentsForLoan([]);
   }, [pendingPayments, currentLoanDetails, loanDetails, isLender]);
 
   const fetchLoanDetailsWithConfirmations = async () => {
     if (!isLender || !loanDetails?._id) return;
-    
+
     setLoadingPendingPayments(true);
     try {
       // Strategy 1: Try to fetch loan details from API (should include pendingConfirmations)
@@ -282,12 +283,12 @@ export default function LoanDetailScreen({ route, navigation }) {
       setActionModalVisible(false);
       setSelectedPayment(null);
       setConfirmNotes('');
-      
+
       // Refresh loan details and pending payments
       await fetchLoanDetailsWithConfirmations();
-      
+
       // Remove confirmed payment from local state
-      setPendingPaymentsForLoan(prev => 
+      setPendingPaymentsForLoan(prev =>
         prev.filter(p => p._id !== selectedPayment._id)
       );
     } catch (error) {
@@ -330,12 +331,12 @@ export default function LoanDetailScreen({ route, navigation }) {
       setActionModalVisible(false);
       setSelectedPayment(null);
       setRejectReason('');
-      
+
       // Refresh loan details and pending payments
       await fetchLoanDetailsWithConfirmations();
-      
+
       // Remove rejected payment from local state
-      setPendingPaymentsForLoan(prev => 
+      setPendingPaymentsForLoan(prev =>
         prev.filter(p => p._id !== selectedPayment._id)
       );
     } catch (error) {
@@ -374,8 +375,8 @@ export default function LoanDetailScreen({ route, navigation }) {
   };
 
   // Calculate loan amounts
-  const loanAmount = typeof loanDetails.amount === 'number' 
-    ? loanDetails.amount 
+  const loanAmount = typeof loanDetails.amount === 'number'
+    ? loanDetails.amount
     : parseFloat(loanDetails.amount) || 0;
   const totalPaid = typeof loanDetails.totalPaid === 'number'
     ? loanDetails.totalPaid
@@ -383,16 +384,16 @@ export default function LoanDetailScreen({ route, navigation }) {
   const remainingAmount = typeof loanDetails.remainingAmount === 'number'
     ? loanDetails.remainingAmount
     : parseFloat(loanDetails.remainingAmount) || loanAmount;
-  
+
   // Check if loan is closed
   const isLoanClosed = remainingAmount <= 0 && totalPaid > 0;
-  
+
   // Check if loan is overdue
-  const isOverdue = loanDetails.loanEndDate && 
-    moment(loanDetails.loanEndDate).isBefore(moment(), 'day') && 
-    remainingAmount > 0 && 
+  const isOverdue = loanDetails.loanEndDate &&
+    moment(loanDetails.loanEndDate).isBefore(moment(), 'day') &&
+    remainingAmount > 0 &&
     !isLoanClosed;
-  
+
   // Get effective status (overdue takes priority)
   const effectiveStatus = isOverdue ? 'overdue' : (isLoanClosed ? 'closed' : (loanDetails.paymentStatus || loanDetails.status || 'pending'));
 
@@ -424,10 +425,10 @@ export default function LoanDetailScreen({ route, navigation }) {
       value: loanDetails.borrowerAcceptanceStatus || 'N/A',
       icon: 'user-check',
     },
-    { 
-      label: 'Purpose', 
-      value: loanDetails.purpose || 'Not specified', 
-      icon: 'book' 
+    {
+      label: 'Purpose',
+      value: loanDetails.purpose || 'Not specified',
+      icon: 'book'
     },
     {
       label: 'Loan Start Date',
@@ -439,10 +440,10 @@ export default function LoanDetailScreen({ route, navigation }) {
       value: loanDetails.loanEndDate ? formatDate(loanDetails.loanEndDate) : 'N/A',
       icon: 'calendar',
     },
-    { 
-      label: 'Address', 
-      value: loanDetails.address || 'Not specified', 
-      icon: 'map-pin' 
+    {
+      label: 'Address',
+      value: loanDetails.address || 'Not specified',
+      icon: 'map-pin'
     },
   ];
 
@@ -457,8 +458,8 @@ export default function LoanDetailScreen({ route, navigation }) {
         isEdit={isEdit}
         onEditPress={handleEdit}
       />
-      
-      <ScrollView 
+
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -528,8 +529,11 @@ export default function LoanDetailScreen({ route, navigation }) {
         {/* Payment Summary Card */}
         {loanAmount > 0 && (
           <View style={styles.paymentSummaryCard}>
-            <Text style={styles.paymentSummaryTitle}>Payment Summary</Text>
-            
+            <View style={styles.rowContainer}>
+              <MaterialIcons name="payments" color="#000" size={24} />
+              <Text style={styles.detailsTitle}>Payment Summary</Text>
+            </View>
+
             <View style={styles.paymentSummaryRow}>
               <View style={styles.paymentSummaryItem}>
                 <Text style={styles.paymentSummaryLabel}>Loan Amount</Text>
@@ -552,14 +556,14 @@ export default function LoanDetailScreen({ route, navigation }) {
             {/* Progress Bar */}
             <View style={styles.progressContainer}>
               <View style={styles.progressBar}>
-                <View 
+                <View
                   style={[
-                    styles.progressFill, 
-                    { 
+                    styles.progressFill,
+                    {
                       width: `${loanAmount > 0 ? (totalPaid / loanAmount) * 100 : 0}%`,
-                      backgroundColor: isLoanClosed ? '#10B981' : '#3B82F6'
+                      backgroundColor: isLoanClosed ? '#17e29fff' : '#3B82F6'
                     }
-                  ]} 
+                  ]}
                 />
               </View>
               <Text style={styles.progressText}>
@@ -576,7 +580,7 @@ export default function LoanDetailScreen({ route, navigation }) {
                 </Text>
               </View>
             )}
-            
+
             {/* Loan Closed Badge */}
             {isLoanClosed && !isOverdue && (
               <View style={styles.closedBadge}>
@@ -589,8 +593,11 @@ export default function LoanDetailScreen({ route, navigation }) {
 
         {/* Loan Details Card */}
         <View style={styles.detailsCard}>
-          <Text style={styles.detailsTitle}>Loan Information</Text>
-          
+          <View style={styles.rowContainer}>
+            <Icon name="info" color="#000" size={24} />
+            <Text style={styles.detailsTitle}>Loan Information</Text>
+          </View>
+
           <View style={styles.detailsGrid}>
             {loanInfo.map((item, index) => (
               <DetailItem
@@ -626,97 +633,97 @@ export default function LoanDetailScreen({ route, navigation }) {
               </View>
             )}
             {pendingPaymentsForLoan && pendingPaymentsForLoan.length > 0 && (
-          <View style={styles.pendingConfirmationsCard}>
-            <View style={styles.pendingConfirmationsHeader}>
-              <View style={styles.pendingConfirmationsTitleRow}>
-                <Ionicons name="notifications" size={24} color="#F59E0B" />
-                <Text style={styles.pendingConfirmationsTitle}>
-                  Pending Payment Confirmations
-                </Text>
-              </View>
-              <View style={styles.pendingBadge}>
-                <Text style={styles.pendingBadgeText}>{pendingPaymentsForLoan.length}</Text>
-              </View>
-            </View>
-            <Text style={styles.pendingConfirmationsMessage}>
-              {loanDetails.name || 'Borrower'} has submitted {pendingPaymentsForLoan.length} payment{pendingPaymentsForLoan.length !== 1 ? 's' : ''} awaiting your review.
-            </Text>
-
-            {pendingPaymentsForLoan.map((payment, index) => (
-              <View key={payment._id || index} style={styles.pendingPaymentItem}>
-                <View style={styles.pendingPaymentInfo}>
-                  <View style={styles.pendingPaymentHeader}>
-                    <Text style={styles.pendingPaymentAmount}>
-                      {formatCurrency(payment.amount)}
+              <View style={styles.pendingConfirmationsCard}>
+                <View style={styles.pendingConfirmationsHeader}>
+                  <View style={styles.pendingConfirmationsTitleRow}>
+                    <Ionicons name="notifications" size={24} color="#F59E0B" />
+                    <Text style={styles.pendingConfirmationsTitle}>
+                      Pending Payment Confirmations
                     </Text>
-                    <View style={styles.pendingPaymentTypeBadge}>
-                      <Text style={styles.pendingPaymentTypeText}>
-                        {payment.installmentLabel || (payment.installmentNumber ? `Installment ${payment.installmentNumber}` : (payment.paymentType === 'one-time' ? 'One-time' : 'Installment'))}
+                  </View>
+                  <View style={styles.pendingBadge}>
+                    <Text style={styles.pendingBadgeText}>{pendingPaymentsForLoan.length}</Text>
+                  </View>
+                </View>
+                <Text style={styles.pendingConfirmationsMessage}>
+                  {loanDetails.name || 'Borrower'} has submitted {pendingPaymentsForLoan.length} payment{pendingPaymentsForLoan.length !== 1 ? 's' : ''} awaiting your review.
+                </Text>
+
+                {pendingPaymentsForLoan.map((payment, index) => (
+                  <View key={payment._id || index} style={styles.pendingPaymentItem}>
+                    <View style={styles.pendingPaymentInfo}>
+                      <View style={styles.pendingPaymentHeader}>
+                        <Text style={styles.pendingPaymentAmount}>
+                          {formatCurrency(payment.amount)}
+                        </Text>
+                        <View style={styles.pendingPaymentTypeBadge}>
+                          <Text style={styles.pendingPaymentTypeText}>
+                            {payment.installmentLabel || (payment.installmentNumber ? `Installment ${payment.installmentNumber}` : (payment.paymentType === 'one-time' ? 'One-time' : 'Installment'))}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.pendingPaymentDetails}>
+                        {payment.paymentMode?.charAt(0).toUpperCase() + payment.paymentMode?.slice(1)} Payment
                       </Text>
+                      <Text style={styles.pendingPaymentDate}>
+                        Paid on: {moment(payment.paymentDate).format('DD MMM YYYY, hh:mm A')}
+                      </Text>
+                      {payment.transactionId && (
+                        <Text style={styles.pendingPaymentTxnId}>
+                          Txn ID: {payment.transactionId}
+                        </Text>
+                      )}
+                      {payment.notes && (
+                        <Text style={styles.pendingPaymentNotes}>
+                          Note: {payment.notes}
+                        </Text>
+                      )}
+                    </View>
+
+                    {payment.paymentProof && (
+                      <TouchableOpacity
+                        style={styles.pendingPaymentProof}
+                        onPress={() => {
+                          // Open image viewer
+                          Toast.show({
+                            type: 'info',
+                            position: 'top',
+                            text1: 'Payment Proof',
+                            text2: 'View payment proof image',
+                          });
+                        }}>
+                        <Ionicons name="document-outline" size={16} color="#3B82F6" />
+                        <Text style={styles.pendingPaymentProofText}>View Proof</Text>
+                      </TouchableOpacity>
+                    )}
+
+                    <View style={styles.pendingPaymentActions}>
+                      <TouchableOpacity
+                        style={[styles.pendingActionButton, styles.rejectPendingButton]}
+                        onPress={() => handlePaymentAction(payment, 'reject')}
+                        disabled={rejecting}>
+                        <Icon name="x" size={16} color="#FFFFFF" />
+                        <Text style={styles.pendingActionButtonText}>Reject</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.pendingActionButton, styles.confirmPendingButton]}
+                        onPress={() => handlePaymentAction(payment, 'confirm')}
+                        disabled={confirming}>
+                        <Icon name="check" size={16} color="#FFFFFF" />
+                        <Text style={styles.pendingActionButtonText}>Accept</Text>
+                      </TouchableOpacity>
                     </View>
                   </View>
-                  <Text style={styles.pendingPaymentDetails}>
-                    {payment.paymentMode?.charAt(0).toUpperCase() + payment.paymentMode?.slice(1)} Payment
-                  </Text>
-                  <Text style={styles.pendingPaymentDate}>
-                    Paid on: {moment(payment.paymentDate).format('DD MMM YYYY, hh:mm A')}
-                  </Text>
-                  {payment.transactionId && (
-                    <Text style={styles.pendingPaymentTxnId}>
-                      Txn ID: {payment.transactionId}
-                    </Text>
-                  )}
-                  {payment.notes && (
-                    <Text style={styles.pendingPaymentNotes}>
-                      Note: {payment.notes}
-                    </Text>
-                  )}
-                </View>
-
-                {payment.paymentProof && (
-                  <TouchableOpacity
-                    style={styles.pendingPaymentProof}
-                    onPress={() => {
-                      // Open image viewer
-                      Toast.show({
-                        type: 'info',
-                        position: 'top',
-                        text1: 'Payment Proof',
-                        text2: 'View payment proof image',
-                      });
-                    }}>
-                    <Ionicons name="document-outline" size={16} color="#3B82F6" />
-                    <Text style={styles.pendingPaymentProofText}>View Proof</Text>
-                  </TouchableOpacity>
-                )}
-
-                <View style={styles.pendingPaymentActions}>
-                  <TouchableOpacity
-                    style={[styles.pendingActionButton, styles.rejectPendingButton]}
-                    onPress={() => handlePaymentAction(payment, 'reject')}
-                    disabled={rejecting}>
-                    <Icon name="x" size={16} color="#FFFFFF" />
-                    <Text style={styles.pendingActionButtonText}>Reject</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.pendingActionButton, styles.confirmPendingButton]}
-                    onPress={() => handlePaymentAction(payment, 'confirm')}
-                    disabled={confirming}>
-                    <Icon name="check" size={16} color="#FFFFFF" />
-                    <Text style={styles.pendingActionButtonText}>Accept</Text>
-                  </TouchableOpacity>
-                </View>
+                ))}
               </View>
-            ))}
-          </View>
             )}
             {!loadingPendingPayments && pendingPaymentsForLoan && pendingPaymentsForLoan.length === 0 && isLender && (
               <View style={styles.noPendingCard}>
                 <Ionicons name="checkmark-circle-outline" size={48} color="#D1D5DB" />
-                <Text style={styles.noPendingText}>No Pending Payments</Text>
-                <Text style={styles.noPendingSubtext}>
+                <Text style={styles.noPendingText}>No Pending Payment Requests</Text>
+                {/* <Text style={styles.noPendingSubtext}>
                   All payments have been reviewed for this loan.
-                </Text>
+                </Text> */}
               </View>
             )}
           </>
@@ -848,7 +855,7 @@ const styles = StyleSheet.create({
     padding: m(16),
     paddingBottom: m(40),
   },
-  
+
   // Profile Card
   profileCard: {
     backgroundColor: '#FFFFFF',
@@ -913,7 +920,7 @@ const styles = StyleSheet.create({
     fontSize: m(14),
     color: '#6B7280',
   },
-  
+
   // Status Container
   statusContainer: {
     flexDirection: 'row',
@@ -949,7 +956,7 @@ const styles = StyleSheet.create({
     height: m(40),
     backgroundColor: '#E5E7EB',
   },
-  
+
   // Details Card
   detailsCard: {
     backgroundColor: '#FFFFFF',
@@ -964,11 +971,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 12,
   },
+  rowContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: m(10),
+    gap: m(8),
+  },
   detailsTitle: {
     fontSize: m(20),
     fontWeight: '700',
     color: '#111827',
-    marginBottom: m(16),
+    marginBottom: m(4),
   },
   detailsGrid: {
     gap: m(10),
@@ -976,9 +989,10 @@ const styles = StyleSheet.create({
   detailItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#f0f4f9ff',
     borderRadius: m(14),
     padding: m(14),
+    paddingVertical: m(10),
     marginBottom: m(5),
     borderWidth: 1,
     borderColor: '#F3F4F6',
@@ -1020,7 +1034,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
   },
-  
+
   // Notes Section
   notesContainer: {
     marginTop: m(20),
@@ -1044,7 +1058,7 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     lineHeight: m(20),
   },
-  
+
   // Action Button
   actionButton: {
     flexDirection: 'row',
@@ -1066,7 +1080,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
   },
-  
+
   // Footer
   footer: {
     flexDirection: 'row',
@@ -1079,7 +1093,7 @@ const styles = StyleSheet.create({
     fontSize: m(14),
     color: '#9CA3AF',
   },
-  
+
   // Payment Summary Card
   paymentSummaryCard: {
     backgroundColor: '#FFFFFF',
@@ -1093,12 +1107,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
-  },
-  paymentSummaryTitle: {
-    fontSize: m(20),
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: m(20),
   },
   paymentSummaryRow: {
     flexDirection: 'row',
@@ -1183,7 +1191,7 @@ const styles = StyleSheet.create({
     color: '#DC2626',
     flex: 1,
   },
-  
+
   // Pending Confirmations Card
   pendingConfirmationsCard: {
     backgroundColor: '#FFF7ED',
@@ -1329,7 +1337,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
   },
-  
+
   // Modal Styles
   modalOverlay: {
     flex: 1,
@@ -1416,7 +1424,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
   },
-  
+
   // Loading Card
   loadingCard: {
     backgroundColor: '#FFF7ED',
@@ -1432,7 +1440,7 @@ const styles = StyleSheet.create({
     fontSize: m(14),
     color: '#92400E',
   },
-  
+
   // No Pending Card
   noPendingCard: {
     backgroundColor: '#F9FAFB',
@@ -1447,10 +1455,5 @@ const styles = StyleSheet.create({
     color: '#111827',
     marginTop: m(12),
     marginBottom: m(4),
-  },
-  noPendingSubtext: {
-    fontSize: m(14),
-    color: '#6B7280',
-    textAlign: 'center',
   },
 });

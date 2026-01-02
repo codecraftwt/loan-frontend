@@ -14,16 +14,14 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useDispatch, useSelector } from 'react-redux';
 import { getBorrowerLoansById } from '../../../Redux/Slices/borrowerLoanSlice';
-import { getPendingPayments } from '../../../Redux/Slices/lenderPaymentSlice';
 import Header from '../../../Components/Header';
 import moment from 'moment';
 import { m } from 'walstar-rn-responsive';
-import { useFocusEffect } from '@react-navigation/native';
 
-const LoanHistoryCard = ({ loan, onPress, pendingPaymentInfo }) => {
+const LoanHistoryCard = ({ loan, onPress }) => {
   // Check if loan is overdue
-  const isOverdue = loan.loanEndDate && 
-    moment(loan.loanEndDate).isBefore(moment(), 'day') && 
+  const isOverdue = loan.loanEndDate &&
+    moment(loan.loanEndDate).isBefore(moment(), 'day') &&
     loan.remainingAmount > 0;
   
   // Get effective status (overdue takes priority)
@@ -60,23 +58,13 @@ const LoanHistoryCard = ({ loan, onPress, pendingPaymentInfo }) => {
   };
 
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={[
         styles.loanCard,
-        isOverdue && styles.overdueCard,
-        pendingPaymentInfo && styles.pendingPaymentCard
-      ]} 
+        isOverdue && styles.overdueCard
+      ]}
       onPress={onPress}
       activeOpacity={0.8}>
-      {/* Pending Payment Banner */}
-      {pendingPaymentInfo && (
-        <View style={styles.pendingPaymentBanner}>
-          <Icon name="notifications" size={16} color="#FFFFFF" />
-          <Text style={styles.pendingPaymentBannerText}>
-            {pendingPaymentInfo.count} Pending Payment{pendingPaymentInfo.count !== 1 ? 's' : ''} - ₹{pendingPaymentInfo.amount?.toLocaleString('en-IN')}
-          </Text>
-        </View>
-      )}
       {/* Overdue Banner */}
       {isOverdue && (
         <View style={styles.overdueBanner}>
@@ -84,15 +72,15 @@ const LoanHistoryCard = ({ loan, onPress, pendingPaymentInfo }) => {
           <Text style={styles.overdueBannerText}>OVERDUE</Text>
         </View>
       )}
-      
+
       <View style={styles.loanCardHeader}>
         <View style={styles.loanInfo}>
           <Text style={styles.loanAmount}>₹{loan.amount?.toLocaleString() || '0'}</Text>
           <Text style={styles.loanPurpose}>{loan.purpose || 'Loan Amount'}</Text>
         </View>
         <View style={[
-          styles.statusBadge, 
-          { 
+          styles.statusBadge,
+          {
             backgroundColor: getStatusColor(effectiveStatus) + '20',
             borderWidth: 1,
             borderColor: getStatusColor(effectiveStatus) + '40',
@@ -114,12 +102,13 @@ const LoanHistoryCard = ({ loan, onPress, pendingPaymentInfo }) => {
       <View style={styles.loanDetails}>
         <View style={styles.detailRow}>
           <View style={styles.detailItem}>
-            <View style={[styles.detailIconContainer, { backgroundColor: '#ECFDF5' }]}>
+            <View style={[styles.detailIconContainer, { backgroundColor: '#dbfdf2ff' }]}>
+              {/* backgroundColor:'#95f2d3ff'  */}
               <Icon name="check-circle" size={16} color="#10B981" />
             </View>
             <View style={styles.detailContent}>
               <Text style={styles.detailLabel}>Paid</Text>
-              <Text style={[styles.detailValue, { color: '#10B981' }]}>
+              <Text style={[styles.detailValue, { color: '#10B981'}]}>
                 ₹{loan.totalPaid?.toLocaleString('en-IN') || '0'}
               </Text>
             </View>
@@ -158,8 +147,8 @@ const LoanHistoryCard = ({ loan, onPress, pendingPaymentInfo }) => {
 
         {loan.lenderId && (
           <View style={styles.lenderInfo}>
-            <View style={[styles.detailIconContainer, { backgroundColor: '#EFF6FF' }]}>
-              <Icon name="person" size={16} color="#3B82F6" />
+            <View style={[styles.detailIconContainer, { backgroundColor: '#afccf4ff' }]}>
+              <Icon name="person" size={18} color="#699ff6ff" />
             </View>
             <Text style={styles.lenderName} numberOfLines={1}>
               Lender: {loan.lenderId.userName || 'N/A'}
@@ -231,7 +220,7 @@ const FilterModal = ({ visible, onClose, filters, setFilters, applyFilters }) =>
                       styles.statusOption,
                       localFilters.status === status && styles.statusOptionSelected,
                     ]}
-                    onPress={() => setLocalFilters({...localFilters, status})}>
+                    onPress={() => setLocalFilters({ ...localFilters, status })}>
                     <Text style={[
                       styles.statusOptionText,
                       localFilters.status === status && styles.statusOptionTextSelected,
@@ -253,7 +242,7 @@ const FilterModal = ({ visible, onClose, filters, setFilters, applyFilters }) =>
                     style={styles.amountInput}
                     placeholder="₹0"
                     value={localFilters.minAmount}
-                    onChangeText={(text) => setLocalFilters({...localFilters, minAmount: text})}
+                    onChangeText={(text) => setLocalFilters({ ...localFilters, minAmount: text })}
                     keyboardType="numeric"
                     placeholderTextColor="#9CA3AF"
                   />
@@ -265,7 +254,7 @@ const FilterModal = ({ visible, onClose, filters, setFilters, applyFilters }) =>
                     style={styles.amountInput}
                     placeholder="₹0"
                     value={localFilters.maxAmount}
-                    onChangeText={(text) => setLocalFilters({...localFilters, maxAmount: text})}
+                    onChangeText={(text) => setLocalFilters({ ...localFilters, maxAmount: text })}
                     keyboardType="numeric"
                     placeholderTextColor="#9CA3AF"
                   />
@@ -283,7 +272,7 @@ const FilterModal = ({ visible, onClose, filters, setFilters, applyFilters }) =>
                     style={styles.dateInput}
                     placeholder="YYYY-MM-DD"
                     value={localFilters.startDate}
-                    onChangeText={(text) => setLocalFilters({...localFilters, startDate: text})}
+                    onChangeText={(text) => setLocalFilters({ ...localFilters, startDate: text })}
                     placeholderTextColor="#9CA3AF"
                   />
                 </View>
@@ -293,7 +282,7 @@ const FilterModal = ({ visible, onClose, filters, setFilters, applyFilters }) =>
                     style={styles.dateInput}
                     placeholder="YYYY-MM-DD"
                     value={localFilters.endDate}
-                    onChangeText={(text) => setLocalFilters({...localFilters, endDate: text})}
+                    onChangeText={(text) => setLocalFilters({ ...localFilters, endDate: text })}
                     placeholderTextColor="#9CA3AF"
                   />
                 </View>
@@ -322,7 +311,7 @@ const FilterModal = ({ visible, onClose, filters, setFilters, applyFilters }) =>
 const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
   const dispatch = useDispatch();
   const { borrowerId } = route.params || {};
-  
+
   const {
     loans: borrowerHistory,
     loading: historyLoading,
@@ -330,7 +319,6 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
     summary: historySummary,
     pagination: historyPagination,
   } = useSelector(state => state.borrowerLoans);
-  const { pendingPayments } = useSelector(state => state.lenderPayments);
 
   const [refreshing, setRefreshing] = useState(false);
   const [filters, setFilters] = useState({
@@ -360,35 +348,6 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
   useEffect(() => {
     loadHistory();
   }, [loadHistory]);
-
-  // Fetch pending payments when screen is focused
-  useFocusEffect(
-    useCallback(() => {
-      dispatch(getPendingPayments({ page: 1, limit: 100 }));
-    }, [dispatch])
-  );
-
-  // Helper function to get pending payments for a specific loan
-  const getLoanPendingPayments = (loanId) => {
-    if (!pendingPayments || pendingPayments.length === 0) return null;
-    
-    const loanPending = pendingPayments.find(
-      loan => loan.loanId === loanId || loan._id === loanId
-    );
-    
-    if (!loanPending || !loanPending.pendingPayments || loanPending.pendingPayments.length === 0) {
-      return null;
-    }
-    
-    const totalAmount = loanPending.pendingPayments.reduce((sum, payment) => {
-      return sum + (typeof payment.amount === 'number' ? payment.amount : parseFloat(payment.amount) || 0);
-    }, 0);
-    
-    return {
-      count: loanPending.pendingPayments.length,
-      amount: totalAmount,
-    };
-  };
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -428,24 +387,24 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
   return (
     <View style={styles.container}>
       <Header title="Loan History" showBackButton />
-      
+
       {/* Summary Section */}
       {historySummary && (
         <View style={styles.summaryContainer}>
           <Text style={styles.summaryTitle}>Loan Summary</Text>
           <View style={styles.summaryGrid}>
             <View style={styles.summaryCard}>
-              <Text style={styles.summaryNumber}>{historySummary.totalLoans || 0}</Text>
+              <Text style={[styles.summaryNumber, { color: '#50C878', backgroundColor: '#D0F0C0' }]}>{historySummary.totalLoans || 0}</Text>
               <Text style={styles.summaryLabel}>Total Loans</Text>
             </View>
             <View style={styles.summaryCard}>
-              <Text style={[styles.summaryNumber, { color: '#F59E0B' }]}>
+              <Text style={[styles.summaryNumber, { color: 'blue', backgroundColor: '#a9c8f9ff' }]}>
                 {historySummary.activeLoans || 0}
               </Text>
               <Text style={styles.summaryLabel}>Active</Text>
             </View>
             <View style={styles.summaryCard}>
-              <Text style={[styles.summaryNumber, { color: '#10B981' }]}>
+              <Text style={[styles.summaryNumber, { color: '#F59E0B', backgroundColor: 'rgba(251, 188, 71, 0.5)' }]}>
                 {historySummary.completedLoans || 0}
               </Text>
               <Text style={styles.summaryLabel}>Completed</Text>
@@ -503,7 +462,7 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
         showsVerticalScrollIndicator={false}>
-        {historyLoading && !refreshing ? (
+        {false && !refreshing ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#3B82F6" />
             <Text style={styles.loadingText}>Loading history...</Text>
@@ -527,17 +486,13 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
           </View>
         ) : (
           <>
-            {borrowerHistory.map((loan, index) => {
-              const pendingPaymentInfo = getLoanPendingPayments(loan._id);
-              return (
-                <LoanHistoryCard
-                  key={loan._id || index}
-                  loan={loan}
-                  onPress={() => handleLoanCardPress(loan)}
-                  pendingPaymentInfo={pendingPaymentInfo}
-                />
-              );
-            })}
+            {borrowerHistory.map((loan, index) => (
+              <LoanHistoryCard
+                key={loan._id || index}
+                loan={loan}
+                onPress={() => handleLoanCardPress(loan)}
+              />
+            ))}
             {historyPagination.currentPage < historyPagination.totalPages && (
               <TouchableOpacity
                 style={styles.loadMoreButton}
@@ -575,7 +530,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     margin: m(16),
     padding: m(20),
-    paddingBottom: m(15),
     borderRadius: m(20),
     borderWidth: 1,
     borderColor: '#E5E7EB',
@@ -589,12 +543,12 @@ const styles = StyleSheet.create({
     fontSize: m(20),
     fontWeight: '700',
     color: '#111827',
-    marginBottom: m(15),
+    marginBottom: m(10),
   },
   summaryGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: m(16),
+    marginBottom: m(10),
   },
   summaryCard: {
     alignItems: 'center',
@@ -606,6 +560,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1F2937',
     marginBottom: m(4),
+    borderRadius: m(23),
+    height: m(46),
+    width: m(46),
+    textAlign: 'center',
+    lineHeight: m(46),
+    justifyContent: 'center',
+    alignItems: 'center', 
+    display: 'flex', 
   },
   summaryLabel: {
     fontSize: m(12),
@@ -700,11 +662,6 @@ const styles = StyleSheet.create({
     borderColor: '#FCA5A5',
     backgroundColor: '#FFF5F5',
   },
-  pendingPaymentCard: {
-    borderWidth: 2,
-    borderColor: '#FDE68A',
-    backgroundColor: '#FFFBF5',
-  },
   overdueBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -723,29 +680,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 1,
   },
-  pendingPaymentBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F59E0B',
-    paddingVertical: m(6),
-    paddingHorizontal: m(12),
-    marginHorizontal: m(-20),
-    marginTop: m(-20),
-    marginBottom: m(16),
-    gap: m(6),
-  },
-  pendingPaymentBannerText: {
-    color: '#FFFFFF',
-    fontSize: m(12),
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
   loanCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: m(12),
+    marginBottom: m(16),
   },
   loanInfo: {
     flex: 1,
@@ -755,7 +694,7 @@ const styles = StyleSheet.create({
     fontSize: m(26),
     fontWeight: '700',
     color: '#111827',
-    marginBottom: m(5),
+    marginBottom: m(6),
   },
   loanPurpose: {
     fontSize: m(14),
@@ -777,7 +716,7 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: '#F3F4F6',
-    marginBottom: m(14),
+    marginBottom: m(16),
   },
   loanDetails: {
     gap: m(12),
@@ -812,7 +751,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   detailValue: {
-    fontSize: m(15),
+    fontSize: m(14),
     fontWeight: '700',
     color: '#111827',
   },
@@ -825,17 +764,17 @@ const styles = StyleSheet.create({
   lenderInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: m(6),
+    marginTop: m(8),
     padding: m(12),
-    backgroundColor: '#F9FAFB',
+    paddingVertical: m(8),
+    backgroundColor: '#eef4faff',
     borderRadius: m(12),
     borderWidth: 1,
     borderColor: '#E5E7EB',
     gap: m(10),
-    paddingVertical: m(7),
   },
   lenderName: {
-    fontSize: m(14.2),
+    fontSize: m(14.4),
     color: '#374151',
     fontWeight: '600',
     flex: 1,
@@ -844,7 +783,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-start',
     alignItems: 'center',
-    marginTop: m(6),
+    marginTop: m(4),
     paddingTop: m(12),
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',

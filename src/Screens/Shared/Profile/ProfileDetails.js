@@ -8,7 +8,8 @@ import {
   TextInput,
   Image,
   ActivityIndicator,
-  KeyboardAvoidingView
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import LinearGradient from 'react-native-linear-gradient';
@@ -129,10 +130,12 @@ const ProfileDetails = ({ navigation }) => {
     }
   };
 
-  const renderField = (icon, label, value, editable = false, keyName) => (
-    <View style={styles.fieldRow}>
-      <Icon name={icon} size={22} color="#ff6700" />
-      <View style={{ flex: 1, marginLeft: m(10) }}>
+  const renderField = (icon, label, value, editable = false, keyName, iconColor = '#3B82F6') => (
+    <View style={styles.fieldCard}>
+      <View style={[styles.fieldIconContainer, { backgroundColor: iconColor + '15' }]}>
+        <Icon name={icon} size={22} color={iconColor} />
+      </View>
+      <View style={styles.fieldContent}>
         <Text style={styles.fieldLabel}>{label}</Text>
         {editable ? (
           <TextInput
@@ -140,25 +143,24 @@ const ProfileDetails = ({ navigation }) => {
             value={editedData[keyName]}
             onChangeText={text => setEditedData({ ...editedData, [keyName]: text })}
             placeholder={`Enter ${label.toLowerCase()}`}
-            placeholderTextColor="#999"
+            placeholderTextColor="#9CA3AF"
           />
         ) : (
-          <Text style={styles.fieldValue}>{value || '-'}</Text>
+          <Text style={styles.fieldValue}>{value || 'Not provided'}</Text>
         )}
       </View>
     </View>
   );
 
   return (
-    // <View style={{ flex: 1, backgroundColor: '#f9f9f9' }}>
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: '#f9f9f9' }}
+      style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       {/* Conditional Header based on edit mode */}
       {isEditing ? (
         <Header
-          title="Edit your profile"
+          title="Edit Profile"
           showBackButton />
       ) : (
         <Header
@@ -172,71 +174,87 @@ const ProfileDetails = ({ navigation }) => {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        {/* Profile Card */}
-        <LinearGradient
-          colors={['#fff', '#fff']}
-          style={styles.profileCard}>
-          <View style={styles.imageContainer}>
-            {profileData?.profileImage ? (
-              <Image
-                source={{ uri: profileData.profileImage }}
-                style={styles.profileImage}
-              />
-            ) : (
-              <View style={styles.defaultProfileIcon}>
-                <Icon name="user" size={60} color="#ff6700" />
-              </View>
-            )}
-
-            {/* Camera Icon Overlay - Only show when not editing or in edit mode */}
-            {(isEditing || !isEditing) && (
+        {/* Profile Header Card */}
+        <View style={styles.profileHeaderCard}>
+          <View style={styles.profileImageSection}>
+            <View style={styles.imageContainer}>
+              {profileData?.profileImage ? (
+                <Image
+                  source={{ uri: profileData.profileImage }}
+                  style={styles.profileImage}
+                />
+              ) : (
+                <View style={styles.defaultProfileIcon}>
+                  <Icon name="user" size={56} color="#FFFFFF" />
+                </View>
+              )}
+              
+              {/* Camera Icon Overlay */}
               <TouchableOpacity
                 style={styles.cameraBtn}
                 onPress={() => handleProfileImage('gallery')}
+                activeOpacity={0.8}
               >
                 <LinearGradient
-                  colors={['#ff6700', '#ff9100']}
+                  colors={['#3B82F6', '#2563EB']}
                   style={styles.cameraIconBg}
                 >
-                  <Icon name="camera" size={20} color="#fff" />
+                  <Icon name="camera" size={18} color="#FFFFFF" />
                 </LinearGradient>
               </TouchableOpacity>
+
+              {/* Delete Image - Only show when has image and in edit mode */}
+              {profileData?.profileImage && isEditing && (
+                <TouchableOpacity
+                  style={styles.deleteImageBtn}
+                  onPress={handleDeleteProfileImage}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.deleteImageIconBg}>
+                    <Icon name="trash-2" size={16} color="#FFFFFF" />
+                  </View>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {loading && (
+              <View style={styles.loadingOverlay}>
+                <ActivityIndicator size="small" color="#3B82F6" />
+              </View>
             )}
 
-            {/* Delete Image - Only show when has image and in edit mode */}
-            {profileData?.profileImage && isEditing && (
-              <TouchableOpacity
-                style={styles.deleteImageBtn}
-                onPress={handleDeleteProfileImage}
-              >
-                <Icon name="trash" size={20} color="#fff" />
-              </TouchableOpacity>
-            )}
+            <View style={styles.userNameSection}>
+              {isEditing ? (
+                <TextInput
+                  style={styles.userNameInput}
+                  value={editedData.userName}
+                  onChangeText={text => setEditedData({ ...editedData, userName: text })}
+                  placeholder="Enter your name"
+                  placeholderTextColor="#9CA3AF"
+                  maxLength={50}
+                />
+              ) : (
+                <Text style={styles.userName}>{profileData?.userName || 'User Name'}</Text>
+              )}
+            </View>
           </View>
+        </View>
 
-          {isEditing ? (
-            <TextInput
-              style={styles.userNameInput}
-              value={editedData.userName}
-              onChangeText={text => setEditedData({ ...editedData, userName: text })}
-              placeholder="Enter your name"
-              placeholderTextColor="#999"
-              maxLength={50}
-            />
-          ) : (
-            <Text style={styles.userName}>{profileData?.userName || 'User Name'}</Text>
-          )}
-        </LinearGradient>
-
-        {loading && <ActivityIndicator size="large" color="#ff6700" style={{ marginTop: m(20) }} />}
-
-        {/* Profile Fields */}
-        <View style={styles.fieldsContainer}>
-          {renderField('user', 'Name', profileData?.userName, isEditing, 'userName')}
-          {renderField('phone', 'Phone', profileData?.mobileNo, isEditing, 'mobileNo')}
-          {renderField('mail', 'Email', profileData?.email, isEditing, 'email')}
-          {renderField('map-pin', 'Address', profileData?.address, isEditing, 'address')}
+        {/* Profile Information Card */}
+        <View style={styles.infoCard}>
+          <View style={styles.infoCardHeader}>
+            <Icon name="info" size={20} color="#3B82F6" />
+            <Text style={styles.infoCardTitle}>Personal Information</Text>
+          </View>
+          
+          <View style={styles.fieldsContainer}>
+            {renderField('user', 'Name', profileData?.userName, isEditing, 'userName', '#3B82F6')}
+            {renderField('phone', 'Phone Number', profileData?.mobileNo, isEditing, 'mobileNo', '#10B981')}
+            {renderField('mail', 'Email Address', profileData?.email, isEditing, 'email', '#F59E0B')}
+            {renderField('map-pin', 'Address', profileData?.address, isEditing, 'address', '#EF4444')}
+          </View>
         </View>
 
         {/* Edit mode action buttons */}
@@ -245,12 +263,13 @@ const ProfileDetails = ({ navigation }) => {
             <TouchableOpacity
               style={styles.saveButton}
               onPress={handleSaveChanges}
+              activeOpacity={0.8}
             >
               <LinearGradient
-                colors={['#ff6700', '#ff9100']}
+                colors={['#3B82F6', '#2563EB']}
                 style={styles.saveButtonGradient}
               >
-                <Icon name="check" size={22} color="#fff" />
+                <Icon name="check" size={20} color="#FFFFFF" />
                 <Text style={styles.saveButtonText}>Save Changes</Text>
               </LinearGradient>
             </TouchableOpacity>
@@ -258,18 +277,23 @@ const ProfileDetails = ({ navigation }) => {
             <TouchableOpacity
               style={styles.cancelEditButton}
               onPress={handleCancelEdit}
+              activeOpacity={0.8}
             >
-              <Icon name="x" size={22} color="#ff6700" />
-              <Text style={styles.cancelEditText}>Cancel Edit</Text>
+              <Icon name="x" size={20} color="#6B7280" />
+              <Text style={styles.cancelEditText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         )}
 
-        {/* Cancel/Back Button - Only show when not in edit mode */}
+        {/* Back Button - Only show when not in edit mode */}
         {!isEditing && (
-          <TouchableOpacity style={styles.cancelBtn} onPress={handleCancel}>
-            <Icon name="arrow-left" size={22} color="#ff6700" />
-            <Text style={styles.cancelText}>Go Back</Text>
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={handleCancel}
+            activeOpacity={0.8}
+          >
+            <Icon name="arrow-left" size={20} color="#6B7280" />
+            <Text style={styles.backButtonText}>Go Back</Text>
           </TouchableOpacity>
         )}
       </ScrollView>
@@ -292,204 +316,264 @@ const ProfileDetails = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  // Profile Card
-  profileCard: {
-    alignItems: 'center',
-    paddingVertical: m(20),
-    borderRadius: m(16),
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: m(4) },
-    shadowOpacity: 0.1,
-    shadowRadius: m(8),
-    elevation: 5,
+  container: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: m(16),
+    paddingBottom: m(100),
+  },
+  // Profile Header Card
+  profileHeaderCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: m(20),
+    padding: m(24),
     marginBottom: m(16),
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  profileImageSection: {
+    alignItems: 'center',
+    width: '100%',
   },
   imageContainer: {
-    width: m(90),
-    height: m(90),
-    borderRadius: m(45),
+    width: m(120),
+    height: m(120),
+    borderRadius: m(60),
+    backgroundColor: '#EFF6FF',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f8f8',
     position: 'relative',
-    borderWidth: 3,
-    borderColor: '#ff6700',
-    marginBottom: m(12),
+    marginBottom: m(20),
+    borderWidth: 4,
+    borderColor: '#DBEAFE',
   },
   defaultProfileIcon: {
-    width: m(90),
-    height: m(90),
+    width: m(120),
+    height: m(120),
+    borderRadius: m(60),
+    backgroundColor: '#3B82F6',
     justifyContent: 'center',
     alignItems: 'center',
   },
   profileImage: {
-    width: m(90),
-    height: m(90),
-    borderRadius: m(45),
+    width: m(120),
+    height: m(120),
+    borderRadius: m(60),
   },
   cameraBtn: {
     position: 'absolute',
-    bottom: 0,
-    right: 0,
+    bottom: m(0),
+    right: m(0),
     width: m(40),
     height: m(40),
     borderRadius: m(20),
     overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#fff',
-    backgroundColor: '#fff',
-    elevation: 3,
-    shadowColor: '#000',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    elevation: 4,
+    shadowColor: '#3B82F6',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
   cameraIconBg: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     width: '100%',
     height: '100%',
-    borderRadius: m(20),
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   deleteImageBtn: {
     position: 'absolute',
-    top: 5,
-    right: 5,
-    backgroundColor: '#ff4444',
-    padding: m(6),
-    borderRadius: m(20),
-    elevation: 2,
+    top: m(-4),
+    right: m(-4),
+    width: m(32),
+    height: m(32),
+    borderRadius: m(16),
+    overflow: 'hidden',
+    elevation: 3,
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  deleteImageIconBg: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#EF4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: m(140),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  userNameSection: {
+    width: '100%',
+    alignItems: 'center',
   },
   userName: {
-    fontSize: m(20),
-    fontWeight: 'bold',
-    color: '#333333ff',
+    fontSize: m(24),
+    fontWeight: '700',
+    color: '#111827',
+    textAlign: 'center',
   },
   userNameInput: {
-    fontSize: m(20),
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: m(24),
+    fontWeight: '700',
+    color: '#111827',
     textAlign: 'center',
     borderBottomWidth: 2,
-    borderBottomColor: '#ff6700',
-    paddingHorizontal: m(8),
-    paddingVertical: m(4),
+    borderBottomColor: '#3B82F6',
+    paddingHorizontal: m(12),
+    paddingVertical: m(8),
     minWidth: m(200),
-    textAlign: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: m(8),
   },
-
-  // Fields
-  fieldsContainer: {
-    backgroundColor: '#fff',
-    borderRadius: m(16),
-    padding: m(16),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: m(2) },
-    shadowOpacity: 0.05,
-    shadowRadius: m(4),
-    elevation: 2,
+  // Info Card
+  infoCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: m(20),
+    padding: m(20),
     marginBottom: m(16),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
   },
-  fieldRow: {
+  infoCardHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: m(20),
-    paddingBottom: m(12),
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    gap: m(10),
+  },
+  infoCardTitle: {
+    fontSize: m(18),
+    fontWeight: '700',
+    color: '#111827',
+  },
+  fieldsContainer: {
+    gap: m(16),
+  },
+  fieldCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: m(16),
+    backgroundColor: '#F9FAFB',
+    borderRadius: m(16),
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: m(16),
+  },
+  fieldIconContainer: {
+    width: m(48),
+    height: m(48),
+    borderRadius: m(14),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fieldContent: {
+    flex: 1,
   },
   fieldLabel: {
-    fontSize: m(14),
-    color: '#777',
-    marginBottom: m(4),
+    fontSize: m(13),
+    color: '#6B7280',
+    fontWeight: '600',
+    marginBottom: m(6),
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   fieldValue: {
     fontSize: m(16),
-    fontWeight: '500',
-    color: '#333',
+    fontWeight: '600',
+    color: '#111827',
+    lineHeight: m(22),
   },
   fieldInput: {
     fontSize: m(16),
-    borderBottomWidth: 1,
-    borderBottomColor: '#ff6700',
-    color: '#333',
-    paddingVertical: m(4),
+    fontWeight: '600',
+    color: '#111827',
+    borderBottomWidth: 1.5,
+    borderBottomColor: '#3B82F6',
+    paddingVertical: m(6),
     paddingHorizontal: 0,
-    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: m(4),
+    paddingLeft: m(8),
   },
-
   // Edit Action Buttons
   editActionButtons: {
-    marginTop: m(10),
+    marginTop: m(8),
     gap: m(12),
   },
   saveButton: {
-    borderRadius: m(12),
+    borderRadius: m(16),
     overflow: 'hidden',
     elevation: 4,
-    shadowColor: '#ff6700',
-    shadowOffset: { width: 0, height: 3 },
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 5,
+    shadowRadius: 8,
   },
   saveButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: m(12),
+    paddingVertical: m(16),
     gap: m(10),
   },
   saveButtonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: m(16),
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   cancelEditButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderColor: '#ff6700',
-    borderWidth: 1,
-    paddingVertical: m(12),
-    borderRadius: m(12),
-    gap: m(8),
+    borderColor: '#E5E7EB',
+    borderWidth: 1.5,
+    paddingVertical: m(16),
+    borderRadius: m(16),
+    backgroundColor: '#FFFFFF',
+    gap: m(10),
   },
   cancelEditText: {
-    color: '#ff6700',
+    color: '#6B7280',
     fontSize: m(16),
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
-
-  // Cancel/Back Button
-  cancelBtn: {
+  // Back Button
+  backButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderColor: '#ff6700',
-    borderWidth: 1,
-    paddingVertical: m(14),
-    borderRadius: m(12),
-    marginTop: m(16),
-    marginBottom: m(30),
+    borderColor: '#E5E7EB',
+    borderWidth: 1.5,
+    paddingVertical: m(16),
+    borderRadius: m(16),
+    backgroundColor: '#FFFFFF',
+    marginTop: m(8),
+    gap: m(10),
   },
-  cancelText: {
-    color: '#ff6700',
+  backButtonText: {
+    color: '#6B7280',
     fontSize: m(16),
-    fontWeight: 'bold',
-    marginLeft: m(8),
-  },
-
-  // Scroll View
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: m(16),
-    paddingBottom: m(80),
+    fontWeight: '600',
   },
 });
 

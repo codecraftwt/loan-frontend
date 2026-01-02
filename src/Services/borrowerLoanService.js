@@ -26,7 +26,10 @@ export const borrowerLoanAPI = {
       const queryString = queryParams.toString();
       const url = `borrower/loans/my-loans?${queryString}`;
 
+      console.log('Fetching borrower loans (authenticated) from:', url); // Debug log
+
       const response = await axiosInstance.get(url);
+      console.log('Borrower loans response:', response.data); // Debug log
       return response.data;
     } catch (error) {
       console.error('Error fetching borrower loans:', error);
@@ -55,6 +58,7 @@ export const borrowerLoanAPI = {
   // Make a payment for a loan
   makePayment: async (loanId, paymentData) => {
     try {
+      console.log('Submitting payment for loan:', loanId, paymentData);
       const response = await axiosInstance.post(
         `borrower/loans/payment/${loanId}`,
         paymentData,
@@ -64,6 +68,7 @@ export const borrowerLoanAPI = {
           },
         }
       );
+      console.log('Payment submission response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error making payment:', error);
@@ -78,16 +83,9 @@ export const borrowerLoanAPI = {
   },
 
   // Get payment history for a loan
-  getPaymentHistory: async (loanId, borrowerId) => {
+  getPaymentHistory: async (loanId) => {
     try {
-      const queryParams = new URLSearchParams();
-      if (borrowerId) {
-        queryParams.append('borrowerId', borrowerId);
-      }
-      const queryString = queryParams.toString();
-      const url = `borrower/loans/payment-history/${loanId}${queryString ? `?${queryString}` : ''}`;
-      
-      const response = await axiosInstance.get(url);
+      const response = await axiosInstance.get(`borrower/loans/payment-history/${loanId}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching payment history:', error);
@@ -158,6 +156,8 @@ export const borrowerLoanAPI = {
       const queryString = queryParams.toString();
       const url = `${baseurl}borrower/loans/my-loans${queryString ? `?${queryString}` : ''}`;
 
+      console.log('Fetching borrower loans from:', url); // Debug log
+
       // Use plain axios without authentication for this endpoint
       const response = await axios.get(url, {
         timeout: 10000, // 10 second timeout
@@ -166,6 +166,7 @@ export const borrowerLoanAPI = {
         }
       });
 
+      console.log('Borrower loans response:', response.data); // Debug log
       return response.data;
     } catch (error) {
       console.error('Error fetching borrower loans:', error);
@@ -175,84 +176,6 @@ export const borrowerLoanAPI = {
         statusText: error.response?.statusText,
         data: error.response?.data,
         url: error.config?.url
-      });
-      throw error;
-    }
-  },
-
-  // Get borrower loan statistics
-  getBorrowerStatistics: async () => {
-    try {
-      const response = await axiosInstance.get('borrower/loans/statistics');
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching borrower statistics:', error);
-      throw error;
-    }
-  },
-
-  // Get borrower recent activities
-  getBorrowerRecentActivities: async (params = {}) => {
-    try {
-      const queryParams = new URLSearchParams();
-      if (params.limit) queryParams.append('limit', params.limit.toString());
-
-      const queryString = queryParams.toString();
-      const url = `borrower/loans/recent-activities${queryString ? `?${queryString}` : ''}`;
-
-      const response = await axiosInstance.get(url);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching borrower recent activities:', error);
-      throw error;
-    }
-  },
-
-  // Create Razorpay order for loan repayment
-  createRazorpayOrder: async (loanId, paymentData) => {
-    try {
-      const response = await axiosInstance.post(
-        `borrower/loans/payment/${loanId}/razorpay/order`,
-        paymentData,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-      return response.data;
-    } catch (error) {
-      console.error('Error creating Razorpay order:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-      });
-      throw error;
-    }
-  },
-
-  // Verify Razorpay payment and process repayment
-  verifyRazorpayPayment: async (loanId, paymentData) => {
-    try {
-      const response = await axiosInstance.post(
-        `borrower/loans/payment/${loanId}/razorpay/verify`,
-        paymentData,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-      return response.data;
-    } catch (error) {
-      console.error('Error verifying Razorpay payment:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
       });
       throw error;
     }

@@ -606,9 +606,17 @@ export default function Home() {
           {(showAllActivity ? recentActivities : recentActivities.slice(0, 1)).map(
             (activity, index) => {
               const activityProps = getActivityProperties(activity);
+              // Ensure unique key by combining multiple identifiers with index
+              const uniqueKey = activity._id 
+                ? `activity-${activity._id}-${index}` 
+                : activity.loanId 
+                ? `activity-${activity.loanId}-${index}` 
+                : activity.timestamp 
+                ? `activity-${activity.timestamp}-${index}` 
+                : `activity-${index}`;
               return (
                 <TouchableOpacity
-                  key={activity._id || activity.loanId || activity.timestamp || index}
+                  key={uniqueKey}
                   activeOpacity={0.7}
                   onPress={() => handleActivityPress(activity)}>
                   <Animated.View
