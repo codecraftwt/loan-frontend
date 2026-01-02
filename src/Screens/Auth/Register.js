@@ -436,8 +436,8 @@ export default function Register({ navigation }) {
             style={styles.inputIcon}
           />
           <TextInput
-            style={[styles.input, { flex: 1 }]}
-            placeholder="Create a password (min. 6 characters)"
+            style={styles.input}
+            placeholder="Create a password"
             secureTextEntry={!passwordVisible}
             placeholderTextColor="#999"
             value={password}

@@ -372,17 +372,18 @@ export default function PaymentHistory() {
     </View>
   );
 
-  if (false) {
-    return (
-      <View style={styles.container}>
-        <Header title="Payment History" showBackButton />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3B82F6" />
-          <Text style={styles.loadingText}>Loading payment history...</Text>
-        </View>
-      </View>
-    );
-  }
+  // Unused loading state (commented out)
+  // if (false) {
+  //   return (
+  //     <View style={styles.container}>
+  //       <Header title="Payment History" showBackButton />
+  //       <View style={styles.loadingContainer}>
+  //         <ActivityIndicator size="large" color="#3B82F6" />
+  //         <Text style={styles.loadingText}>Loading payment history...</Text>
+  //       </View>
+  //     </View>
+  //   );
+  // }
 
   return (
     <View style={styles.container}>

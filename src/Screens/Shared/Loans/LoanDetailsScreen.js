@@ -719,7 +719,8 @@ export default function LoanDetailScreen({ route, navigation }) {
               <View style={styles.noPendingCard}>
                 <Ionicons name="checkmark-circle-outline" size={48} color="#D1D5DB" />
                 <Text style={styles.noPendingText}>No Pending Payment Requests</Text>
-                {/* <Text style={styles.noPendingSubtext}>
+                {/* Unused: Subtext for no pending payments (commented out)
+                <Text style={styles.noPendingSubtext}>
                   All payments have been reviewed for this loan.
                 </Text> */}
               </View>

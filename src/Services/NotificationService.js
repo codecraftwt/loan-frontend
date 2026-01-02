@@ -14,7 +14,7 @@ class NotificationService {
   }
 
   async requestPermission() {
-    try {    
+    try {      
       // Check if Firebase messaging is available
       if (!messaging) {
         console.error('Firebase messaging is not available');
@@ -114,27 +114,27 @@ class NotificationService {
       // Provide helpful error messages based on error type
       if (error.code === 'messaging/unknown' || error.message?.includes('AUTHENTICATION_FAILED')) {
         console.error('❌ FCM Authentication Failed. Common causes:');
-        console.error('1. SHA-1/SHA-256 fingerprints not registered in Firebase Console');
-        console.error('2. Firebase Cloud Messaging API not enabled');
-        console.error('3. Incorrect google-services.json file');
-        console.error('4. Package name mismatch');
-        console.error('\n📋 To fix this:');
-        console.error('1. Get your SHA-1 fingerprint:');
-        console.error('   For debug: keytool -list -v -keystore android/app/debug.keystore -alias androiddebugkey -storepass android -keypass android');
-        console.error('2. Add SHA-1 and SHA-256 to Firebase Console > Project Settings > Your Android App');
-        console.error('3. Download the updated google-services.json and replace android/app/google-services.json');
-        console.error('4. Ensure Cloud Messaging API is enabled in Google Cloud Console');
+        // console.error('1. SHA-1/SHA-256 fingerprints not registered in Firebase Console');
+        // console.error('2. Firebase Cloud Messaging API not enabled');
+        // console.error('3. Incorrect google-services.json file');
+        // console.error('4. Package name mismatch');
+        // console.error('\n📋 To fix this:');
+        // console.error('1. Get your SHA-1 fingerprint:');
+        // console.error('   For debug: keytool -list -v -keystore android/app/debug.keystore -alias androiddebugkey -storepass android -keypass android');
+        // console.error('2. Add SHA-1 and SHA-256 to Firebase Console > Project Settings > Your Android App');
+        // console.error('3. Download the updated google-services.json and replace android/app/google-services.json');
+        // console.error('4. Ensure Cloud Messaging API is enabled in Google Cloud Console');
         
         // Retry with exponential backoff for transient errors
         if (retryCount < maxRetries) {
-          const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+          const delay = Math.pow(2, retryCount) * 1000;
           await new Promise(resolve => setTimeout(resolve, delay));
           return this.getFCMToken(retryCount + 1, maxRetries);
         }
       } else if (error.code === 'messaging/registration-token-not-ready') {
         console.warn('FCM registration token not ready yet, will retry...');
         if (retryCount < maxRetries) {
-          const delay = 2000; // 2 seconds
+          const delay = 2000;
           await new Promise(resolve => setTimeout(resolve, delay));
           return this.getFCMToken(retryCount + 1, maxRetries);
         }
@@ -376,8 +376,9 @@ class NotificationService {
     }
   }
 
-  //Handle overdue loan notification
-
+  /**
+   * Handle overdue loan notification
+   */
   handleOverdueLoanNotification(data) {
     const navigationParams = {
       notificationId: data.notificationId,
@@ -400,7 +401,9 @@ class NotificationService {
     }
   }
 
-  // Handle pending payment notification
+  /**
+   * Handle pending payment notification
+   */
   handlePendingPaymentNotification(data) {
     const navigationParams = {
       notificationId: data.notificationId,

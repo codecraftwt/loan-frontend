@@ -42,12 +42,12 @@ export default function Home() {
   );
   const { pendingPayments} = useSelector(state => state.lenderPayments);
 
-  // Debug: Log pending payments
-  useEffect(() => {
-    if (pendingPayments && pendingPayments.length > 0) {
-      const totalPending = pendingPayments.reduce((total, loan) => total + (loan.pendingPayments?.length || 0), 0);
-    }
-  }, [pendingPayments]);
+  // Unused: Calculate total pending payments (commented out as not used)
+  // useEffect(() => {
+  //   if (pendingPayments && pendingPayments.length > 0) {
+  //     const totalPending = pendingPayments.reduce((total, loan) => total + (loan.pendingPayments?.length || 0), 0);
+  //   }
+  // }, [pendingPayments]);
 
   const [refreshing, setRefreshing] = useState(false);
   const [showAllActivity, setShowAllActivity] = useState(false);

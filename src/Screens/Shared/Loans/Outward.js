@@ -25,10 +25,12 @@ import Header from '../../../Components/Header';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Outward = ({ navigation, route }) => {
+  const scrollViewRef = React.useRef(null);
   const dispatch = useDispatch();
-  const [searchQuery, setSearchQuery] = useState('');
-  const { borrowers, loading: borrowersLoading,} = useSelector(state => state.borrowers);
   const { pendingPayments } = useSelector(state => state.lenderPayments);
+  const { borrowers, loading: borrowersLoading,} = useSelector(state => state.borrowers);
+
+  const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedBorrower, setSelectedBorrower] = useState(null);
   const [borrowerActionModalVisible, setBorrowerActionModalVisible] = useState(false);
@@ -36,7 +38,6 @@ const Outward = ({ navigation, route }) => {
   const [pendingHighlightParams, setPendingHighlightParams] = useState(null);
   const [borrowerFraudStatus, setBorrowerFraudStatus] = useState({});
 
-  const scrollViewRef = React.useRef(null);
 
   // Handle navigation from notification
   useEffect(() => {
@@ -110,7 +111,7 @@ const Outward = ({ navigation, route }) => {
           setTimeout(() => {
             scrollToBorrower(borrower._id);
           }, 500);
-          setPendingHighlightParams(null); // Clear after success
+          setPendingHighlightParams(null);
         }
       } else if (highlightMobileNumber) {
         const borrower = borrowers.find(b => 
@@ -123,7 +124,7 @@ const Outward = ({ navigation, route }) => {
           setTimeout(() => {
             scrollToBorrower(borrower._id);
           }, 500);
-          setPendingHighlightParams(null); // Clear after success
+          setPendingHighlightParams(null);
         }
       }
     }
