@@ -14,7 +14,7 @@ class NotificationService {
   }
 
   async requestPermission() {
-    try {
+    try {      
       // Check if Firebase messaging is available
       if (!messaging) {
         console.error('Firebase messaging is not available');
@@ -42,8 +42,8 @@ class NotificationService {
         }
         
         // For all Android versions, request Firebase permission
-        try {
-          const authStatus = await messaging().requestPermission();
+          try {
+            const authStatus = await messaging().requestPermission();
           const enabled =
             authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
             authStatus === messaging.AuthorizationStatus.PROVISIONAL;
@@ -106,7 +106,6 @@ class NotificationService {
       
       // Store token locally
       await AsyncStorage.setItem('fcm_token', token);
-      console.log('✅ FCM token retrieved successfully');
       
       return token;
     } catch (error) {
@@ -129,7 +128,6 @@ class NotificationService {
         // Retry with exponential backoff for transient errors
         if (retryCount < maxRetries) {
           const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
-          console.log(`Retrying FCM token retrieval in ${delay}ms... (attempt ${retryCount + 1}/${maxRetries})`);
           await new Promise(resolve => setTimeout(resolve, delay));
           return this.getFCMToken(retryCount + 1, maxRetries);
         }
@@ -200,9 +198,6 @@ class NotificationService {
    */
   setNavigation(navigation) {
     this.navigation = navigation;
-    if (navigation) {
-      console.log('Navigation object:', typeof navigation.navigate);
-    }
   }
 
 // Setup notification handlers
@@ -214,12 +209,6 @@ class NotificationService {
 
     // Handle foreground messages
     this.foregroundUnsubscribe = messaging().onMessage(async remoteMessage => {
-      
-      // Log specific notification types
-      if (remoteMessage?.data?.type === 'mobile_number_change') {
-        console.log('Mobile number change notification detected in foreground handler');
-      }
-      
       this.displayNotification(remoteMessage);
     });
 
@@ -262,6 +251,74 @@ class NotificationService {
   }
 
   /**
+   * Mark notification as read (local storage)
+   */
+  async markNotificationAsRead(notificationId) {
+    if (!notificationId) {
+      return;
+    }
+    try {
+      const readNotifications = await AsyncStorage.getItem('read_notifications');
+      let readList = readNotifications ? JSON.parse(readNotifications) : [];
+      
+      if (!readList.includes(notificationId)) {
+        readList.push(notificationId);
+        await AsyncStorage.setItem('read_notifications', JSON.stringify(readList));
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  }
+
+  /**
+   * Get user role from storage
+   */
+  async getUserRole() {
+    try {
+      const userStr = await AsyncStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        return user.roleId; // 1 = lender, 2 = borrower
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting user role:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Navigate to loan details screen (handles both lender and borrower)
+   */
+  async navigateToLoanDetails(loanId, notificationData = {}) {
+    if (!loanId) {
+      console.warn('No loanId provided for loan details navigation');
+      return false;
+    }
+
+    try {
+      const userRole = await this.getUserRole();
+      const navigationParams = {
+        loanDetails: { _id: loanId },
+        ...notificationData,
+      };
+
+      // Navigate based on user role
+      if (userRole === 1) {
+        // Lender - use LoanDetailScreen
+        this.navigation.navigate('LoanDetailScreen', navigationParams);
+      } else {
+        // Borrower - use BorrowerLoanDetails
+        this.navigation.navigate('BorrowerLoanDetails', { loan: { _id: loanId }, ...notificationData });
+      }
+      return true;
+    } catch (error) {
+      console.error('Error navigating to loan details:', error);
+      return false;
+    }
+  }
+
+  /**
    * Handle notification press/navigation
    */
   handleNotificationPress(remoteMessage) {
@@ -281,165 +338,281 @@ class NotificationService {
 
     const { data } = remoteMessage;
 
-    // Handle fraud alert notifications first
-    if (data && data.type === 'fraud_alert') {
-      const navigationParams = {};
+    if (!data) {
+      console.warn('No data in notification, navigating to home');
+      this.navigation.navigate('BottomNavigation');
+      return;
+    }
+
+    // Handle notification based on type
+    switch (data.type) {
+      case 'overdue_loan':
+        this.handleOverdueLoanNotification(data);
+        break;
       
-      if (data.notificationId) {
-        navigationParams.notificationId = data.notificationId;
-      }
-      navigationParams.notificationType = 'fraud_alert';
-      navigationParams.fraudScore = data.fraudScore;
-      navigationParams.riskLevel = data.riskLevel;
-      navigationParams.borrowerName = data.borrowerName;
+      case 'pending_payment':
+        this.handlePendingPaymentNotification(data);
+        break;
       
-      // Navigate based on screen specified in notification
-      if (data.screen) {
-        switch (data.screen) {
-          case 'CreateLoan':
-            // Navigate to AddDetails screen
-            try {
-              this.navigation.navigate('AddDetails', navigationParams);
-            } catch (error) {
-              console.error('Navigation error (CreateLoan):', error);
-              this.navigation.navigate('BottomNavigation');
-            }
-            break;
-          case 'LoanDetails':
-            // Navigate to loan details if loanId is provided
-            if (data.loanId) {
-              try {
-                // Navigate to loan details screen
-                this.navigation.navigate('LoanDetailScreen', {
-                  loanDetails: { _id: data.loanId },
-                  fraudAlert: true,
-                  fraudData: {
-                    fraudScore: data.fraudScore,
-                    riskLevel: data.riskLevel,
+      case 'pending_loan':
+        this.handlePendingLoanNotification(data);
+        break;
+      
+      case 'subscription_reminder':
+        this.handleSubscriptionReminderNotification(data);
+        break;
+      
+      case 'mobile_number_change':
+        this.handleMobileNumberChangeNotification(data);
+        break;
+      
+      case 'fraud_alert':
+        this.handleFraudAlertNotification(data);
+        break;
+      
+      default:
+        // Handle by screen if type is not recognized
+        this.handleNotificationByScreen(data);
+    }
+  }
+
+  /**
+   * Handle overdue loan notification
+   */
+  handleOverdueLoanNotification(data) {
+    const navigationParams = {
+      notificationId: data.notificationId,
+      notificationType: 'overdue_loan',
+      overdueDays: data.overdueDays,
+      overdueAmount: data.overdueAmount,
+    };
+
+    if (data.screen === 'LoanDetails' && data.loanId) {
+      // Navigate to loan details with overdue info
+      this.navigateToLoanDetails(data.loanId, {
+        ...navigationParams,
+        highlightOverdue: true,
+        borrowerName: data.borrowerName,
+        lenderName: data.lenderName,
+      });
+    } else {
+      // Fallback to Outward screen
+      this.navigation.navigate('Outward', navigationParams);
+    }
+  }
+
+  /**
+   * Handle pending payment notification
+   */
+  handlePendingPaymentNotification(data) {
+    const navigationParams = {
+      notificationId: data.notificationId,
+      notificationType: 'pending_payment',
+      paymentAmount: data.paymentAmount,
+      paymentMode: data.paymentMode,
                     borrowerName: data.borrowerName,
-                  },
-                });
-              } catch (error) {
-                console.error('Navigation error (LoanDetails):', error);
+    };
+
+    if (data.screen === 'LoanDetails' && data.loanId) {
+      // Navigate to loan details with pending payment info
+      this.navigateToLoanDetails(data.loanId, {
+        ...navigationParams,
+        highlightPendingPayment: true,
+      });
+    } else {
                 // Fallback to Outward screen
                 this.navigation.navigate('Outward', navigationParams);
               }
+  }
+
+  /**
+   * Handle pending loan notification
+   */
+  handlePendingLoanNotification(data) {
+    const navigationParams = {
+      notificationId: data.notificationId,
+      notificationType: 'pending_loan',
+      loanAmount: data.loanAmount,
+    };
+
+    if (data.screen === 'LoanDetails' && data.loanId) {
+      // Navigate to loan details with pending loan info
+      this.navigateToLoanDetails(data.loanId, {
+        ...navigationParams,
+        highlightPendingLoan: true,
+        borrowerName: data.borrowerName,
+        lenderName: data.lenderName,
+      });
             } else {
+      // Fallback to Outward screen
               this.navigation.navigate('Outward', navigationParams);
             }
-            break;
-          case 'LoansList':
-          case 'Outward':
-            // Navigate to Outward screen (loans list)
-            try {
-              this.navigation.navigate('Outward', navigationParams);
+  }
+
+  /**
+   * Handle subscription reminder notification
+   */
+  handleSubscriptionReminderNotification(data) {
+    const navigationParams = {
+      notificationId: data.notificationId,
+      notificationType: 'subscription_reminder',
+      planName: data.planName,
+      remainingDays: data.remainingDays,
+      expiryDate: data.expiryDate,
+    };
+
+    if (data.screen === 'Subscription') {
+      try {
+        this.navigation.navigate('SubscriptionScreen', navigationParams);
             } catch (error) {
-              console.error('Navigation error (LoansList/Outward):', error);
+        console.error('Navigation error (Subscription):', error);
               this.navigation.navigate('BottomNavigation');
             }
-            break;
-          default:
-            // Default to Outward screen
+    } else {
+      // Fallback to subscription screen anyway
             try {
-              this.navigation.navigate('Outward', navigationParams);
+        this.navigation.navigate('SubscriptionScreen', navigationParams);
             } catch (error) {
               this.navigation.navigate('BottomNavigation');
             }
         }
-      } else {
-        // Default navigation for fraud alerts
-        this.navigation.navigate('Outward', navigationParams);
-      }
-      return;
-    }
-    
-    if (data) {
-      // Navigate based on notification data
-      if (data.screen) {
-        switch (data.screen) {
-          case 'Outward':
-            // Navigate to Outward screen with borrower data if available
-            const navigationParams = {};
-            
-            // Add borrower ID or mobile number for highlighting
+  }
+
+  /**
+   * Handle mobile number change notification
+   */
+  handleMobileNumberChangeNotification(data) {
+    const navigationParams = {
+      notificationId: data.notificationId,
+      notificationType: 'mobile_number_change',
+    };
+
             if (data.borrowerId) {
               navigationParams.highlightBorrowerId = data.borrowerId;
             }
             if (data.mobileNumber) {
               navigationParams.highlightMobileNumber = data.mobileNumber;
             }
-            if (data.loanId) {
-              navigationParams.loanId = data.loanId;
-            }
-            
-            // Add notification ID for mark as read
-            if (data.notificationId) {
-              navigationParams.notificationId = data.notificationId;
-            }
-            
-            // Add notification type
-            if (data.type) {
-              navigationParams.notificationType = data.type;
-            }
+
             try {
               this.navigation.navigate('Outward', navigationParams);
             } catch (error) {
-              console.error('Navigation error:', error);
-              console.error('Error details:', error.message);
-              // Fallback navigation
-              try {
+      console.error('Navigation error (mobile number change):', error);
                 this.navigation.navigate('BottomNavigation');
-              } catch (fallbackError) {
-                console.error('Fallback navigation also failed:', fallbackError);
-              }
-            }
-            break;
-          case 'Inward':
-            this.navigation.navigate('LoanRequest');
-            break;
-          default:
-            // Try to navigate to the screen name directly
-            try {
-              this.navigation.navigate(data.screen);
+    }
+  }
+
+  /**
+   * Handle fraud alert notification
+   */
+  handleFraudAlertNotification(data) {
+    const navigationParams = {
+      notificationId: data.notificationId,
+      notificationType: 'fraud_alert',
+      fraudScore: data.fraudScore,
+      riskLevel: data.riskLevel,
+      borrowerName: data.borrowerName,
+    };
+
+    if (data.screen === 'LoanDetails' && data.loanId) {
+      try {
+        this.navigateToLoanDetails(data.loanId, {
+          ...navigationParams,
+          fraudAlert: true,
+        });
+      } catch (error) {
+        console.error('Navigation error (fraud alert - LoanDetails):', error);
+        this.navigation.navigate('Outward', navigationParams);
+      }
+    } else if (data.screen === 'CreateLoan') {
+      try {
+        this.navigation.navigate('AddDetails', navigationParams);
             } catch (error) {
-              // Fallback to home
+        console.error('Navigation error (fraud alert - CreateLoan):', error);
               this.navigation.navigate('BottomNavigation');
-            }
         }
       } else {
-        // Default navigation
+      // Default to Outward screen
+      try {
+        this.navigation.navigate('Outward', navigationParams);
+      } catch (error) {
         this.navigation.navigate('BottomNavigation');
       }
-      
-      // Handle specific notification types - navigate to Outward with borrower info
-      if (data.type === 'mobile_number_change') {
-        const navigationParams = {};
+    }
+  }
+
+  /**
+   * Handle notification by screen (fallback for unknown types)
+   */
+  handleNotificationByScreen(data) {
+    if (!data.screen) {
+      // No screen specified, navigate to home
+      this.navigation.navigate('BottomNavigation');
+      return;
+    }
+
+    const navigationParams = {
+      notificationId: data.notificationId,
+      notificationType: data.type,
+    };
+
+    // Add loanId if present
+    if (data.loanId) {
+      navigationParams.loanId = data.loanId;
+    }
+
+    // Add borrower info if present
         if (data.borrowerId) {
           navigationParams.highlightBorrowerId = data.borrowerId;
         }
         if (data.mobileNumber) {
           navigationParams.highlightMobileNumber = data.mobileNumber;
         }
-        if (data.notificationId) {
-          navigationParams.notificationId = data.notificationId;
+
+    switch (data.screen) {
+      case 'LoanDetails':
+        if (data.loanId) {
+          this.navigateToLoanDetails(data.loanId, navigationParams);
+        } else {
+          this.navigation.navigate('Outward', navigationParams);
         }
-        navigationParams.notificationType = 'mobile_number_change';
-        
+        break;
+      
+      case 'Subscription':
+        try {
+          this.navigation.navigate('SubscriptionScreen', navigationParams);
+        } catch (error) {
+          console.error('Navigation error (Subscription):', error);
+          this.navigation.navigate('BottomNavigation');
+        }
+        break;
+      
+      case 'Outward':
         try {
           this.navigation.navigate('Outward', navigationParams);
         } catch (error) {
-          console.error('Navigation error (mobile number change):', error);
-          // Fallback navigation
-          try {
-            this.navigation.navigate('BottomNavigation');
-          } catch (fallbackError) {
-            console.error('Fallback navigation failed:', fallbackError);
-          }
+          console.error('Navigation error (Outward):', error);
+          this.navigation.navigate('BottomNavigation');
         }
-      }
-    } else {
-      // Default navigation
-      this.navigation.navigate('BottomNavigation');
+        break;
+      
+      case 'Inward':
+        try {
+          this.navigation.navigate('LoanRequest', navigationParams);
+        } catch (error) {
+          console.error('Navigation error (Inward):', error);
+            this.navigation.navigate('BottomNavigation');
+        }
+        break;
+      
+      default:
+        // Try to navigate to screen name directly
+        try {
+          this.navigation.navigate(data.screen, navigationParams);
+        } catch (error) {
+          console.error(`Navigation error (${data.screen}):`, error);
+          this.navigation.navigate('BottomNavigation');
+        }
     }
   }
 

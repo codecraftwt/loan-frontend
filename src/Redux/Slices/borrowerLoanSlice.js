@@ -114,8 +114,20 @@ export const getPaymentHistory = createAsyncThunk(
   'borrowerLoans/getPaymentHistory',
   async ({ loanId, borrowerId }, { rejectWithValue }) => {
     try {
+      // Validate loanId
+      if (!loanId) {
+        return rejectWithValue('Loan ID is required');
+      }
+      
+      // Validate borrowerId
+      if (!borrowerId) {
+        return rejectWithValue('Borrower ID is required');
+      }
+      
       const response = await borrowerLoanAPI.getPaymentHistory(loanId, borrowerId);
-      return response.data;
+      
+      // Service returns the data object directly: { loanId, loanSummary, installmentDetails, payments, paymentStats, lenderInfo }
+      return response;
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || error.message || 'Failed to fetch payment history'

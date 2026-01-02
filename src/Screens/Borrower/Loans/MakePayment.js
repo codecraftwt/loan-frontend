@@ -64,8 +64,22 @@ export default function MakePayment() {
   const checkForPendingPayment = async () => {
     try {
       setCheckingPending(true);
-      const response = await borrowerLoanAPI.getPaymentHistory(loan._id, user?._id);
-      const data = response.data || {};
+      
+      // Validate loan ID
+      if (!loan?._id) {
+        return;
+      }
+      
+      // Get borrower ID from user or loan object
+      const borrowerId = user?._id || loan.borrowerId || loan.borrower?._id;
+      if (!borrowerId) {
+        return;
+      }
+      
+      const response = await borrowerLoanAPI.getPaymentHistory(loan._id, borrowerId);
+      
+      // Service returns the data object directly: { loanId, loanSummary, installmentDetails, payments, paymentStats, lenderInfo }
+      const data = response || {};
       const payments = data.payments || [];
       
       // Find pending payment (status === 'pending')

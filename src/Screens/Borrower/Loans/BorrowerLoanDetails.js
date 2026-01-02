@@ -44,12 +44,24 @@ export default function BorrowerLoanDetails() {
 
   const fetchPaymentHistory = async () => {
     try {
-      // Fetch payment history for this loan
-      const borrowerId = user?._id || loan.borrowerId || loan.borrower?._id;
-      const response = await borrowerLoanAPI.getPaymentHistory(loan._id, borrowerId);
-      const paymentData = response.data || {};
+      // Validate loan ID
+      if (!loan?._id) {
+        throw new Error('Loan ID is required');
+      }
       
-      // New API structure: payments array (renamed from paymentHistory.allPayments)
+      // Get borrower ID from user or loan object
+      const borrowerId = user?._id || loan.borrowerId || loan.borrower?._id;
+      if (!borrowerId) {
+        throw new Error('Borrower ID is required');
+      }
+      
+      // Fetch payment history for this loan (API requires borrowerId as query parameter)
+      const response = await borrowerLoanAPI.getPaymentHistory(loan._id, borrowerId);
+      
+      // Service returns the data object directly: { loanId, loanSummary, installmentDetails, payments, paymentStats, lenderInfo }
+      const paymentData = response || {};
+      
+      // Extract payments array
       const payments = paymentData.payments || [];
       setPaymentHistory(payments);
       
@@ -59,10 +71,10 @@ export default function BorrowerLoanDetails() {
       );
       setHasPendingPayment(!!pending);
       
-      // New API structure: installmentDetails (null for one-time loans)
+      // Extract installmentDetails (null for one-time loans)
       setInstallmentDetails(paymentData.installmentDetails || null);
       
-      // Update loan details with latest totals from API (new structure: loanSummary)
+      // Update loan details with latest totals from API (loanSummary structure)
       if (paymentData.loanSummary) {
         setLoanDetails(prev => ({
           ...prev,
@@ -79,11 +91,24 @@ export default function BorrowerLoanDetails() {
       }
     } catch (error) {
       console.error('Error fetching payment history:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        loanId: loan?._id,
+      });
+      
+      const errorMessage = error.response?.data?.message 
+        || error.response?.data?.error 
+        || error.message 
+        || 'Failed to fetch payment history';
+      
       Toast.show({
         type: 'error',
         position: 'top',
         text1: 'Error',
-        text2: error.response?.data?.message || error.message || 'Failed to fetch payment history',
+        text2: errorMessage,
       });
     }
   };

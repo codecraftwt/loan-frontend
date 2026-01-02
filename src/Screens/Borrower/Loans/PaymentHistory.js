@@ -48,13 +48,27 @@ export default function PaymentHistory() {
   const fetchPaymentHistory = async () => {
     try {
       setLoading(true);
-      const response = await borrowerLoanAPI.getPaymentHistory(loan._id, user?._id);
-      const data = response.data || {};
       
-      // New API structure: payments array (renamed from paymentHistory.allPayments)
+      // Validate loan ID
+      if (!loan?._id) {
+        throw new Error('Loan ID is required');
+      }
+      
+      // Get borrower ID from user or loan object
+      const borrowerId = user?._id || loan.borrowerId || loan.borrower?._id;
+      if (!borrowerId) {
+        throw new Error('Borrower ID is required');
+      }
+      
+      const response = await borrowerLoanAPI.getPaymentHistory(loan._id, borrowerId);
+      
+      // Service returns the data object directly: { loanId, loanSummary, installmentDetails, payments, paymentStats, lenderInfo }
+      const data = response || {};
+      
+      // Extract payments array
       setPaymentHistory(data.payments || []);
       
-      // New API structure: paymentStats object
+      // Extract paymentStats object
       setPaymentStats(data.paymentStats || {
         totalPayments: 0,
         confirmedPayments: 0,
@@ -62,19 +76,31 @@ export default function PaymentHistory() {
         pendingAmount: 0,
       });
       
-      // New API structure: loanSummary object
+      // Extract loanSummary object
       setLoanSummary(data.loanSummary || null);
       
-      // New API structure: installmentDetails (null for one-time loans)
+      // Extract installmentDetails (null for one-time loans)
       setInstallmentDetails(data.installmentDetails || null);
-      
     } catch (error) {
       console.error('Error fetching payment history:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        loanId: loan?._id,
+      });
+      
+      const errorMessage = error.response?.data?.message 
+        || error.response?.data?.error 
+        || error.message 
+        || 'Failed to fetch payment history';
+      
       Toast.show({
         type: 'error',
         position: 'top',
         text1: 'Error',
-        text2: error.response?.data?.message || error.message || 'Failed to fetch payment history',
+        text2: errorMessage,
       });
     } finally {
       setLoading(false);
