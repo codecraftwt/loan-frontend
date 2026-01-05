@@ -31,6 +31,7 @@ import LoanOTPVerification from '../../../Components/LoanOTPVerification';
 import FraudStatusBadge from '../../../Components/FraudStatusBadge';
 import FraudWarningModal from '../../../Components/FraudWarningModal';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 export default function AddDetails({ route, navigation }) {
   const dispatch = useDispatch();
@@ -155,16 +156,16 @@ export default function AddDetails({ route, navigation }) {
   const checkPlanBeforeLoanCreation = async () => {
     try {
       const result = await dispatch(getActivePlan()).unwrap();
-      
+
       if (!result.hasActivePlan) {
         Alert.alert(
           'Plan Required',
           'You need to purchase a plan to create loans. Would you like to view plans?',
           [
             { text: 'Cancel', style: 'cancel' },
-            { 
-              text: 'View Plans', 
-              onPress: () => navigation.navigate('SubscriptionScreen') 
+            {
+              text: 'View Plans',
+              onPress: () => navigation.navigate('SubscriptionScreen')
             },
           ]
         );
@@ -177,9 +178,9 @@ export default function AddDetails({ route, navigation }) {
           'Your plan has expired. Please renew to continue creating loans.',
           [
             { text: 'Cancel', style: 'cancel' },
-            { 
-              text: 'Renew Plan', 
-              onPress: () => navigation.navigate('SubscriptionScreen') 
+            {
+              text: 'Renew Plan',
+              onPress: () => navigation.navigate('SubscriptionScreen')
             },
           ]
         );
@@ -195,13 +196,13 @@ export default function AddDetails({ route, navigation }) {
         'Unable to verify your plan status. You may proceed, but ensure you have an active plan.',
         [
           { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Proceed Anyway', 
-            onPress: () => {} 
+          {
+            text: 'Proceed Anyway',
+            onPress: () => { }
           },
         ]
       );
-      return false; 
+      return false;
     }
   };
 
@@ -282,7 +283,7 @@ export default function AddDetails({ route, navigation }) {
         if (!loanDetails && createLoan.fulfilled.match(response)) {
           // Handle API response structure: response.payload.data or response.payload
           const loanData = responsePayload?.data || responsePayload;
-          
+
           if (loanData && loanData._id) {
             setCreatedLoanData(loanData);
             setIsOTPModalVisible(true);
@@ -312,16 +313,16 @@ export default function AddDetails({ route, navigation }) {
         }
       } else {
         // Handle plan-related errors
-        if (response.payload?.type === 'SUBSCRIPTION_REQUIRED' || 
-            response.payload?.errorCode === 'PLAN_REQUIRED') {
+        if (response.payload?.type === 'SUBSCRIPTION_REQUIRED' ||
+          response.payload?.errorCode === 'PLAN_REQUIRED') {
           Alert.alert(
             'Plan Required',
             response.payload?.message || 'You need to purchase a plan to create loans.',
             [
               { text: 'Cancel', style: 'cancel' },
-              { 
-                text: 'View Plans', 
-                onPress: () => navigation.navigate('SubscriptionScreen') 
+              {
+                text: 'View Plans',
+                onPress: () => navigation.navigate('SubscriptionScreen')
               },
             ]
           );
@@ -490,9 +491,12 @@ export default function AddDetails({ route, navigation }) {
           keyboardShouldPersistTaps="handled">
 
           <View style={styles.headerCard}>
-            <Text style={styles.headerTitle}>
-              {loanDetails ? 'Update Loan Information' : 'Add New Loan'}
-            </Text>
+            <View style={styles.addLoanCont}>
+              <MaterialIcons name="add" color="#ff8500" size={24} />
+              <Text style={styles.headerTitle}>
+                {loanDetails ? 'Update Loan Information' : 'Add New Loan'}
+              </Text>
+            </View>
             <Text style={styles.headerSubtitle}>
               Fill the form below to {loanDetails ? 'update' : 'create'} loan details
             </Text>
@@ -579,7 +583,7 @@ export default function AddDetails({ route, navigation }) {
                       <Icon name="history" size={20} color="#FFF" />
                       <Text style={styles.oldHistoryButtonText}>View Loan History</Text>
                     </TouchableOpacity>
-                    
+
                     {/* Fraud Status Badge */}
                     {fraudStatus && fraudStatus.success && (
                       <View style={styles.fraudBadgeContainer}>
@@ -589,9 +593,9 @@ export default function AddDetails({ route, navigation }) {
                             <Text style={styles.fraudLoadingText}>Checking fraud status...</Text>
                           </View>
                         ) : fraudStatus.riskLevel && fraudStatus.riskLevel !== 'low' ? (
-                          <FraudStatusBadge 
-                            fraudScore={fraudStatus.fraudScore} 
-                            riskLevel={fraudStatus.riskLevel} 
+                          <FraudStatusBadge
+                            fraudScore={fraudStatus.fraudScore}
+                            riskLevel={fraudStatus.riskLevel}
                           />
                         ) : null}
                       </View>
@@ -891,7 +895,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat-Bold',
     color: '#ff8500',
     textAlign: 'center',
-    marginBottom: m(6),
+    // marginBottom: m(6),
   },
   headerSubtitle: {
     fontSize: m(14),
@@ -1199,4 +1203,10 @@ const styles = StyleSheet.create({
     color: '#64748b',
     fontFamily: 'Montserrat-Regular',
   },
+  addLoanCont:{
+    flexDirection: 'row',
+     alignItems: 'center', 
+     gap: 6, 
+     marginBottom: 6
+  }
 });

@@ -75,10 +75,8 @@ export default function BottomNavigation() {
               left: m(16),
               right: m(16),
               bottom: insets.bottom,
-              // bottom: insets.bottom - m(10),
               height: m(68),
               backgroundColor: '#e5dad1',
-              // backgroundColor: 'white',
               borderTopWidth: 0,
               paddingTop: m(5),
               paddingBottom: insets.bottom > 0 ? m(5) : 0,
@@ -154,10 +152,8 @@ export default function BottomNavigation() {
               left: m(16),
               right: m(16),
               bottom: insets.bottom,
-              // bottom: insets.bottom - m(10),
               height: m(69),
               backgroundColor: '#e5dad1',
-              // backgroundColor: 'white',
               borderTopWidth: 0,
               paddingTop: m(6),
               paddingBottom: insets.bottom > 0 ? m(5) : 0,
@@ -223,15 +219,11 @@ export default function BottomNavigation() {
             left: m(16),
             right: m(16),
             bottom: insets.bottom,
-            // bottom: insets.bottom - m(10),
-
             height: m(69),
             backgroundColor: '#e5dad1',
-            // backgroundColor: 'white',
             borderTopWidth: 0,
             paddingTop: m(10),
             paddingBottom: insets.bottom > 0 ? m(5) : 0,
-            // boederRadius: m(16),
           },
         }}>
         <Tab.Screen
@@ -278,7 +270,6 @@ const styles = StyleSheet.create({
     borderRadius: m(17),
     justifyContent: 'center',
     alignItems: 'center',
-    // paddingBottom: m(1)
   },
   iconWrapperActive: {
     backgroundColor: '#ff6700',

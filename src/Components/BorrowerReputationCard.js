@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,11 +10,6 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { m } from 'walstar-rn-responsive';
 import { reputationAPI } from '../Services/reputationService';
 
-/**
- * BorrowerReputationCard Component
- * Displays borrower reputation score with attractive design
- * Shows score, level, and key metrics
- */
 const BorrowerReputationCard = ({ aadhaarNumber, compact = false }) => {
   const [reputation, setReputation] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -101,11 +96,11 @@ const BorrowerReputationCard = ({ aadhaarNumber, compact = false }) => {
   }
 
   if (error || !reputation) {
-    return null; // Don't show error, just don't display the card
+    return null; 
   }
 
   const { reputationScore, reputationLevel, reputationColor, metrics, breakdown } = reputation;
-  const color = reputationColor || getReputationColor(reputationLevel);
+  const color = reputationColor || getReputationColor(reputationLevel) || '#6B7280';
 
   // Compact view for borrower cards
   if (compact) {
@@ -333,6 +328,7 @@ const styles = StyleSheet.create({
     padding: m(16),
     marginBottom: m(12),
     borderWidth: 2,
+    borderColor: '#E5E7EB', // Default border color to prevent black flash
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -546,6 +542,7 @@ const styles = StyleSheet.create({
     borderRadius: m(12),
     padding: m(12),
     borderWidth: 1.5,
+    borderColor: '#E5E7EB', // Default border color to prevent black flash
     marginBottom: m(8),
   },
   compactHeader: {

@@ -16,6 +16,7 @@ import {
   getLoanByLender,
   checkFraudStatus,
 } from '../../../Redux/Slices/loanSlice';
+import { getPendingPayments } from '../../../Redux/Slices/lenderPaymentSlice';
 import FraudStatusBadge from '../../../Components/FraudStatusBadge';
 import { useFocusEffect, useRoute } from '@react-navigation/native';
 import moment from 'moment';
@@ -27,10 +28,12 @@ import DatePicker from 'react-native-date-picker';
 export default function Inward({ navigation }) {
   const dispatch = useDispatch();
   const route = useRoute();
-  // const user = useSelector(state => state.auth.user);
+  const user = useSelector(state => state.auth.user);
   const { lenderLoans, loading } = useSelector(
     state => state.loans,
   );
+  const { pendingPayments } = useSelector(state => state.lenderPayments);
+  const isLender = user?.roleId === 1;
   
   // Get highlightLoanId from route params
   const highlightLoanId = route.params?.highlightLoanId;
@@ -55,6 +58,62 @@ export default function Inward({ navigation }) {
   const [borrowerFraudStatus, setBorrowerFraudStatus] = useState({});
 
   const formatDate = date => moment(date).format('DD MMM, YYYY');
+
+  // Helper function to get pending payments for a borrower
+  const getBorrowerPendingPayments = (borrower) => {
+    if (!isLender || !pendingPayments || !Array.isArray(pendingPayments) || pendingPayments.length === 0) {
+      return null;
+    }
+    
+    // Try multiple matching strategies
+    const borrowerLoans = pendingPayments.filter(loan => {
+      // Match by name
+      const nameMatch = (
+        (loan.loanName && borrower.name && 
+         loan.loanName.toLowerCase() === borrower.name.toLowerCase()) ||
+        (loan.borrowerName && borrower.name && 
+         loan.borrowerName.toLowerCase() === borrower.name.toLowerCase())
+      );
+      
+      // Match by mobile
+      const mobileMatch = loan.borrowerMobile && borrower.mobileNumber && (
+        loan.borrowerMobile === borrower.mobileNumber ||
+        loan.borrowerMobile === borrower.mobileNumber.replace(/^\+91/, '') ||
+        loan.borrowerMobile.replace(/^\+91/, '') === borrower.mobileNumber
+      );
+      
+      // Match by Aadhaar
+      const aadhaarMatch = loan.borrowerAadhaar && borrower.aadhaarNumber && 
+        loan.borrowerAadhaar === borrower.aadhaarNumber;
+      
+      return nameMatch || mobileMatch || aadhaarMatch;
+    });
+    
+    if (borrowerLoans.length === 0) return null;
+    
+    // Aggregate all pending payments for this borrower
+    let totalPendingCount = 0;
+    let totalPendingAmount = 0;
+    
+    borrowerLoans.forEach(loan => {
+      if (loan.pendingPayments && Array.isArray(loan.pendingPayments) && loan.pendingPayments.length > 0) {
+        totalPendingCount += loan.pendingPayments.length;
+        loan.pendingPayments.forEach(payment => {
+          const amount = typeof payment.amount === 'number' 
+            ? payment.amount 
+            : parseFloat(payment.amount) || 0;
+          totalPendingAmount += amount;
+        });
+      }
+    });
+    
+    if (totalPendingCount === 0) return null;
+    
+    return {
+      count: totalPendingCount,
+      amount: totalPendingAmount,
+    };
+  };
 
   // Add debouncing effect for search
   useEffect(() => {
@@ -119,7 +178,12 @@ export default function Inward({ navigation }) {
         filters.search = debouncedSearch;
       }
       dispatch(getLoanByLender(filters));
-    }, [dispatch, debouncedSearch]),
+      
+      // Fetch pending payments for lender
+      if (isLender) {
+        dispatch(getPendingPayments({ page: 1, limit: 100 }));
+      }
+    }, [dispatch, debouncedSearch, isLender]),
   );
 
   // Effect to scroll to and highlight loan when highlightLoanId is provided
@@ -467,20 +531,35 @@ export default function Inward({ navigation }) {
               const fraudData = borrower.aadhaarNumber ? borrowerFraudStatus[borrower.aadhaarNumber] : null;
               const hasFraudRisk = fraudData && fraudData.success && fraudData.riskLevel && fraudData.riskLevel !== 'low';
               
+              // Get pending payments for this borrower
+              const borrowerPendingPayments = getBorrowerPendingPayments(borrower);
+              
               return (
                 <TouchableOpacity
                   key={`borrower-${borrower.aadhaarNumber || borrower.name || 'unknown'}-${groupIndex}`}
                   style={[
                     styles.borrowerCard,
                     hasOverdue && styles.overdueBorrowerCard,
-                    hasFraudRisk && styles.fraudRiskBorrowerCard
+                    hasFraudRisk && styles.fraudRiskBorrowerCard,
+                    borrowerPendingPayments && styles.pendingPaymentBorrowerCard
                   ]}
                   onPress={() => navigation.navigate('BorrowerLoansScreen', {
                     borrower: borrower,
                     loans: loans,
                   })}
                   activeOpacity={0.8}>
-                  {hasOverdue && (
+                  {borrowerPendingPayments && borrowerPendingPayments.count > 0 && (
+                    <View style={styles.pendingPaymentBanner}>
+                      <View style={styles.bannerIconContainer}>
+                        <Icon name="notifications" size={18} color="#FFFFFF" />
+                      </View>
+                      <Text style={styles.pendingPaymentBannerText}>
+                        {borrowerPendingPayments.count} PENDING PAYMENT{borrowerPendingPayments.count > 1 ? 'S' : ''} - {formatCurrency(borrowerPendingPayments.amount)}
+                      </Text>
+                    </View>
+                  )}
+                  
+                  {hasOverdue && !borrowerPendingPayments && (
                     <View style={styles.overdueBanner}>
                       <View style={styles.bannerIconContainer}>
                         <Icon name="error" size={18} color="#FFFFFF" />
@@ -491,7 +570,7 @@ export default function Inward({ navigation }) {
                     </View>
                   )}
                   
-                  {hasFraudRisk && !hasOverdue && (
+                  {hasFraudRisk && !hasOverdue && !borrowerPendingPayments && (
                     <View style={[
                       styles.fraudBanner,
                       { backgroundColor: fraudData.riskLevel === 'critical' ? '#DC2626' : 
@@ -638,6 +717,14 @@ export default function Inward({ navigation }) {
                         {loans.length} loan{loans.length > 1 ? 's' : ''} • Tap to view all
                       </Text>
                     </View>
+                    {borrowerPendingPayments && borrowerPendingPayments.count > 0 && (
+                      <View style={styles.pendingPaymentBadge}>
+                        <Icon name="clock" size={14} color="#F59E0B" />
+                        <Text style={styles.pendingPaymentBadgeText}>
+                          {borrowerPendingPayments.count} pending • {formatCurrency(borrowerPendingPayments.amount)}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                 </TouchableOpacity>
               );
@@ -1098,6 +1185,47 @@ const styles = StyleSheet.create({
     fontSize: m(13),
     color: '#6B7280',
     fontWeight: '500',
+  },
+  pendingPaymentBorrowerCard: {
+    borderWidth: 2,
+    borderColor: '#FDE68A',
+    backgroundColor: '#FFFBF5',
+  },
+  pendingPaymentBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F59E0B',
+    paddingVertical: m(8),
+    paddingHorizontal: m(12),
+    marginHorizontal: m(-20),
+    marginTop: m(-20),
+    marginBottom: m(16),
+    gap: m(6),
+    borderTopLeftRadius: m(17),
+    borderTopRightRadius: m(17),
+  },
+  pendingPaymentBannerText: {
+    color: '#FFFFFF',
+    fontSize: m(12),
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  pendingPaymentBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF7ED',
+    borderRadius: m(8),
+    paddingHorizontal: m(10),
+    paddingVertical: m(6),
+    gap: m(6),
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  pendingPaymentBadgeText: {
+    fontSize: m(11),
+    fontWeight: '600',
+    color: '#92400E',
   },
 
   // Input Styles

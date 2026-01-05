@@ -24,6 +24,7 @@ import Header from '../../../Components/Header';
 import { useFocusEffect } from '@react-navigation/native';
 import lenderLoanAPI from '../../../Services/lenderLoanService';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { baseurl } from '../../../Utils/API';
 
 const DetailItem = ({ icon, label, value, isStatus, onStatusChange }) => {
   const isAccepted = value?.toLowerCase() === 'accepted';
@@ -62,9 +63,11 @@ export default function LoanDetailScreen({ route, navigation }) {
   const [currentLoanDetails, setCurrentLoanDetails] = useState(loanDetails);
   const [actionModalVisible, setActionModalVisible] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
-  const [actionType, setActionType] = useState(null); // 'confirm' or 'reject'
+  const [actionType, setActionType] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
   const [confirmNotes, setConfirmNotes] = useState('');
+  const [imageViewerVisible, setImageViewerVisible] = useState(false);
+  const [selectedImageUrl, setSelectedImageUrl] = useState(null);
 
   const isLender = user?.roleId === 1;
 
@@ -248,6 +251,42 @@ export default function LoanDetailScreen({ route, navigation }) {
     return `₹${numAmount.toLocaleString('en-IN')}`;
   };
 
+  const getPaymentProofUrl = (paymentProof) => {
+    if (!paymentProof) return null;
+    
+    // If it's already a full URL (starts with http:// or https://), return as is
+    if (paymentProof.startsWith('http://') || paymentProof.startsWith('https://')) {
+      return paymentProof;
+    }
+    
+    // If it's a relative path, construct full URL
+    let baseUrl = baseurl.replace('/api', '').replace(/\/$/, '');
+    
+    // Handle payment proof path
+    let proofPath = paymentProof;
+    if (proofPath.startsWith('/')) {
+      proofPath = proofPath.substring(1);
+    }
+    
+    const fullUrl = `${baseUrl}/${proofPath}`;
+    return fullUrl;
+  };
+
+  const handleViewProof = (paymentProof) => {
+    const imageUrl = getPaymentProofUrl(paymentProof);
+    if (imageUrl) {
+      setSelectedImageUrl(imageUrl);
+      setImageViewerVisible(true);
+    } else {
+      Toast.show({
+        type: 'error',
+        position: 'top',
+        text1: 'Error',
+        text2: 'Payment proof image not available',
+      });
+    }
+  };
+
   const handlePaymentAction = (payment, type) => {
     setSelectedPayment(payment);
     setActionType(type);
@@ -262,11 +301,39 @@ export default function LoanDetailScreen({ route, navigation }) {
   const handleConfirmPayment = async () => {
     if (!selectedPayment || !loanDetails?._id) return;
 
+    const paymentId = selectedPayment?.paymentId || 
+                     selectedPayment?._id;
+
+    const loanId = loanDetails?._id || 
+                   loanDetails?.loanId;
+    
+    if (!paymentId) {
+      console.error('Payment ID not found in payment object (LoanDetailsScreen):', selectedPayment);
+      Toast.show({
+        type: 'error',
+        position: 'top',
+        text1: 'Error',
+        text2: 'Payment ID not found. Please check the payment object structure.',
+      });
+      return;
+    }
+    
+    if (!loanId) {
+      console.error('Loan ID not found in loan object (LoanDetailsScreen):', loanDetails);
+      Toast.show({
+        type: 'error',
+        position: 'top',
+        text1: 'Error',
+        text2: 'Loan ID not found. Please check the loan object structure.',
+      });
+      return;
+    }
+
     try {
       await dispatch(
         confirmPayment({
-          loanId: loanDetails._id,
-          paymentId: selectedPayment._id,
+          loanId: loanId,
+          paymentId: paymentId,
           notes: confirmNotes.trim(),
         })
       ).unwrap();
@@ -286,15 +353,19 @@ export default function LoanDetailScreen({ route, navigation }) {
       await fetchLoanDetailsWithConfirmations();
 
       // Remove confirmed payment from local state
+      const paymentId = selectedPayment.paymentId || selectedPayment._id;
       setPendingPaymentsForLoan(prev =>
-        prev.filter(p => p._id !== selectedPayment._id)
+        prev.filter(p => (p.paymentId || p._id) !== paymentId)
       );
     } catch (error) {
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to confirm payment';
+      console.error('Confirm payment error:', errorMessage);
+      console.error('Full error:', error);
       Toast.show({
         type: 'error',
         position: 'top',
         text1: 'Error',
-        text2: error || 'Failed to confirm payment',
+        text2: errorMessage,
       });
     }
   };
@@ -310,11 +381,40 @@ export default function LoanDetailScreen({ route, navigation }) {
       return;
     }
 
+    const paymentId = selectedPayment?.paymentId || 
+                     selectedPayment?._id;
+    
+    // Get loan ID - use _id from loanDetails
+    const loanId = loanDetails?._id || 
+                   loanDetails?.loanId;
+    
+    if (!paymentId) {
+      console.error('Payment ID not found in payment object (LoanDetailsScreen reject):', selectedPayment);
+      Toast.show({
+        type: 'error',
+        position: 'top',
+        text1: 'Error',
+        text2: 'Payment ID not found. Please check the payment object structure.',
+      });
+      return;
+    }
+    
+    if (!loanId) {
+      console.error('Loan ID not found in loan object (LoanDetailsScreen reject):', loanDetails);
+      Toast.show({
+        type: 'error',
+        position: 'top',
+        text1: 'Error',
+        text2: 'Loan ID not found. Please check the loan object structure.',
+      });
+      return;
+    }
+
     try {
       await dispatch(
         rejectPayment({
-          loanId: loanDetails._id,
-          paymentId: selectedPayment._id,
+          loanId: loanId,
+          paymentId: paymentId,
           reason: rejectReason.trim(),
         })
       ).unwrap();
@@ -334,15 +434,19 @@ export default function LoanDetailScreen({ route, navigation }) {
       await fetchLoanDetailsWithConfirmations();
 
       // Remove rejected payment from local state
+      const paymentId = selectedPayment.paymentId || selectedPayment._id;
       setPendingPaymentsForLoan(prev =>
-        prev.filter(p => p._id !== selectedPayment._id)
+        prev.filter(p => (p.paymentId || p._id) !== paymentId)
       );
     } catch (error) {
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to reject payment';
+      console.error('Reject payment error:', errorMessage);
+      console.error('Full error:', error);
       Toast.show({
         type: 'error',
         position: 'top',
         text1: 'Error',
-        text2: error || 'Failed to reject payment',
+        text2: errorMessage,
       });
     }
   };
@@ -647,8 +751,11 @@ export default function LoanDetailScreen({ route, navigation }) {
                   {loanDetails.name || 'Borrower'} has submitted {pendingPaymentsForLoan.length} payment{pendingPaymentsForLoan.length !== 1 ? 's' : ''} awaiting your review.
                 </Text>
 
-                {pendingPaymentsForLoan.map((payment, index) => (
-                  <View key={payment._id || index} style={styles.pendingPaymentItem}>
+                {pendingPaymentsForLoan.map((payment, index) => {
+                  // Use paymentId as primary key, fallback to _id
+                  const paymentKey = payment.paymentId || payment._id || `payment-${index}`;
+                  return (
+                  <View key={paymentKey} style={styles.pendingPaymentItem}>
                     <View style={styles.pendingPaymentInfo}>
                       <View style={styles.pendingPaymentHeader}>
                         <Text style={styles.pendingPaymentAmount}>
@@ -681,17 +788,16 @@ export default function LoanDetailScreen({ route, navigation }) {
                     {payment.paymentProof && (
                       <TouchableOpacity
                         style={styles.pendingPaymentProof}
-                        onPress={() => {
-                          // Open image viewer
-                          Toast.show({
-                            type: 'info',
-                            position: 'top',
-                            text1: 'Payment Proof',
-                            text2: 'View payment proof image',
-                          });
-                        }}>
-                        <Ionicons name="document-outline" size={16} color="#3B82F6" />
-                        <Text style={styles.pendingPaymentProofText}>View Proof</Text>
+                        onPress={() => handleViewProof(payment.paymentProof)}
+                        activeOpacity={0.8}>
+                        <View style={styles.proofIconContainer}>
+                          <Ionicons name="image-outline" size={20} color="#3B82F6" />
+                        </View>
+                        <View style={styles.proofTextContainer}>
+                          <Text style={styles.pendingPaymentProofText}>Payment Proof Available</Text>
+                          <Text style={styles.proofSubtext}>Tap to view image</Text>
+                        </View>
+                        <Icon name="external-link" size={18} color="#3B82F6" />
                       </TouchableOpacity>
                     )}
 
@@ -712,17 +818,14 @@ export default function LoanDetailScreen({ route, navigation }) {
                       </TouchableOpacity>
                     </View>
                   </View>
-                ))}
+                  );
+                })}
               </View>
             )}
             {!loadingPendingPayments && pendingPaymentsForLoan && pendingPaymentsForLoan.length === 0 && isLender && (
               <View style={styles.noPendingCard}>
                 <Ionicons name="checkmark-circle-outline" size={48} color="#D1D5DB" />
                 <Text style={styles.noPendingText}>No Pending Payment Requests</Text>
-                {/* Unused: Subtext for no pending payments (commented out)
-                <Text style={styles.noPendingSubtext}>
-                  All payments have been reviewed for this loan.
-                </Text> */}
               </View>
             )}
           </>
@@ -838,9 +941,63 @@ export default function LoanDetailScreen({ route, navigation }) {
           </View>
         </Modal>
       )}
+
+      {/* Payment Proof Image Viewer */}
+      <ImageViewer
+        visible={imageViewerVisible}
+        imageUrl={selectedImageUrl}
+        onClose={() => {
+          setImageViewerVisible(false);
+          setSelectedImageUrl(null);
+        }}
+      />
     </View>
   );
 }
+
+const ImageViewer = ({ visible, imageUrl, onClose }) => {
+  if (!visible || !imageUrl) return null;
+
+  return (
+    <Modal
+      visible={visible}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={onClose}>
+      <View style={imageViewerStyles.overlay}>
+        <View style={imageViewerStyles.header}>
+          <Text style={imageViewerStyles.headerText}>Payment Proof</Text>
+          <TouchableOpacity onPress={onClose} style={imageViewerStyles.closeButton}>
+            <Icon name="x" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+        <ScrollView
+          contentContainerStyle={imageViewerStyles.scrollContent}
+          maximumZoomScale={3}
+          minimumZoomScale={1}
+          showsVerticalScrollIndicator={false}
+          showsHorizontalScrollIndicator={false}>
+          <Image
+            source={{ uri: imageUrl }}
+            style={imageViewerStyles.image}
+            resizeMode="contain"
+            onError={(error) => {
+              console.error('Image load error:', error);
+              console.error('Failed URL:', imageUrl);
+              Toast.show({
+                type: 'error',
+                position: 'top',
+                text1: 'Error Loading Image',
+                text2: 'Failed to load payment proof image. Please check the URL.',
+                visibilityTime: 4000,
+              });
+            }}
+          />
+        </ScrollView>
+      </View>
+    </Modal>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -1301,16 +1458,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#EFF6FF',
-    borderRadius: m(8),
-    padding: m(10),
+    borderRadius: m(12),
+    padding: m(12),
     marginBottom: m(12),
-    gap: m(8),
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
+    gap: m(12),
+  },
+  proofIconContainer: {
+    width: m(40),
+    height: m(40),
+    borderRadius: m(20),
+    backgroundColor: '#DBEAFE',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  proofTextContainer: {
+    flex: 1,
   },
   pendingPaymentProofText: {
-    flex: 1,
     fontSize: m(14),
     color: '#3B82F6',
-    fontWeight: '500',
+    fontWeight: '600',
+    marginBottom: m(2),
+  },
+  proofSubtext: {
+    fontSize: m(11),
+    color: '#6B7280',
   },
   pendingPaymentActions: {
     flexDirection: 'row',
@@ -1454,5 +1628,43 @@ const styles = StyleSheet.create({
     color: '#111827',
     marginTop: m(12),
     marginBottom: m(4),
+  },
+});
+
+const imageViewerStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: m(16),
+    paddingTop: m(50),
+  },
+  headerText: {
+    fontSize: m(18),
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  closeButton: {
+    width: m(36),
+    height: m(36),
+    borderRadius: m(18),
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: m(20),
+  },
+  image: {
+    width: '100%',
+    minHeight: m(400),
+    aspectRatio: 1,
   },
 });

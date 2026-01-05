@@ -455,12 +455,21 @@ export default function MakePayment() {
           text2: 'The loan end date has passed. Please contact your lender to extend the loan before making a payment.',
           visibilityTime: 5000,
         });
+      } else if (errorMessage.includes('cannot exceed remaining') || errorMessage.includes('exceed remaining amount')) {
+        // Handle amount exceeds remaining balance error from backend
+        Toast.show({
+          type: 'error',
+          position: 'top',
+          text1: 'Amount Exceeds Balance',
+          text2: errorMessage,
+          visibilityTime: 4000,
+        });
       } else if (errorMessage.includes('amount') || errorDetail?.includes('amount')) {
         Toast.show({
           type: 'error',
           position: 'top',
           text1: 'Amount Error',
-          text2: fullErrorMessage || 'Invalid payment amount. Please check and try again.',
+          text2: errorMessage || fullErrorMessage || 'Invalid payment amount. Please check and try again.',
         });
       } else if (errorMessage.includes('payment type') || errorDetail?.includes('paymentType')) {
         Toast.show({
@@ -596,6 +605,15 @@ export default function MakePayment() {
           text2: 'The loan end date has passed. Please contact your lender to extend the loan before making a payment.',
           visibilityTime: 5000,
         });
+      } else if (errorMessage.includes('cannot exceed remaining') || errorMessage.includes('exceed remaining amount')) {
+        // Handle amount exceeds remaining balance error from backend
+        Toast.show({
+          type: 'error',
+          position: 'top',
+          text1: 'Amount Exceeds Balance',
+          text2: errorMessage,
+          visibilityTime: 4000,
+        });
       } else if (errorMessage.includes('payment mode') || errorDetail?.includes('paymentMode')) {
         Toast.show({
           type: 'error',
@@ -608,7 +626,7 @@ export default function MakePayment() {
           type: 'error',
           position: 'top',
           text1: 'Amount Error',
-          text2: fullErrorMessage || 'Please enter a valid payment amount.',
+          text2: errorMessage || fullErrorMessage || 'Please enter a valid payment amount.',
         });
       } else if (statusCode === 400 || statusCode === 422) {
         Toast.show({
@@ -700,15 +718,13 @@ export default function MakePayment() {
           text: 'Camera',
           onPress: async () => {
             try {
-              // For Android, check permission first (only for older versions)
               if (Platform.OS === 'android' && Platform.Version < 33) {
                 const hasPermission = await requestCameraPermission();
                 if (!hasPermission) {
-                  return; // Error message is already shown in requestCameraPermission
+                  return;
                 }
               }
 
-              // Launch camera - react-native-image-picker will handle permissions on Android 13+
               launchCamera(
                 {
                   mediaType: 'photo',

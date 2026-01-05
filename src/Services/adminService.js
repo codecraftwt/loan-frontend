@@ -23,13 +23,13 @@ export const adminAPI = {
       return response.data;
     } catch (error) {
       console.error('Error fetching lenders with plans:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        url: error.config?.url
-      });
+      // console.error('Error details:', {
+      //   message: error.message,
+      //   status: error.response?.status,
+      //   statusText: error.response?.statusText,
+      //   data: error.response?.data,
+      //   url: error.config?.url
+      // });
       throw error;
     }
   },

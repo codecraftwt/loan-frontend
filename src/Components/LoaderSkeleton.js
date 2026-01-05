@@ -1,9 +1,9 @@
 import React from 'react';
 import {StyleSheet, View, Animated, Easing} from 'react-native';
-import LinearGradient from 'react-native-linear-gradient'; // For shimmer effect
+import LinearGradient from 'react-native-linear-gradient';
 
 const LoaderSkeleton = () => {
-  const animatedValue = new Animated.Value(0); // Initial value for the shimmer
+  const animatedValue = new Animated.Value(0);
 
   // Shimmer animation
   Animated.loop(
@@ -18,7 +18,7 @@ const LoaderSkeleton = () => {
   // Interpolation for numeric translation
   const interpolateAnimation = animatedValue.interpolate({
     inputRange: [0, 1],
-    outputRange: [-100, 100], // Numeric values for translateX
+    outputRange: [-100, 100],
   });
 
   return (

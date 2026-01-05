@@ -64,23 +64,6 @@ export default function Profile() {
       onPress: navigateToProfileDetails,
       color: '#3B82F6',
     },
-    // {
-    //   icon: 'file-text',
-    //   label: 'Loan History',
-    //   onPress: () => {
-    //     const aadhaarNumber = user?.aadhaarNumber || user?.aadharCardNo;
-    //     if (aadhaarNumber) {
-    //       navigation.navigate('OldHistoryPage', { aadhaarNumber });
-    //     } else {
-    //       Alert.alert(
-    //         'Something went wrong',
-    //         'Aadhaar Number not found, please try again later',
-    //       );
-    //     }
-    //   },
-    //   // onPress: () => { },
-    //   color: '#10B981',
-    // },
     {
       icon: 'help-circle',
       label: 'Help & Support',
@@ -93,12 +76,6 @@ export default function Profile() {
       onPress: () => { },
       color: '#EF4444',
     },
-    // {
-    //   icon: 'credit-card',
-    //   label: 'Payment Methods',
-    //   onPress: () => { },
-    //   color: '#8B5CF6',
-    // },
   ];
 
   return (

@@ -198,6 +198,46 @@ export const borrowerLoanAPI = {
     }
   },
 
+  // Get borrower loan statistics
+  getBorrowerStatistics: async () => {
+    try {
+      const response = await axiosInstance.get('borrower/loans/statistics');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching borrower statistics:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+      });
+      throw error;
+    }
+  },
+
+  // Get borrower recent activities
+  getBorrowerRecentActivities: async (params = {}) => {
+    try {
+      const queryParams = new URLSearchParams();
+      if (params.limit) queryParams.append('limit', params.limit.toString());
+
+      const queryString = queryParams.toString();
+      const url = `borrower/loans/recent-activities${queryString ? `?${queryString}` : ''}`;
+
+      const response = await axiosInstance.get(url);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching borrower recent activities:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+      });
+      throw error;
+    }
+  },
+
   // Get loans for a specific borrower (for lenders) - No authentication required
   getBorrowerLoansById: async (borrowerId, params = {}) => {
     try {

@@ -139,16 +139,22 @@ const lenderPaymentSlice = createSlice({
         // Remove confirmed payment from pending list
         const { loanId, paymentId } = action.payload;
         state.pendingPayments = state.pendingPayments.map(loan => {
-          if (loan.loanId === loanId) {
+          // Match loan by loanId or _id
+          const matchesLoan = (loan.loanId === loanId) || (loan._id === loanId);
+          if (matchesLoan) {
             return {
               ...loan,
               pendingPayments: loan.pendingPayments.filter(
-                payment => payment._id !== paymentId
+                payment => {
+                  // Match payment by paymentId or _id
+                  const paymentMatchId = payment.paymentId || payment._id;
+                  return paymentMatchId !== paymentId;
+                }
               ),
             };
           }
           return loan;
-        }).filter(loan => loan.pendingPayments.length > 0);
+        }).filter(loan => loan.pendingPayments && loan.pendingPayments.length > 0);
       })
       .addCase(confirmPayment.rejected, (state, action) => {
         state.confirming = false;
@@ -166,16 +172,22 @@ const lenderPaymentSlice = createSlice({
         // Remove rejected payment from pending list
         const { loanId, paymentId } = action.payload;
         state.pendingPayments = state.pendingPayments.map(loan => {
-          if (loan.loanId === loanId) {
+          // Match loan by loanId or _id
+          const matchesLoan = (loan.loanId === loanId) || (loan._id === loanId);
+          if (matchesLoan) {
             return {
               ...loan,
               pendingPayments: loan.pendingPayments.filter(
-                payment => payment._id !== paymentId
+                payment => {
+                  // Match payment by paymentId or _id
+                  const paymentMatchId = payment.paymentId || payment._id;
+                  return paymentMatchId !== paymentId;
+                }
               ),
             };
           }
           return loan;
-        }).filter(loan => loan.pendingPayments.length > 0);
+        }).filter(loan => loan.pendingPayments && loan.pendingPayments.length > 0);
       })
       .addCase(rejectPayment.rejected, (state, action) => {
         state.rejecting = false;

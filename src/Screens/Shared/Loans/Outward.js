@@ -23,7 +23,6 @@ import BorrowerReputationCard from '../../../Components/BorrowerReputationCard';
 import LoaderSkeleton from '../../../Components/LoaderSkeleton';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Outward = ({ navigation, route }) => {
   const scrollViewRef = React.useRef(null);
@@ -78,7 +77,6 @@ const Outward = ({ navigation, route }) => {
           );
           if (borrower) {
             setHighlightedBorrowerId(borrower._id);
-            // Scroll to borrower after a short delay
             setTimeout(() => {
               scrollToBorrower(borrower._id);
             }, 500);
@@ -137,8 +135,6 @@ const Outward = ({ navigation, route }) => {
     
     const index = borrowers.findIndex(b => b._id === borrowerId);
     if (index !== -1) {
-      // Scroll to the borrower card
-      // Note: This is a simplified scroll - you may need to adjust based on card heights
       scrollViewRef.current?.scrollTo({ y: index * 200, animated: true });
     }
   };
@@ -222,13 +218,32 @@ const Outward = ({ navigation, route }) => {
 
   // Helper function to get pending payments for a borrower
   const getBorrowerPendingPayments = (borrower) => {
-    if (!pendingPayments || pendingPayments.length === 0) return null;
+    if (!pendingPayments || !Array.isArray(pendingPayments) || pendingPayments.length === 0) {
+      return null;
+    }
     
-    // Match by borrower name (userName in borrowers vs loanName in pending payments)
-    const borrowerLoans = pendingPayments.filter(
-      loan => loan.loanName && borrower.userName && 
-      loan.loanName.toLowerCase() === borrower.userName.toLowerCase()
-    );
+    const borrowerLoans = pendingPayments.filter(loan => {
+      // Match by name
+      const nameMatch = (
+        (loan.loanName && borrower.userName && 
+         loan.loanName.toLowerCase() === borrower.userName.toLowerCase()) ||
+        (loan.borrowerName && borrower.userName && 
+         loan.borrowerName.toLowerCase() === borrower.userName.toLowerCase())
+      );
+      
+      // Match by mobile
+      const mobileMatch = loan.borrowerMobile && borrower.mobileNo && (
+        loan.borrowerMobile === borrower.mobileNo ||
+        loan.borrowerMobile === borrower.mobileNo.replace(/^\+91/, '') ||
+        loan.borrowerMobile.replace(/^\+91/, '') === borrower.mobileNo
+      );
+      
+      // Match by Aadhaar
+      const aadhaarMatch = loan.borrowerAadhaar && borrower.aadharCardNo && 
+        loan.borrowerAadhaar === borrower.aadharCardNo;
+      
+      return nameMatch || mobileMatch || aadhaarMatch;
+    });
     
     if (borrowerLoans.length === 0) return null;
     
@@ -237,10 +252,13 @@ const Outward = ({ navigation, route }) => {
     let totalPendingAmount = 0;
     
     borrowerLoans.forEach(loan => {
-      if (loan.pendingPayments && Array.isArray(loan.pendingPayments)) {
+      if (loan.pendingPayments && Array.isArray(loan.pendingPayments) && loan.pendingPayments.length > 0) {
         totalPendingCount += loan.pendingPayments.length;
         loan.pendingPayments.forEach(payment => {
-          totalPendingAmount += typeof payment.amount === 'number' ? payment.amount : parseFloat(payment.amount) || 0;
+          const amount = typeof payment.amount === 'number' 
+            ? payment.amount 
+            : parseFloat(payment.amount) || 0;
+          totalPendingAmount += amount;
         });
       }
     });
@@ -273,7 +291,6 @@ const Outward = ({ navigation, route }) => {
 
   const handleAddLoan = () => {
     setBorrowerActionModalVisible(false);
-    // Map borrower fields to loan form fields
     const borrowerData = {
       name: selectedBorrower.userName,
       mobileNumber: selectedBorrower.mobileNo?.replace(/^\+91/, '') || selectedBorrower.mobileNo,
@@ -737,8 +754,8 @@ const styles = StyleSheet.create({
     marginTop: m(2),
   },
   reputationContainer: {
-    marginTop: m(12),
-    marginBottom: m(8),
+    marginTop: m(6),
+    // marginBottom: m(8),
   },
   cardFooter: {
     flexDirection: 'row',

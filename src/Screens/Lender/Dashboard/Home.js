@@ -235,7 +235,26 @@ export default function Home() {
         </View>
 
         {/* Pending Payments Notification */}
-        {pendingPayments && Array.isArray(pendingPayments) && pendingPayments.length > 0 && pendingPayments.some(loan => loan.pendingPayments && loan.pendingPayments.length > 0) && (
+        {(() => {
+          // Calculate total pending payments
+          if (!pendingPayments || !Array.isArray(pendingPayments) || pendingPayments.length === 0) {
+            return false;
+          }
+          
+          const hasPendingPayments = pendingPayments.some(loan => 
+            loan.pendingPayments && 
+            Array.isArray(loan.pendingPayments) && 
+            loan.pendingPayments.length > 0
+          );
+          
+          if (!hasPendingPayments) return false;
+          
+          const totalPendingCount = pendingPayments.reduce((total, loan) => 
+            total + (Array.isArray(loan.pendingPayments) ? loan.pendingPayments.length : 0), 0
+          );
+          
+          return totalPendingCount > 0;
+        })() && (
           <Animated.View
             style={[
               styles.pendingPaymentCard,
@@ -255,10 +274,17 @@ export default function Home() {
                 <View style={styles.pendingPaymentContent}>
                   <View style={styles.pendingPaymentIcon}>
                     <Ionicons name="notifications" size={24} color="#FFFFFF" />
-                    {pendingPayments.reduce((total, loan) => total + (loan.pendingPayments?.length || 0), 0) > 0 && (
+                    {(() => {
+                      const totalPending = pendingPayments.reduce((total, loan) => 
+                        total + (Array.isArray(loan.pendingPayments) ? loan.pendingPayments.length : 0), 0
+                      );
+                      return totalPending > 0;
+                    })() && (
                       <View style={styles.badge}>
                         <Text style={styles.badgeText}>
-                          {pendingPayments.reduce((total, loan) => total + (loan.pendingPayments?.length || 0), 0)}
+                          {pendingPayments.reduce((total, loan) => 
+                            total + (Array.isArray(loan.pendingPayments) ? loan.pendingPayments.length : 0), 0
+                          )}
                         </Text>
                       </View>
                     )}
@@ -269,12 +295,16 @@ export default function Home() {
                     </Text>
                     <Text style={styles.pendingPaymentSubtitle} numberOfLines={2}>
                       {(() => {
-                        const totalPending = pendingPayments.reduce((total, loan) => total + (loan.pendingPayments?.length || 0), 0);
+                        const totalPending = pendingPayments.reduce((total, loan) => 
+                          total + (Array.isArray(loan.pendingPayments) ? loan.pendingPayments.length : 0), 0
+                        );
                         if (totalPending === 0) return '';
-                        const firstLoan = pendingPayments.find(loan => loan.pendingPayments && loan.pendingPayments.length > 0);
+                        const firstLoan = pendingPayments.find(loan => 
+                          Array.isArray(loan.pendingPayments) && loan.pendingPayments.length > 0
+                        );
                         if (firstLoan && firstLoan.pendingPayments && firstLoan.pendingPayments.length > 0) {
                           const firstPayment = firstLoan.pendingPayments[0];
-                          const borrowerName = firstLoan.loanName || 'Borrower';
+                          const borrowerName = firstLoan.borrowerName || firstLoan.loanName || 'Borrower';
                           const amount = typeof firstPayment.amount === 'number' 
                             ? firstPayment.amount 
                             : parseFloat(firstPayment.amount) || 0;

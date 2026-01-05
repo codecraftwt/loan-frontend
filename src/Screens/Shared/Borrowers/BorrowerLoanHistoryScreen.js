@@ -11,9 +11,11 @@ import {
   ActivityIndicator,
   Animated,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useDispatch, useSelector } from 'react-redux';
 import { getBorrowerLoansById } from '../../../Redux/Slices/borrowerLoanSlice';
+import { getPendingPayments } from '../../../Redux/Slices/lenderPaymentSlice';
 import Header from '../../../Components/Header';
 import BorrowerReputationCard from '../../../Components/BorrowerReputationCard';
 import moment from 'moment';
@@ -21,7 +23,7 @@ import { m } from 'walstar-rn-responsive';
 
 // Orange Theme Colors
 const ORANGE_THEME = {
-  primary: '#FF6B35', // Vibrant orange
+  primary: '#FF6B35',
   primaryLight: '#FFF7F4',
   primaryDark: '#E55A2B',
   secondary: '#FF9E6D',
@@ -395,6 +397,10 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
     summary: historySummary,
     pagination: historyPagination,
   } = useSelector(state => state.borrowerLoans);
+  
+  const { pendingPayments } = useSelector(state => state.lenderPayments);
+  const user = useSelector(state => state.auth.user);
+  const isLender = user?.roleId === 1;
 
   const [refreshing, setRefreshing] = useState(false);
   const [filters, setFilters] = useState({
@@ -446,6 +452,82 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
   useEffect(() => {
     loadHistory(1); // Reset to page 1 when filters or search change
   }, [loadHistory]);
+
+  // Fetch pending payments for lender
+  useFocusEffect(
+    useCallback(() => {
+      if (isLender) {
+        dispatch(getPendingPayments({ page: 1, limit: 100 }));
+      }
+    }, [dispatch, isLender])
+  );
+
+  // Helper function to get pending payments for this borrower
+  const getBorrowerPendingPayments = useCallback(() => {
+    if (!isLender || !pendingPayments || !Array.isArray(pendingPayments) || pendingPayments.length === 0) {
+      return null;
+    }
+    
+    // Get borrower identifier
+    const borrowerName = borrowerDetails?.userName || borrowerDetails?.name;
+    const borrowerMobile = borrowerDetails?.mobileNo;
+    const borrowerAadhaar = borrowerDetails?.aadharCardNo || borrowerDetails?.aadhaarNumber;
+    
+    if (!borrowerName && !borrowerMobile && !borrowerAadhaar) {
+      return null;
+    }
+    
+    // Find loans with pending payments for this borrower
+    const borrowerLoans = pendingPayments.filter(loan => {
+      // Match by name
+      const nameMatch = (
+        (loan.loanName && borrowerName && 
+         loan.loanName.toLowerCase() === borrowerName.toLowerCase()) ||
+        (loan.borrowerName && borrowerName && 
+         loan.borrowerName.toLowerCase() === borrowerName.toLowerCase())
+      );
+      
+      // Match by mobile
+      const mobileMatch = loan.borrowerMobile && borrowerMobile && (
+        loan.borrowerMobile === borrowerMobile ||
+        loan.borrowerMobile === borrowerMobile.replace(/^\+91/, '') ||
+        loan.borrowerMobile.replace(/^\+91/, '') === borrowerMobile
+      );
+      
+      // Match by Aadhaar
+      const aadhaarMatch = loan.borrowerAadhaar && borrowerAadhaar && 
+        loan.borrowerAadhaar === borrowerAadhaar;
+      
+      return nameMatch || mobileMatch || aadhaarMatch;
+    });
+    
+    if (borrowerLoans.length === 0) return null;
+    
+    // Aggregate all pending payments
+    let totalPendingCount = 0;
+    let totalPendingAmount = 0;
+    
+    borrowerLoans.forEach(loan => {
+      if (loan.pendingPayments && Array.isArray(loan.pendingPayments) && loan.pendingPayments.length > 0) {
+        totalPendingCount += loan.pendingPayments.length;
+        loan.pendingPayments.forEach(payment => {
+          const amount = typeof payment.amount === 'number' 
+            ? payment.amount 
+            : parseFloat(payment.amount) || 0;
+          totalPendingAmount += amount;
+        });
+      }
+    });
+    
+    if (totalPendingCount === 0) return null;
+    
+    return {
+      count: totalPendingCount,
+      amount: totalPendingAmount,
+    };
+  }, [isLender, pendingPayments, borrowerDetails]);
+
+  const borrowerPendingPayments = getBorrowerPendingPayments();
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -538,6 +620,27 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
         }
         showsVerticalScrollIndicator={false}>
         
+        {/* Pending Payments Badge for Lender */}
+        {isLender && borrowerPendingPayments && borrowerPendingPayments.count > 0 && (
+          <View style={styles.pendingPaymentBanner}>
+            <Icon name="notifications" size={20} color="#FFFFFF" />
+            <View style={styles.pendingPaymentBannerContent}>
+              <Text style={styles.pendingPaymentBannerTitle}>
+                {borrowerPendingPayments.count} Pending Payment{borrowerPendingPayments.count !== 1 ? 's' : ''}
+              </Text>
+              <Text style={styles.pendingPaymentBannerSubtitle}>
+                Total: {formatCurrency(borrowerPendingPayments.amount)} awaiting your review
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.pendingPaymentButton}
+              onPress={() => navigation.navigate('PendingPayments')}>
+              <Text style={styles.pendingPaymentButtonText}>Review</Text>
+              <Icon name="arrow-forward" size={16} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Summary Section - Hide when searching */}
         {historySummary && !debouncedSearchQuery && (
           <View style={styles.summaryContainer}>
@@ -1440,6 +1543,51 @@ const styles = StyleSheet.create({
     color: ORANGE_THEME.error,
     fontWeight: '600',
     marginTop: m(16),
+  },
+  // Pending Payment Banner
+  pendingPaymentBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: ORANGE_THEME.warning,
+    marginHorizontal: m(16),
+    marginTop: m(12),
+    marginBottom: m(16),
+    padding: m(16),
+    borderRadius: m(16),
+    gap: m(12),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  pendingPaymentBannerContent: {
+    flex: 1,
+  },
+  pendingPaymentBannerTitle: {
+    fontSize: m(16),
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: m(4),
+  },
+  pendingPaymentBannerSubtitle: {
+    fontSize: m(12),
+    color: '#FFFFFF',
+    opacity: 0.9,
+  },
+  pendingPaymentButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: m(12),
+    paddingVertical: m(8),
+    borderRadius: m(8),
+    gap: m(4),
+  },
+  pendingPaymentButtonText: {
+    fontSize: m(13),
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });
 
