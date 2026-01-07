@@ -83,30 +83,39 @@ export default function LoanDetailScreen({ route, navigation }) {
   useEffect(() => {
     if (!isLender) return;
 
-    // Strategy 1: Check currentLoanDetails (from API)
-    if (currentLoanDetails?.pendingConfirmations?.payments) {
-      const payments = currentLoanDetails.pendingConfirmations.payments;
-      if (Array.isArray(payments) && payments.length > 0) {
-        setPendingPaymentsForLoan(payments);
-        return;
-      }
-    }
+    // Helper function to check if payment has valid ID
+    const hasValidId = (payment) => payment?.paymentId || payment?._id || payment?.id;
 
-    // Strategy 2: Check pendingPayments from Redux
+    // PRIORITY 1: Check pendingPayments from Redux (has proper paymentId fields)
     if (pendingPayments && pendingPayments.length > 0) {
       const loanPendingPayments = pendingPayments.find(
         loan => loan.loanId === loanDetails?._id || loan._id === loanDetails?._id
       );
       if (loanPendingPayments && loanPendingPayments.pendingPayments) {
-        setPendingPaymentsForLoan(loanPendingPayments.pendingPayments);
-        return;
+        const validPayments = loanPendingPayments.pendingPayments.filter(hasValidId);
+        if (validPayments.length > 0) {
+          setPendingPaymentsForLoan(validPayments);
+          return;
+        }
       }
     }
 
-    // Strategy 3: Check paymentHistory for pending payments
+    // PRIORITY 2: Check currentLoanDetails (from API)
+    if (currentLoanDetails?.pendingConfirmations?.payments) {
+      const payments = currentLoanDetails.pendingConfirmations.payments;
+      if (Array.isArray(payments) && payments.length > 0) {
+        const validPayments = payments.filter(hasValidId);
+        if (validPayments.length > 0) {
+          setPendingPaymentsForLoan(validPayments);
+          return;
+        }
+      }
+    }
+
+    // PRIORITY 3: Check paymentHistory for pending payments
     if (loanDetails?.paymentHistory && Array.isArray(loanDetails.paymentHistory)) {
       const pendingFromHistory = loanDetails.paymentHistory.filter(
-        payment => payment.paymentStatus?.toLowerCase() === 'pending'
+        payment => payment.paymentStatus?.toLowerCase() === 'pending' && hasValidId(payment)
       );
       if (pendingFromHistory.length > 0) {
         setPendingPaymentsForLoan(pendingFromHistory);
@@ -114,12 +123,15 @@ export default function LoanDetailScreen({ route, navigation }) {
       }
     }
 
-    // Strategy 4: Check original loanDetails
+    // PRIORITY 4: Check original loanDetails
     if (loanDetails?.pendingConfirmations?.payments) {
       const payments = loanDetails.pendingConfirmations.payments;
       if (Array.isArray(payments) && payments.length > 0) {
-        setPendingPaymentsForLoan(payments);
-        return;
+        const validPayments = payments.filter(hasValidId);
+        if (validPayments.length > 0) {
+          setPendingPaymentsForLoan(validPayments);
+          return;
+        }
       }
     }
     setPendingPaymentsForLoan([]);
@@ -130,23 +142,7 @@ export default function LoanDetailScreen({ route, navigation }) {
 
     setLoadingPendingPayments(true);
     try {
-      // Strategy 1: Try to fetch loan details from API (should include pendingConfirmations)
-      try {
-        const response = await lenderLoanAPI.getLoanDetails(loanDetails._id);
-        if (response?.data) {
-          setCurrentLoanDetails(response.data);
-          if (response.data.pendingConfirmations?.payments) {
-            setPendingPaymentsForLoan(response.data.pendingConfirmations.payments);
-            setLoadingPendingPayments(false);
-            return;
-          }
-        }
-      } catch (apiError) {
-        // Handle 500 error gracefully - API endpoint might not be available
-        // Using fallback strategy
-      }
-
-      // Strategy 2: Try pending payments endpoint (handles 500 gracefully)
+      // PRIORITY 1: Try pending payments endpoint first (has proper paymentId fields)
       try {
         const result = await dispatch(getPendingPayments({ page: 1, limit: 50 })).unwrap();
         if (result.payments && result.payments.length > 0) {
@@ -155,19 +151,50 @@ export default function LoanDetailScreen({ route, navigation }) {
             loan => loan.loanId === loanDetails._id || loan._id === loanDetails._id
           );
           if (loanPending?.pendingPayments && loanPending.pendingPayments.length > 0) {
-            setPendingPaymentsForLoan(loanPending.pendingPayments);
-            setLoadingPendingPayments(false);
-            return;
+            // Verify payments have proper IDs before using
+            const validPayments = loanPending.pendingPayments.filter(
+              p => p.paymentId || p._id || p.id
+            );
+            if (validPayments.length > 0) {
+              setPendingPaymentsForLoan(validPayments);
+              setLoadingPendingPayments(false);
+              return;
+            }
           }
         }
       } catch (pendingError) {
         // This is expected - the endpoint returns 500, but Redux handles it gracefully
+        console.log('Pending payments endpoint failed, trying fallback strategies');
       }
 
-      // Strategy 3: Check if loan object has paymentHistory with pending payments
+      // PRIORITY 2: Try to fetch loan details from API (pendingConfirmations)
+      try {
+        const response = await lenderLoanAPI.getLoanDetails(loanDetails._id);
+        if (response?.data) {
+          setCurrentLoanDetails(response.data);
+          if (response.data.pendingConfirmations?.payments) {
+            // Verify payments have proper IDs
+            const payments = response.data.pendingConfirmations.payments;
+            const validPayments = payments.filter(
+              p => p.paymentId || p._id || p.id
+            );
+            if (validPayments.length > 0) {
+              setPendingPaymentsForLoan(validPayments);
+              setLoadingPendingPayments(false);
+              return;
+            }
+          }
+        }
+      } catch (apiError) {
+        // Handle 500 error gracefully - API endpoint might not be available
+        console.log('Loan details API failed, trying fallback strategies');
+      }
+
+      // PRIORITY 3: Check if loan object has paymentHistory with pending payments
       if (loanDetails?.paymentHistory && Array.isArray(loanDetails.paymentHistory)) {
         const pendingFromHistory = loanDetails.paymentHistory.filter(
-          payment => payment.paymentStatus?.toLowerCase() === 'pending'
+          payment => payment.paymentStatus?.toLowerCase() === 'pending' && 
+                    (payment.paymentId || payment._id || payment.id)
         );
         if (pendingFromHistory.length > 0) {
           setPendingPaymentsForLoan(pendingFromHistory);
@@ -176,16 +203,30 @@ export default function LoanDetailScreen({ route, navigation }) {
         }
       }
 
-      // Strategy 4: Check existing loanDetails for pendingConfirmations
+      // PRIORITY 4: Check existing loanDetails for pendingConfirmations
       if (loanDetails?.pendingConfirmations?.payments) {
-        setPendingPaymentsForLoan(loanDetails.pendingConfirmations.payments);
+        const payments = loanDetails.pendingConfirmations.payments;
+        const validPayments = payments.filter(
+          p => p.paymentId || p._id || p.id
+        );
+        if (validPayments.length > 0) {
+          setPendingPaymentsForLoan(validPayments);
+        } else {
+          console.warn('Pending payments found but none have valid IDs:', payments);
+          setPendingPaymentsForLoan([]);
+        }
       } else {
         setPendingPaymentsForLoan([]);
       }
     } catch (error) {
+      console.error('Error in fetchLoanDetailsWithConfirmations:', error);
       // Use existing loanDetails if available
       if (loanDetails?.pendingConfirmations?.payments) {
-        setPendingPaymentsForLoan(loanDetails.pendingConfirmations.payments);
+        const payments = loanDetails.pendingConfirmations.payments;
+        const validPayments = payments.filter(
+          p => p.paymentId || p._id || p.id
+        );
+        setPendingPaymentsForLoan(validPayments);
       } else {
         setPendingPaymentsForLoan([]);
       }
@@ -288,6 +329,22 @@ export default function LoanDetailScreen({ route, navigation }) {
   };
 
   const handlePaymentAction = (payment, type) => {
+    // Log the payment object to debug any ID issues
+    console.log('Payment object received:', JSON.stringify(payment, null, 2));
+    
+    // Ensure payment has an ID before proceeding
+    const extractedPaymentId = payment?.paymentId || payment?._id || payment?.id;
+    if (!extractedPaymentId) {
+      console.error('No payment ID found in payment object:', payment);
+      Toast.show({
+        type: 'error',
+        position: 'top',
+        text1: 'Error',
+        text2: 'Unable to process payment - ID not found. Please refresh and try again.',
+      });
+      return;
+    }
+    
     setSelectedPayment(payment);
     setActionType(type);
     setActionModalVisible(true);
@@ -301,19 +358,22 @@ export default function LoanDetailScreen({ route, navigation }) {
   const handleConfirmPayment = async () => {
     if (!selectedPayment || !loanDetails?._id) return;
 
+    // Extract payment ID - check all possible field names
     const paymentId = selectedPayment?.paymentId || 
-                     selectedPayment?._id;
+                     selectedPayment?._id ||
+                     selectedPayment?.id ||
+                     selectedPayment?.payment_id;
 
     const loanId = loanDetails?._id || 
                    loanDetails?.loanId;
     
     if (!paymentId) {
-      console.error('Payment ID not found in payment object (LoanDetailsScreen):', selectedPayment);
+      console.error('Payment ID not found in payment object (LoanDetailsScreen):', JSON.stringify(selectedPayment, null, 2));
       Toast.show({
         type: 'error',
         position: 'top',
         text1: 'Error',
-        text2: 'Payment ID not found. Please check the payment object structure.',
+        text2: 'Payment ID not found. Please try refreshing the page.',
       });
       return;
     }
@@ -353,19 +413,19 @@ export default function LoanDetailScreen({ route, navigation }) {
       await fetchLoanDetailsWithConfirmations();
 
       // Remove confirmed payment from local state
-      const paymentId = selectedPayment.paymentId || selectedPayment._id;
+      const confirmedPaymentId = selectedPayment.paymentId || selectedPayment._id || selectedPayment.id;
       setPendingPaymentsForLoan(prev =>
-        prev.filter(p => (p.paymentId || p._id) !== paymentId)
+        prev.filter(p => (p.paymentId || p._id || p.id) !== confirmedPaymentId)
       );
     } catch (error) {
-      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to confirm payment';
+      const errorMessage = error?.response?.data?.message || error?.message || error || 'Failed to confirm payment';
       console.error('Confirm payment error:', errorMessage);
       console.error('Full error:', error);
       Toast.show({
         type: 'error',
         position: 'top',
         text1: 'Error',
-        text2: errorMessage,
+        text2: typeof errorMessage === 'string' ? errorMessage : 'Failed to confirm payment',
       });
     }
   };
@@ -381,20 +441,23 @@ export default function LoanDetailScreen({ route, navigation }) {
       return;
     }
 
+    // Extract payment ID - check all possible field names
     const paymentId = selectedPayment?.paymentId || 
-                     selectedPayment?._id;
+                     selectedPayment?._id ||
+                     selectedPayment?.id ||
+                     selectedPayment?.payment_id;
     
     // Get loan ID - use _id from loanDetails
     const loanId = loanDetails?._id || 
                    loanDetails?.loanId;
     
     if (!paymentId) {
-      console.error('Payment ID not found in payment object (LoanDetailsScreen reject):', selectedPayment);
+      console.error('Payment ID not found in payment object (LoanDetailsScreen reject):', JSON.stringify(selectedPayment, null, 2));
       Toast.show({
         type: 'error',
         position: 'top',
         text1: 'Error',
-        text2: 'Payment ID not found. Please check the payment object structure.',
+        text2: 'Payment ID not found. Please try refreshing the page.',
       });
       return;
     }
@@ -434,19 +497,19 @@ export default function LoanDetailScreen({ route, navigation }) {
       await fetchLoanDetailsWithConfirmations();
 
       // Remove rejected payment from local state
-      const paymentId = selectedPayment.paymentId || selectedPayment._id;
+      const rejectedPaymentId = selectedPayment.paymentId || selectedPayment._id || selectedPayment.id;
       setPendingPaymentsForLoan(prev =>
-        prev.filter(p => (p.paymentId || p._id) !== paymentId)
+        prev.filter(p => (p.paymentId || p._id || p.id) !== rejectedPaymentId)
       );
     } catch (error) {
-      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to reject payment';
+      const errorMessage = error?.response?.data?.message || error?.message || error || 'Failed to reject payment';
       console.error('Reject payment error:', errorMessage);
       console.error('Full error:', error);
       Toast.show({
         type: 'error',
         position: 'top',
         text1: 'Error',
-        text2: errorMessage,
+        text2: typeof errorMessage === 'string' ? errorMessage : 'Failed to reject payment',
       });
     }
   };

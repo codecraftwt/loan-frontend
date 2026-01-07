@@ -257,3 +257,105 @@ export const openRazorpayCheckoutForLoan = (order, user, loan) => {
       });
   });
 };
+
+/**
+ * Open Razorpay checkout for lender giving loan to borrower (online payment mode)
+ * @param {Object} razorpayOrder - Razorpay order data from loan creation response
+ * @param {Object} lender - Lender user data
+ * @param {Object} loan - Loan data
+ * @returns {Promise} Promise with payment result
+ */
+export const openRazorpayCheckoutForLoanCreation = (razorpayOrder, lender, loan) => {
+  return new Promise((resolve, reject) => {
+    if (!razorpayOrder || !razorpayOrder.orderId) {
+      console.error('Invalid Razorpay order data:', razorpayOrder);
+      reject(new Error('Invalid Razorpay order data'));
+      return;
+    }
+
+    const borrowerName = loan?.name || 'Borrower';
+    const loanAmount = loan?.amount || (razorpayOrder.amount / 100);
+
+    const options = {
+      key: razorpayOrder.keyId || RAZORPAY_KEY,
+      amount: razorpayOrder.amount.toString(), // Amount already in paise from backend
+      currency: razorpayOrder.currency || 'INR',
+      name: 'Loan Management App',
+      description: `Loan to ${borrowerName} - ₹${loanAmount.toLocaleString('en-IN')}`,
+      order_id: razorpayOrder.orderId,
+      prefill: {
+        email: lender?.email || '',
+        contact: lender?.mobileNo || lender?.mobile || '',
+        name: lender?.userName || lender?.name || '',
+      },
+      theme: { color: '#ff7900' },
+      notes: {
+        loanId: loan?._id || loan?.id,
+        borrowerName: borrowerName,
+        paymentType: 'loan-disbursement',
+      },
+    };
+
+    RazorpayCheckout.open(options)
+      .then((data) => {
+        if (!data.razorpay_payment_id || !data.razorpay_order_id) {
+          console.error('Missing payment or order ID in loan creation checkout');
+          console.error('Received data:', data);
+          reject({
+            type: 'PAYMENT_FAILED',
+            message: 'Payment response incomplete',
+          });
+          return;
+        }
+        
+        if (!data.razorpay_signature) {
+          console.error('Missing signature in payment response');
+          console.error('Received data:', data);
+          reject({
+            type: 'PAYMENT_FAILED',
+            message: 'Payment signature missing',
+          });
+          return;
+        }
+        
+        const paymentResponse = {
+          success: true,
+          data: {
+            razorpay_payment_id: data.razorpay_payment_id,
+            razorpay_order_id: data.razorpay_order_id || razorpayOrder.orderId,
+            razorpay_signature: data.razorpay_signature,
+          },
+          order: razorpayOrder,
+        };
+        
+        resolve(paymentResponse);
+      })
+      .catch((error) => {
+        console.error('Razorpay loan creation error:', error);
+        
+        if (error.code === 2) {
+          // User cancelled
+          reject({
+            type: 'USER_CANCELLED',
+            message: 'Payment cancelled by user',
+            code: error.code,
+          });
+        } else if (error.code === 0 || error.code === 3) {
+          // Network error or payment failed
+          reject({
+            type: 'PAYMENT_FAILED',
+            message: error.description || error.message || 'Payment failed. Please try again.',
+            code: error.code,
+          });
+        } else {
+          // Other errors
+          reject({
+            type: 'PAYMENT_FAILED',
+            message: error.description || error.message || 'Payment failed. Please try again.',
+            error: error,
+            code: error.code,
+          });
+        }
+      });
+  });
+};

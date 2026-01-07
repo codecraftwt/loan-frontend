@@ -21,6 +21,8 @@ const LoanOTPVerification = ({
   onVerifySuccess,
   onSkip,
   onClose,
+  isOnlinePayment = false,
+  paymentVerified = false,
 }) => {
   const dispatch = useDispatch();
   const [otp, setOtp] = useState(['', '', '', '']); // 4-digit OTP
@@ -168,8 +170,20 @@ const LoanOTPVerification = ({
           </View>
 
           <View style={styles.content}>
+            {/* Payment Success Message for Online Payments */}
+            {isOnlinePayment && paymentVerified && (
+              <View style={styles.paymentSuccessBanner}>
+                <Icon name="check-circle" size={20} color="#10B981" />
+                <Text style={styles.paymentSuccessText}>
+                  Payment completed successfully!
+                </Text>
+              </View>
+            )}
+            
             <Text style={styles.instructionText}>
-              Enter the 4-digit OTP sent to borrower's mobile number
+              {isOnlinePayment && paymentVerified 
+                ? 'Now, enter the 4-digit OTP sent to borrower\'s mobile number to confirm the loan'
+                : 'Enter the 4-digit OTP sent to borrower\'s mobile number'}
             </Text>
             {borrowerMobile && (
               <Text style={styles.mobileText}>
@@ -257,8 +271,9 @@ const LoanOTPVerification = ({
             </View>
 
             <Text style={styles.noteText}>
-              Note: You can skip OTP verification and verify later. The loan will
-              remain pending until verified.
+              {isOnlinePayment && paymentVerified
+                ? 'Note: Payment has been completed. You can skip OTP verification and verify later, but the loan will remain pending until OTP is verified.'
+                : 'Note: You can skip OTP verification and verify later. The loan will remain pending until verified.'}
             </Text>
           </View>
         </View>
@@ -301,6 +316,23 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: m(20),
+  },
+  paymentSuccessBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ECFDF5',
+    borderRadius: m(12),
+    padding: m(12),
+    marginBottom: m(16),
+    gap: m(8),
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  paymentSuccessText: {
+    fontSize: m(14),
+    fontWeight: '600',
+    color: '#059669',
   },
   instructionText: {
     fontSize: m(14),

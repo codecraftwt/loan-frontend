@@ -88,7 +88,7 @@ export default function Home() {
   useFocusEffect(
     React.useCallback(() => {
       dispatch(getLenderStatistics());
-      dispatch(getLenderRecentActivities({ limit: 10 }));
+      dispatch(getLenderRecentActivities({ limit: 5 }));
       // Fetch pending payments for lender
       dispatch(getPendingPayments({ page: 1, limit: 10 }));
 
@@ -125,7 +125,7 @@ export default function Home() {
     setRefreshing(true);
     await Promise.all([
       dispatch(getLenderStatistics()),
-      dispatch(getLenderRecentActivities({ limit: 10 })),
+      dispatch(getLenderRecentActivities({ limit: 5 })),
       dispatch(getPendingPayments({ page: 1, limit: 10 })),
     ]);
     setRefreshing(false);
@@ -415,7 +415,7 @@ export default function Home() {
               {
                 icon: 'settings',
                 text: 'Settings',
-                screen: 'SettingsScreen',
+                // screen: 'SettingsScreen',
                 gradient: ['#a09240ff', '#a3964aff'],
                 // ffec7f
                 description: 'App settings',

@@ -16,6 +16,8 @@ const initialState = {
   error: null,
   updateError: null,
   aadharError: null,
+  paymentVerifying: false,
+  paymentError: null,
   pagination: {
     page: 1,
     limit: 10,
@@ -45,14 +47,17 @@ export const checkFraudStatus = createAsyncThunk(
 
       return response.data;
     } catch (error) {
-      console.error('Check fraud error:', error.response?.data || error.message);
+      // Only log actual errors, not expected 404s
+      if (error.response?.status !== 404) {
+        console.error('Check fraud error:', error.response?.data || error.message);
+      }
       
       if (error.response?.status === 400) {
         return rejectWithValue(error.response.data.message || 'Invalid Aadhaar number');
       }
 
       if (error.response?.status === 404) {
-        // Borrower not found - not necessarily an error
+        // Borrower not found or endpoint not available - not necessarily an error
         return rejectWithValue('Borrower not found');
       }
 
@@ -250,6 +255,63 @@ export const verifyLoanOTP = createAsyncThunk(
       console.error('Verify OTP error:', error.response?.data || error.message);
       return rejectWithValue(
         error.response?.data?.message || error.message || 'Failed to verify OTP'
+      );
+    }
+  },
+);
+
+// Verify Razorpay payment for online loan disbursement
+export const verifyLoanPayment = createAsyncThunk(
+  'loans/verifyLoanPayment',
+  async ({ loanId, razorpay_payment_id, razorpay_order_id, razorpay_signature }, { rejectWithValue }) => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        return rejectWithValue('User is not authenticated');
+      }
+
+      if (!loanId || !razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
+        return rejectWithValue('Missing required payment verification fields');
+      }
+
+      const response = await instance.post(
+        'lender/loans/verify-payment',
+        { 
+          loanId, 
+          razorpay_payment_id, 
+          razorpay_order_id, 
+          razorpay_signature 
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error('Verify loan payment error:', error.response?.data || error.message);
+      
+      // Handle specific error cases
+      if (error.response?.status === 400) {
+        return rejectWithValue(
+          error.response.data?.message || 'Invalid payment verification request'
+        );
+      }
+      
+      if (error.response?.status === 403) {
+        return rejectWithValue(
+          error.response.data?.message || 'You can only verify payments for loans that you created'
+        );
+      }
+      
+      if (error.response?.status === 404) {
+        return rejectWithValue('Loan not found');
+      }
+
+      return rejectWithValue(
+        error.response?.data?.message || error.message || 'Failed to verify payment'
       );
     }
   },
@@ -572,6 +634,29 @@ const loanSlice = createSlice({
       .addCase(verifyLoanOTP.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || 'Failed to verify OTP';
+      })
+
+      // Handling verifyLoanPayment (Razorpay payment verification for loan disbursement)
+      .addCase(verifyLoanPayment.pending, state => {
+        state.paymentVerifying = true;
+        state.paymentError = null;
+      })
+      .addCase(verifyLoanPayment.fulfilled, (state, action) => {
+        state.paymentVerifying = false;
+        const verifiedLoan = action.payload.data?.loan;
+        if (verifiedLoan) {
+          const updatedLoanIndex = state.lenderLoans.findIndex(
+            loan => loan._id === verifiedLoan._id,
+          );
+          if (updatedLoanIndex >= 0) {
+            state.lenderLoans[updatedLoanIndex] = verifiedLoan;
+          }
+        }
+        state.paymentError = null;
+      })
+      .addCase(verifyLoanPayment.rejected, (state, action) => {
+        state.paymentVerifying = false;
+        state.paymentError = action.payload || 'Failed to verify payment';
       })
 
       // Handling getLenderStatistics

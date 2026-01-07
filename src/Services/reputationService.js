@@ -32,9 +32,7 @@ export const reputationAPI = {
         error: response.data?.message || 'Failed to fetch reputation',
       };
     } catch (error) {
-      console.error('Error fetching borrower reputation:', error);
-      
-      // Handle 404 - borrower not found or no loan history
+      // Handle 404 - borrower not found or no loan history (expected case, don't log as error)
       if (error.response?.status === 404) {
         return {
           success: false,
@@ -82,4 +80,3 @@ export const reputationAPI = {
 };
 
 export default reputationAPI;
-

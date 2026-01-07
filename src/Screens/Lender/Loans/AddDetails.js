@@ -22,8 +22,10 @@ import {
   updateLoan,
   checkFraudStatus,
   clearFraudStatus,
+  verifyLoanPayment,
 } from '../../../Redux/Slices/loanSlice';
 import { getActivePlan } from '../../../Redux/Slices/planPurchaseSlice';
+import { openRazorpayCheckoutForLoanCreation } from '../../../Services/razorpayService';
 import Toast from 'react-native-toast-message';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
@@ -35,9 +37,10 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 export default function AddDetails({ route, navigation }) {
   const dispatch = useDispatch();
-  const { error, aadharError, loading, fraudStatus, fraudLoading } = useSelector(
+  const { error, aadharError, loading, fraudStatus, fraudLoading, paymentVerifying } = useSelector(
     state => state.loans,
   );
+  const user = useSelector(state => state.auth.user);
   const { loanDetails, borrowerData } = route.params || {};
 
   // Auto-fill from borrowerData if available
@@ -91,6 +94,8 @@ export default function AddDetails({ route, navigation }) {
   const [createdLoanData, setCreatedLoanData] = useState(null);
   const [showFraudWarning, setShowFraudWarning] = useState(false);
   const [pendingLoanData, setPendingLoanData] = useState(null);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [paymentVerified, setPaymentVerified] = useState(false);
 
   // Focus animation
   const focusAnim = new Animated.Value(0);
@@ -279,20 +284,28 @@ export default function AddDetails({ route, navigation }) {
           );
         }
 
-        // For new loans, show OTP verification modal
+        // For new loans, check if online payment is required
         if (!loanDetails && createLoan.fulfilled.match(response)) {
           // Handle API response structure: response.payload.data or response.payload
           const loanData = responsePayload?.data || responsePayload;
 
           if (loanData && loanData._id) {
-            setCreatedLoanData(loanData);
-            setIsOTPModalVisible(true);
-            Toast.show({
-              type: 'success',
-              position: 'top',
-              text1: 'Loan created successfully',
-              text2: 'OTP sent to borrower. Please verify to confirm the loan.',
-            });
+            // Check if this is an online payment loan with Razorpay order
+            if (loanData.loanMode === 'online' && loanData.razorpayOrder) {
+              // Store loan data and initiate Razorpay payment
+              setCreatedLoanData(loanData);
+              await handleRazorpayPayment(loanData);
+            } else {
+              // Cash mode - directly show OTP verification
+              setCreatedLoanData(loanData);
+              setIsOTPModalVisible(true);
+              Toast.show({
+                type: 'success',
+                position: 'top',
+                text1: 'Loan created successfully',
+                text2: 'OTP sent to borrower. Please verify to confirm the loan.',
+              });
+            }
           } else {
             // Fallback: navigate if loan data structure is unexpected
             Toast.show({
@@ -365,6 +378,108 @@ export default function AddDetails({ route, navigation }) {
     }
   };
 
+  // Handle Razorpay payment for online loan disbursement
+  const handleRazorpayPayment = async (loanData) => {
+    setIsProcessingPayment(true);
+    
+    try {
+      Toast.show({
+        type: 'info',
+        position: 'top',
+        text1: 'Opening Payment Gateway',
+        text2: 'Please complete the payment to proceed.',
+      });
+
+      // Open Razorpay checkout
+      const paymentResult = await openRazorpayCheckoutForLoanCreation(
+        loanData.razorpayOrder,
+        user,
+        loanData
+      );
+
+      if (paymentResult.success) {
+        // Verify the payment with backend
+        await verifyRazorpayPayment(loanData._id, paymentResult.data);
+      }
+    } catch (error) {
+      setIsProcessingPayment(false);
+      
+      if (error.type === 'USER_CANCELLED') {
+        Alert.alert(
+          'Payment Cancelled',
+          'You cancelled the payment. The loan has been created but payment is pending. You can complete the payment later or switch to cash mode.',
+          [
+            {
+              text: 'Go to Loans',
+              onPress: () => navigation.navigate('BottomNavigation', { screen: 'Outward' }),
+            },
+          ]
+        );
+      } else {
+        Alert.alert(
+          'Payment Failed',
+          error.message || 'Payment could not be completed. Please try again.',
+          [
+            {
+              text: 'Go to Loans',
+              onPress: () => navigation.navigate('BottomNavigation', { screen: 'Outward' }),
+            },
+          ]
+        );
+      }
+    }
+  };
+
+  // Verify Razorpay payment with backend
+  const verifyRazorpayPayment = async (loanId, paymentData) => {
+    try {
+      const verifyResult = await dispatch(verifyLoanPayment({
+        loanId,
+        razorpay_payment_id: paymentData.razorpay_payment_id,
+        razorpay_order_id: paymentData.razorpay_order_id,
+        razorpay_signature: paymentData.razorpay_signature,
+      })).unwrap();
+
+      setIsProcessingPayment(false);
+
+      if (verifyResult.success) {
+        setPaymentVerified(true);
+        // Update the created loan data with verified payment info
+        if (verifyResult.data?.loan) {
+          setCreatedLoanData(prev => ({
+            ...prev,
+            ...verifyResult.data.loan,
+          }));
+        }
+        
+        Toast.show({
+          type: 'success',
+          position: 'top',
+          text1: 'Payment Verified Successfully',
+          text2: 'Please verify OTP to confirm the loan.',
+        });
+        
+        // Show OTP verification modal
+        setIsOTPModalVisible(true);
+      } else {
+        throw new Error(verifyResult.message || 'Payment verification failed');
+      }
+    } catch (error) {
+      setIsProcessingPayment(false);
+      
+      Alert.alert(
+        'Payment Verification Failed',
+        error.message || 'Could not verify the payment. Please contact support.',
+        [
+          {
+            text: 'Go to Loans',
+            onPress: () => navigation.navigate('BottomNavigation', { screen: 'Outward' }),
+          },
+        ]
+      );
+    }
+  };
+
   // Reset form fields
   const resetForm = () => {
     setFormData({
@@ -380,6 +495,8 @@ export default function AddDetails({ route, navigation }) {
     });
     setErrorMessage('');
     setShowOldHistoryButton(false);
+    setIsProcessingPayment(false);
+    setPaymentVerified(false);
     dispatch(clearFraudStatus());
   };
 
@@ -773,6 +890,16 @@ export default function AddDetails({ route, navigation }) {
                   </Text>
                 </TouchableOpacity>
               </View>
+              
+              {/* Online Payment Info */}
+              {formData.loanMode === 'online' && (
+                <View style={styles.onlinePaymentInfo}>
+                  <Icon name="information" size={18} color="#3B82F6" />
+                  <Text style={styles.onlinePaymentInfoText}>
+                    Payment will be processed via Razorpay. You'll be redirected to complete the payment after creating the loan.
+                  </Text>
+                </View>
+              )}
             </View>
 
             {(errorMessage || error) && (
@@ -795,21 +922,32 @@ export default function AddDetails({ route, navigation }) {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.submitButton}
+                style={[
+                  styles.submitButton,
+                  (loading || isProcessingPayment || paymentVerifying) && styles.submitButtonDisabled,
+                ]}
                 onPress={handleSubmit}
-                disabled={loading}
+                disabled={loading || isProcessingPayment || paymentVerifying}
                 activeOpacity={0.8}>
-                {loading ? (
-                  <ActivityIndicator size="small" color="#FFF" />
+                {(loading || isProcessingPayment || paymentVerifying) ? (
+                  <>
+                    <ActivityIndicator size="small" color="#FFF" />
+                    <Text style={styles.submitButtonText}>
+                      {isProcessingPayment ? 'Processing Payment...' : 
+                       paymentVerifying ? 'Verifying Payment...' : 'Creating...'}
+                    </Text>
+                  </>
                 ) : (
                   <>
                     <Icon
-                      name={loanDetails ? "check-circle" : "plus-circle"}
+                      name={loanDetails ? "check-circle" : 
+                            formData.loanMode === 'online' ? "credit-card-check" : "plus-circle"}
                       size={20}
                       color="#FFF"
                     />
                     <Text style={styles.submitButtonText}>
-                      {loanDetails ? 'Update Loan' : 'Create Loan'}
+                      {loanDetails ? 'Update Loan' : 
+                       formData.loanMode === 'online' ? 'Create & Pay Online' : 'Create Loan'}
                     </Text>
                   </>
                 )}
@@ -846,6 +984,8 @@ export default function AddDetails({ route, navigation }) {
             onVerifySuccess={handleOTPVerifySuccess}
             onSkip={handleOTPSkip}
             onClose={handleOTPClose}
+            isOnlinePayment={createdLoanData.loanMode === 'online'}
+            paymentVerified={paymentVerified}
           />
         )}
 
@@ -1144,6 +1284,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#ff7900',
     gap: m(10),
   },
+  submitButtonDisabled: {
+    backgroundColor: '#ffa54d',
+    opacity: 0.8,
+  },
   submitButtonText: {
     fontSize: m(14),
     fontFamily: 'Montserrat-Bold',
@@ -1185,6 +1329,24 @@ const styles = StyleSheet.create({
   },
   loanModeButtonTextActive: {
     color: '#FFFFFF',
+  },
+  onlinePaymentInfo: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#EFF6FF',
+    borderRadius: m(10),
+    padding: m(12),
+    marginTop: m(12),
+    gap: m(10),
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  onlinePaymentInfoText: {
+    flex: 1,
+    fontSize: m(12),
+    fontFamily: 'Montserrat-Regular',
+    color: '#1E40AF',
+    lineHeight: m(18),
   },
   fraudBadgeContainer: {
     marginTop: m(12),

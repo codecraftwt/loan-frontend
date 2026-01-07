@@ -624,12 +624,6 @@ const ImageViewer = ({ visible, imageUrl, onClose }) => {
                 visibilityTime: 4000,
               });
             }}
-            // onLoadStart={() => {
-            //   console.log('Image loading started:', imageUrl);
-            // }}
-            // onLoadEnd={() => {
-            //   console.log('Image loaded successfully:', imageUrl);
-            // }}
           />
         </ScrollView>
       </View>

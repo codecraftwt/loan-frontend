@@ -9,7 +9,11 @@ export const lenderLoanAPI = {
       const response = await axiosInstance.get(`lender/loans/${loanId}`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching lender loan details:', error);
+      // Suppress console error for 500 errors - backend endpoint may not be fully implemented
+      // Fallback strategies exist in the calling code
+      if (error.response?.status !== 500) {
+        console.error('Error fetching lender loan details:', error);
+      }
       throw error;
     }
   },

@@ -51,13 +51,13 @@ export const adminAPI = {
       return response.data;
     } catch (error) {
       console.error('Error fetching revenue statistics:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        url: error.config?.url
-      });
+      // console.error('Error details:', {
+      //   message: error.message,
+      //   status: error.response?.status,
+      //   statusText: error.response?.statusText,
+      //   data: error.response?.data,
+      //   url: error.config?.url
+      // });
       throw error;
     }
   },
@@ -88,4 +88,3 @@ export const adminAPI = {
 };
 
 export default adminAPI;
-
