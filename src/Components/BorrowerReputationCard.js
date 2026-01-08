@@ -96,7 +96,27 @@ const BorrowerReputationCard = ({ aadhaarNumber, compact = false }) => {
   }
 
   if (error || !reputation) {
-    return null; 
+    // Show a subtle card indicating no reputation data available
+    if (compact) {
+      return null; // Don't show anything in compact mode if no data
+    }
+    return (
+      <View style={[styles.container, styles.noDataContainer]}>
+        <View style={styles.noDataContent}>
+          <View style={[styles.iconContainer, { backgroundColor: '#F3F4F6' }]}>
+            <Icon name="info" size={24} color="#9CA3AF" />
+          </View>
+          <View style={styles.noDataTextContainer}>
+            <Text style={styles.noDataTitle}>No Reputation Data</Text>
+            <Text style={styles.noDataSubtitle}>
+              {error === 'No loan history available for this borrower' 
+                ? 'This borrower has no previous loan history.'
+                : 'Reputation score will be available once the borrower has loan history.'}
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
   }
 
   const { reputationScore, reputationLevel, reputationColor, metrics, breakdown } = reputation;
@@ -581,6 +601,30 @@ const styles = StyleSheet.create({
     fontSize: m(10),
     fontWeight: '700',
     textTransform: 'uppercase',
+  },
+  // No data styles
+  noDataContainer: {
+    borderColor: '#E5E7EB',
+    backgroundColor: '#F9FAFB',
+  },
+  noDataContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(12),
+  },
+  noDataTextContainer: {
+    flex: 1,
+  },
+  noDataTitle: {
+    fontSize: m(15),
+    fontWeight: '600',
+    color: '#6B7280',
+    marginBottom: m(4),
+  },
+  noDataSubtitle: {
+    fontSize: m(13),
+    color: '#9CA3AF',
+    lineHeight: m(18),
   },
 });
 

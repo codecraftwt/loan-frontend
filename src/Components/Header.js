@@ -14,6 +14,7 @@ import Feather from 'react-native-vector-icons/Feather';
 import Icon from 'react-native-vector-icons/Feather';
 import { m } from 'walstar-rn-responsive';
 import { logo } from '../Assets';
+import { FontFamily } from '../constants';
 
 const Header = ({
   title,
@@ -161,7 +162,7 @@ const styles = StyleSheet.create({
   headerText: {
     color: '#ffffff',
     fontSize: m(20),
-    fontFamily: 'Montserrat-Bold',
+    fontFamily: FontFamily.secondaryBold,
     letterSpacing: m(1.2),
     textAlign: 'center',
     textShadowColor: 'rgba(255, 255, 255, 0.3)',

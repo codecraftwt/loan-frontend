@@ -34,6 +34,7 @@ import FraudStatusBadge from '../../../Components/FraudStatusBadge';
 import FraudWarningModal from '../../../Components/FraudWarningModal';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { FontFamily, FontSizes } from '../../../constants';
 
 export default function AddDetails({ route, navigation }) {
   const dispatch = useDispatch();
@@ -1031,15 +1032,14 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   headerTitle: {
-    fontSize: m(18),
-    fontFamily: 'Montserrat-Bold',
+    fontSize: FontSizes.lg,
+    fontFamily: FontFamily.secondaryBold,
     color: '#ff8500',
     textAlign: 'center',
-    // marginBottom: m(6),
   },
   headerSubtitle: {
-    fontSize: m(14),
-    fontFamily: 'Montserrat-Regular',
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.secondaryRegular,
     color: '#64748b',
     textAlign: 'center',
     lineHeight: m(20),
@@ -1068,8 +1068,8 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f1f5f9',
   },
   sectionTitle: {
-    fontSize: m(16),
-    fontFamily: 'Montserrat-SemiBold',
+    fontSize: FontSizes.md,
+    fontFamily: FontFamily.secondarySemiBold,
     color: '#1e293b',
     marginLeft: m(10),
   },
@@ -1096,8 +1096,8 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     padding: m(12),
-    fontSize: m(15),
-    fontFamily: 'Montserrat-Regular',
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primaryRegular,
     color: '#1e293b',
     backgroundColor: '#f8fafc',
   },
@@ -1108,8 +1108,8 @@ const styles = StyleSheet.create({
   textArea: {
     flex: 1,
     padding: m(12),
-    fontSize: m(15),
-    fontFamily: 'Montserrat-Regular',
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primaryRegular,
     color: '#1e293b',
     minHeight: m(70),
     textAlignVertical: 'top',
@@ -1131,21 +1131,21 @@ const styles = StyleSheet.create({
     marginBottom: m(8),
   },
   errorTitle: {
-    fontSize: m(14),
-    fontFamily: 'Montserrat-SemiBold',
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primarySemiBold,
     color: '#dc2626',
     marginLeft: m(8),
   },
   errorMessage: {
-    fontSize: m(13),
-    fontFamily: 'Montserrat-Regular',
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.primaryRegular,
     color: '#b91c1c',
     lineHeight: m(18),
     marginBottom: m(8),
   },
   errorNote: {
-    fontSize: m(12),
-    fontFamily: 'Montserrat-Regular',
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.primaryRegular,
     color: '#92400e',
     lineHeight: m(16),
   },
@@ -1160,8 +1160,8 @@ const styles = StyleSheet.create({
   },
   oldHistoryButtonText: {
     color: '#FFF',
-    fontSize: m(15),
-    fontFamily: 'Montserrat-SemiBold',
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primarySemiBold,
   },
   amountContainer: {
     marginBottom: m(16),
@@ -1180,15 +1180,15 @@ const styles = StyleSheet.create({
   amountInput: {
     flex: 1,
     padding: m(12),
-    fontSize: m(16),
-    fontFamily: 'Montserrat-SemiBold',
+    fontSize: FontSizes.md,
+    fontFamily: FontFamily.primarySemiBold,
     color: '#1e293b',
     backgroundColor: '#f8fafc',
   },
   currencyText: {
     paddingHorizontal: m(16),
-    fontSize: m(14),
-    fontFamily: 'Montserrat-Medium',
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primaryMedium,
     color: '#64748b',
   },
   dateRow: {
@@ -1217,19 +1217,19 @@ const styles = StyleSheet.create({
     marginHorizontal: m(8),
   },
   datePlaceholder: {
-    fontSize: m(13),
-    fontFamily: 'Montserrat-Regular',
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.primaryRegular,
     color: '#888',
     lineHeight: m(18),
   },
   datePlaceholderFilled: {
-    fontSize: m(11),
+    fontSize: FontSizes.xs,
     color: '#94a3b8',
-    fontFamily: 'Montserrat-Medium',
+    fontFamily: FontFamily.primaryMedium,
   },
   dateValue: {
-    fontSize: m(14),
-    fontFamily: 'Montserrat-SemiBold',
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primarySemiBold,
     color: '#1e293b',
     lineHeight: m(20),
     marginTop: m(2),
@@ -1247,8 +1247,8 @@ const styles = StyleSheet.create({
   },
   errorText: {
     flex: 1,
-    fontSize: m(13),
-    fontFamily: 'Montserrat-Regular',
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.primaryRegular,
     color: '#b91c1c',
     lineHeight: m(18),
   },
@@ -1270,8 +1270,8 @@ const styles = StyleSheet.create({
     gap: m(8),
   },
   resetButtonText: {
-    fontSize: m(14),
-    fontFamily: 'Montserrat-SemiBold',
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primarySemiBold,
     color: '#64748b',
   },
   submitButton: {
@@ -1289,16 +1289,16 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   submitButtonText: {
-    fontSize: m(14),
-    fontFamily: 'Montserrat-Bold',
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primarySemiBold,
     color: '#FFF',
   },
   loanModeContainer: {
     marginBottom: m(20),
   },
   loanModeLabel: {
-    fontSize: m(14),
-    fontFamily: 'Montserrat-SemiBold',
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primarySemiBold,
     color: '#374151',
     marginBottom: m(12),
   },
@@ -1323,8 +1323,8 @@ const styles = StyleSheet.create({
     borderColor: '#ff7900',
   },
   loanModeButtonText: {
-    fontSize: m(14),
-    fontFamily: 'Montserrat-SemiBold',
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primarySemiBold,
     color: '#6B7280',
   },
   loanModeButtonTextActive: {
@@ -1343,8 +1343,8 @@ const styles = StyleSheet.create({
   },
   onlinePaymentInfoText: {
     flex: 1,
-    fontSize: m(12),
-    fontFamily: 'Montserrat-Regular',
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.primaryRegular,
     color: '#1E40AF',
     lineHeight: m(18),
   },
@@ -1361,9 +1361,9 @@ const styles = StyleSheet.create({
     gap: m(10),
   },
   fraudLoadingText: {
-    fontSize: m(13),
+    fontSize: FontSizes.sm,
     color: '#64748b',
-    fontFamily: 'Montserrat-Regular',
+    fontFamily: FontFamily.primaryRegular,
   },
   addLoanCont:{
     flexDirection: 'row',

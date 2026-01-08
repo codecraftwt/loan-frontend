@@ -13,6 +13,7 @@ import {useDispatch} from 'react-redux';
 import {verifyOtp} from '../../Redux/Slices/authslice';
 import Toast from 'react-native-toast-message';
 import {m} from 'walstar-rn-responsive';
+import {FontFamily, FontSizes} from '../../constants';
 
 export default function OTP({navigation, route}) {
   const {email} = route.params; // The email passed from the Forgot Password screen.
@@ -120,16 +121,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerText: {
-    fontSize: m(28),
+    fontSize: FontSizes['3xl'],
     color: '#b80266',
-    fontFamily: 'Montserrat-Bold',
+    fontFamily: FontFamily.secondaryBold,
     textAlign: 'center',
     marginBottom: m(20),
   },
   instructionText: {
-    fontSize: m(16),
+    fontSize: FontSizes.md,
     color: '#333',
-    fontFamily: 'Poppins-Regular',
+    fontFamily: FontFamily.primaryRegular,
     textAlign: 'center',
     marginBottom: m(40),
   },
@@ -145,8 +146,8 @@ const styles = StyleSheet.create({
     borderWidth: m(1),
     borderRadius: m(8),
     textAlign: 'center',
-    fontSize: m(24),
-    fontFamily: 'Poppins-Regular',
+    fontSize: FontSizes['2xl'],
+    fontFamily: FontFamily.primaryRegular,
     color: '#333333',
     backgroundColor: '#FFFFFF',
     shadowColor: '#000',
@@ -165,7 +166,7 @@ const styles = StyleSheet.create({
   },
   verifyButtonText: {
     color: '#FFFFFF',
-    fontSize: m(18),
-    fontFamily: 'Poppins-Bold',
+    fontSize: FontSizes.lg,
+    fontFamily: FontFamily.primarySemiBold,
   },
 });

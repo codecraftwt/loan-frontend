@@ -11,6 +11,7 @@ import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
 import { getLenderStatistics } from '../../../Redux/Slices/loanSlice';
 import DonutChart from '../../../Components/DonutChart';
+import { FontFamily, FontSizes } from '../../../constants';
 
 const formatCurrency = value => {
   if (!value) {
@@ -228,8 +229,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   loadingText: {
-    fontSize: m(16),
-    fontFamily: 'Poppins-Medium',
+    fontSize: FontSizes.md,
+    fontFamily: FontFamily.primaryMedium,
     color: '#6b7280',
   },
   emptyContainer: {
@@ -238,20 +239,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emptyText: {
-    fontSize: m(18),
-    fontFamily: 'Montserrat-SemiBold',
+    fontSize: FontSizes.lg,
+    fontFamily: FontFamily.secondarySemiBold,
     color: '#6b7280',
     marginBottom: m(8),
   },
   emptySubtext: {
-    fontSize: m(14),
-    fontFamily: 'Poppins-Regular',
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primaryRegular,
     color: '#9ca3af',
     textAlign: 'center',
   },
   screenTitle: {
-    fontSize: m(22),
-    fontFamily: 'Montserrat-Bold',
+    fontSize: FontSizes.xl,
+    fontFamily: FontFamily.secondaryBold,
     color: '#111827',
     marginTop: m(20),
     marginBottom: m(12),
@@ -268,14 +269,14 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   sectionTitle: {
-    fontSize: m(18),
-    fontFamily: 'Montserrat-SemiBold',
+    fontSize: FontSizes.lg,
+    fontFamily: FontFamily.secondarySemiBold,
     color: '#111827',
     marginBottom: m(4),
   },
   sectionSubtitle: {
-    fontSize: m(12),
-    fontFamily: 'Poppins-Regular',
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.primaryRegular,
     color: '#6b7280',
     marginBottom: m(16),
   },
@@ -306,20 +307,20 @@ const styles = StyleSheet.create({
     marginRight: m(10),
   },
   rowLabel: {
-    fontSize: m(14),
-    fontFamily: 'Poppins-Medium',
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primaryMedium,
     color: '#374151',
     flexShrink: 1,
   },
   rowValue: {
-    fontSize: m(14),
-    fontFamily: 'Poppins-SemiBold',
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primarySemiBold,
     color: '#111827',
     marginBottom: m(2),
   },
   rowPercentage: {
-    fontSize: m(12),
-    fontFamily: 'Poppins-Regular',
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.primaryRegular,
     color: '#6b7280',
   },
   countsContainer: {
@@ -337,14 +338,14 @@ const styles = StyleSheet.create({
     borderRadius: m(12),
   },
   countValue: {
-    fontSize: m(24),
-    fontFamily: 'Montserrat-Bold',
+    fontSize: FontSizes['2xl'],
+    fontFamily: FontFamily.secondaryBold,
     color: '#111827',
     marginBottom: m(4),
   },
   countLabel: {
-    fontSize: m(12),
-    fontFamily: 'Poppins-Medium',
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.primaryMedium,
     color: '#6b7280',
     textTransform: 'uppercase',
     letterSpacing: 0.5,

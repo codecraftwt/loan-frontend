@@ -5,6 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import { m } from 'walstar-rn-responsive';
+import Fonts from '../constants/fonts';
 
 // Lender screens
 import Home from '../Screens/Lender/Dashboard/Home';

@@ -26,6 +26,7 @@ import {
   rejectPayment,
 } from '../../../Redux/Slices/lenderPaymentSlice';
 import { baseurl } from '../../../Utils/API';
+import { FontFamily, FontSizes } from '../../../constants';
 
 export default function PendingPayments() {
   // const navigation = useNavigation();
@@ -643,7 +644,8 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: m(16),
-    fontSize: m(16),
+    fontSize: FontSizes.md,
+    fontFamily: FontFamily.primaryRegular,
     color: '#6B7280',
   },
   listContainer: {
@@ -673,13 +675,14 @@ const styles = StyleSheet.create({
     gap: m(4),
   },
   borrowerName: {
-    fontSize: m(18),
-    fontWeight: '700',
+    fontSize: FontSizes.lg,
+    fontFamily: FontFamily.secondaryBold,
     color: '#111827',
     marginBottom: m(4),
   },
   borrowerInfo: {
-    fontSize: m(12),
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.primaryRegular,
     color: '#6B7280',
     marginBottom: m(2),
     flexDirection: 'row',
@@ -701,13 +704,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loanAmountLabel: {
-    fontSize: m(10),
+    fontSize: FontSizes.xs,
+    fontFamily: FontFamily.primaryRegular,
     color: '#6B7280',
     marginBottom: m(4),
   },
   loanAmountValue: {
-    fontSize: m(14),
-    fontWeight: '700',
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primaryBold,
     color: '#111827',
   },
   loanStatusBadge: {
@@ -719,8 +723,8 @@ const styles = StyleSheet.create({
     marginTop: m(4),
   },
   loanStatusText: {
-    fontSize: m(12),
-    fontWeight: '600',
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.primarySemiBold,
     color: '#3B82F6',
   },
   paymentCard: {
@@ -744,12 +748,13 @@ const styles = StyleSheet.create({
     marginBottom: m(12),
   },
   paymentAmount: {
-    fontSize: m(24),
-    fontWeight: '800',
+    fontSize: FontSizes['2xl'],
+    fontFamily: FontFamily.primaryBold,
     color: '#111827',
   },
   paymentSubtitle: {
-    fontSize: m(11),
+    fontSize: FontSizes.xs,
+    fontFamily: FontFamily.primaryRegular,
     color: '#6B7280',
     marginTop: m(2),
   },
@@ -771,8 +776,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#3B82F6',
   },
   paymentTypeText: {
-    fontSize: m(11),
-    fontWeight: '600',
+    fontSize: FontSizes.xs,
+    fontFamily: FontFamily.primarySemiBold,
     color: '#FFFFFF',
   },
   paymentModeBadge: {
@@ -791,8 +796,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F59E0B',
   },
   paymentModeText: {
-    fontSize: m(11),
-    fontWeight: '600',
+    fontSize: FontSizes.xs,
+    fontFamily: FontFamily.primarySemiBold,
     color: '#FFFFFF',
   },
   paymentDetailsGrid: {
@@ -806,23 +811,23 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   detailLabel: {
-    fontSize: m(12),
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.primaryMedium,
     color: '#6B7280',
-    fontWeight: '500',
   },
   detailValue: {
-    fontSize: m(12),
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.primarySemiBold,
     color: '#111827',
-    fontWeight: '600',
   },
   transactionIdValue: {
-    fontSize: m(12),
+    fontSize: FontSizes.sm,
     color: '#3B82F6',
     fontFamily: 'monospace',
-    fontWeight: '600',
   },
   notesValue: {
-    fontSize: m(12),
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.primaryRegular,
     color: '#374151',
     fontStyle: 'italic',
     flex: 1,
@@ -850,13 +855,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   proofText: {
-    fontSize: m(14),
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primarySemiBold,
     color: '#3B82F6',
-    fontWeight: '600',
     marginBottom: m(2),
   },
   proofSubtext: {
-    fontSize: m(11),
+    fontSize: FontSizes.xs,
+    fontFamily: FontFamily.primaryRegular,
     color: '#6B7280',
   },
   actionButtons: {
@@ -879,8 +885,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#10B981',
   },
   actionButtonText: {
-    fontSize: m(14),
-    fontWeight: '600',
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primarySemiBold,
     color: '#FFFFFF',
   },
   emptyState: {
@@ -890,14 +896,15 @@ const styles = StyleSheet.create({
     padding: m(32),
   },
   emptyTitle: {
-    fontSize: m(18),
-    fontWeight: '600',
+    fontSize: FontSizes.lg,
+    fontFamily: FontFamily.secondarySemiBold,
     color: '#111827',
     marginTop: m(16),
     marginBottom: m(8),
   },
   emptySubtitle: {
-    fontSize: m(14),
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primaryRegular,
     color: '#6B7280',
     textAlign: 'center',
   },
@@ -922,15 +929,16 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E5E7EB',
   },
   modalTitle: {
-    fontSize: m(20),
-    fontWeight: '700',
+    fontSize: FontSizes.xl,
+    fontFamily: FontFamily.secondaryBold,
     color: '#111827',
   },
   modalBody: {
     padding: m(20),
   },
   modalMessage: {
-    fontSize: m(16),
+    fontSize: FontSizes.md,
+    fontFamily: FontFamily.primaryRegular,
     color: '#374151',
     marginBottom: m(16),
   },
@@ -938,8 +946,8 @@ const styles = StyleSheet.create({
     marginTop: m(12),
   },
   inputLabel: {
-    fontSize: m(14),
-    fontWeight: '600',
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primarySemiBold,
     color: '#374151',
     marginBottom: m(8),
   },
@@ -948,7 +956,8 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     borderRadius: m(8),
     padding: m(12),
-    fontSize: m(14),
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primaryRegular,
     color: '#111827',
     backgroundColor: '#F9FAFB',
     textAlignVertical: 'top',
@@ -971,8 +980,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
   },
   cancelButtonText: {
-    fontSize: m(14),
-    fontWeight: '600',
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primarySemiBold,
     color: '#6B7280',
   },
   confirmModalButton: {
@@ -982,8 +991,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#EF4444',
   },
   modalButtonText: {
-    fontSize: m(14),
-    fontWeight: '600',
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primarySemiBold,
     color: '#FFFFFF',
   },
   errorContainer: {
@@ -993,14 +1002,15 @@ const styles = StyleSheet.create({
     padding: m(32),
   },
   errorTitle: {
-    fontSize: m(18),
-    fontWeight: '600',
+    fontSize: FontSizes.lg,
+    fontFamily: FontFamily.secondarySemiBold,
     color: '#111827',
     marginTop: m(16),
     marginBottom: m(8),
   },
   errorMessage: {
-    fontSize: m(14),
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primaryRegular,
     color: '#6B7280',
     textAlign: 'center',
     marginBottom: m(24),
@@ -1013,8 +1023,8 @@ const styles = StyleSheet.create({
   },
   retryButtonText: {
     color: '#FFFFFF',
-    fontSize: m(14),
-    fontWeight: '600',
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primarySemiBold,
   },
 });
 
@@ -1031,8 +1041,8 @@ const imageViewerStyles = StyleSheet.create({
     paddingTop: m(50),
   },
   headerText: {
-    fontSize: m(18),
-    fontWeight: '700',
+    fontSize: FontSizes.lg,
+    fontFamily: FontFamily.secondaryBold,
     color: '#FFFFFF',
   },
   closeButton: {

@@ -13,6 +13,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import {useDispatch} from 'react-redux';
 import {resetPassword} from '../../Redux/Slices/authslice';
 import {m} from 'walstar-rn-responsive';
+import {FontFamily, FontSizes} from '../../constants';
 
 export default function CreatePass({navigation, route}) {
   const {email, otp} = route.params;
@@ -127,16 +128,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerText: {
-    fontSize: m(28),
+    fontSize: FontSizes['3xl'],
     color: '#b80266',
-    fontFamily: 'Montserrat-Bold',
+    fontFamily: FontFamily.secondaryBold,
     textAlign: 'center',
     marginBottom: m(20),
   },
   instructionText: {
-    fontSize: m(16),
+    fontSize: FontSizes.md,
     color: '#333',
-    fontFamily: 'Poppins-Regular',
+    fontFamily: FontFamily.primaryRegular,
     textAlign: 'center',
     marginBottom: m(30),
   },
@@ -157,8 +158,8 @@ const styles = StyleSheet.create({
     flex: 1,
     height: m(60),
     paddingHorizontal: m(16),
-    fontSize: m(16),
-    fontFamily: 'Poppins-Regular',
+    fontSize: FontSizes.md,
+    fontFamily: FontFamily.primaryRegular,
     color: '#333333',
   },
   icon: {
@@ -175,7 +176,7 @@ const styles = StyleSheet.create({
   },
   applyButtonText: {
     color: '#FFFFFF',
-    fontSize: m(18),
-    fontFamily: 'Poppins-Bold',
+    fontSize: FontSizes.lg,
+    fontFamily: FontFamily.primarySemiBold,
   },
 });

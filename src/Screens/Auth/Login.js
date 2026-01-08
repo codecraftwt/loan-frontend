@@ -16,6 +16,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { login } from '../../Redux/Slices/authslice';
 import Toast from 'react-native-toast-message';
 import { m } from 'walstar-rn-responsive';
+import { FontFamily, FontSizes } from '../../constants';
 
 export default function LoginScreen({ navigation }) {
   const [mobileNumber, setMobileNumber] = useState('');
@@ -253,12 +254,13 @@ const styles = StyleSheet.create({
     marginBottom: m(12),
   },
   appName: {
-    fontSize: m(32),
-    fontWeight: '700',
+    fontSize: FontSizes['4xl'],
+    fontFamily: FontFamily.secondaryBold,
     color: '#ff6700',
   },
   tagline: {
-    fontSize: m(16),
+    fontSize: FontSizes.md,
+    fontFamily: FontFamily.secondaryRegular,
     color: '#ff6700',
     textAlign: 'center',
     fontStyle: 'italic',
@@ -289,14 +291,15 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
   },
   formTitle: {
-    fontSize: m(24),
-    fontWeight: '700',
+    fontSize: FontSizes['2xl'],
+    fontFamily: FontFamily.secondaryBold,
     color: '#333',
     marginBottom: m(4),
     textAlign: 'center',
   },
   formSubtitle: {
-    fontSize: m(14),
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primaryRegular,
     color: '#666',
     marginBottom: m(24),
     textAlign: 'center',
@@ -307,8 +310,8 @@ const styles = StyleSheet.create({
     marginBottom: m(20),
   },
   inputLabel: {
-    fontSize: m(14),
-    fontWeight: '500',
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primarySemiBold,
     color: '#555',
     marginBottom: m(8),
   },
@@ -333,7 +336,8 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontSize: m(16),
+    fontSize: FontSizes.md,
+    fontFamily: FontFamily.primaryRegular,
     color: '#333',
     padding: 0,
   },
@@ -341,7 +345,8 @@ const styles = StyleSheet.create({
     padding: m(4),
   },
   errorText: {
-    fontSize: m(12),
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.primaryRegular,
     color: '#FF4444',
     marginTop: m(4),
     marginLeft: m(4),
@@ -369,14 +374,13 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   loginButtonText: {
-    fontSize: m(16),
-    fontWeight: '600',
+    fontSize: FontSizes.md,
+    fontFamily: FontFamily.primarySemiBold,
     color: '#FFFFFF',
     textShadowColor: 'rgba(0, 0, 0, 0.2)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
     paddingVertical: Platform.OS === 'android' ? m(0) : m(16),
-
   },
 
   // Divider
@@ -391,10 +395,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFEDD5',
   },
   dividerText: {
-    fontSize: m(14),
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primaryMedium,
     color: '#ff7900',
     marginHorizontal: m(16),
-    fontWeight: '500',
   },
 
   // Alternative Buttons
@@ -403,8 +407,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   registerButtonText: {
-    fontSize: m(16),
-    fontWeight: '600',
+    fontSize: FontSizes.md,
+    fontFamily: FontFamily.primarySemiBold,
     color: '#ff6700',
   },
 
@@ -414,8 +418,8 @@ const styles = StyleSheet.create({
     paddingVertical: m(8),
   },
   forgotPasswordText: {
-    fontSize: m(14),
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primarySemiBold,
     color: '#ff7900',
-    fontWeight: '500',
   },
 });

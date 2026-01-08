@@ -25,6 +25,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import lenderLoanAPI from '../../../Services/lenderLoanService';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { baseurl } from '../../../Utils/API';
+import BorrowerReputationCard from '../../../Components/BorrowerReputationCard';
 
 const DetailItem = ({ icon, label, value, isStatus, onStatusChange }) => {
   const isAccepted = value?.toLowerCase() === 'accepted';
@@ -690,6 +691,14 @@ export default function LoanDetailScreen({ route, navigation }) {
             </View>
           </View>
         </View>
+
+        {/* Borrower Reputation Score - Only for Lenders */}
+        {isLender && loanDetails.aadhaarNumber && (
+          <BorrowerReputationCard 
+            aadhaarNumber={loanDetails.aadhaarNumber} 
+            compact={false}
+          />
+        )}
 
         {/* Payment Summary Card */}
         {loanAmount > 0 && (

@@ -12,7 +12,8 @@ import {
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
-import Ionicons from 'react-native-vector-icons/Ionicons'; import LinearGradient from 'react-native-linear-gradient';
+import Ionicons from 'react-native-vector-icons/Ionicons'; 
+import LinearGradient from 'react-native-linear-gradient';
 import { getLenderStatistics } from '../../../Redux/Slices/loanSlice';
 import { getPendingPayments } from '../../../Redux/Slices/lenderPaymentSlice';
 import { getLenderRecentActivities } from '../../../Redux/Slices/lenderActivitiesSlice';
@@ -20,6 +21,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import useFetchUserFromStorage from '../../../Redux/hooks/useFetchUserFromStorage';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
+import { FontFamily, FontSizes } from '../../../constants';
 
 const formatCurrency = value => {
   if (!value) {
@@ -734,16 +736,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   greeting: {
-    fontSize: m(24),
-    fontFamily: 'Montserrat-Bold',
+    fontSize: FontSizes['2xl'],
+    fontFamily: FontFamily.secondaryBold,
     color: 'black',
     marginBottom: m(6),
     letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: m(14),
+    fontSize: FontSizes.base,
     color: 'black',
-    fontFamily: 'Poppins-Regular',
+    fontFamily: FontFamily.primaryRegular,
   },
   avatarContainer: {
     position: 'relative',
@@ -758,8 +760,8 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     color: '#fff',
-    fontSize: m(20),
-    fontFamily: 'Montserrat-Bold',
+    fontSize: FontSizes.xl,
+    fontFamily: FontFamily.secondaryBold,
   },
   onlineIndicator: {
     position: 'absolute',
@@ -855,8 +857,8 @@ const styles = StyleSheet.create({
     marginLeft: 10
   },
   premiumTitle: {
-    fontSize: m(20),
-    fontFamily: 'Montserrat-Bold',
+    fontSize: FontSizes.xl,
+    fontFamily: FontFamily.secondaryBold,
     color: '#fff',
     marginBottom: m(6),
     textShadowColor: 'rgba(255, 215, 0, 0.5)',
@@ -865,9 +867,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   premiumSubtitle: {
-    fontSize: m(13),
+    fontSize: FontSizes.sm,
     color: 'rgba(255, 255, 255, 0.85)',
-    fontFamily: 'Poppins-Light',
+    fontFamily: FontFamily.primaryRegular,
     letterSpacing: 0.3,
   },
   premiumArrow: {
@@ -879,8 +881,8 @@ const styles = StyleSheet.create({
     marginBottom: m(16),
   },
   sectionTitle: {
-    fontSize: m(18),
-    fontFamily: 'Montserrat-Bold',
+    fontSize: FontSizes.lg,
+    fontFamily: FontFamily.secondaryBold,
     color: '#2c3e50',
     marginBottom: m(16),
     letterSpacing: -0.3,
@@ -904,14 +906,14 @@ const styles = StyleSheet.create({
     marginBottom: m(8),
   },
   statValue: {
-    fontSize: m(20),
-    fontFamily: 'Poppins-Bold',
+    fontSize: FontSizes.xl,
+    fontFamily: FontFamily.primaryBold,
     color: '#2c3e50',
   },
   statLabel: {
-    fontSize: m(12),
+    fontSize: FontSizes.sm,
     color: 'black',
-    fontFamily: 'Poppins-Medium',
+    fontFamily: FontFamily.primaryMedium,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     textAlign: 'center',
@@ -960,15 +962,15 @@ const styles = StyleSheet.create({
     paddingRight: m(10),
   },
   actionText: {
-    fontSize: m(15),
+    fontSize: FontSizes.base,
     color: '#2c3e50',
-    fontFamily: 'Montserrat-Bold',
+    fontFamily: FontFamily.secondaryBold,
     marginBottom: m(3),
   },
   actionDescription: {
-    fontSize: m(12),
+    fontSize: FontSizes.sm,
     color: '#7f8c8d',
-    fontFamily: 'Poppins-Regular',
+    fontFamily: FontFamily.primaryRegular,
     lineHeight: m(16),
     marginBottom: 10
   },
@@ -1050,8 +1052,8 @@ const styles = StyleSheet.create({
   },
   progressCircleText: {
     position: 'absolute',
-    fontSize: m(18),
-    fontFamily: 'Montserrat-Bold',
+    fontSize: FontSizes.lg,
+    fontFamily: FontFamily.secondaryBold,
     color: '#ffd700',
     textShadowColor: 'rgba(255, 215, 0, 0.5)',
     textShadowOffset: { width: 0, height: 0 },
@@ -1065,8 +1067,8 @@ const styles = StyleSheet.create({
     marginBottom: m(16),
   },
   progressTitle: {
-    fontSize: m(18),
-    fontFamily: 'Montserrat-Bold',
+    fontSize: FontSizes.lg,
+    fontFamily: FontFamily.secondaryBold,
     color: '#fff',
     marginBottom: m(4),
     textShadowColor: 'rgba(0, 0, 0, 0.3)',
@@ -1074,15 +1076,15 @@ const styles = StyleSheet.create({
     textShadowRadius: 3,
   },
   progressText: {
-    fontSize: m(12),
+    fontSize: FontSizes.sm,
     color: 'rgba(255, 255, 255, 0.8)',
-    fontFamily: 'Poppins-Regular',
+    fontFamily: FontFamily.primaryRegular,
     marginBottom: m(4),
   },
   progressAmountText: {
-    fontSize: m(11),
+    fontSize: FontSizes.xs,
     color: 'rgba(255, 255, 255, 0.9)',
-    fontFamily: 'Poppins-SemiBold',
+    fontFamily: FontFamily.primarySemiBold,
     marginBottom: m(12),
   },
   progressStats: {
@@ -1100,9 +1102,9 @@ const styles = StyleSheet.create({
     marginRight: m(6),
   },
   statText: {
-    fontSize: m(10),
+    fontSize: FontSizes.xs,
     color: 'rgba(255, 255, 255, 0.7)',
-    fontFamily: 'Poppins-Regular',
+    fontFamily: FontFamily.primaryRegular,
   },
   // Enhanced Progress Bar
   progressBarContainer: {
@@ -1141,9 +1143,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   progressLabel: {
-    fontSize: m(10),
+    fontSize: FontSizes.xs,
     color: 'rgba(255, 255, 255, 0.6)',
-    fontFamily: 'Poppins-Regular',
+    fontFamily: FontFamily.primaryRegular,
   },
   // Activity Section
   activitySection: {
@@ -1176,9 +1178,9 @@ const styles = StyleSheet.create({
     borderRadius: m(20),
   },
   seeAllText: {
-    fontSize: m(13),
+    fontSize: FontSizes.sm,
     color: '#ff6700',
-    fontFamily: 'Poppins-SemiBold',
+    fontFamily: FontFamily.primarySemiBold,
     marginRight: m(4),
   },
   activityItem: {
@@ -1241,15 +1243,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   activityTitle: {
-    fontSize: m(16),
-    fontFamily: 'Poppins-SemiBold',
+    fontSize: FontSizes.md,
+    fontFamily: FontFamily.primarySemiBold,
     color: '#2c3e50',
     marginBottom: m(2),
   },
   activityPerson: {
-    fontSize: m(12),
+    fontSize: FontSizes.sm,
     color: '#7f8c8d',
-    fontFamily: 'Poppins-Regular',
+    fontFamily: FontFamily.primaryRegular,
   },
   activityAmountContainer: {
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
@@ -1260,9 +1262,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0,0,0,0.05)',
   },
   activityAmount: {
-    fontSize: m(15),
-    fontFamily: 'Poppins-Bold',
-    fontWeight: '700',
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primaryBold,
   },
   // Activity Footer
   activityFooter: {
@@ -1275,9 +1276,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   activityTime: {
-    fontSize: m(11),
+    fontSize: FontSizes.xs,
     color: '#7f8c8d',
-    fontFamily: 'Poppins-Regular',
+    fontFamily: FontFamily.primaryRegular,
     marginLeft: m(4),
   },
   statusBadge: {
@@ -1286,8 +1287,8 @@ const styles = StyleSheet.create({
     borderRadius: m(12),
   },
   statusText: {
-    fontSize: m(10),
-    fontFamily: 'Poppins-SemiBold',
+    fontSize: FontSizes.xs,
+    fontFamily: FontFamily.primarySemiBold,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },

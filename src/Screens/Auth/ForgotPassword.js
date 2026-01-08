@@ -12,6 +12,7 @@ import {useDispatch} from 'react-redux';
 import {forgotPassword} from '../../Redux/Slices/authslice';
 import Toast from 'react-native-toast-message';
 import {m} from 'walstar-rn-responsive';
+import {FontFamily, FontSizes} from '../../constants';
 
 export default function ForgotPassword({navigation}) {
   const dispatch = useDispatch();
@@ -113,16 +114,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerText: {
-    fontSize: m(26),
+    fontSize: FontSizes['2xl'],
     color: '#b80266',
-    fontFamily: 'Montserrat-Bold',
+    fontFamily: FontFamily.secondaryBold,
     textAlign: 'center',
     marginBottom: m(20),
   },
   instructionText: {
-    fontSize: m(16),
+    fontSize: FontSizes.md,
     color: '#333',
-    fontFamily: 'Poppins-Regular',
+    fontFamily: FontFamily.primaryRegular,
     textAlign: 'center',
     marginBottom: m(30),
   },
@@ -133,8 +134,8 @@ const styles = StyleSheet.create({
     borderRadius: m(8),
     marginBottom: m(15),
     paddingHorizontal: m(16),
-    fontSize: m(16),
-    fontFamily: 'Poppins-Regular',
+    fontSize: FontSizes.md,
+    fontFamily: FontFamily.primaryRegular,
     color: '#333333',
     backgroundColor: '#FFFFFF',
     shadowColor: '#000',
@@ -143,9 +144,9 @@ const styles = StyleSheet.create({
     shadowRadius: m(4),
   },
   errorText: {
-    fontSize: m(14),
+    fontSize: FontSizes.base,
     color: 'red',
-    fontFamily: 'Poppins-Regular',
+    fontFamily: FontFamily.primaryRegular,
     marginBottom: m(10),
   },
   continueButton: {
@@ -159,7 +160,7 @@ const styles = StyleSheet.create({
   },
   continueButtonText: {
     color: '#FFFFFF',
-    fontSize: m(18),
-    fontFamily: 'Poppins-Bold',
+    fontSize: FontSizes.lg,
+    fontFamily: FontFamily.primarySemiBold,
   },
 });

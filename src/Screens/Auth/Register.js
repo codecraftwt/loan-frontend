@@ -19,6 +19,7 @@ import { registerUser } from '../../Redux/Slices/authslice';
 import Toast from 'react-native-toast-message';
 import { m } from 'walstar-rn-responsive';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
+import { FontFamily, FontSizes } from '../../constants';
 
 export default function Register({ navigation }) {
   const [currentStep, setCurrentStep] = useState(1);
@@ -942,15 +943,16 @@ const styles = StyleSheet.create({
     marginBottom: m(12),
   },
   appName: {
-    fontSize: m(32),
-    fontWeight: '700',
+    fontSize: FontSizes['4xl'],
+    fontFamily: FontFamily.secondaryBold,
     color: '#ff6700',
     textShadowColor: 'rgba(0, 0, 0, 0.2)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
   },
   tagline: {
-    fontSize: m(16),
+    fontSize: FontSizes.md,
+    fontFamily: FontFamily.secondaryRegular,
     color: '#ff6700',
     textAlign: 'center',
     fontStyle: 'italic',
@@ -990,8 +992,8 @@ const styles = StyleSheet.create({
     borderColor: '#ff6700',
   },
   progressStepText: {
-    fontSize: m(16),
-    fontWeight: '600',
+    fontSize: FontSizes.md,
+    fontFamily: FontFamily.primarySemiBold,
     color: '#6B7280',
   },
   progressLine: {
@@ -1018,14 +1020,15 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
   },
   stepTitle: {
-    fontSize: m(24),
-    fontWeight: '700',
+    fontSize: FontSizes['2xl'],
+    fontFamily: FontFamily.secondaryBold,
     color: '#333',
     marginBottom: m(4),
     textAlign: 'center',
   },
   stepSubtitle: {
-    fontSize: m(14),
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primaryRegular,
     color: '#666',
     marginBottom: m(24),
     textAlign: 'center',
@@ -1034,8 +1037,8 @@ const styles = StyleSheet.create({
     marginBottom: m(20),
   },
   inputLabel: {
-    fontSize: m(14),
-    fontWeight: '500',
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primarySemiBold,
     color: '#555',
     marginBottom: m(8),
   },
@@ -1060,7 +1063,8 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontSize: m(16),
+    fontSize: FontSizes.md,
+    fontFamily: FontFamily.primaryRegular,
     color: '#333',
     padding: 0,
   },
@@ -1069,7 +1073,8 @@ const styles = StyleSheet.create({
     marginLeft: m(8),
   },
   errorText: {
-    fontSize: m(12),
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.primaryRegular,
     color: '#FF4444',
     marginTop: m(4),
     marginLeft: m(4),
@@ -1100,13 +1105,13 @@ const styles = StyleSheet.create({
     borderColor: '#ff6700',
   },
   roleOptionText: {
-    fontSize: m(14),
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primaryMedium,
     color: '#666',
-    fontWeight: '500',
   },
   roleOptionTextSelected: {
     color: '#ff6700',
-    fontWeight: '600',
+    fontFamily: FontFamily.primarySemiBold,
   },
   imagePickerContainer: {
     marginBottom: m(24),
@@ -1171,14 +1176,15 @@ const styles = StyleSheet.create({
     marginBottom: m(12),
   },
   imagePlaceholderText: {
-    fontSize: m(14),
-    fontWeight: '600',
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primarySemiBold,
     color: '#666',
     marginTop: m(8),
     textAlign: 'center',
   },
   imagePlaceholderSubtext: {
-    fontSize: m(12),
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.primaryRegular,
     color: '#999',
     marginTop: m(4),
     textAlign: 'center',
@@ -1212,8 +1218,8 @@ const styles = StyleSheet.create({
     marginBottom: m(8),
   },
   imagePickerButtonText: {
-    fontSize: m(14),
-    fontWeight: '600',
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primarySemiBold,
     color: '#ff6700',
     textAlign: 'center',
   },
@@ -1231,8 +1237,8 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   changeImageButtonText: {
-    fontSize: m(14),
-    fontWeight: '600',
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primarySemiBold,
     color: '#ff6700',
   },
   termsContainer: {
@@ -1251,12 +1257,13 @@ const styles = StyleSheet.create({
   },
   termsText: {
     flex: 1,
-    fontSize: m(12),
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.primaryRegular,
     color: '#7C2D12',
     lineHeight: m(18),
   },
   termsLink: {
-    fontWeight: '600',
+    fontFamily: FontFamily.primarySemiBold,
     color: '#C2410C',
   },
   navigationButtons: {
@@ -1281,8 +1288,8 @@ const styles = StyleSheet.create({
     borderColor: '#999',
   },
   backButtonText: {
-    fontSize: m(16),
-    fontWeight: '600',
+    fontSize: FontSizes.md,
+    fontFamily: FontFamily.primarySemiBold,
     color: '#ff6700',
   },
   backButtonTextDisabled: {
@@ -1306,8 +1313,8 @@ const styles = StyleSheet.create({
     gap: m(8),
   },
   nextButtonText: {
-    fontSize: m(16),
-    fontWeight: '600',
+    fontSize: FontSizes.md,
+    fontFamily: FontFamily.primarySemiBold,
     color: '#FFFFFF',
     textShadowColor: 'rgba(0, 0, 0, 0.2)',
     textShadowOffset: { width: 1, height: 1 },
@@ -1335,8 +1342,8 @@ const styles = StyleSheet.create({
     gap: m(8),
   },
   registerButtonText: {
-    fontSize: m(16),
-    fontWeight: '600',
+    fontSize: FontSizes.md,
+    fontFamily: FontFamily.primarySemiBold,
     color: '#FFFFFF',
     textShadowColor: 'rgba(0, 0, 0, 0.2)',
     textShadowOffset: { width: 1, height: 1 },
@@ -1350,12 +1357,13 @@ const styles = StyleSheet.create({
     marginTop: m(16),
   },
   loginText: {
-    fontSize: m(14),
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primaryRegular,
     color: '#666',
   },
   loginLink: {
-    fontSize: m(14),
-    fontWeight: '600',
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primarySemiBold,
     color: '#ff6700',
   },
   securityInfo: {
@@ -1371,7 +1379,8 @@ const styles = StyleSheet.create({
     marginBottom: m(20),
   },
   securityText: {
-    fontSize: m(12),
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.primaryRegular,
     color: '#666',
   },
 });
