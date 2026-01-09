@@ -65,6 +65,12 @@ export default function Profile() {
       color: '#3B82F6',
     },
     {
+      icon: 'settings',
+      label: 'Settings',
+      onPress: () => navigation.navigate('Settings'),
+      color: '#10B981',
+    },
+    {
       icon: 'help-circle',
       label: 'Help & Support',
       onPress: () => navigation.navigate('HelpAndSupportScreen'),

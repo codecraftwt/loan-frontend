@@ -417,9 +417,8 @@ export default function Home() {
               {
                 icon: 'settings',
                 text: 'Settings',
-                // screen: 'SettingsScreen',
+                screen: 'Settings',
                 gradient: ['#a09240ff', '#a3964aff'],
-                // ffec7f
                 description: 'App settings',
                 lightColor: '#ffec7f'
               },

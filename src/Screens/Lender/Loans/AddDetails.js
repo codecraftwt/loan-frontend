@@ -10,7 +10,6 @@ import {
   Platform,
   Keyboard,
   ActivityIndicator,
-  TouchableWithoutFeedback,
   Animated,
   Alert,
 } from 'react-native';
@@ -592,23 +591,23 @@ export default function AddDetails({ route, navigation }) {
   };
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 20}>
-        <Header
-          title={loanDetails ? 'Edit Loan Details' : 'Add Loan Details'}
-          showBackButton
-        />
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 20}>
+      <Header
+        title={loanDetails ? 'Edit Loan Details' : 'Add Loan Details'}
+        showBackButton
+      />
 
-        <ScrollView
-          style={styles.scrollViewContainer}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled">
+      <ScrollView
+        style={styles.scrollViewContainer}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        onScrollBeginDrag={Keyboard.dismiss}>
 
-          <View style={styles.headerCard}>
+        <View style={styles.headerCard}>
             <View style={styles.addLoanCont}>
               <MaterialIcons name="add" color="#ff8500" size={24} />
               <Text style={styles.headerTitle}>
@@ -957,49 +956,48 @@ export default function AddDetails({ route, navigation }) {
           </View>
         </ScrollView>
 
-        {/* Date Pickers */}
-        <DateTimePickerModal
-          isVisible={isStartDatePickerVisible}
-          mode="date"
-          onConfirm={date => handleDateChange('loanStartDate', date)}
-          onCancel={() => setStartDatePickerVisible(false)}
-          minimumDate={new Date()}
-          display="spinner"
-        />
+      {/* Date Pickers */}
+      <DateTimePickerModal
+        isVisible={isStartDatePickerVisible}
+        mode="date"
+        onConfirm={date => handleDateChange('loanStartDate', date)}
+        onCancel={() => setStartDatePickerVisible(false)}
+        minimumDate={new Date()}
+        display="spinner"
+      />
 
-        <DateTimePickerModal
-          isVisible={isEndDatePickerVisible}
-          mode="date"
-          onConfirm={date => handleDateChange('loanEndDate', date)}
-          onCancel={() => setEndDatePickerVisible(false)}
-          minimumDate={new Date()}
-          display="spinner"
-        />
+      <DateTimePickerModal
+        isVisible={isEndDatePickerVisible}
+        mode="date"
+        onConfirm={date => handleDateChange('loanEndDate', date)}
+        onCancel={() => setEndDatePickerVisible(false)}
+        minimumDate={new Date()}
+        display="spinner"
+      />
 
-        {/* OTP Verification Modal */}
-        {createdLoanData && (
-          <LoanOTPVerification
-            visible={isOTPModalVisible}
-            loanId={createdLoanData._id}
-            borrowerMobile={formData.mobileNumber}
-            onVerifySuccess={handleOTPVerifySuccess}
-            onSkip={handleOTPSkip}
-            onClose={handleOTPClose}
-            isOnlinePayment={createdLoanData.loanMode === 'online'}
-            paymentVerified={paymentVerified}
-          />
-        )}
-
-        {/* Fraud Warning Modal */}
-        <FraudWarningModal
-          visible={showFraudWarning}
-          fraudData={fraudStatus}
-          onProceed={handleFraudWarningProceed}
-          onCancel={handleFraudWarningCancel}
-          onViewHistory={handleFraudWarningViewHistory}
+      {/* OTP Verification Modal */}
+      {createdLoanData && (
+        <LoanOTPVerification
+          visible={isOTPModalVisible}
+          loanId={createdLoanData._id}
+          borrowerMobile={formData.mobileNumber}
+          onVerifySuccess={handleOTPVerifySuccess}
+          onSkip={handleOTPSkip}
+          onClose={handleOTPClose}
+          isOnlinePayment={createdLoanData.loanMode === 'online'}
+          paymentVerified={paymentVerified}
         />
-      </KeyboardAvoidingView>
-    </TouchableWithoutFeedback>
+      )}
+
+      {/* Fraud Warning Modal */}
+      <FraudWarningModal
+        visible={showFraudWarning}
+        fraudData={fraudStatus}
+        onProceed={handleFraudWarningProceed}
+        onCancel={handleFraudWarningCancel}
+        onViewHistory={handleFraudWarningViewHistory}
+      />
+    </KeyboardAvoidingView>
   );
 }
 
