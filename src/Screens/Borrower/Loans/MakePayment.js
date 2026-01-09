@@ -295,11 +295,17 @@ export default function MakePayment() {
 
       let verifyResponse;
       try {
+        // Ensure all required fields are present
+        if (!paymentType || !paymentAmount || paymentAmount <= 0) {
+          throw new Error('Payment type and amount are required');
+        }
+
         verifyResponse = await borrowerLoanAPI.verifyRazorpayPayment(loan._id, {
           razorpay_payment_id: paymentResult.data.razorpay_payment_id,
           razorpay_order_id: paymentResult.data.razorpay_order_id,
           razorpay_signature: paymentResult.data.razorpay_signature,
           amount: paymentAmount, // amount in INR as required by backend docs
+          paymentMode: 'online', // Online payment mode
           paymentType: paymentType,
           notes: notes.trim() || undefined,
         });
@@ -511,14 +517,39 @@ export default function MakePayment() {
   const submitPayment = async () => {
     setLoading(true);
     try {
+      // Double-check required fields before submitting
+      if (!paymentMode || !paymentType || !amount) {
+        Toast.show({
+          type: 'error',
+          position: 'top',
+          text1: 'Validation Error',
+          text2: 'Payment mode, payment type, and amount are required',
+        });
+        setLoading(false);
+        return;
+      }
+
+      const paymentAmount = parseFloat(amount);
+      if (isNaN(paymentAmount) || paymentAmount <= 0) {
+        Toast.show({
+          type: 'error',
+          position: 'top',
+          text1: 'Invalid Amount',
+          text2: 'Please enter a valid payment amount',
+        });
+        setLoading(false);
+        return;
+      }
+
       const formData = new FormData();
-      formData.append('paymentMode', paymentMode);
-      formData.append('paymentType', paymentType);
-      formData.append('amount', parseFloat(amount));
-      if (transactionId.trim()) {
+      formData.append('paymentMode', paymentMode.trim());
+      formData.append('paymentType', paymentType.trim());
+      formData.append('amount', paymentAmount);
+      
+      if (transactionId && transactionId.trim()) {
         formData.append('transactionId', transactionId.trim());
       }
-      if (notes.trim()) {
+      if (notes && notes.trim()) {
         formData.append('notes', notes.trim());
       }
       if (paymentProof) {

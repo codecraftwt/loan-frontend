@@ -110,6 +110,52 @@ export const lenderLoanAPI = {
       throw error;
     }
   },
+
+  // Get borrower risk assessment (fraud/risk badges)
+  getRiskAssessment: async (aadhaarNumber) => {
+    try {
+      if (!aadhaarNumber || aadhaarNumber.length !== 12) {
+        throw new Error('Valid Aadhaar number (12 digits) is required');
+      }
+
+      const response = await axiosInstance.get(`lender/loans/risk-assessment/${aadhaarNumber}`);
+      // API returns: { success: true, message: "...", data: {...} }
+      if (response.data && response.data.success && response.data.data) {
+        return {
+          success: true,
+          data: response.data.data,
+        };
+      }
+      // Fallback to response.data if structure is different
+      return {
+        success: response.data?.success || false,
+        data: response.data?.data || response.data || null,
+      };
+    } catch (error) {
+      // Handle 404 gracefully - borrower not found or no loan history
+      if (error.response?.status === 404) {
+        return {
+          success: false,
+          error: 'Borrower not found or no loan history available',
+          data: null,
+        };
+      }
+      // Handle 400 - invalid Aadhaar
+      if (error.response?.status === 400) {
+        return {
+          success: false,
+          error: error.response?.data?.message || 'Invalid Aadhaar number',
+          data: null,
+        };
+      }
+      console.error('Error fetching risk assessment:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || error.message || 'Failed to fetch risk assessment',
+        data: null,
+      };
+    }
+  },
 };
 
 export default lenderLoanAPI;

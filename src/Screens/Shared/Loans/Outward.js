@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -11,11 +11,12 @@ import {
   KeyboardAvoidingView,
   RefreshControl,
   Image,
+  Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useDispatch, useSelector } from 'react-redux';
 import { getAllBorrowers, searchBorrowers } from '../../../Redux/Slices/borrowerSlice';
-import { checkFraudStatus } from '../../../Redux/Slices/loanSlice';
+import { getRiskAssessment } from '../../../Redux/Slices/loanSlice';
 import { getPendingPayments } from '../../../Redux/Slices/lenderPaymentSlice';
 import { useFocusEffect } from '@react-navigation/native';
 import FraudStatusBadge from '../../../Components/FraudStatusBadge';
@@ -36,7 +37,7 @@ const Outward = ({ navigation, route }) => {
   const [borrowerActionModalVisible, setBorrowerActionModalVisible] = useState(false);
   const [highlightedBorrowerId, setHighlightedBorrowerId] = useState(null);
   const [pendingHighlightParams, setPendingHighlightParams] = useState(null);
-  const [borrowerFraudStatus, setBorrowerFraudStatus] = useState({});
+  const [borrowerRiskAssessment, setBorrowerRiskAssessment] = useState({});
 
 
   // Handle navigation from notification
@@ -166,38 +167,43 @@ const Outward = ({ navigation, route }) => {
     fetchData();
   }, [debouncedSearch, dispatch]);
 
-
-  // Fetch fraud status for a borrower
-  const fetchFraudStatus = async (aadhaarNumber) => {
+  // Fetch risk assessment for a borrower
+  const fetchRiskAssessment = useCallback(async (aadhaarNumber) => {
     if (!aadhaarNumber || aadhaarNumber.length !== 12) return;
     
-    // Check if we already have fraud status for this borrower
-    if (borrowerFraudStatus[aadhaarNumber]) return;
-    
     try {
-      const result = await dispatch(checkFraudStatus(aadhaarNumber));
-      if (checkFraudStatus.fulfilled.match(result)) {
-        setBorrowerFraudStatus(prev => ({
-          ...prev,
-          [aadhaarNumber]: result.payload,
-        }));
+      const result = await dispatch(getRiskAssessment(aadhaarNumber));
+      if (getRiskAssessment.fulfilled.match(result)) {
+        setBorrowerRiskAssessment(prev => {
+          // Check if we already have risk assessment for this borrower
+          if (prev[aadhaarNumber]) return prev;
+          // console.log('Risk assessment fetched for', aadhaarNumber, ':', result.payload);
+          return {
+            ...prev,
+            [aadhaarNumber]: result.payload,
+          };
+        });
+      } else if (getRiskAssessment.rejected.match(result)) {
+        // Silently handle rejections - borrower may not have loan history
+        // console.log('Risk assessment rejected for', aadhaarNumber, ':', result.payload);
       }
     } catch (error) {
-      console.error('Error fetching fraud status:', error);
+      // Silently handle errors - borrower may not have loan history
+      // console.log('Error fetching risk assessment:', error);
     }
-  };
+  }, [dispatch]);
 
-  // Fetch fraud status for all borrowers when they load
+  // Fetch risk assessment for all borrowers when they load
   useEffect(() => {
     if (borrowers && borrowers.length > 0) {
       borrowers.forEach(borrower => {
-        const aadhaarNumber = borrower.aadharCardNo;
+        const aadhaarNumber = borrower.aadharCardNo || borrower.aadhaarCardNo || borrower.aadhaarNumber;
         if (aadhaarNumber && aadhaarNumber.length === 12) {
-          fetchFraudStatus(aadhaarNumber);
+          fetchRiskAssessment(aadhaarNumber);
         }
       });
     }
-  }, [borrowers]);
+  }, [borrowers, fetchRiskAssessment]);
 
   // Fetch borrowers on initial mount
   useEffect(() => {
@@ -291,6 +297,49 @@ const Outward = ({ navigation, route }) => {
 
   const handleAddLoan = () => {
     setBorrowerActionModalVisible(false);
+    
+    // Check for risk assessment before proceeding
+    const aadhaarNumber = selectedBorrower.aadharCardNo;
+    const riskData = aadhaarNumber ? borrowerRiskAssessment[aadhaarNumber] : null;
+    
+    // Check if borrower has medium, high, or critical risk
+    if (riskData && riskData.riskLevel) {
+      const riskLevel = riskData.riskLevel.toLowerCase();
+      if (riskLevel === 'medium' || riskLevel === 'high' || riskLevel === 'critical') {
+        // Show alert with risk warning
+        Alert.alert(
+          '⚠️ Fraud Risk Detected',
+          riskData.warning || riskData.recommendation || `This borrower has been flagged as ${riskLevel.toUpperCase()} RISK. Do you still want to proceed with creating a loan?`,
+          [
+            {
+              text: 'Cancel',
+              style: 'cancel',
+              onPress: () => {
+                // User cancelled, do nothing
+              },
+            },
+            {
+              text: 'Yes, Continue',
+              style: 'destructive',
+              onPress: () => {
+                // User confirmed, proceed with loan creation
+                const borrowerData = {
+                  name: selectedBorrower.userName,
+                  mobileNumber: selectedBorrower.mobileNo?.replace(/^\+91/, '') || selectedBorrower.mobileNo,
+                  aadhaarNumber: selectedBorrower.aadharCardNo,
+                  address: selectedBorrower.address,
+                };
+                navigation.navigate('AddDetails', { borrowerData });
+              },
+            },
+          ],
+          { cancelable: true }
+        );
+        return;
+      }
+    }
+    
+    // No risk or low risk - proceed directly
     const borrowerData = {
       name: selectedBorrower.userName,
       mobileNumber: selectedBorrower.mobileNo?.replace(/^\+91/, '') || selectedBorrower.mobileNo,
@@ -438,8 +487,11 @@ const Outward = ({ navigation, route }) => {
           ) : (
             borrowers?.map((borrower, index) => {
               const isHighlighted = highlightedBorrowerId === borrower._id;
-              const fraudData = borrower.aadharCardNo ? borrowerFraudStatus[borrower.aadharCardNo] : null;
-              const hasFraudRisk = fraudData && fraudData.success && fraudData.riskLevel && fraudData.riskLevel !== 'low';
+              const aadhaarNumber = borrower.aadharCardNo || borrower.aadhaarCardNo || borrower.aadhaarNumber;
+              const riskData = aadhaarNumber ? borrowerRiskAssessment[aadhaarNumber] : null;
+              const hasRisk = riskData && riskData.riskLevel && riskData.riskLevel.toLowerCase() !== 'low';
+              const riskLevel = riskData?.riskLevel?.toLowerCase() || null;
+              const riskBadge = riskData?.riskBadge || null;
               const borrowerPendingPayments = getBorrowerPendingPayments(borrower);
               
               return (
@@ -450,7 +502,7 @@ const Outward = ({ navigation, route }) => {
                   <View style={[
                     styles.borrowerCard,
                     isHighlighted && styles.highlightedBorrowerCard,
-                    hasFraudRisk && styles.fraudRiskBorrowerCard,
+                    hasRisk && styles.fraudRiskBorrowerCard,
                     borrowerPendingPayments && styles.pendingPaymentBorrowerCard
                   ]}>
                     {/* Status Banners */}
@@ -469,20 +521,16 @@ const Outward = ({ navigation, route }) => {
                         </View>
                       </View>
                     )}
-                    {hasFraudRisk && !borrowerPendingPayments && (
+                    {hasRisk && !borrowerPendingPayments && riskBadge && (
                       <View style={[
                         styles.fraudBanner,
-                        {
-                          backgroundColor: fraudData.riskLevel === 'critical' ? '#DC2626' :
-                            fraudData.riskLevel === 'high' ? '#EA580C' :
-                              fraudData.riskLevel === 'medium' ? '#D97706' : '#059669'
-                        }
+                        { backgroundColor: riskBadge.color || '#EA580C' }
                       ]}>
                         <View style={styles.bannerIconContainer}>
                           <Icon name="warning" size={18} color="#FFFFFF" />
                         </View>
                         <Text style={styles.fraudBannerText}>
-                          {fraudData.riskLevel?.toUpperCase()} FRAUD RISK DETECTED
+                          {riskBadge.label?.toUpperCase() || riskLevel?.toUpperCase()} RISK DETECTED
                         </Text>
                       </View>
                     )}
@@ -507,11 +555,10 @@ const Outward = ({ navigation, route }) => {
                             <Text style={styles.userName} numberOfLines={1}>
                               {borrower.userName}
                             </Text>
-                            {hasFraudRisk && (
+                            {hasRisk && riskBadge && (
                               <View style={styles.fraudBadgeContainer}>
                                 <FraudStatusBadge
-                                  fraudScore={fraudData.fraudScore}
-                                  riskLevel={fraudData.riskLevel}
+                                  riskLevel={riskBadge.level || riskData.riskLevel}
                                 />
                               </View>
                             )}
@@ -612,35 +659,35 @@ const Outward = ({ navigation, route }) => {
                           </Text>
                         </View>
                       )}
-                      {hasFraudRisk && !borrowerPendingPayments && (
+                      {hasRisk && !borrowerPendingPayments && riskBadge && (
                         <View style={[
                           styles.fraudWarning,
                           {
-                            backgroundColor: fraudData.riskLevel === 'critical' ? '#FEE2E2' :
-                              fraudData.riskLevel === 'high' ? '#FED7AA' :
-                                fraudData.riskLevel === 'medium' ? '#FEF3C7' : '#D1FAE5'
+                            backgroundColor: riskLevel === 'critical' ? '#FEE2E2' :
+                              riskLevel === 'high' ? '#FED7AA' :
+                                riskLevel === 'medium' ? '#FEF3C7' : '#D1FAE5'
                           }
                         ]}>
                           <Icon
                             name="warning"
                             size={12}
-                            color={fraudData.riskLevel === 'critical' ? '#DC2626' :
-                              fraudData.riskLevel === 'high' ? '#EA580C' :
-                                fraudData.riskLevel === 'medium' ? '#D97706' : '#059669'}
+                            color={riskLevel === 'critical' ? '#DC2626' :
+                              riskLevel === 'high' ? '#EA580C' :
+                                riskLevel === 'medium' ? '#D97706' : '#059669'}
                           />
                           <Text style={[
                             styles.fraudWarningText,
                             {
-                              color: fraudData.riskLevel === 'critical' ? '#DC2626' :
-                                fraudData.riskLevel === 'high' ? '#EA580C' :
-                                  fraudData.riskLevel === 'medium' ? '#D97706' : '#059669'
+                              color: riskLevel === 'critical' ? '#DC2626' :
+                                riskLevel === 'high' ? '#EA580C' :
+                                  riskLevel === 'medium' ? '#D97706' : '#059669'
                             }
                           ]}>
-                            Risk Alert
+                            {riskBadge.label || 'Risk Alert'}
                           </Text>
                         </View>
                       )}
-                      {!hasFraudRisk && !borrowerPendingPayments && (
+                      {!hasRisk && !borrowerPendingPayments && (
                         <View style={styles.actionHint}>
                           <Icon name="touch-app" size={12} color="#ff6700" />
                           <Text style={styles.actionHintText}>Tap for options</Text>

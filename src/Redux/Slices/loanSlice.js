@@ -3,6 +3,28 @@ import instance from '../../Utils/AxiosInstance';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { lenderLoanAPI } from '../../Services/lenderLoanService';
 
+// Get borrower risk assessment (new API)
+export const getRiskAssessment = createAsyncThunk(
+  'loans/getRiskAssessment',
+  async (aadhaarNumber, { rejectWithValue }) => {
+    try {
+      if (!aadhaarNumber || aadhaarNumber.length !== 12) {
+        return rejectWithValue('Valid Aadhaar number (12 digits) is required');
+      }
+
+      const response = await lenderLoanAPI.getRiskAssessment(aadhaarNumber);
+      
+      if (response.success && response.data) {
+        return response.data;
+      }
+      
+      return rejectWithValue(response.error || 'Failed to fetch risk assessment');
+    } catch (error) {
+      return rejectWithValue(error.message || 'Failed to fetch risk assessment');
+    }
+  }
+);
+
 const initialState = {
   loans: [],
   totalAmount: 0,

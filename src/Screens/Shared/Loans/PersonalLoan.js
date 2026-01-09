@@ -162,21 +162,6 @@ export default function PersonalLoan({ route }) {
                   {installment.paymentMode?.charAt(0).toUpperCase() + installment.paymentMode?.slice(1)}
                 </Text>
               </View>
-              {installment.isOnTime !== undefined && (
-                <View style={styles.installmentDetailRow}>
-                  <Icon
-                    name={installment.isOnTime ? 'check' : 'x'}
-                    size={14}
-                    color={installment.isOnTime ? '#10B981' : '#EF4444'}
-                  />
-                  <Text style={[
-                    styles.installmentDetailValue,
-                    { color: installment.isOnTime ? '#10B981' : '#EF4444', marginLeft: 4 }
-                  ]}>
-                    {installment.isOnTime ? 'Paid on time' : 'Paid late'}
-                  </Text>
-                </View>
-              )}
             </>
           )}
 
