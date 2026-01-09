@@ -58,11 +58,11 @@ export default function BorrowerLoanDetails() {
       // Fetch payment history for this loan (API requires borrowerId as query parameter)
       const response = await borrowerLoanAPI.getPaymentHistory(loan._id, borrowerId);
       
-      // Service returns the data object directly: { loanId, loanSummary, installmentDetails, payments, paymentStats, lenderInfo }
+      // Service returns the data object directly: { loanId, loanSummary, installmentDetails, paymentHistory, lenderInfo }
       const paymentData = response || {};
       
-      // Extract payments array
-      const payments = paymentData.payments || [];
+      // Extract payments array - API returns payments in paymentHistory.allPayments
+      const payments = paymentData.paymentHistory?.allPayments || paymentData.payments || [];
       setPaymentHistory(payments);
       
       // Check for pending payments
@@ -74,19 +74,49 @@ export default function BorrowerLoanDetails() {
       // Extract installmentDetails (null for one-time loans)
       setInstallmentDetails(paymentData.installmentDetails || null);
       
+      // Calculate totalPaid from confirmed payments if loanSummary doesn't have it
+      let calculatedTotalPaid = 0;
+      if (payments.length > 0) {
+        calculatedTotalPaid = payments
+          .filter(p => p.paymentStatus?.toLowerCase() === 'confirmed' || p.paymentStatus?.toLowerCase() === 'paid')
+          .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+      }
+      
       // Update loan details with latest totals from API (loanSummary structure)
       if (paymentData.loanSummary) {
+        const loanSummary = paymentData.loanSummary;
+        
+        // Try multiple possible field names for totalPaid - API uses totalPaidAmount
+        const totalPaidValue = 
+          loanSummary.totalPaidAmount ??
+          loanSummary.totalPaid ?? 
+          loanSummary.currentPaidAmount ?? 
+          loanSummary.paidAmount ?? 
+          calculatedTotalPaid;
+        
+        // Try multiple possible field names for remainingAmount
+        const remainingAmountValue = 
+          loanSummary.remainingAmount ?? 
+          loanSummary.currentRemainingAmount ?? 
+          loanSummary.remaining ?? 
+          (typeof loanDetails.amount === 'number' ? loanDetails.amount : parseFloat(loanDetails.amount) || 0) - totalPaidValue;
+        
         setLoanDetails(prev => ({
           ...prev,
-          // Ensure amounts are numbers, not strings
-          totalPaid: typeof paymentData.loanSummary.totalPaid === 'number' 
-            ? paymentData.loanSummary.totalPaid 
-            : parseFloat(paymentData.loanSummary.totalPaid) || 0,
-          remainingAmount: typeof paymentData.loanSummary.remainingAmount === 'number'
-            ? paymentData.loanSummary.remainingAmount
-            : parseFloat(paymentData.loanSummary.remainingAmount) || 0,
-          paymentStatus: paymentData.loanSummary.paymentStatus,
-          paymentType: paymentData.loanSummary.paymentType,
+          totalPaid: typeof totalPaidValue === 'number' 
+            ? totalPaidValue 
+            : parseFloat(totalPaidValue) || 0,
+          remainingAmount: typeof remainingAmountValue === 'number'
+            ? remainingAmountValue
+            : parseFloat(remainingAmountValue) || 0,
+          paymentStatus: loanSummary.paymentStatus || loanSummary.loanStatus || prev.paymentStatus,
+          paymentType: loanSummary.loanType || loanSummary.paymentType || prev.paymentType,
+        }));
+      } else if (calculatedTotalPaid > 0) {
+        setLoanDetails(prev => ({
+          ...prev,
+          totalPaid: calculatedTotalPaid,
+          remainingAmount: Math.max(0, (typeof prev.amount === 'number' ? prev.amount : parseFloat(prev.amount) || 0) - calculatedTotalPaid),
         }));
       }
     } catch (error) {
