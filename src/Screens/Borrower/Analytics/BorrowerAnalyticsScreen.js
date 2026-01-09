@@ -23,6 +23,11 @@ const formatCurrency = value => {
 };
 
 const AnalyticsRow = ({ label, amount, percentage, color }) => {
+  // Handle percentage as number or string
+  const percentageValue = typeof percentage === 'number' 
+    ? percentage 
+    : parseFloat(percentage) || 0;
+  
   return (
     <View style={styles.row}>
       <View style={styles.rowLeft}>
@@ -31,7 +36,7 @@ const AnalyticsRow = ({ label, amount, percentage, color }) => {
       </View>
       <View style={styles.rowRight}>
         <Text style={styles.rowValue}>{formatCurrency(amount)} ₹</Text>
-        <Text style={styles.rowPercentage}>{percentage.toFixed(2)}%</Text>
+        <Text style={styles.rowPercentage}>{percentageValue.toFixed(2)}%</Text>
       </View>
     </View>
   );
@@ -159,6 +164,14 @@ export default function BorrowerAnalyticsScreen() {
                   color="#22c55e"
                 />
                 <AnalyticsRow
+                  label="Remaining Amount"
+                  amount={borrowerStatistics.totalRemainingAmount}
+                  percentage={borrowerStatistics.totalLoanAmount > 0 
+                    ? ((borrowerStatistics.totalRemainingAmount / borrowerStatistics.totalLoanAmount) * 100)
+                    : 0}
+                  color="#3b82f6"
+                />
+                <AnalyticsRow
                   label="Overdue Amount"
                   amount={borrowerStatistics.totalOverdueAmount}
                   percentage={borrowerStatistics.percentages.overduePercentage}
@@ -186,6 +199,12 @@ export default function BorrowerAnalyticsScreen() {
                     {borrowerStatistics.counts.totalLoans || 0}
                   </Text>
                   <Text style={styles.countLabel}>Total Loans</Text>
+                </View>
+                <View style={styles.countItem}>
+                  <Text style={[styles.countValue, { color: '#3b82f6' }]}>
+                    {borrowerStatistics.counts.activeLoans || 0}
+                  </Text>
+                  <Text style={styles.countLabel}>Active</Text>
                 </View>
                 <View style={styles.countItem}>
                   <Text style={[styles.countValue, { color: '#22c55e' }]}>

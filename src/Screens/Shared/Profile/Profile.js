@@ -6,57 +6,27 @@ import {
   ScrollView,
   ActivityIndicator,
   Image,
-  Alert,
 } from 'react-native';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import Icon from 'react-native-vector-icons/Feather';
 import { useNavigation } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
 import PromptBox from '../../PromptBox/Prompt';
-import { logout, removeUserDeviceToken } from '../../../Redux/Slices/authslice';
 import useFetchUserFromStorage from '../../../Redux/hooks/useFetchUserFromStorage';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
 
+
 export default function Profile() {
+  // Navigation & Redux
   const navigation = useNavigation();
-  const dispatch = useDispatch();
   const user = useSelector(state => state.auth.user);
   useFetchUserFromStorage();
 
   const [imageError, setImageError] = useState(false);
   const [isPromptVisible, setIsPromptVisible] = useState(false);
 
-  const handleImageError = () => {
-    setImageError(true);
-  };
-
-  const navigateToProfileDetails = () => {
-    navigation.navigate('ProfileDetails', { profileData: user });
-  };
-
-  const handleLogout = () => {
-    setIsPromptVisible(true);
-  };
-
-  const handleConfirmLogout = async () => {
-    try {
-      await dispatch(removeUserDeviceToken({}));
-      await dispatch(logout());
-      setTimeout(() => {
-        setIsPromptVisible(false);
-        navigation.replace('Login');
-      }, 200);
-    } catch (error) {
-      console.error('Error during logout process:', error);
-      Alert.alert('Not able to logout');
-    }
-  };
-
-  const handleCancelLogout = () => {
-    setIsPromptVisible(false);
-  };
-
+  // Constants
   const menuItems = [
     {
       icon: 'user',
@@ -120,10 +90,6 @@ export default function Profile() {
                     <Text style={styles.profileEmail} numberOfLines={2}>
                       {user?.email}
                     </Text>
-                    <View style={styles.verifiedBadge}>
-                      <Icon name="check-circle" size={14} color="#10B981" />
-                      <Text style={styles.verifiedText}>Verified Account</Text>
-                    </View>
                   </>
                 ) : (
                   <ActivityIndicator size="small" color="#3B82F6" />
@@ -211,9 +177,10 @@ const styles = StyleSheet.create({
 
   // Profile Card
   profileCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F9FAFB',
     borderRadius: m(20),
     padding: m(20),
+     paddingBottom: m(0),
     marginBottom: m(20),
     borderWidth: 1,
     borderColor: '#E5E7EB',
@@ -262,22 +229,6 @@ const styles = StyleSheet.create({
   profileEmail: {
     fontSize: m(14),
     color: '#6B7280',
-    marginBottom: m(8),
-  },
-  verifiedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ECFDF5',
-    paddingHorizontal: m(10),
-    paddingVertical: m(4),
-    borderRadius: m(20),
-    alignSelf: 'flex-start',
-    gap: m(4),
-  },
-  verifiedText: {
-    fontSize: m(12),
-    fontWeight: '500',
-    color: '#065F46',
   },
   // Menu Section
   menuSection: {

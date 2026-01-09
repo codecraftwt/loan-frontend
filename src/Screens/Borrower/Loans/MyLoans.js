@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
-import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useDispatch, useSelector } from 'react-redux';
 import moment from 'moment';
 import { m } from 'walstar-rn-responsive';
@@ -20,15 +19,17 @@ import Toast from 'react-native-toast-message';
 import { getBorrowerLoans, clearLoans } from '../../../Redux/Slices/borrowerLoanSlice';
 
 export default function MyLoans() {
+  // Navigation & Redux
   const navigation = useNavigation();
   const dispatch = useDispatch();
-  const { loans, summary, loading, error, pagination } = useSelector(state => state.borrowerLoans);
+  const { loans, summary, loading, error, } = useSelector(state => state.borrowerLoans);
   const user = useSelector(state => state.auth.user);
 
+  // State Management
   const [filteredLoans, setFilteredLoans] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState('all'); // 'pending', 'paid', or 'all'
+  const [activeTab, setActiveTab] = useState('all');
   const [filters, setFilters] = useState({
     status: '',
     startDate: '',
@@ -37,6 +38,7 @@ export default function MyLoans() {
     maxAmount: '',
   });
 
+  // Effects
   useEffect(() => {
     if (user?._id) {
       fetchMyLoans();
@@ -46,7 +48,6 @@ export default function MyLoans() {
     };
   }, [user?._id]);
 
-  // Refresh loans when screen is focused (e.g., after lender confirms/rejects payment)
   useFocusEffect(
     React.useCallback(() => {
       if (user?._id) {
@@ -70,6 +71,7 @@ export default function MyLoans() {
     }
   }, [error]);
 
+  // API Functions
   const fetchMyLoans = (params = {}) => {
     if (!user?._id) {
       Toast.show({
@@ -83,6 +85,7 @@ export default function MyLoans() {
     dispatch(getBorrowerLoans({ borrowerId: user._id, ...params }));
   };
 
+  // Utility Functions
   const filterLoans = () => {
     let filtered = loans;
 
@@ -92,9 +95,8 @@ export default function MyLoans() {
     } else if (activeTab === 'paid') {
       filtered = loans.filter(loan => loan.paymentStatus === 'paid');
     }
-    // For 'all' tab, no filtering needed - use all loans
 
-    // Then apply search query filter
+    // Apply search query filter
     if (searchQuery.trim()) {
       filtered = filtered.filter(loan =>
         loan.lenderId?.userName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -139,10 +141,12 @@ export default function MyLoans() {
     }
   };
 
+  // Render Functions
   const renderLoanCard = ({ item }) => (
     <TouchableOpacity
       style={styles.loanCard}
-      onPress={() => navigation.navigate('BorrowerLoanDetails', { loan: item })}>
+      onPress={() => navigation.navigate('BorrowerLoanDetails', { loan: item })}
+    >
       <View style={styles.loanHeader}>
         <View style={styles.loanInfo}>
           <Text style={styles.loanAmount}>₹{item.amount?.toLocaleString('en-IN')}</Text>
@@ -190,7 +194,8 @@ export default function MyLoans() {
       <View style={styles.loanActions}>
         <TouchableOpacity
           style={styles.actionButton}
-          onPress={() => navigation.navigate('BorrowerLoanDetails', { loan: item })}>
+          onPress={() => navigation.navigate('BorrowerLoanDetails', { loan: item })}
+        >
           <Text style={styles.actionButtonText}>View Details</Text>
           <Icon name="chevron-right" size={16} color="#3B82F6" />
         </TouchableOpacity>
@@ -227,7 +232,7 @@ export default function MyLoans() {
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <Ionicons name="document-outline" size={64} color="#D1D5DB" />
+      <Icon name="document" size={64} color="#D1D5DB" />
       <Text style={styles.emptyTitle}>No Loans Found</Text>
       <Text style={styles.emptySubtitle}>
         {searchQuery
@@ -236,12 +241,12 @@ export default function MyLoans() {
             ? 'No pending loans at the moment'
             : activeTab === 'paid'
               ? 'No paid loans yet'
-              : 'You haven\'t taken any loans yet'
-        }
+              : 'You haven\'t taken any loans yet'}
       </Text>
     </View>
   );
 
+  // Loading State
   if (loading) {
     return (
       <View style={styles.container}>
@@ -279,29 +284,30 @@ export default function MyLoans() {
 
       {/* Tabs */}
       <View style={styles.tabsContainer}>
-
         <TouchableOpacity
           style={[styles.tab, activeTab === 'all' && styles.activeTab]}
-          onPress={() => setActiveTab('all')}>
+          onPress={() => setActiveTab('all')}
+        >
           <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>
             All ({loans.length})
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'paid' && styles.activeTab]}
-          onPress={() => setActiveTab('paid')}>
+          onPress={() => setActiveTab('paid')}
+        >
           <Text style={[styles.tabText, activeTab === 'paid' && styles.activeTabText]}>
             Paid ({loans.filter(loan => loan.paymentStatus === 'paid').length})
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'pending' && styles.activeTab]}
-          onPress={() => setActiveTab('pending')}>
+          onPress={() => setActiveTab('pending')}
+        >
           <Text style={[styles.tabText, activeTab === 'pending' && styles.activeTabText]}>
             Pending ({loans.filter(loan => loan.paymentStatus !== 'paid').length})
           </Text>
         </TouchableOpacity>
-
       </View>
 
       {/* Loans List */}
@@ -322,6 +328,7 @@ export default function MyLoans() {
 }
 
 const styles = StyleSheet.create({
+  // Container
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
@@ -336,12 +343,35 @@ const styles = StyleSheet.create({
     fontSize: m(16),
     color: '#6B7280',
   },
+  
+  // Search
   searchContainer: {
     padding: m(16),
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: m(12),
+    paddingHorizontal: m(12),
+    paddingVertical: m(8),
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  searchIcon: {
+    marginRight: m(8),
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: m(16),
+    color: '#111827',
+    paddingVertical: m(4),
+  },
+  
+  // Tabs
   tabsContainer: {
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
@@ -366,29 +396,14 @@ const styles = StyleSheet.create({
   activeTabText: {
     color: '#3B82F6',
   },
-  searchInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    borderRadius: m(12),
-    paddingHorizontal: m(12),
-    paddingVertical: m(8),
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  searchIcon: {
-    marginRight: m(8),
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: m(16),
-    color: '#111827',
-    paddingVertical: m(4),
-  },
+  
+  // List
   listContainer: {
     padding: m(16),
     paddingBottom: m(100),
   },
+  
+  // Loan Card
   loanCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: m(16),
@@ -417,7 +432,7 @@ const styles = StyleSheet.create({
     color: '#111827',
     marginBottom: m(4),
   },
-  loanPurpose: {
+  loanLender: {
     fontSize: m(14),
     color: '#6B7280',
   },
@@ -484,25 +499,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#3B82F6',
   },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: m(32),
-  },
-  emptyTitle: {
-    fontSize: m(18),
-    fontWeight: '600',
-    color: '#111827',
-    marginTop: m(16),
-    marginBottom: m(8),
-  },
-  emptySubtitle: {
-    fontSize: m(14),
-    color: '#6B7280',
-    textAlign: 'center',
-    marginBottom: m(24),
-  },
+  
+  // Summary Card
   summaryCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: m(16),
@@ -547,5 +545,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#E5E7EB',
     marginHorizontal: m(12),
   },
+  
+  // Empty State
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: m(32),
+  },
+  emptyTitle: {
+    fontSize: m(18),
+    fontWeight: '600',
+    color: '#111827',
+    marginTop: m(16),
+    marginBottom: m(8),
+  },
+  emptySubtitle: {
+    fontSize: m(14),
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: m(24),
+  },
 });
-

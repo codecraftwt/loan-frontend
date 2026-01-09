@@ -1,7 +1,7 @@
-import React, {useState, useEffect} from 'react';
-import {Modal, View, Text, StyleSheet, TouchableOpacity} from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { Modal, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
-const PromptBox = ({visible, message, onConfirm, onCancel}) => {
+const PromptBox = ({ visible, message, onConfirm, onCancel }) => {
   const [clicked, setClicked] = useState(null);
 
   useEffect(() => {
@@ -34,32 +34,31 @@ const PromptBox = ({visible, message, onConfirm, onCancel}) => {
             <TouchableOpacity
               style={[
                 styles.button,
-                {
-                  backgroundColor:
-                    clicked === 'confirm' ? 'orange' : '#ededed',
-                },
+                styles.cancelButton,
+                clicked === 'cancel' && styles.cancelButtonActive,
               ]}
-              onPress={() => handleButtonClick('confirm')}>
+              onPress={() => handleButtonClick('cancel')}>
               <Text
                 style={[
-                  styles.buttonText,
-                  {color: clicked === 'confirm' ? '#FFF' : 'orange'},
+                  styles.cancelButtonText,
+                  clicked === 'cancel' && styles.cancelButtonTextActive,
                 ]}>
-                Confirm
+                Cancel
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
                 styles.button,
-                {backgroundColor: clicked === 'cancel' ? 'orange' : '#ededed'},
+                styles.confirmButton,
+                clicked === 'confirm' && styles.confirmButtonActive,
               ]}
-              onPress={() => handleButtonClick('cancel')}>
+              onPress={() => handleButtonClick('confirm')}>
               <Text
                 style={[
-                  styles.buttonText,
-                  {color: clicked === 'cancel' ? '#FFF' : 'orange'},
+                  styles.confirmButtonText,
+                  clicked === 'confirm' && styles.confirmButtonTextActive,
                 ]}>
-                Cancel
+                Confirm
               </Text>
             </TouchableOpacity>
           </View>
@@ -80,31 +79,71 @@ const styles = StyleSheet.create({
     width: 300,
     padding: 24,
     backgroundColor: '#FFF',
-    borderRadius: 10,
+    borderRadius: 12,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
   },
   modalMessage: {
     fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 20,
+    fontWeight: '500',
+    marginBottom: 24,
     textAlign: 'center',
-    color: '#000',
+    color: '#333',
+    lineHeight: 22,
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
+    gap: 12,
   },
   button: {
     flex: 1,
-    marginHorizontal: 10,
     paddingVertical: 12,
-    borderRadius: 5,
+    borderRadius: 8,
     alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
-  buttonText: {
-    fontSize: 14,
+  // Cancel button styles
+  cancelButton: {
+    backgroundColor: '#f5f5f5',
+    borderColor: '#ddd',
+  },
+  cancelButtonActive: {
+    backgroundColor: '#e0e0e0',
+    borderColor: '#ccc',
+  },
+  cancelButtonText: {
+    fontSize: 15,
     fontWeight: '600',
+    color: '#666',
+  },
+  cancelButtonTextActive: {
+    color: '#444',
+  },
+  // Confirm button styles
+  confirmButton: {
+    backgroundColor: '#ff8800ff',
+  },
+  confirmButtonActive: {
+    backgroundColor: '#ff8800ff',
+  },
+  confirmButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFF',
+  },
+  confirmButtonTextActive: {
+    color: '#FFF',
   },
 });
 

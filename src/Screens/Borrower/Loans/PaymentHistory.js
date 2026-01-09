@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -18,78 +17,71 @@ import Toast from 'react-native-toast-message';
 import borrowerLoanAPI from '../../../Services/borrowerLoanService';
 import { useSelector } from 'react-redux';
 
+// Constants
+const INITIAL_PAYMENT_COUNT = 3;
+
 export default function PaymentHistory() {
+  // Navigation & Route
   const navigation = useNavigation();
   const route = useRoute();
   const { loan, paymentHistory: initialPaymentHistory } = route.params;
   const user = useSelector(state => state.auth.user);
 
+  // State Management
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [paymentHistory, setPaymentHistory] = useState(initialPaymentHistory || []);
+  const [showAllPayments, setShowAllPayments] = useState(false);
   const [loanSummary, setLoanSummary] = useState(null);
   const [installmentDetails, setInstallmentDetails] = useState(null);
   const [paymentStats, setPaymentStats] = useState({
     totalPayments: 0,
     confirmedPayments: 0,
     pendingPayments: 0,
+    rejectedPayments: 0,
     pendingAmount: 0,
   });
 
+  // Effects
   useEffect(() => {
-    if (!initialPaymentHistory) {
-      fetchPaymentHistory();
-    } else {
-      // If initial data is provided, we still need to fetch full details
-      fetchPaymentHistory();
-    }
+    fetchPaymentHistory();
   }, []);
 
+  // API Functions
   const fetchPaymentHistory = async () => {
     try {
       setLoading(true);
       
-      // Validate loan ID
       if (!loan?._id) {
         throw new Error('Loan ID is required');
       }
       
-      // Get borrower ID from user or loan object
       const borrowerId = user?._id || loan.borrowerId || loan.borrower?._id;
       if (!borrowerId) {
         throw new Error('Borrower ID is required');
       }
       
       const response = await borrowerLoanAPI.getPaymentHistory(loan._id, borrowerId);
-      
-      // Service returns the data object directly: { loanId, loanSummary, installmentDetails, payments, paymentStats, lenderInfo }
       const data = response || {};
       
-      // Extract payments array
-      setPaymentHistory(data.payments || []);
+      // Extract payments array - API returns payments in paymentHistory.allPayments
+      const payments = data.paymentHistory?.allPayments || data.payments || [];
+      setPaymentHistory(payments);
       
-      // Extract paymentStats object
-      setPaymentStats(data.paymentStats || {
-        totalPayments: 0,
-        confirmedPayments: 0,
-        pendingPayments: 0,
-        pendingAmount: 0,
+      // Extract paymentStats from paymentHistory object
+      const paymentHistoryData = data.paymentHistory || {};
+      setPaymentStats({
+        totalPayments: payments.length,
+        confirmedPayments: paymentHistoryData.confirmedPayments || payments.filter(p => p.paymentStatus?.toLowerCase() === 'confirmed').length,
+        pendingPayments: paymentHistoryData.pendingPayments || payments.filter(p => p.paymentStatus?.toLowerCase() === 'pending').length,
+        rejectedPayments: payments.filter(p => p.paymentStatus?.toLowerCase() === 'rejected').length,
+        pendingAmount: paymentHistoryData.pendingAmount || 0,
       });
       
-      // Extract loanSummary object
       setLoanSummary(data.loanSummary || null);
-      
-      // Extract installmentDetails (null for one-time loans)
       setInstallmentDetails(data.installmentDetails || null);
     } catch (error) {
       console.error('Error fetching payment history:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        loanId: loan?._id,
-      });
       
       const errorMessage = error.response?.data?.message 
         || error.response?.data?.error 
@@ -113,40 +105,42 @@ export default function PaymentHistory() {
     setRefreshing(false);
   };
 
+  // Utility Functions
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
-      case 'confirmed': return '#10B981';
-      case 'pending': return '#F59E0B';
+      case 'confirmed':
+      case 'paid': return '#10B981';
+      case 'pending':
+      case 'part paid': return '#F59E0B';
       case 'rejected': return '#EF4444';
-       case 'part paid': return '#F59E0B';
-       case 'paid': return '#10B981';
       default: return '#6B7280';
     }
   };
 
   const getStatusIcon = (status) => {
     switch (status?.toLowerCase()) {
-      case 'confirmed': return 'check-circle';
-      case 'pending': return 'clock';
+      case 'confirmed':
+      case 'paid': return 'check-circle';
+      case 'pending':
+      case 'part paid': return 'clock';
       case 'rejected': return 'x-circle';
-       case 'part paid': return 'clock';
-       case 'paid': return 'check-circle';
       default: return 'circle';
     }
   };
 
   const formatCurrency = (amount) => {
-    // Ensure amount is a number before formatting to avoid string concatenation
     const numAmount = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
     return `₹${numAmount.toLocaleString('en-IN')}`;
   };
 
   const calculateProgress = () => {
     if (!loanSummary || loanSummary.totalLoanAmount === 0) return 0;
-    return (loanSummary.totalPaid / loanSummary.totalLoanAmount) * 100;
+    const totalPaid = loanSummary.totalPaidAmount ?? loanSummary.totalPaid ?? 0;
+    return (totalPaid / loanSummary.totalLoanAmount) * 100;
   };
 
-  const renderPaymentItem = ({ item, index }) => {
+  // Render Functions
+  const renderPaymentItem = ({ item }) => {
     const statusColor = getStatusColor(item.paymentStatus);
     const statusIcon = getStatusIcon(item.paymentStatus);
     
@@ -225,7 +219,9 @@ export default function PaymentHistory() {
           <View>
             <Text style={styles.lenderName}>{loan.lenderId?.userName || 'Unknown Lender'}</Text>
             <Text style={styles.loanType}>
-              {loanSummary.paymentType === 'installment' ? 'Installment Loan' : 'One-time Payment'}
+              {loanSummary.loanType === 'installment' || loanSummary.paymentType === 'installment' 
+                ? 'Installment Loan' 
+                : 'One-time Payment'}
             </Text>
           </View>
           <View style={[styles.loanStatusBadge, { backgroundColor: getStatusColor(loanSummary.paymentStatus) + '20' }]}>
@@ -246,7 +242,7 @@ export default function PaymentHistory() {
             <View style={styles.amountBlock}>
               <Text style={styles.amountLabel}>Paid</Text>
               <Text style={[styles.paidAmount, { color: '#10B981' }]}>
-                {formatCurrency(loanSummary.totalPaid)}
+                {formatCurrency(loanSummary.totalPaidAmount ?? loanSummary.totalPaid ?? 0)}
               </Text>
             </View>
             <View style={styles.amountDivider} />
@@ -300,6 +296,14 @@ export default function PaymentHistory() {
           <Text style={[styles.statValue, { color: '#F59E0B' }]}>{paymentStats.pendingPayments}</Text>
           <Text style={styles.statLabel}>Pending</Text>
         </View>
+
+        <View style={styles.statCard}>
+          <View style={[styles.statIconContainer, { backgroundColor: '#FEE2E2' }]}>
+            <Icon name="x-circle" size={18} color="#EF4444" />
+          </View>
+          <Text style={[styles.statValue, { color: '#EF4444' }]}>{paymentStats.rejectedPayments}</Text>
+          <Text style={styles.statLabel}>Rejected</Text>
+        </View>
       </View>
 
       {paymentStats.pendingAmount > 0 && (
@@ -309,45 +313,6 @@ export default function PaymentHistory() {
             <Text style={styles.pendingAmountLabel}>Pending Amount</Text>
           </View>
           <Text style={styles.pendingAmountValue}>{formatCurrency(paymentStats.pendingAmount)}</Text>
-        </View>
-      )}
-
-      {installmentDetails && (
-        <View style={styles.installmentCard}>
-          <View style={styles.installmentHeader}>
-            <Icon name="repeat" size={18} color="#6366F1" />
-            <Text style={styles.installmentTitle}>Installment Details</Text>
-          </View>
-          <View style={styles.installmentInfo}>
-            <View style={styles.installmentRow}>
-              <View style={styles.installmentIconWrapper}>
-                <Icon name="check-circle" size={16} color="#10B981" />
-              </View>
-              <Text style={styles.installmentText}>
-                <Text style={styles.installmentBold}>{installmentDetails.totalInstallmentsPaid}</Text> Installment{installmentDetails.totalInstallmentsPaid !== 1 ? 's' : ''} Paid
-              </Text>
-            </View>
-            {installmentDetails.nextDueDate && (
-              <View style={styles.installmentRow}>
-                <View style={styles.installmentIconWrapper}>
-                  <Icon name="calendar" size={16} color="#3B82F6" />
-                </View>
-                <Text style={styles.installmentText}>
-                  Next Due: <Text style={styles.installmentBold}>{moment(installmentDetails.nextDueDate).format('DD MMM YYYY')}</Text>
-                </Text>
-              </View>
-            )}
-            {installmentDetails.frequency && (
-              <View style={styles.installmentRow}>
-                <View style={styles.installmentIconWrapper}>
-                  <Icon name="refresh-cw" size={16} color="#6B7280" />
-                </View>
-                <Text style={styles.installmentText}>
-                  Frequency: <Text style={styles.installmentBold}>{installmentDetails.frequency.charAt(0).toUpperCase() + installmentDetails.frequency.slice(1)}</Text>
-                </Text>
-              </View>
-            )}
-          </View>
         </View>
       )}
     </View>
@@ -372,25 +337,18 @@ export default function PaymentHistory() {
     </View>
   );
 
-  // Unused loading state (commented out)
-  // if (false) {
-  //   return (
-  //     <View style={styles.container}>
-  //       <Header title="Payment History" showBackButton />
-  //       <View style={styles.loadingContainer}>
-  //         <ActivityIndicator size="large" color="#3B82F6" />
-  //         <Text style={styles.loadingText}>Loading payment history...</Text>
-  //       </View>
-  //     </View>
-  //   );
-  // }
+  // Computed Values
+  const displayedPayments = showAllPayments 
+    ? paymentHistory 
+    : paymentHistory.slice(0, INITIAL_PAYMENT_COUNT);
+  const hasMorePayments = paymentHistory.length > INITIAL_PAYMENT_COUNT;
 
   return (
     <View style={styles.container}>
       <Header title="Payment History" showBackButton />
       
       <FlatList
-        data={paymentHistory}
+        data={displayedPayments}
         renderItem={renderPaymentItem}
         keyExtractor={item => item._id}
         contentContainerStyle={styles.listContainer}
@@ -403,9 +361,26 @@ export default function PaymentHistory() {
             {renderLoanHeader()}
             {renderStatsCard()}
             <View style={styles.paymentsHeader}>
-              <Icon name="clock" size={20} color="#111827" />
-              <Text style={styles.paymentsTitle}>Payment History</Text>
-              <Text style={styles.paymentsCount}>({paymentHistory.length})</Text>
+              <View style={styles.paymentsHeaderLeft}>
+                <Icon name="clock" size={20} color="#111827" />
+                <Text style={styles.paymentsTitle}>Payment History</Text>
+                <Text style={styles.paymentsCount}>({paymentHistory.length})</Text>
+              </View>
+              {hasMorePayments && (
+                <TouchableOpacity
+                  style={styles.toggleButtonHeader}
+                  onPress={() => setShowAllPayments(!showAllPayments)}
+                >
+                  <Text style={styles.toggleButtonTextHeader}>
+                    {showAllPayments ? 'See Less' : 'See All'}
+                  </Text>
+                  <Icon 
+                    name={showAllPayments ? 'chevron-up' : 'chevron-down'} 
+                    size={16} 
+                    color="#3B82F6" 
+                  />
+                </TouchableOpacity>
+              )}
             </View>
           </>
         }
@@ -416,25 +391,16 @@ export default function PaymentHistory() {
 }
 
 const styles = StyleSheet.create({
+  // Container
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: m(16),
-    fontSize: m(16),
-    color: '#6B7280',
-    fontWeight: '500',
   },
   listContainer: {
     padding: m(16),
     paddingBottom: m(100),
   },
+  
   // Loan Header
   loanHeader: {
     backgroundColor: '#FFFFFF',
@@ -536,6 +502,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
+  
   // Stats Card
   statsCard: {
     backgroundColor: '#FFFFFF',
@@ -565,33 +532,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: m(16),
-    gap: m(12),
+    gap: m(8),
   },
   statCard: {
-    flex: 1,
+    width: '23%',
     backgroundColor: '#F9FAFB',
     borderRadius: m(16),
-    padding: m(16),
+    padding: m(12),
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#F3F4F6',
   },
   statIconContainer: {
-    width: m(40),
-    height: m(40),
-    borderRadius: m(20),
+    width: m(36),
+    height: m(36),
+    borderRadius: m(18),
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: m(10),
+    marginBottom: m(8),
   },
   statValue: {
-    fontSize: m(20),
+    fontSize: m(18),
     fontWeight: '700',
     color: '#111827',
     marginBottom: m(4),
   },
   statLabel: {
-    fontSize: m(11),
+    fontSize: m(10),
     color: '#6B7280',
     fontWeight: '500',
     textAlign: 'center',
@@ -620,69 +587,48 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#F59E0B',
   },
-  installmentCard: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: m(16),
-    padding: m(16),
-    marginTop: m(16),
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  installmentHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: m(14),
-    gap: m(10),
-  },
-  installmentTitle: {
-    fontSize: m(16),
-    fontWeight: '600',
-    color: '#111827',
-  },
-  installmentInfo: {
-    gap: m(12),
-  },
-  installmentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(12),
-  },
-  installmentIconWrapper: {
-    width: m(28),
-    height: m(28),
-    borderRadius: m(14),
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  installmentText: {
-    fontSize: m(14),
-    color: '#374151',
-    flex: 1,
-  },
-  installmentBold: {
-    fontWeight: '600',
-    color: '#111827',
-  },
+  
   // Payments Header
   paymentsHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: m(16),
     marginTop: m(8),
+  },
+  paymentsHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: m(10),
+    flex: 1,
   },
   paymentsTitle: {
     fontSize: m(18),
     fontWeight: '700',
     color: '#111827',
-    flex: 1,
   },
   paymentsCount: {
     fontSize: m(14),
     color: '#6B7280',
     fontWeight: '500',
   },
+  toggleButtonHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: m(6),
+    paddingHorizontal: m(12),
+    borderRadius: m(8),
+    backgroundColor: '#EFF6FF',
+    gap: m(6),
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
+  },
+  toggleButtonTextHeader: {
+    fontSize: m(14),
+    fontWeight: '600',
+    color: '#3B82F6',
+  },
+  
   // Payment Card
   paymentCard: {
     backgroundColor: '#FFFFFF',
@@ -791,6 +737,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     flex: 1,
   },
+  
   // Empty State
   emptyState: {
     flex: 1,

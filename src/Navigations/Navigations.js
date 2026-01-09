@@ -13,6 +13,7 @@ import AddDetails from '../Screens/Lender/Loans/AddDetails';
 import LoanDetailScreen from '../Screens/Shared/Loans/LoanDetailsScreen';
 import BorrowerDetailsScreen from '../Screens/Shared/Borrowers/BorrowerDetailsScreen';
 import ProfileDetails from '../Screens/Shared/Profile/ProfileDetails';
+import EditProfile from '../Screens/Shared/Profile/EditProfile';
 import OldHistoryPage from '../Screens/Shared/History/OldHistoryPage';
 import SettingsScreen from '../Screens/Shared/Profile/SettingsScreen';
 import SubscriptionScreen from '../Screens/Shared/Subscription/SubscriptionScreen';
@@ -59,6 +60,7 @@ const Navigation = () => {
       <Stack.Screen name="BorrowerLoansScreen" component={BorrowerLoansScreen} />
 
       <Stack.Screen name="ProfileDetails" component={ProfileDetails} />
+      <Stack.Screen name="EditProfile" component={EditProfile} />
       <Stack.Screen name="OldHistoryPage" component={OldHistoryPage} />
 
       <Stack.Screen name="SubscriptionScreen" component={SubscriptionScreen} />

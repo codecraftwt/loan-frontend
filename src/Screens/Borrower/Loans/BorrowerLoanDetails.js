@@ -17,48 +17,42 @@ import Toast from 'react-native-toast-message';
 import { useSelector } from 'react-redux';
 
 export default function BorrowerLoanDetails() {
+  // Navigation & Route
   const navigation = useNavigation();
   const route = useRoute();
   const { loan } = route.params;
   const user = useSelector(state => state.auth.user);
 
+  // State Management
   const [loanDetails, setLoanDetails] = useState(loan);
   const [paymentHistory, setPaymentHistory] = useState([]);
   const [installmentDetails, setInstallmentDetails] = useState(null);
   const [hasPendingPayment, setHasPendingPayment] = useState(false);
-  // const [loanStats, setLoanStats] = useState({
-  //   totalPaid: loan.totalPaid || 0,
-  //   remainingAmount: loan.remainingAmount || loan.amount || 0,
-  // });
 
+  // Effects
   useEffect(() => {
     fetchPaymentHistory();
   }, []);
 
-  // Refresh payment history when screen is focused (e.g., returning from payment screen)
   useFocusEffect(
     React.useCallback(() => {
       fetchPaymentHistory();
     }, [loan._id])
   );
 
+  // API Functions
   const fetchPaymentHistory = async () => {
     try {
-      // Validate loan ID
       if (!loan?._id) {
         throw new Error('Loan ID is required');
       }
       
-      // Get borrower ID from user or loan object
       const borrowerId = user?._id || loan.borrowerId || loan.borrower?._id;
       if (!borrowerId) {
         throw new Error('Borrower ID is required');
       }
       
-      // Fetch payment history for this loan (API requires borrowerId as query parameter)
       const response = await borrowerLoanAPI.getPaymentHistory(loan._id, borrowerId);
-      
-      // Service returns the data object directly: { loanId, loanSummary, installmentDetails, paymentHistory, lenderInfo }
       const paymentData = response || {};
       
       // Extract payments array - API returns payments in paymentHistory.allPayments
@@ -113,6 +107,7 @@ export default function BorrowerLoanDetails() {
           paymentType: loanSummary.loanType || loanSummary.paymentType || prev.paymentType,
         }));
       } else if (calculatedTotalPaid > 0) {
+        // If loanSummary doesn't exist but we have payments, use calculated values
         setLoanDetails(prev => ({
           ...prev,
           totalPaid: calculatedTotalPaid,
@@ -121,13 +116,6 @@ export default function BorrowerLoanDetails() {
       }
     } catch (error) {
       console.error('Error fetching payment history:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        loanId: loan?._id,
-      });
       
       const errorMessage = error.response?.data?.message 
         || error.response?.data?.error 
@@ -143,12 +131,13 @@ export default function BorrowerLoanDetails() {
     }
   };
 
+  // Utility Functions
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
-      case 'paid': return '#10B981';
+      case 'paid':
+      case 'confirmed': return '#10B981';
       case 'part paid': return '#F59E0B';
       case 'pending': return '#6B7280';
-      case 'confirmed': return '#10B981';
       case 'rejected': return '#EF4444';
       case 'overdue': return '#DC2626';
       default: return '#6B7280';
@@ -157,24 +146,22 @@ export default function BorrowerLoanDetails() {
 
   const getStatusIcon = (status) => {
     switch (status?.toLowerCase()) {
-      case 'paid': return 'check-circle';
-      case 'part paid': return 'clock';
-      case 'pending': return 'clock';
+      case 'paid':
       case 'confirmed': return 'check-circle';
-      case 'rejected': return 'x-circle';
+      case 'part paid':
+      case 'pending': return 'clock';
+      case 'rejected':
       case 'overdue': return 'x-circle';
       default: return 'circle';
     }
   };
 
   const formatCurrency = (amount) => {
-    // Ensure amount is a number before formatting to avoid string concatenation
     const numAmount = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
     return `₹${numAmount.toLocaleString('en-IN')}`;
   };
 
   const calculateProgress = () => {
-    // Ensure amounts are numbers, not strings
     const totalAmount = typeof loanDetails.amount === 'number' 
       ? loanDetails.amount 
       : parseFloat(loanDetails.amount) || 0;
@@ -184,25 +171,6 @@ export default function BorrowerLoanDetails() {
     return totalAmount > 0 ? (totalPaid / totalAmount) * 100 : 0;
   };
 
-  // const isLoanActive = () => {
-  //   // Check if loan is paid
-  //   if (loanDetails.paymentStatus === 'paid') return false;
-    
-  //   // Check if remaining amount is greater than 0
-  //   if (loanDetails.remainingAmount <= 0) return false;
-    
-  //   // Check if loan end date has passed
-  //   if (loanDetails.loanEndDate) {
-  //     const endDate = moment(loanDetails.loanEndDate);
-  //     const today = moment();
-  //     if (endDate.isBefore(today, 'day')) {
-  //       return false; // Loan has expired
-  //     }
-  //   }
-    
-  //   return true;
-  // };
-
   const isLoanExpired = () => {
     if (!loanDetails.loanEndDate) return false;
     const endDate = moment(loanDetails.loanEndDate);
@@ -210,6 +178,7 @@ export default function BorrowerLoanDetails() {
     return endDate.isBefore(today, 'day');
   };
 
+  // Navigation Handlers
   const handleMakePayment = () => {
     navigation.navigate('MakePayment', { loan: loanDetails });
   };
@@ -218,6 +187,7 @@ export default function BorrowerLoanDetails() {
     navigation.navigate('PaymentHistory', { loan: loanDetails, paymentHistory });
   };
 
+  // Render Components
   const DetailItem = ({ icon, label, value, isStatus = false }) => (
     <View style={styles.detailItem}>
       <View style={styles.detailIconContainer}>
@@ -266,11 +236,6 @@ export default function BorrowerLoanDetails() {
             Confirmed: {moment(item.confirmedAt).format('DD MMM YYYY, hh:mm A')}
           </Text>
         )}
-        {/* {item.notes && (
-          <Text style={styles.paymentNotes}>
-            Note: {item.notes}
-          </Text>
-        )} */}
       </View>
     </View>
   );
@@ -401,7 +366,7 @@ export default function BorrowerLoanDetails() {
                 <View style={styles.installmentContent}>
                   <Text style={styles.installmentLabel}>Installments Paid</Text>
                   <Text style={styles.installmentValue}>
-                    {installmentDetails.totalInstallmentsPaid} Installment{installmentDetails.totalInstallmentsPaid !== 1 ? 's' : ''}
+                    {installmentDetails.paidInstallments ?? installmentDetails.totalInstallmentsPaid ?? 0} Installment{(installmentDetails.paidInstallments ?? installmentDetails.totalInstallmentsPaid ?? 0) !== 1 ? 's' : ''}
                   </Text>
                 </View>
               </View>
@@ -456,7 +421,8 @@ export default function BorrowerLoanDetails() {
                 (hasPendingPayment || isLoanExpired()) && styles.disabledButton
               ]}
               onPress={handleMakePayment}
-              disabled={hasPendingPayment || isLoanExpired()}>
+              disabled={hasPendingPayment || isLoanExpired()}
+            >
               <Ionicons name="cash-outline" size={20} color="#FFFFFF" />
               <Text style={styles.primaryButtonText}>
                 {isLoanExpired() 
@@ -486,7 +452,8 @@ export default function BorrowerLoanDetails() {
 
           <TouchableOpacity
             style={[styles.actionButton, styles.secondaryButton]}
-            onPress={handleViewPaymentHistory}>
+            onPress={handleViewPaymentHistory}
+          >
             <Icon name="clock" size={20} color="#3B82F6" />
             <Text style={styles.secondaryButtonText}>Payment History</Text>
           </TouchableOpacity>
@@ -504,6 +471,7 @@ export default function BorrowerLoanDetails() {
 }
 
 const styles = StyleSheet.create({
+  // Container
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
@@ -515,6 +483,8 @@ const styles = StyleSheet.create({
     padding: m(16),
     paddingBottom: m(100),
   },
+  
+  // Overview Card
   overviewCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: m(16),
@@ -596,6 +566,8 @@ const styles = StyleSheet.create({
     fontSize: m(12),
     color: '#6B7280',
   },
+  
+  // Info Card
   infoCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: m(16),
@@ -626,6 +598,8 @@ const styles = StyleSheet.create({
     color: '#3B82F6',
     fontWeight: '600',
   },
+  
+  // Lender Info
   lenderInfo: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -657,6 +631,8 @@ const styles = StyleSheet.create({
     fontSize: m(14),
     color: '#6B7280',
   },
+  
+  // Details Grid
   detailsGrid: {
     gap: m(9),
   },
@@ -689,6 +665,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#374151',
   },
+  
+  // Payment History Item
   paymentHistoryItem: {
     backgroundColor: '#f2f7fcff',
     borderRadius: m(12),
@@ -737,17 +715,31 @@ const styles = StyleSheet.create({
     fontSize: m(12),
     color: '#10B981',
   },
-  rejectedDate: {
-    fontSize: m(12),
-    color: '#EF4444',
-    marginTop: m(4),
+  
+  // Installment Details
+  installmentContainer: {
+    gap: m(16),
   },
-  paymentNotes: {
+  installmentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(12),
+  },
+  installmentContent: {
+    flex: 1,
+  },
+  installmentLabel: {
     fontSize: m(12),
     color: '#6B7280',
-    marginTop: m(4),
-    fontStyle: 'italic',
+    marginBottom: m(4),
   },
+  installmentValue: {
+    fontSize: m(16),
+    fontWeight: '600',
+    color: '#111827',
+  },
+  
+  // Actions
   actionsContainer: {
     gap: m(12),
     marginBottom: m(16),
@@ -782,35 +774,6 @@ const styles = StyleSheet.create({
     fontSize: m(16),
     fontWeight: '600',
     color: '#3B82F6',
-  },
-  footer: {
-    alignItems: 'center',
-    padding: m(16),
-  },
-  footerText: {
-    fontSize: m(12),
-    color: '#9CA3AF',
-  },
-  installmentContainer: {
-    gap: m(16),
-  },
-  installmentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(12),
-  },
-  installmentContent: {
-    flex: 1,
-  },
-  installmentLabel: {
-    fontSize: m(12),
-    color: '#6B7280',
-    marginBottom: m(4),
-  },
-  installmentValue: {
-    fontSize: m(16),
-    fontWeight: '600',
-    color: '#111827',
   },
   disabledButton: {
     backgroundColor: '#9CA3AF',
@@ -848,5 +811,14 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     flex: 1,
   },
+  
+  // Footer
+  footer: {
+    alignItems: 'center',
+    padding: m(16),
+  },
+  footerText: {
+    fontSize: m(12),
+    color: '#9CA3AF',
+  },
 });
-

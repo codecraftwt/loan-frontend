@@ -105,12 +105,6 @@ export const borrowerLoanAPI = {
       return response.data;
     } catch (error) {
       console.error('Error verifying Razorpay payment:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-      });
       throw error;
     }
   },
@@ -145,13 +139,6 @@ export const borrowerLoanAPI = {
       return response.data;
     } catch (error) {
       console.error('Error fetching payment history:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        url: error.config?.url,
-      });
       throw error;
     }
   },
@@ -202,15 +189,37 @@ export const borrowerLoanAPI = {
   getBorrowerStatistics: async () => {
     try {
       const response = await axiosInstance.get('borrower/loans/statistics');
-      return response.data;
+      if (response.data && response.data.success && response.data.data) {
+        return response.data.data;
+      }
+      // Fallback to response.data if structure is different
+      return response.data?.data || response.data || null;
     } catch (error) {
+      // Handle 404 gracefully - endpoint may not exist
+      if (error.response?.status === 404) {
+        console.warn('Borrower statistics endpoint not found (404), returning default values');
+        return {
+          totalLoanAmount: 0,
+          totalPaidAmount: 0,
+          totalOverdueAmount: 0,
+          totalPendingAmount: 0,
+          totalRemainingAmount: 0,
+          percentages: {
+            totalLoanAmountPercentage: 0,
+            paidPercentage: 0,
+            overduePercentage: 0,
+            pendingPercentage: 0,
+          },
+          counts: {
+            totalLoans: 0,
+            paidLoans: 0,
+            overdueLoans: 0,
+            pendingLoans: 0,
+            activeLoans: 0,
+          },
+        };
+      }
       console.error('Error fetching borrower statistics:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-      });
       throw error;
     }
   },
@@ -227,13 +236,15 @@ export const borrowerLoanAPI = {
       const response = await axiosInstance.get(url);
       return response.data;
     } catch (error) {
+      // Handle 404 gracefully - endpoint may not exist
+      if (error.response?.status === 404) {
+        console.warn('Borrower recent activities endpoint not found (404), returning empty array');
+        return {
+          data: [],
+          count: 0,
+        };
+      }
       console.error('Error fetching borrower recent activities:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-      });
       throw error;
     }
   },
@@ -261,7 +272,7 @@ export const borrowerLoanAPI = {
 
       // Use plain axios without authentication for this endpoint
       const response = await axios.get(url, {
-        timeout: 10000, // 10 second timeout
+        timeout: 10000,
         headers: {
           'Content-Type': 'application/json',
         }
@@ -270,13 +281,6 @@ export const borrowerLoanAPI = {
       return response.data;
     } catch (error) {
       console.error('Error fetching borrower loans:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        url: error.config?.url
-      });
       throw error;
     }
   },

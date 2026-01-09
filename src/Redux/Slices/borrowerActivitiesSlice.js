@@ -44,8 +44,11 @@ const borrowerActivitiesSlice = createSlice({
       })
       .addCase(getBorrowerRecentActivities.fulfilled, (state, action) => {
         state.loading = false;
-        state.activities = action.payload.data || action.payload || [];
-        state.count = action.payload.count || action.payload.length || 0;
+        // Handle both response.data and direct response
+        const payload = action.payload || {};
+        state.activities = payload.data || (Array.isArray(payload) ? payload : []);
+        state.count = payload.count || (Array.isArray(payload) ? payload.length : 0);
+        state.error = null;
       })
       .addCase(getBorrowerRecentActivities.rejected, (state, action) => {
         state.loading = false;

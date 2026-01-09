@@ -157,8 +157,53 @@ export const getBorrowerStatistics = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await borrowerLoanAPI.getBorrowerStatistics();
+      if (!response || !response.percentages) {
+        return {
+          totalLoanAmount: 0,
+          totalPaidAmount: 0,
+          totalOverdueAmount: 0,
+          totalPendingAmount: 0,
+          totalRemainingAmount: 0,
+          percentages: {
+            totalLoanAmountPercentage: 0,
+            paidPercentage: 0,
+            overduePercentage: 0,
+            pendingPercentage: 0,
+          },
+          counts: {
+            totalLoans: 0,
+            paidLoans: 0,
+            overdueLoans: 0,
+            pendingLoans: 0,
+            activeLoans: 0,
+          },
+        };
+      }
       return response;
     } catch (error) {
+      // For 404 errors, return default values instead of rejecting
+      if (error.response?.status === 404) {
+        return {
+          totalLoanAmount: 0,
+          totalPaidAmount: 0,
+          totalOverdueAmount: 0,
+          totalPendingAmount: 0,
+          totalRemainingAmount: 0,
+          percentages: {
+            totalLoanAmountPercentage: 0,
+            paidPercentage: 0,
+            overduePercentage: 0,
+            pendingPercentage: 0,
+          },
+          counts: {
+            totalLoans: 0,
+            paidLoans: 0,
+            overdueLoans: 0,
+            pendingLoans: 0,
+            activeLoans: 0,
+          },
+        };
+      }
       return rejectWithValue(
         error.response?.data?.message || error.message || 'Failed to fetch statistics'
       );
@@ -333,7 +378,28 @@ const borrowerLoanSlice = createSlice({
       })
       .addCase(getBorrowerStatistics.fulfilled, (state, action) => {
         state.statisticsLoading = false;
-        state.borrowerStatistics = action.payload.data;
+        // Service returns the data object directly
+        const payload = action.payload;
+        state.borrowerStatistics = payload || {
+          totalLoanAmount: 0,
+          totalPaidAmount: 0,
+          totalOverdueAmount: 0,
+          totalPendingAmount: 0,
+          totalRemainingAmount: 0,
+          percentages: {
+            totalLoanAmountPercentage: 0,
+            paidPercentage: 0,
+            overduePercentage: 0,
+            pendingPercentage: 0,
+          },
+          counts: {
+            totalLoans: 0,
+            paidLoans: 0,
+            overdueLoans: 0,
+            pendingLoans: 0,
+            activeLoans: 0,
+          },
+        };
         state.statisticsError = null;
       })
       .addCase(getBorrowerStatistics.rejected, (state, action) => {
