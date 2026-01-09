@@ -84,6 +84,32 @@ export const lenderLoanAPI = {
       throw error;
     }
   },
+
+  // Get installment history for a loan (lender view)
+  getInstallmentHistory: async (loanId) => {
+    try {
+      const response = await axiosInstance.get(`lender/loans/installment-history/${loanId}`);
+      // API returns: { success: true, message: "...", data: {...} }
+      if (response.data && response.data.success && response.data.data) {
+        return response.data.data;
+      }
+      // Fallback to response.data if structure is different
+      return response.data?.data || response.data || null;
+    } catch (error) {
+      // Handle 404 gracefully - loan may not be an installment loan
+      if (error.response?.status === 404) {
+        console.warn('Installment history endpoint not found (404), loan may not be an installment loan');
+        return null;
+      }
+      // Handle 400 - not an installment loan
+      if (error.response?.status === 400) {
+        console.warn('Loan is not an installment loan (400)');
+        return null;
+      }
+      console.error('Error fetching installment history:', error);
+      throw error;
+    }
+  },
 };
 
 export default lenderLoanAPI;

@@ -244,7 +244,7 @@ export default function BottomNavigation() {
           }}
         />
         <Tab.Screen
-          name="Loans"
+          name="My Loans"
           component={Inward}
           options={{
             tabBarIcon: ({ color, size, focused }) =>

@@ -409,7 +409,7 @@ export default function Home() {
               {
                 icon: 'users',
                 text: 'Contacts',
-                screen: 'ContactsScreen',
+                // screen: 'ContactsScreen',
                 gradient: ['#27ae60', '#2ecc71'],
                 description: 'Manage contacts',
                 lightColor: '#C0ECCC'

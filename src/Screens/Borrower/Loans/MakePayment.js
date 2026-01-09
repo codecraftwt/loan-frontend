@@ -285,19 +285,24 @@ export default function MakePayment() {
       }
 
       // Step 3: Verify payment
-      if (!paymentResult.data.razorpay_payment_id || !paymentResult.data.razorpay_order_id || !paymentResult.data.razorpay_signature) {
+      if (
+        !paymentResult.data.razorpay_payment_id ||
+        !paymentResult.data.razorpay_order_id ||
+        !paymentResult.data.razorpay_signature
+      ) {
         throw new Error('Payment response incomplete');
       }
 
       let verifyResponse;
       try {
         verifyResponse = await borrowerLoanAPI.verifyRazorpayPayment(loan._id, {
-        razorpay_payment_id: paymentResult.data.razorpay_payment_id,
-        razorpay_order_id: paymentResult.data.razorpay_order_id,
-        razorpay_signature: paymentResult.data.razorpay_signature,
-        paymentType: paymentType,
-        notes: notes.trim() || undefined,
-      });
+          razorpay_payment_id: paymentResult.data.razorpay_payment_id,
+          razorpay_order_id: paymentResult.data.razorpay_order_id,
+          razorpay_signature: paymentResult.data.razorpay_signature,
+          amount: paymentAmount, // amount in INR as required by backend docs
+          paymentType: paymentType,
+          notes: notes.trim() || undefined,
+        });
       } catch (verifyError) {
         setLoading(false);
         const verifyErrorResponse = verifyError.response?.data || {};

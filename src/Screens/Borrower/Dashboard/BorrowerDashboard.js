@@ -30,7 +30,7 @@ export default function BorrowerDashboard() {
   useEffect(() => {
     if (user?._id) {
       dispatch(getBorrowerLoans({ borrowerId: user._id }));
-      dispatch(getBorrowerRecentActivities({ limit: 10 }));
+      dispatch(getBorrowerRecentActivities({ limit: 5 }));
     }
     return () => {
       dispatch(clearLoans());

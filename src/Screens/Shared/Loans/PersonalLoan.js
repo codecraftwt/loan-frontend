@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import moment from 'moment';
@@ -14,6 +16,8 @@ import { useSelector } from 'react-redux';
 import AgreementModal from '../../PromptBox/AgreementModal';
 import Header from '../../../Components/Header';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
+import { lenderLoanAPI } from '../../../Services/lenderLoanService';
+import Toast from 'react-native-toast-message';
 
 
 const DetailCard = ({ icon, label, value }) => (
@@ -33,11 +37,200 @@ export default function PersonalLoan({ route }) {
   const user = useSelector(state => state.auth.user);
 
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [installmentHistory, setInstallmentHistory] = useState(null);
+  const [loadingInstallments, setLoadingInstallments] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [showAllInstallments, setShowAllInstallments] = useState(false);
+
+  // Check if user is a lender
+  const isLender = user?.roleId === 1;
+
+  // Fetch installment history for lenders
+  useEffect(() => {
+    if (isLender && loanDetails?._id) {
+      fetchInstallmentHistory();
+    }
+  }, [isLender, loanDetails?._id]);
+
+  const fetchInstallmentHistory = async () => {
+    try {
+      setLoadingInstallments(true);
+      const response = await lenderLoanAPI.getInstallmentHistory(loanDetails._id);
+      if (response) {
+        setInstallmentHistory(response);
+      }
+    } catch (error) {
+      // Only show error if it's not a 400/404 (not an installment loan)
+      if (error.response?.status !== 400 && error.response?.status !== 404) {
+        console.error('Error fetching installment history:', error);
+        Toast.show({
+          type: 'error',
+          position: 'top',
+          text1: 'Error',
+          text2: error.response?.data?.message || 'Failed to fetch installment history',
+        });
+      }
+    } finally {
+      setLoadingInstallments(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchInstallmentHistory();
+    setRefreshing(false);
+  };
 
   const formatDate = date => moment(date).format('DD MMM, YYYY');
   const formatCurrency = (amount) => {
     const numAmount = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
     return `₹${numAmount.toLocaleString('en-IN')}`;
+  };
+
+  // Render installment item
+  const renderInstallmentItem = (installment, index) => {
+    const getStatusColor = (status) => {
+      switch (status?.toLowerCase()) {
+        case 'paid': return '#10B981';
+        case 'pending': return '#F59E0B';
+        case 'rejected': return '#EF4444';
+        case 'overdue': return '#EF4444';
+        case 'upcoming': return '#6B7280';
+        default: return '#6B7280';
+      }
+    };
+
+    const getStatusIcon = (status) => {
+      switch (status?.toLowerCase()) {
+        case 'paid': return 'check-circle';
+        case 'pending': return 'clock';
+        case 'rejected': return 'x-circle';
+        case 'overdue': return 'alert-circle';
+        case 'upcoming': return 'calendar';
+        default: return 'circle';
+      }
+    };
+
+    const statusColor = getStatusColor(installment.status);
+    const statusIcon = getStatusIcon(installment.status);
+    const isLast = index === (showAllInstallments
+      ? installmentHistory.installmentHistory.length - 1
+      : Math.min(2, installmentHistory.installmentHistory.length - 1));
+
+    return (
+      <View
+        key={installment.installmentNumber}
+        style={[styles.installmentCard, isLast && styles.installmentCardLast]}>
+        <View style={styles.installmentHeader}>
+          <View style={styles.installmentLeftSection}>
+            <View style={[styles.installmentIconContainer, { backgroundColor: statusColor + '20' }]}>
+              <Icon name={statusIcon} size={18} color={statusColor} />
+            </View>
+            <View style={styles.installmentInfo}>
+              <Text style={styles.installmentNumber}>
+                Installment #{installment.installmentNumber}
+              </Text>
+              <Text style={[styles.installmentStatus, { color: statusColor }]}>
+                {installment.status?.charAt(0).toUpperCase() + installment.status?.slice(1)}
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.installmentAmount}>
+            {formatCurrency(installment.amount)}
+          </Text>
+        </View>
+
+        <View style={styles.installmentDetails}>
+          <View style={styles.installmentDetailRow}>
+            <Text style={styles.installmentDetailLabel}>Due Date:</Text>
+            <Text style={styles.installmentDetailValue}>
+              {moment(installment.dueDate).format('DD MMM YYYY')}
+            </Text>
+          </View>
+
+          {installment.status === 'paid' && (
+            <>
+              <View style={styles.installmentDetailRow}>
+                <Text style={styles.installmentDetailLabel}>Paid Date:</Text>
+                <Text style={styles.installmentDetailValue}>
+                  {moment(installment.paidDate).format('DD MMM YYYY, hh:mm A')}
+                </Text>
+              </View>
+              <View style={styles.installmentDetailRow}>
+                <Text style={styles.installmentDetailLabel}>Payment Mode:</Text>
+                <Text style={styles.installmentDetailValue}>
+                  {installment.paymentMode?.charAt(0).toUpperCase() + installment.paymentMode?.slice(1)}
+                </Text>
+              </View>
+              {installment.isOnTime !== undefined && (
+                <View style={styles.installmentDetailRow}>
+                  <Icon
+                    name={installment.isOnTime ? 'check' : 'x'}
+                    size={14}
+                    color={installment.isOnTime ? '#10B981' : '#EF4444'}
+                  />
+                  <Text style={[
+                    styles.installmentDetailValue,
+                    { color: installment.isOnTime ? '#10B981' : '#EF4444', marginLeft: 4 }
+                  ]}>
+                    {installment.isOnTime ? 'Paid on time' : 'Paid late'}
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
+
+          {installment.status === 'pending' && (
+            <>
+              <View style={styles.installmentDetailRow}>
+                <Text style={styles.installmentDetailLabel}>Submitted:</Text>
+                <Text style={styles.installmentDetailValue}>
+                  {moment(installment.submittedDate).format('DD MMM YYYY, hh:mm A')}
+                </Text>
+              </View>
+              <View style={styles.installmentDetailRow}>
+                <Text style={styles.installmentDetailLabel}>Payment Mode:</Text>
+                <Text style={styles.installmentDetailValue}>
+                  {installment.paymentMode?.charAt(0).toUpperCase() + installment.paymentMode?.slice(1)}
+                </Text>
+              </View>
+              <View style={styles.pendingBadge}>
+                <Icon name="clock" size={14} color="#F59E0B" />
+                <Text style={styles.pendingBadgeText}>Awaiting your confirmation</Text>
+              </View>
+            </>
+          )}
+
+          {installment.status === 'rejected' && (
+            <>
+              <View style={styles.installmentDetailRow}>
+                <Text style={styles.installmentDetailLabel}>Rejected Date:</Text>
+                <Text style={styles.installmentDetailValue}>
+                  {moment(installment.rejectedDate).format('DD MMM YYYY')}
+                </Text>
+              </View>
+              {installment.rejectionReason && (
+                <View style={styles.installmentDetailRow}>
+                  <Text style={styles.installmentDetailLabel}>Reason:</Text>
+                  <Text style={styles.installmentDetailValue}>
+                    {installment.rejectionReason}
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
+
+          {installment.status === 'overdue' && (
+            <View style={styles.overdueBadge}>
+              <Icon name="alert-circle" size={14} color="#EF4444" />
+              <Text style={styles.overdueBadgeText}>
+                {installment.overdueDays} day(s) overdue
+              </Text>
+            </View>
+          )}
+        </View>
+      </View>
+    );
   };
 
   // Get lender name with multiple fallbacks
@@ -209,6 +402,11 @@ export default function PersonalLoan({ route }) {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          isLender ? (
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          ) : undefined
+        }
       >
         {/* Profile Card */}
         <View style={styles.profileCard}>
@@ -396,6 +594,135 @@ export default function PersonalLoan({ route }) {
               <Icon name="chevron-right" size={24} color="#6B7280" />
             </View>
           </TouchableOpacity>
+        )}
+
+        {/* Installment History Section - Only for Lenders */}
+        {isLender && installmentHistory && (
+          <View style={styles.installmentSection}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionHeaderLeft}>
+                <Icon name="calendar" size={20} color="#111827" />
+                <Text style={styles.sectionTitle}>Installment History</Text>
+              </View>
+              {installmentHistory.installmentHistory?.length > 3 && (
+                <TouchableOpacity
+                  onPress={() => setShowAllInstallments(!showAllInstallments)}
+                  activeOpacity={0.7}>
+                  <Text style={styles.viewAllText}>
+                    {showAllInstallments ? 'Show Less' : 'See All'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Installment Plan Summary */}
+            {installmentHistory.installmentPlan && (
+              <View style={styles.installmentPlanCard}>
+                <View style={styles.planRow}>
+                  <View style={styles.planItem}>
+                    <Text style={styles.planLabel}>Total Installments</Text>
+                    <Text style={styles.planValue}>
+                      {installmentHistory.installmentPlan.totalInstallments}
+                    </Text>
+                  </View>
+                  <View style={styles.planItem}>
+                    <Text style={styles.planLabel}>Paid</Text>
+                    <Text style={[styles.planValue, { color: '#10B981' }]}>
+                      {installmentHistory.installmentPlan.paidInstallments}
+                    </Text>
+                  </View>
+                  <View style={styles.planItem}>
+                    <Text style={styles.planLabel}>Pending</Text>
+                    <Text style={[styles.planValue, { color: '#F59E0B' }]}>
+                      {installmentHistory.installmentPlan.pendingInstallments}
+                    </Text>
+                  </View>
+                  <View style={styles.planItem}>
+                    <Text style={styles.planLabel}>Overdue</Text>
+                    <Text style={[styles.planValue, { color: '#EF4444' }]}>
+                      {installmentHistory.installmentPlan.overdueInstallments}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.planDetails}>
+                  <Text style={styles.planDetailText}>
+                    Installment Amount: {formatCurrency(installmentHistory.installmentPlan.installmentAmount)}
+                  </Text>
+                  <Text style={styles.planDetailText}>
+                    Frequency: {installmentHistory.installmentPlan.frequency?.charAt(0).toUpperCase() + installmentHistory.installmentPlan.frequency?.slice(1)}
+                  </Text>
+                  {installmentHistory.installmentPlan.nextDueDate && (
+                    <Text style={styles.planDetailText}>
+                      Next Due: {moment(installmentHistory.installmentPlan.nextDueDate).format('DD MMM YYYY')}
+                    </Text>
+                  )}
+                </View>
+              </View>
+            )}
+
+            {/* Summary Stats */}
+            {installmentHistory.summary && (
+              <View style={styles.summaryStatsCard}>
+                <View style={styles.summaryStatsRow}>
+                  <View style={styles.summaryStatItem}>
+                    <Text style={styles.summaryStatLabel}>Total Paid</Text>
+                    <Text style={[styles.summaryStatValue, { color: '#10B981' }]}>
+                      {formatCurrency(installmentHistory.summary.totalPaidAmount)}
+                    </Text>
+                  </View>
+                  <View style={styles.summaryStatItem}>
+                    <Text style={styles.summaryStatLabel}>Pending</Text>
+                    <Text style={[styles.summaryStatValue, { color: '#F59E0B' }]}>
+                      {formatCurrency(installmentHistory.summary.totalPendingAmount)}
+                    </Text>
+                  </View>
+                  <View style={styles.summaryStatItem}>
+                    <Text style={styles.summaryStatLabel}>Overdue</Text>
+                    <Text style={[styles.summaryStatValue, { color: '#EF4444' }]}>
+                      {formatCurrency(installmentHistory.summary.totalOverdueAmount)}
+                    </Text>
+                  </View>
+                </View>
+                {installmentHistory.summary.onTimePaymentRate !== undefined && (
+                  <View style={styles.onTimeRateContainer}>
+                    <Text style={styles.onTimeRateLabel}>On-Time Payment Rate</Text>
+                    <Text style={styles.onTimeRateValue}>
+                      {installmentHistory.summary.onTimePaymentRate.toFixed(1)}%
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Installment List */}
+            {loadingInstallments ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color="#3B82F6" />
+                <Text style={styles.loadingText}>Loading installments...</Text>
+              </View>
+            ) : installmentHistory.installmentHistory?.length > 0 ? (
+              <View style={styles.installmentListContainer}>
+                {(showAllInstallments
+                  ? installmentHistory.installmentHistory
+                  : installmentHistory.installmentHistory.slice(0, 3)
+                ).map((installment, index) => renderInstallmentItem(installment, index))}
+              </View>
+            ) : (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>No installment history available</Text>
+              </View>
+            )}
+
+            {/* Action Message */}
+            {installmentHistory.actions?.requiresAction && (
+              <View style={styles.actionCard}>
+                <Icon name="alert-circle" size={20} color="#F59E0B" />
+                <Text style={styles.actionText}>
+                  {installmentHistory.actions.message}
+                </Text>
+              </View>
+            )}
+          </View>
         )}
 
         {/* Loan Summary - Hide or modify if loan is rejected */}
@@ -823,5 +1150,255 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#DC2626',
     flex: 1,
+  },
+
+  // Installment History Styles
+  installmentSection: {
+    marginBottom: m(16),
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: m(16),
+    paddingHorizontal: m(4),
+  },
+  sectionHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(8),
+  },
+  viewAllText: {
+    fontSize: m(14),
+    color: '#3B82F6',
+    fontWeight: '600',
+  },
+  installmentPlanCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: m(16),
+    padding: m(16),
+    marginBottom: m(12),
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+  },
+  planRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: m(12),
+  },
+  planItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  planLabel: {
+    fontSize: m(11),
+    color: '#6B7280',
+    marginBottom: m(4),
+    textAlign: 'center',
+  },
+  planValue: {
+    fontSize: m(16),
+    fontWeight: '700',
+    color: '#111827',
+  },
+  planDetails: {
+    paddingTop: m(12),
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+    gap: m(6),
+  },
+  planDetailText: {
+    fontSize: m(13),
+    color: '#6B7280',
+  },
+  summaryStatsCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: m(12),
+    padding: m(16),
+    marginBottom: m(12),
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  summaryStatsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: m(12),
+  },
+  summaryStatItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  summaryStatLabel: {
+    fontSize: m(11),
+    color: '#6B7280',
+    marginBottom: m(4),
+  },
+  summaryStatValue: {
+    fontSize: m(14),
+    fontWeight: '700',
+    color: '#111827',
+  },
+  onTimeRateContainer: {
+    paddingTop: m(12),
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  onTimeRateLabel: {
+    fontSize: m(13),
+    color: '#6B7280',
+    fontWeight: '600',
+  },
+  onTimeRateValue: {
+    fontSize: m(16),
+    fontWeight: '700',
+    color: '#10B981',
+  },
+  installmentListContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: m(16),
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    overflow: 'hidden',
+    marginBottom: m(12),
+  },
+  installmentCard: {
+    padding: m(16),
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  installmentCardLast: {
+    borderBottomWidth: 0,
+  },
+  installmentHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: m(12),
+  },
+  installmentLeftSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  installmentIconContainer: {
+    width: m(40),
+    height: m(40),
+    borderRadius: m(20),
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: m(12),
+  },
+  installmentInfo: {
+    flex: 1,
+  },
+  installmentNumber: {
+    fontSize: m(15),
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: m(2),
+  },
+  installmentStatus: {
+    fontSize: m(12),
+    fontWeight: '500',
+  },
+  installmentAmount: {
+    fontSize: m(16),
+    fontWeight: '700',
+    color: '#111827',
+  },
+  installmentDetails: {
+    gap: m(8),
+  },
+  installmentDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(6),
+  },
+  installmentDetailLabel: {
+    fontSize: m(12),
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  installmentDetailValue: {
+    fontSize: m(12),
+    color: '#111827',
+    flex: 1,
+  },
+  pendingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF7ED',
+    padding: m(8),
+    borderRadius: m(6),
+    gap: m(6),
+    marginTop: m(4),
+  },
+  pendingBadgeText: {
+    fontSize: m(12),
+    color: '#F59E0B',
+    fontWeight: '500',
+  },
+  overdueBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEE2E2',
+    padding: m(8),
+    borderRadius: m(6),
+    gap: m(6),
+    marginTop: m(4),
+  },
+  overdueBadgeText: {
+    fontSize: m(12),
+    color: '#EF4444',
+    fontWeight: '500',
+  },
+  actionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF7ED',
+    borderRadius: m(12),
+    padding: m(16),
+    gap: m(12),
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  actionText: {
+    flex: 1,
+    fontSize: m(14),
+    color: '#92400E',
+    fontWeight: '500',
+  },
+  loadingContainer: {
+    padding: m(20),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: m(16),
+    marginBottom: m(12),
+  },
+  loadingText: {
+    marginTop: m(8),
+    fontSize: m(12),
+    color: '#6B7280',
+  },
+  emptyContainer: {
+    padding: m(20),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: m(16),
+    marginBottom: m(12),
+  },
+  emptyText: {
+    fontSize: m(14),
+    color: '#9CA3AF',
   },
 });

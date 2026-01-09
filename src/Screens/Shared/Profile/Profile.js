@@ -6,12 +6,14 @@ import {
   ScrollView,
   ActivityIndicator,
   Image,
+  Alert,
 } from 'react-native';
 import { useState } from 'react';
 import Icon from 'react-native-vector-icons/Feather';
 import { useNavigation } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
 import PromptBox from '../../PromptBox/Prompt';
+import { logout, removeUserDeviceToken } from '../../../Redux/Slices/authslice';
 import useFetchUserFromStorage from '../../../Redux/hooks/useFetchUserFromStorage';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
@@ -20,13 +22,45 @@ import Header from '../../../Components/Header';
 export default function Profile() {
   // Navigation & Redux
   const navigation = useNavigation();
+  const dispatch = useDispatch();
   const user = useSelector(state => state.auth.user);
   useFetchUserFromStorage();
 
   const [imageError, setImageError] = useState(false);
   const [isPromptVisible, setIsPromptVisible] = useState(false);
 
-  // Constants
+  // Event Handlers
+  const handleImageError = () => {
+    setImageError(true);
+  };
+
+  const navigateToProfileDetails = () => {
+    navigation.navigate('ProfileDetails', { profileData: user });
+  };
+
+  const handleLogout = () => {
+    setIsPromptVisible(true);
+  };
+
+  const handleConfirmLogout = async () => {
+    try {
+      await dispatch(removeUserDeviceToken({}));
+      await dispatch(logout());
+      setTimeout(() => {
+        setIsPromptVisible(false);
+        navigation.replace('Login');
+      }, 200);
+    } catch (error) {
+      // console.error('Error during logout process:', error);
+      Alert.alert('Not able to logout');
+    }
+  };
+
+  const handleCancelLogout = () => {
+    setIsPromptVisible(false);
+  };
+
+  // Constants (menu items configuration)
   const menuItems = [
     {
       icon: 'user',

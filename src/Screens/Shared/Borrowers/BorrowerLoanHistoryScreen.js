@@ -203,10 +203,10 @@ const LoanHistoryCard = ({ loan, onPress }) => {
                 {moment(loan.createdAt).format('DD MMM YYYY')}
               </Text>
             </View>
-            <TouchableOpacity style={styles.viewButton}>
+            <View style={styles.viewButton}>
               <Text style={styles.viewButtonText}>View Details</Text>
               <Icon name="arrow-forward" size={16} color={ORANGE_THEME.primary} />
-            </TouchableOpacity>
+            </View>
           </View>
         </View>
       </TouchableOpacity>
