@@ -697,17 +697,7 @@ export default function MakePayment() {
     }
     
     try {
-      // Check Android version - react-native-image-picker handles permissions automatically on Android 13+
-      // For older versions, we need to request manually
-      const androidVersion = Platform.Version;
-      
-      // For Android 13+ (API 33+), let the library handle permissions
-      if (androidVersion >= 33) {
-        return true;
-      }
-
-      // For older Android versions, check and request permission
-      const checkResult = await PermissionsAndroid.check(
+       const checkResult = await PermissionsAndroid.check(
         PermissionsAndroid.PERMISSIONS.CAMERA
       );
       
@@ -754,7 +744,8 @@ export default function MakePayment() {
           text: 'Camera',
           onPress: async () => {
             try {
-              if (Platform.OS === 'android' && Platform.Version < 33) {
+              // Request camera permission for Android (required since it's in manifest)
+              if (Platform.OS === 'android') {
                 const hasPermission = await requestCameraPermission();
                 if (!hasPermission) {
                   return;

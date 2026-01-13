@@ -23,7 +23,6 @@ export default function SplashScreen({navigation}) {
   useEffect(() => {
     // Animation sequence
     Animated.sequence([
-      // Logo fade in and scale
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -112,7 +111,6 @@ export default function SplashScreen({navigation}) {
             ],
           },
         ]}>
-        {/* <Text style={styles.appName}>LoanHub</Text> */}
       </Animated.View>
 
       {/* Tagline with Animation */}
@@ -127,7 +125,7 @@ export default function SplashScreen({navigation}) {
       </Animated.View>
 
       {/* Loading Indicator */}
-      <View style={styles.loadingContainer}>
+      <View>
         <View style={styles.loadingDots}>
           <View style={[styles.dot, styles.dot1]} />
           <View style={[styles.dot, styles.dot2]} />
@@ -178,19 +176,9 @@ const styles = StyleSheet.create({
   appNameContainer: {
     marginBottom: m(8),
   },
-  appName: {
-    fontSize: m(42),
-    fontWeight: '800',
-    color: '#FFFFFF',
-    textShadowColor: 'rgba(0, 0, 0, 0.2)',
-    textShadowOffset: {width: 1, height: 1},
-    textShadowRadius: 3,
-    letterSpacing: 1,
-  },
   taglineContainer: {
     marginBottom: m(30),
     marginTop: m(50),
-    // backgroundColor:'red'
   },
   tagline: {
     fontSize: m(20),
@@ -198,9 +186,6 @@ const styles = StyleSheet.create({
     fontWeight: '300',
     letterSpacing: 1.5,
     opacity: 0.9,
-  },
-  loadingContainer: {
-    // marginTop: m(30),
   },
   loadingDots: {
     flexDirection: 'row',

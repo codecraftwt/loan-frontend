@@ -18,6 +18,9 @@ import { getBorrowerLoansById } from '../../../Redux/Slices/borrowerLoanSlice';
 import { getPendingPayments } from '../../../Redux/Slices/lenderPaymentSlice';
 import Header from '../../../Components/Header';
 import BorrowerReputationCard from '../../../Components/BorrowerReputationCard';
+import SubscriptionRestriction from '../../../Components/SubscriptionRestriction';
+import { useSubscription } from '../../../hooks/useSubscription';
+import { getActivePlan } from '../../../Redux/Slices/planPurchaseSlice';
 import moment from 'moment';
 import { m } from 'walstar-rn-responsive';
 
@@ -401,6 +404,8 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
   const { pendingPayments } = useSelector(state => state.lenderPayments);
   const user = useSelector(state => state.auth.user);
   const isLender = user?.roleId === 1;
+  const { hasActivePlan } = useSubscription();
+  const { loading: planLoading } = useSelector(state => state.planPurchase);
 
   const [refreshing, setRefreshing] = useState(false);
   const [filters, setFilters] = useState({
@@ -536,6 +541,9 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
   }, [loadHistory]);
 
   const handleLoanCardPress = (loan) => {
+    if (isLender && !hasActivePlan) {
+      return;
+    }
     navigation.navigate('LoanDetailScreen', { loanId: loan._id, loanDetails: loan });
   };
 
@@ -578,7 +586,10 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
       />
 
       {/* Search and Filter Bar */}
-      <View style={styles.searchFilterContainer}>
+      <View style={[
+        styles.searchFilterContainer,
+        isLender && !hasActivePlan && { opacity: 0.5 }
+      ]}>
         <View style={styles.searchContainer}>
           <Icon name="search" size={22} color={ORANGE_THEME.primary} style={styles.searchIcon} />
           <TextInput
@@ -587,6 +598,7 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholderTextColor={ORANGE_THEME.textLight}
+            editable={isLender ? hasActivePlan : true}
           />
           {searchQuery ? (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
@@ -608,7 +620,10 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
 
       {/* Scrollable Content */}
       <ScrollView
-        style={styles.scrollContainer}
+        style={[
+          styles.scrollContainer,
+          isLender && !hasActivePlan && { opacity: 0.5 }
+        ]}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl 
@@ -616,9 +631,11 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
             onRefresh={onRefresh}
             colors={[ORANGE_THEME.primary]}
             tintColor={ORANGE_THEME.primary}
+            enabled={isLender ? hasActivePlan : true}
           />
         }
-        showsVerticalScrollIndicator={false}>
+        showsVerticalScrollIndicator={false}
+        scrollEnabled={isLender ? hasActivePlan : true}>
         
         {/* Pending Payments Badge for Lender */}
         {isLender && borrowerPendingPayments && borrowerPendingPayments.count > 0 && (
@@ -840,6 +857,14 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
           </>
         )}
       </ScrollView>
+
+      {/* Subscription Restriction Overlay */}
+      {isLender && !planLoading && !hasActivePlan && (
+        <SubscriptionRestriction 
+          message="Purchase a plan to view borrower loan history"
+          asOverlay={true}
+        />
+      )}
 
       {/* Filter Modal */}
       <FilterModal

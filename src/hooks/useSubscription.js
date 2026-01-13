@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
-  getAdminPlansForLender, // NEW - Fetch admin plans
+  getAdminPlansForLender,
   selectPlan,
 } from '../Redux/Slices/subscriptionSlice';
 import {
@@ -194,7 +194,8 @@ export const useSubscription = () => {
     plans,
     selectedPlan,
     activePlan,
-    hasActivePlan: hasActivePlan && isActive && remainingDays > 0,
+    // Only return true if plan exists, is active, and has remaining days (not expired)
+    hasActivePlan: hasActivePlan === true && isActive === true && remainingDays > 0,
     purchaseDate,
     expiryDate,
     remainingDays,

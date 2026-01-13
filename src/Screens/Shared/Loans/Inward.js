@@ -18,6 +18,9 @@ import {
 } from '../../../Redux/Slices/loanSlice';
 import { getPendingPayments } from '../../../Redux/Slices/lenderPaymentSlice';
 import FraudStatusBadge from '../../../Components/FraudStatusBadge';
+import SubscriptionRestriction from '../../../Components/SubscriptionRestriction';
+import { useSubscription } from '../../../hooks/useSubscription';
+import { getActivePlan } from '../../../Redux/Slices/planPurchaseSlice';
 import { useFocusEffect, useRoute } from '@react-navigation/native';
 import moment from 'moment';
 import LoaderSkeleton from '../../../Components/LoaderSkeleton';
@@ -34,6 +37,8 @@ export default function Inward({ navigation }) {
   );
   const { pendingPayments } = useSelector(state => state.lenderPayments);
   const isLender = user?.roleId === 1;
+  const { hasActivePlan } = useSubscription();
+  const { loading: planLoading } = useSelector(state => state.planPurchase);
   
   // Get highlightLoanId from route params
   const highlightLoanId = route.params?.highlightLoanId;
@@ -179,8 +184,9 @@ export default function Inward({ navigation }) {
       }
       dispatch(getLoanByLender(filters));
       
-      // Fetch pending payments for lender
+      // Fetch active plan and pending payments for lender
       if (isLender) {
+        dispatch(getActivePlan());
         dispatch(getPendingPayments({ page: 1, limit: 100 }));
       }
     }, [dispatch, debouncedSearch, isLender]),
@@ -293,7 +299,10 @@ export default function Inward({ navigation }) {
       <Header title="Given Loans" />
 
       {/* Search and Filter Section */}
-      <View style={styles.searchSection}>
+      <View style={[
+        styles.searchSection,
+        isLender && !hasActivePlan && { opacity: 0.5 }
+      ]}>
         <View style={styles.searchContainer}>
           <Icon name="search" size={20} color="#6B7280" style={styles.searchIcon} />
           <TextInput
@@ -302,6 +311,7 @@ export default function Inward({ navigation }) {
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholderTextColor="#9CA3AF"
+            editable={isLender ? hasActivePlan : true}
           />
           <TouchableOpacity
             style={styles.filterButton}
@@ -477,12 +487,20 @@ export default function Inward({ navigation }) {
       ) : (
         <ScrollView
           ref={scrollViewRef}
-          style={styles.loanListContainer}
+          style={[
+            styles.loanListContainer,
+            isLender && !hasActivePlan && { opacity: 0.5 }
+          ]}
           contentContainerStyle={styles.scrollContent}
           refreshControl={
-            <RefreshControl refreshing={loading} onRefresh={onRefresh} />
+            <RefreshControl 
+              refreshing={loading} 
+              onRefresh={onRefresh}
+              enabled={isLender ? hasActivePlan : true}
+            />
           }
-          showsVerticalScrollIndicator={false}>
+          showsVerticalScrollIndicator={false}
+          scrollEnabled={isLender ? hasActivePlan : true}>
               {lenderLoans?.length === 0 ? (
             <View style={styles.emptyState}>
               <Icon 
@@ -731,6 +749,14 @@ export default function Inward({ navigation }) {
             })
           )}
         </ScrollView>
+      )}
+
+      {/* Subscription Restriction Overlay */}
+      {isLender && !planLoading && !hasActivePlan && (
+        <SubscriptionRestriction 
+          message="Purchase a plan to view and search your loans"
+          asOverlay={true}
+        />
       )}
     </View>
   );

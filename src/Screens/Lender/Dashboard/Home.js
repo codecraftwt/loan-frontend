@@ -12,11 +12,12 @@ import {
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
-import Ionicons from 'react-native-vector-icons/Ionicons'; 
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import { getLenderStatistics } from '../../../Redux/Slices/loanSlice';
 import { getPendingPayments } from '../../../Redux/Slices/lenderPaymentSlice';
 import { getLenderRecentActivities } from '../../../Redux/Slices/lenderActivitiesSlice';
+import { getActivePlan } from '../../../Redux/Slices/planPurchaseSlice';
 import { useDispatch, useSelector } from 'react-redux';
 import useFetchUserFromStorage from '../../../Redux/hooks/useFetchUserFromStorage';
 import { m } from 'walstar-rn-responsive';
@@ -42,7 +43,7 @@ export default function Home() {
   const { activities: recentActivities, loading: activitiesLoading } = useSelector(
     state => state.lenderActivities,
   );
-  const { pendingPayments} = useSelector(state => state.lenderPayments);
+  const { pendingPayments } = useSelector(state => state.lenderPayments);
 
   // Unused: Calculate total pending payments (commented out as not used)
   // useEffect(() => {
@@ -93,6 +94,8 @@ export default function Home() {
       dispatch(getLenderRecentActivities({ limit: 5 }));
       // Fetch pending payments for lender
       dispatch(getPendingPayments({ page: 1, limit: 10 }));
+      // Fetch subscription status for lender
+      dispatch(getActivePlan());
 
       // Reset animations
       fadeAnim.setValue(0);
@@ -129,6 +132,7 @@ export default function Home() {
       dispatch(getLenderStatistics()),
       dispatch(getLenderRecentActivities({ limit: 5 })),
       dispatch(getPendingPayments({ page: 1, limit: 10 })),
+      dispatch(getActivePlan()),
     ]);
     setRefreshing(false);
   };
@@ -139,9 +143,9 @@ export default function Home() {
   );
 
   // Calculate remaining loans (pending + overdue)
-  const remainingLoans = (lenderStatistics?.counts?.pendingLoans || 0) + 
-                         (lenderStatistics?.counts?.overdueLoans || 0);
-  
+  const remainingLoans = (lenderStatistics?.counts?.pendingLoans || 0) +
+    (lenderStatistics?.counts?.overdueLoans || 0);
+
   // Calculate remaining amount (pending + overdue)
   // const remainingAmount = (lenderStatistics?.totalPendingAmount || 0) + 
   //                         (lenderStatistics?.totalOverdueAmount || 0);
@@ -149,11 +153,11 @@ export default function Home() {
   // Helper function to map activity type to UI properties
   const getActivityProperties = (activity) => {
     const activityType = activity.type || '';
-    
+
     let icon = 'clock';
     let color = '#34495e';
     let gradient = ['#2c3e50', '#34495e'];
-    
+
     switch (activityType) {
       case 'payment_received':
         icon = 'dollar-sign';
@@ -190,7 +194,7 @@ export default function Home() {
         color = '#34495e';
         gradient = ['#2c3e50', '#34495e'];
     }
-    
+
     return { icon, color, gradient };
   };
 
@@ -242,91 +246,91 @@ export default function Home() {
           if (!pendingPayments || !Array.isArray(pendingPayments) || pendingPayments.length === 0) {
             return false;
           }
-          
-          const hasPendingPayments = pendingPayments.some(loan => 
-            loan.pendingPayments && 
-            Array.isArray(loan.pendingPayments) && 
+
+          const hasPendingPayments = pendingPayments.some(loan =>
+            loan.pendingPayments &&
+            Array.isArray(loan.pendingPayments) &&
             loan.pendingPayments.length > 0
           );
-          
+
           if (!hasPendingPayments) return false;
-          
-          const totalPendingCount = pendingPayments.reduce((total, loan) => 
+
+          const totalPendingCount = pendingPayments.reduce((total, loan) =>
             total + (Array.isArray(loan.pendingPayments) ? loan.pendingPayments.length : 0), 0
           );
-          
+
           return totalPendingCount > 0;
         })() && (
-          <Animated.View
-            style={[
-              styles.pendingPaymentCard,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateY: slideUpAnim }],
-              },
-            ]}>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('PendingPayments')}
-              activeOpacity={0.8}>
-              <LinearGradient
-                colors={['#F59E0B', '#F97316']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.pendingPaymentGradient}>
-                <View style={styles.pendingPaymentContent}>
-                  <View style={styles.pendingPaymentIcon}>
-                    <Ionicons name="notifications" size={24} color="#FFFFFF" />
-                    {(() => {
-                      const totalPending = pendingPayments.reduce((total, loan) => 
-                        total + (Array.isArray(loan.pendingPayments) ? loan.pendingPayments.length : 0), 0
-                      );
-                      return totalPending > 0;
-                    })() && (
-                      <View style={styles.badge}>
-                        <Text style={styles.badgeText}>
-                          {pendingPayments.reduce((total, loan) => 
-                            total + (Array.isArray(loan.pendingPayments) ? loan.pendingPayments.length : 0), 0
-                          )}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                  <View style={styles.pendingPaymentText}>
-                    <Text style={styles.pendingPaymentTitle}>
-                      Pending Payments
-                    </Text>
-                    <Text style={styles.pendingPaymentSubtitle} numberOfLines={2}>
+            <Animated.View
+              style={[
+                styles.pendingPaymentCard,
+                {
+                  opacity: fadeAnim,
+                  transform: [{ translateY: slideUpAnim }],
+                },
+              ]}>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('PendingPayments')}
+                activeOpacity={0.8}>
+                <LinearGradient
+                  colors={['#F59E0B', '#F97316']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.pendingPaymentGradient}>
+                  <View style={styles.pendingPaymentContent}>
+                    <View style={styles.pendingPaymentIcon}>
+                      <Ionicons name="notifications" size={24} color="#FFFFFF" />
                       {(() => {
-                        const totalPending = pendingPayments.reduce((total, loan) => 
+                        const totalPending = pendingPayments.reduce((total, loan) =>
                           total + (Array.isArray(loan.pendingPayments) ? loan.pendingPayments.length : 0), 0
                         );
-                        if (totalPending === 0) return '';
-                        const firstLoan = pendingPayments.find(loan => 
-                          Array.isArray(loan.pendingPayments) && loan.pendingPayments.length > 0
-                        );
-                        if (firstLoan && firstLoan.pendingPayments && firstLoan.pendingPayments.length > 0) {
-                          const firstPayment = firstLoan.pendingPayments[0];
-                          const borrowerName = firstLoan.borrowerName || firstLoan.loanName || 'Borrower';
-                          const amount = typeof firstPayment.amount === 'number' 
-                            ? firstPayment.amount 
-                            : parseFloat(firstPayment.amount) || 0;
-                          const formattedAmount = `₹${amount.toLocaleString('en-IN')}`;
-                          if (totalPending === 1) {
-                            return `${borrowerName} paid ${formattedAmount}. Please check`;
-                          } else {
-                            return `${borrowerName} paid ${formattedAmount} and ${totalPending - 1} more payment${totalPending - 1 !== 1 ? 's' : ''} awaiting review`;
+                        return totalPending > 0;
+                      })() && (
+                          <View style={styles.badge}>
+                            <Text style={styles.badgeText}>
+                              {pendingPayments.reduce((total, loan) =>
+                                total + (Array.isArray(loan.pendingPayments) ? loan.pendingPayments.length : 0), 0
+                              )}
+                            </Text>
+                          </View>
+                        )}
+                    </View>
+                    <View style={styles.pendingPaymentText}>
+                      <Text style={styles.pendingPaymentTitle}>
+                        Pending Payments
+                      </Text>
+                      <Text style={styles.pendingPaymentSubtitle} numberOfLines={2}>
+                        {(() => {
+                          const totalPending = pendingPayments.reduce((total, loan) =>
+                            total + (Array.isArray(loan.pendingPayments) ? loan.pendingPayments.length : 0), 0
+                          );
+                          if (totalPending === 0) return '';
+                          const firstLoan = pendingPayments.find(loan =>
+                            Array.isArray(loan.pendingPayments) && loan.pendingPayments.length > 0
+                          );
+                          if (firstLoan && firstLoan.pendingPayments && firstLoan.pendingPayments.length > 0) {
+                            const firstPayment = firstLoan.pendingPayments[0];
+                            const borrowerName = firstLoan.borrowerName || firstLoan.loanName || 'Borrower';
+                            const amount = typeof firstPayment.amount === 'number'
+                              ? firstPayment.amount
+                              : parseFloat(firstPayment.amount) || 0;
+                            const formattedAmount = `₹${amount.toLocaleString('en-IN')}`;
+                            if (totalPending === 1) {
+                              return `${borrowerName} paid ${formattedAmount}. Please check`;
+                            } else {
+                              return `${borrowerName} paid ${formattedAmount} and ${totalPending - 1} more payment${totalPending - 1 !== 1 ? 's' : ''} awaiting review`;
+                            }
                           }
-                        }
-                        return `${totalPending} payment${totalPending !== 1 ? 's' : ''} awaiting your review`;
-                      })()}
-                    </Text>
+                          return `${totalPending} payment${totalPending !== 1 ? 's' : ''} awaiting your review`;
+                        })()}
+                      </Text>
+                    </View>
+                    <Icon name="chevron-right" size={24} color="#FFFFFF" />
                   </View>
-                  <Icon name="chevron-right" size={24} color="#FFFFFF" />
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
-          </Animated.View>
-        )}
+                </LinearGradient>
+              </TouchableOpacity>
+            </Animated.View>
+          )}
 
         {/* Premium CTA with Simplified Animation */}
         <Animated.View
@@ -438,20 +442,15 @@ export default function Home() {
                   </View>
 
                   {/* Icon in Bottom Right Corner */}
-                  <Animated.View
-                    style={[
-                      styles.actionIconWrapper,
-                      {
-                        transform: [{ scale: scaleAnim }]
-                      }
-                    ]}>
+                  <View
+                    style={styles.actionIconWrapper}>
                     <LinearGradient
                       colors={action.gradient}
                       style={styles.actionIcon}
                     >
                       <Icon name={action.icon} size={19} color="#fff" />
                     </LinearGradient>
-                  </Animated.View>
+                  </View>
                 </View>
               </TouchableOpacity>
             ))}
@@ -636,13 +635,13 @@ export default function Home() {
             (activity, index) => {
               const activityProps = getActivityProperties(activity);
               // Ensure unique key by combining multiple identifiers with index
-              const uniqueKey = activity._id 
-                ? `activity-${activity._id}-${index}` 
-                : activity.loanId 
-                ? `activity-${activity.loanId}-${index}` 
-                : activity.timestamp 
-                ? `activity-${activity.timestamp}-${index}` 
-                : `activity-${index}`;
+              const uniqueKey = activity._id
+                ? `activity-${activity._id}-${index}`
+                : activity.loanId
+                  ? `activity-${activity.loanId}-${index}`
+                  : activity.timestamp
+                    ? `activity-${activity.timestamp}-${index}`
+                    : `activity-${index}`;
               return (
                 <TouchableOpacity
                   key={uniqueKey}
@@ -984,11 +983,6 @@ const styles = StyleSheet.create({
     borderRadius: m(16),
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
   },
   // Progress Card
   progressCard: {

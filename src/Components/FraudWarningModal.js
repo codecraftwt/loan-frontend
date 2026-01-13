@@ -176,7 +176,7 @@ const FraudWarningModal = ({ visible, fraudData, onProceed, onCancel, onViewHist
             )}
             
             <TouchableOpacity
-              style={[styles.button, styles.proceedButton, { backgroundColor: getBorderColor() }]}
+              style={[styles.button,{ backgroundColor: getBorderColor() }]}
               onPress={onProceed}
               activeOpacity={0.8}>
               <Text style={styles.proceedButtonText}>Proceed</Text>
@@ -320,9 +320,6 @@ const styles = StyleSheet.create({
     fontSize: m(14),
     fontWeight: '600',
     color: '#3B82F6',
-  },
-  proceedButton: {
-    // Color set dynamically
   },
   proceedButtonText: {
     fontSize: m(14),

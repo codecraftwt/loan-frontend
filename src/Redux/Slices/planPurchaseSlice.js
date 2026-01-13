@@ -151,18 +151,31 @@ const planPurchaseSlice = createSlice({
       })
       .addCase(getActivePlan.fulfilled, (state, action) => {
         state.loading = false;
-        state.hasActivePlan = action.payload.hasActivePlan;
-        state.activePlan = action.payload.plan;
-        state.purchaseDate = action.payload.purchaseDate;
-        state.expiryDate = action.payload.expiryDate;
-        state.remainingDays = action.payload.remainingDays;
-        state.isActive = action.payload.isActive;
+        // Extract values from API response
+        const apiHasActivePlan = action.payload.hasActivePlan === true;
+        const apiIsActive = action.payload.isActive === true;
+        const apiRemainingDays = typeof action.payload.remainingDays === 'number' 
+          ? action.payload.remainingDays 
+          : 0;
+        
+        // Store raw values from API
+        state.hasActivePlan = apiHasActivePlan;
+        state.activePlan = action.payload.plan || null;
+        state.purchaseDate = action.payload.purchaseDate || null;
+        state.expiryDate = action.payload.expiryDate || null;
+        state.remainingDays = apiRemainingDays;
+        state.isActive = apiIsActive;
       })
       .addCase(getActivePlan.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+        // When API fails or returns error, assume no active plan
         state.hasActivePlan = false;
         state.activePlan = null;
+        state.purchaseDate = null;
+        state.expiryDate = null;
+        state.remainingDays = 0;
+        state.isActive = false;
       })
 
       // Create plan order

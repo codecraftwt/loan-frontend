@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   TextInput,
@@ -31,6 +31,8 @@ import Header from '../../../Components/Header';
 import LoanOTPVerification from '../../../Components/LoanOTPVerification';
 import FraudStatusBadge from '../../../Components/FraudStatusBadge';
 import FraudWarningModal from '../../../Components/FraudWarningModal';
+import SubscriptionRestriction from '../../../Components/SubscriptionRestriction';
+import { useSubscription } from '../../../hooks/useSubscription';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { FontFamily, FontSizes } from '../../../constants';
@@ -42,6 +44,9 @@ export default function AddDetails({ route, navigation }) {
   );
   const user = useSelector(state => state.auth.user);
   const { loanDetails, borrowerData } = route.params || {};
+  const { hasActivePlan } = useSubscription();
+  const isLender = user?.roleId === 1;
+  const { loading: planLoading } = useSelector(state => state.planPurchase);
 
   // Auto-fill from borrowerData if available
   const getInitialFormData = () => {
@@ -601,11 +606,15 @@ export default function AddDetails({ route, navigation }) {
       />
 
       <ScrollView
-        style={styles.scrollViewContainer}
+        style={[
+          styles.scrollViewContainer,
+          isLender && !hasActivePlan && { opacity: 0.5 }
+        ]}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
-        onScrollBeginDrag={Keyboard.dismiss}>
+        onScrollBeginDrag={Keyboard.dismiss}
+        scrollEnabled={isLender ? hasActivePlan : true}>
 
         <View style={styles.headerCard}>
             <View style={styles.addLoanCont}>
@@ -997,6 +1006,14 @@ export default function AddDetails({ route, navigation }) {
         onCancel={handleFraudWarningCancel}
         onViewHistory={handleFraudWarningViewHistory}
       />
+      
+      {/* Subscription Restriction Overlay */}
+      {isLender && !planLoading && !hasActivePlan && (
+        <SubscriptionRestriction 
+          message="Purchase a plan to add new loans"
+          asOverlay={true}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }

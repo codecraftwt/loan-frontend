@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -440,51 +440,51 @@ const styles = StyleSheet.create({
   },
 
   // Tips Section
-  tipsSection: {
-    backgroundColor: '#FFFBEB',
-    borderRadius: m(16),
-    padding: m(20),
-    marginBottom: m(32),
-    borderWidth: 1,
-    borderColor: '#FEF3C7',
-  },
-  tipsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(8),
-    marginBottom: m(16),
-  },
-  tipsTitle: {
-    fontSize: m(18),
-    fontWeight: '600',
-    color: '#92400E',
-  },
-  tipItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: m(12),
-  },
-  tipBullet: {
-    width: m(24),
-    height: m(24),
-    borderRadius: m(12),
-    backgroundColor: '#F59E0B',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: m(12),
-    marginTop: m(2),
-  },
-  tipNumber: {
-    fontSize: m(12),
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  tipText: {
-    flex: 1,
-    fontSize: m(14),
-    color: '#92400E',
-    lineHeight: m(20),
-  },
+  // tipsSection: {
+  //   backgroundColor: '#FFFBEB',
+  //   borderRadius: m(16),
+  //   padding: m(20),
+  //   marginBottom: m(32),
+  //   borderWidth: 1,
+  //   borderColor: '#FEF3C7',
+  // },
+  // tipsHeader: {
+  //   flexDirection: 'row',
+  //   alignItems: 'center',
+  //   gap: m(8),
+  //   marginBottom: m(16),
+  // },
+  // tipsTitle: {
+  //   fontSize: m(18),
+  //   fontWeight: '600',
+  //   color: '#92400E',
+  // },
+  // tipItem: {
+  //   flexDirection: 'row',
+  //   alignItems: 'flex-start',
+  //   marginBottom: m(12),
+  // },
+  // tipBullet: {
+  //   width: m(24),
+  //   height: m(24),
+  //   borderRadius: m(12),
+  //   backgroundColor: '#F59E0B',
+  //   justifyContent: 'center',
+  //   alignItems: 'center',
+  //   marginRight: m(12),
+  //   marginTop: m(2),
+  // },
+  // tipNumber: {
+  //   fontSize: m(12),
+  //   fontWeight: '600',
+  //   color: '#FFFFFF',
+  // },
+  // tipText: {
+  //   flex: 1,
+  //   fontSize: m(14),
+  //   color: '#92400E',
+  //   lineHeight: m(20),
+  // },
 
   // Footer
   footer: {

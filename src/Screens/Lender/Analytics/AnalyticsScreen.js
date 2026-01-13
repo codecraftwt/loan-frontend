@@ -9,6 +9,9 @@ import {
 import { useDispatch, useSelector } from 'react-redux';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
+import SubscriptionRestriction from '../../../Components/SubscriptionRestriction';
+import { useSubscription } from '../../../hooks/useSubscription';
+import { getActivePlan } from '../../../Redux/Slices/planPurchaseSlice';
 import { getLenderStatistics } from '../../../Redux/Slices/loanSlice';
 import DonutChart from '../../../Components/DonutChart';
 import { FontFamily, FontSizes } from '../../../constants';
@@ -41,6 +44,10 @@ const AnalyticsRow = ({ label, amount, percentage, color }) => {
 export default function AnalyticsScreen() {
   const dispatch = useDispatch();
   const { lenderStatistics } = useSelector(state => state.loans);
+  const user = useSelector(state => state.auth.user);
+  const isLender = user?.roleId === 1;
+  const { hasActivePlan } = useSubscription();
+  const { loading: planLoading } = useSelector(state => state.planPurchase);
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -111,10 +118,18 @@ export default function AnalyticsScreen() {
       <Header title="Analytics" showBackButton />
 
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          isLender && !hasActivePlan && { opacity: 0.5 }
+        ]}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }>
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            enabled={isLender ? hasActivePlan : true}
+          />
+        }
+        scrollEnabled={isLender ? hasActivePlan : true}>
         <Text style={styles.screenTitle}>Loan Statistics</Text>
 
         {isLoading ? (
@@ -210,6 +225,14 @@ export default function AnalyticsScreen() {
           </>
         )}
       </ScrollView>
+
+      {/* Subscription Restriction Overlay */}
+      {isLender && !planLoading && !hasActivePlan && (
+        <SubscriptionRestriction 
+          message="Purchase a plan to view analytics"
+          asOverlay={true}
+        />
+      )}
     </View>
   );
 }

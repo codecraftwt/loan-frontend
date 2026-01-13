@@ -22,6 +22,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import FraudStatusBadge from '../../../Components/FraudStatusBadge';
 import BorrowerReputationCard from '../../../Components/BorrowerReputationCard';
 import LoaderSkeleton from '../../../Components/LoaderSkeleton';
+import SubscriptionRestriction from '../../../Components/SubscriptionRestriction';
+import { useSubscription } from '../../../hooks/useSubscription';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
 
@@ -30,6 +32,10 @@ const Outward = ({ navigation, route }) => {
   const dispatch = useDispatch();
   const { pendingPayments } = useSelector(state => state.lenderPayments);
   const { borrowers, loading: borrowersLoading,} = useSelector(state => state.borrowers);
+  const user = useSelector(state => state.auth.user);
+  const isLender = user?.roleId === 1;
+  const { hasActivePlan } = useSubscription();
+  const { loading: planLoading } = useSelector(state => state.planPurchase);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -157,10 +163,9 @@ const Outward = ({ navigation, route }) => {
         dispatch(searchBorrowers({ search: debouncedSearch }));
       } else {
         try {
-          // Assuming dispatch(getAllBorrowers()) returns a promise or handles data fetching asynchronously
           const result = await dispatch(getAllBorrowers());
         } catch (error) {
-          console.error("Error fetching borrowers:", error); // In case there is an error fetching data
+          console.error("Error fetching borrowers:", error);
         }
       }
     };
@@ -286,6 +291,9 @@ const Outward = ({ navigation, route }) => {
   }, [dispatch, debouncedSearch]);
 
   const handleBorrowerCardPress = (borrower) => {
+    if (isLender && !hasActivePlan) {
+      return;
+    }
     setSelectedBorrower(borrower);
     setBorrowerActionModalVisible(true);
   };
@@ -350,13 +358,17 @@ const Outward = ({ navigation, route }) => {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <Header title="Borrowers" />
+    <View style={styles.container}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <Header title="Borrowers" />
 
       {/* Search and Filter Section */}
-      <View style={styles.searchSection}>
+      <View style={[
+        styles.searchSection,
+        isLender && !hasActivePlan && styles.disabledSection
+      ]}>
         <View style={styles.searchWrapper}>
           <View style={styles.searchContainer}>
             <Icon name="search" size={22} color="#ff6700" style={styles.searchIcon} />
@@ -366,19 +378,25 @@ const Outward = ({ navigation, route }) => {
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholderTextColor="#9CA3AF"
+              editable={isLender ? hasActivePlan : true}
             />
             {searchQuery.length > 0 && (
               <TouchableOpacity
                 onPress={() => setSearchQuery('')}
-                style={styles.clearButton}>
+                style={styles.clearButton}
+                disabled={isLender && !hasActivePlan}>
                 <Icon name="close" size={18} color="#6B7280" />
               </TouchableOpacity>
             )}
           </View>
           <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => navigation.navigate('AddDetails')}
-            activeOpacity={0.8}>
+            style={[styles.addButton, (!isLender || !hasActivePlan) && styles.disabledButton]}
+            onPress={() => {
+              if (isLender && !hasActivePlan) return;
+              navigation.navigate('AddDetails');
+            }}
+            activeOpacity={0.8}
+            disabled={isLender && !hasActivePlan}>
             <Icon name="add" size={24} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
@@ -455,12 +473,20 @@ const Outward = ({ navigation, route }) => {
       ) : (
         <ScrollView
           ref={scrollViewRef}
-          style={styles.loanListContainer}
+          style={[
+            styles.loanListContainer,
+            isLender && !hasActivePlan && styles.disabledSection
+          ]}
           contentContainerStyle={styles.scrollContent}
           refreshControl={
-            <RefreshControl refreshing={loading} onRefresh={onRefresh} />
+            <RefreshControl 
+              refreshing={loading} 
+              onRefresh={onRefresh}
+              enabled={isLender ? hasActivePlan : true}
+            />
           }
-          showsVerticalScrollIndicator={false}>
+          showsVerticalScrollIndicator={false}
+          scrollEnabled={isLender ? hasActivePlan : true}>
           {borrowers?.length === 0 ? (
             <View style={styles.emptyState}>
               <View style={styles.emptyIconContainer}>
@@ -498,7 +524,8 @@ const Outward = ({ navigation, route }) => {
                 <TouchableOpacity
                   key={borrower._id || index}
                   onPress={() => handleBorrowerCardPress(borrower)}
-                  activeOpacity={0.9}>
+                  activeOpacity={isLender && !hasActivePlan ? 1 : 0.9}
+                  disabled={isLender && !hasActivePlan}>
                   <View style={[
                     styles.borrowerCard,
                     isHighlighted && styles.highlightedBorrowerCard,
@@ -701,12 +728,24 @@ const Outward = ({ navigation, route }) => {
           )}
         </ScrollView>
       )}
-    </KeyboardAvoidingView>
+      
+      </KeyboardAvoidingView>
+      
+      {/* Subscription Restriction Overlay */}
+      {isLender && !planLoading && !hasActivePlan && (
+        <SubscriptionRestriction 
+          message="Purchase a plan to view and search borrowers"
+          asOverlay={true}
+        />
+      )}
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    position: 'relative',
     flex: 1,
     backgroundColor: '#F9FAFB',
   },
@@ -1237,6 +1276,12 @@ const styles = StyleSheet.create({
     fontSize: m(13),
     color: '#6B7280',
     fontWeight: '400',
+  },
+  disabledButton: {
+    opacity: 0.5,
+  },
+  disabledSection: {
+    opacity: 0.5,
   },
 });
 

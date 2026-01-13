@@ -526,7 +526,7 @@ export default function Register({ navigation }) {
           />
           <TextInput
             style={styles.input}
-            placeholder="Enter 12 digit Aadhar number (numbers only)"
+            placeholder="Enter 12 digit Aadhar number"
             keyboardType="numeric"
             placeholderTextColor="#999"
             value={aadharNumber}
@@ -606,7 +606,7 @@ export default function Register({ navigation }) {
           />
           <TextInput
             style={styles.input}
-            placeholder="Enter 10 digit PAN (e.g., ABCDE1234F)"
+            placeholder="Enter 10 digit PAN"
             placeholderTextColor="#999"
             value={panCardNumber}
             onChangeText={handlePanCardChange}

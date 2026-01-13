@@ -14,6 +14,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import { useDispatch, useSelector } from 'react-redux';
 import { login } from '../../Redux/Slices/authslice';
+import { getActivePlan } from '../../Redux/Slices/planPurchaseSlice';
 import Toast from 'react-native-toast-message';
 import { m } from 'walstar-rn-responsive';
 import { FontFamily, FontSizes } from '../../constants';
@@ -71,7 +72,11 @@ export default function LoginScreen({ navigation }) {
 
     dispatch(login({ emailOrMobile: mobileNumber, password }))
       .unwrap()
-      .then(() => {
+      .then((userData) => {
+        // Fetch subscription status for lenders (roleId === 1)
+        if (userData?.roleId === 1) {
+          dispatch(getActivePlan());
+        }
         navigation.navigate('BottomNavigation');
       })
       .catch(error => {
