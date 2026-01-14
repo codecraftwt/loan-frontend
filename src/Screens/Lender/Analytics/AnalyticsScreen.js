@@ -74,38 +74,76 @@ export default function AnalyticsScreen() {
 
   // Prepare chart data from statistics
   const chartData = React.useMemo(() => {
-    if (!lenderStatistics?.percentages) {
+    if (!lenderStatistics || !lenderStatistics.totalLoanAmount || lenderStatistics.totalLoanAmount <= 0) {
       return [];
     }
 
+    const totalAmount = lenderStatistics.totalLoanAmount || 0;
     const { percentages } = lenderStatistics;
     const data = [];
 
+    // Calculate percentages from amounts if percentages are missing or zero
+    const paidAmount = lenderStatistics.totalPaidAmount || 0;
+    const pendingAmount = lenderStatistics.totalPendingAmount || 0;
+    const overdueAmount = lenderStatistics.totalOverdueAmount || 0;
+
+    // Use percentages if available and > 0, otherwise calculate from amounts
+    const paidPercentage = (percentages?.paidPercentage > 0) 
+      ? percentages.paidPercentage 
+      : (totalAmount > 0 ? (paidAmount / totalAmount) * 100 : 0);
+    
+    const pendingPercentage = (percentages?.pendingPercentage > 0)
+      ? percentages.pendingPercentage
+      : (totalAmount > 0 ? (pendingAmount / totalAmount) * 100 : 0);
+    
+    const overduePercentage = (percentages?.overduePercentage > 0)
+      ? percentages.overduePercentage
+      : (totalAmount > 0 ? (overdueAmount / totalAmount) * 100 : 0);
+
     // Add Paid
-    if (percentages.paidPercentage > 0) {
+    if (paidPercentage > 0) {
       data.push({
         label: 'Paid',
-        value: percentages.paidPercentage,
+        value: paidPercentage,
         color: '#22c55e',
       });
     }
 
     // Add Overdue
-    if (percentages.overduePercentage > 0) {
+    if (overduePercentage > 0) {
       data.push({
         label: 'Overdue',
-        value: percentages.overduePercentage,
+        value: overduePercentage,
         color: '#ef4444',
       });
     }
 
     // Add Pending
-    if (percentages.pendingPercentage > 0) {
+    if (pendingPercentage > 0) {
       data.push({
         label: 'Pending',
-        value: percentages.pendingPercentage,
+        value: pendingPercentage,
         color: '#f59e0b',
       });
+    }
+
+    // Fallback: If no slices but we have total loan amount, show Total Loan Amount or Pending
+    if (data.length === 0 && totalAmount > 0) {
+      // If there's pending amount, show that, otherwise show total
+      if (pendingAmount > 0) {
+        const pendingPercentage = (pendingAmount / totalAmount) * 100;
+        data.push({
+          label: 'Pending',
+          value: pendingPercentage,
+          color: '#f59e0b',
+        });
+      } else {
+        data.push({
+          label: 'Total Loan Amount',
+          value: 100,
+          color: '#6366f1',
+        });
+      }
     }
 
     return data;

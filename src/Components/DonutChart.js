@@ -6,6 +6,30 @@ import {m} from 'walstar-rn-responsive';
 const toRadians = angle => (Math.PI / 180) * angle;
 
 const createSlicePath = (cx, cy, radius, startAngle, endAngle) => {
+  // Handle full circle (360 degrees / 2π radians)
+  const angleDiff = endAngle - startAngle;
+  const isFullCircle = Math.abs(angleDiff - Math.PI * 2) < 0.001 || Math.abs(angleDiff) >= Math.PI * 2;
+  
+  if (isFullCircle) {
+    // For full circle, create two arcs
+    const midAngle = startAngle + Math.PI;
+    const mid = {
+      x: cx + radius * Math.cos(midAngle),
+      y: cy + radius * Math.sin(midAngle),
+    };
+    const start = {
+      x: cx + radius * Math.cos(startAngle),
+      y: cy + radius * Math.sin(startAngle),
+    };
+    return [
+      `M ${cx} ${cy}`,
+      `L ${start.x} ${start.y}`,
+      `A ${radius} ${radius} 0 1 1 ${mid.x} ${mid.y}`,
+      `A ${radius} ${radius} 0 1 1 ${start.x} ${start.y}`,
+      'Z',
+    ].join(' ');
+  }
+
   const start = {
     x: cx + radius * Math.cos(startAngle),
     y: cy + radius * Math.sin(startAngle),
@@ -15,7 +39,7 @@ const createSlicePath = (cx, cy, radius, startAngle, endAngle) => {
     y: cy + radius * Math.sin(endAngle),
   };
 
-  const largeArcFlag = endAngle - startAngle <= Math.PI ? 0 : 1;
+  const largeArcFlag = angleDiff <= Math.PI ? 0 : 1;
 
   return [
     `M ${cx} ${cy}`,
@@ -43,7 +67,7 @@ const DonutChart = ({
   const center = {x: radius, y: radius};
 
   const slices = useMemo(() => {
-    if (!total) {
+    if (!total || !data || data.length === 0) {
       return [];
     }
 
@@ -69,7 +93,7 @@ const DonutChart = ({
         startAngle = endAngle;
         return slice;
       });
-  }, [data, radius, total]);
+  }, [data, radius, total, center]);
 
   if (!total) {
     const emptyOuterRadius = radius;
@@ -77,13 +101,13 @@ const DonutChart = ({
 
     return (
       <View style={styles.emptyContainer}>
-        <Svg width={size} height={size}>
+        <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
           {/* Outer solid circle */}
           <Circle
             cx={center.x}
             cy={center.y}
             r={emptyOuterRadius}
-            fill="#000000"
+            fill="#e5e7eb"
           />
           {/* Inner cut-out to create donut */}
           <Circle
@@ -95,10 +119,11 @@ const DonutChart = ({
           <SvgText
             x={center.x}
             y={center.y}
-            fill="#000000"
+            fill="#6b7280"
             fontSize={m(10)}
             fontFamily="Poppins-Regular"
-            textAnchor="middle">
+            textAnchor="middle"
+            alignmentBaseline="middle">
             No data
           </SvgText>
         </Svg>
@@ -108,17 +133,27 @@ const DonutChart = ({
 
   return (
     <View style={styles.container}>
-      <Svg width={size} height={size}>
+      <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         <G>
-          {slices.map((slice, index) => (
-            <Path
-              key={slice.label + index}
-              d={slice.path}
-              fill={slice.color}
-              stroke={backgroundColor}
-              strokeWidth={strokeWidth}
+          {slices.length > 0 ? (
+            slices.map((slice, index) => (
+              <Path
+                key={slice.label + index}
+                d={slice.path}
+                fill={slice.color}
+                stroke={backgroundColor}
+                strokeWidth={strokeWidth}
+              />
+            ))
+          ) : (
+            // Fallback: Show a full circle if no slices (shouldn't happen, but safety check)
+            <Circle
+              cx={center.x}
+              cy={center.y}
+              r={radius}
+              fill="#e5e7eb"
             />
-          ))}
+          )}
           {/* Inner circle to create donut effect */}
           <Circle
             cx={center.x}
@@ -135,7 +170,8 @@ const DonutChart = ({
                 fill="#111827"
                 fontSize={m(13)}
                 fontFamily="Montserrat-Bold"
-                textAnchor="middle">
+                textAnchor="middle"
+                alignmentBaseline="middle">
                 {centerLabel}
               </SvgText>
               {centerSubLabel ? (
@@ -145,7 +181,8 @@ const DonutChart = ({
                   fill="#6b7280"
                   fontSize={m(9)}
                   fontFamily="Poppins-Regular"
-                  textAnchor="middle">
+                  textAnchor="middle"
+                  alignmentBaseline="middle">
                   {centerSubLabel}
                 </SvgText>
               ) : null}
@@ -162,11 +199,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: m(8),
+    width: '100%',
+    minHeight: m(160), // Ensure minimum height for chart visibility
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: m(8),
+    width: '100%',
+    minHeight: m(160), // Ensure minimum height for chart visibility
   },
 });
 

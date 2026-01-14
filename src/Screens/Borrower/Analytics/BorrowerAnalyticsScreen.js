@@ -72,37 +72,71 @@ export default function BorrowerAnalyticsScreen() {
 
   // Prepare chart data from statistics
   const chartData = React.useMemo(() => {
-    if (!borrowerStatistics?.percentages) {
+    if (!borrowerStatistics || !borrowerStatistics.totalLoanAmount || borrowerStatistics.totalLoanAmount <= 0) {
       return [];
     }
 
-    const { percentages } = borrowerStatistics;
+    const totalAmount = borrowerStatistics.totalLoanAmount || 0;
+    const { percentages } = borrowerStatistics || {};
     const data = [];
 
-    // Add Paid
-    if (percentages.paidPercentage > 0) {
+    // Get amounts (ensure they're numbers)
+    const paidAmount = parseFloat(borrowerStatistics.totalPaidAmount) || 0;
+    const pendingAmount = parseFloat(borrowerStatistics.totalPendingAmount) || 0;
+    const remainingAmount = parseFloat(borrowerStatistics.totalRemainingAmount) || 0;
+    const overdueAmount = parseFloat(borrowerStatistics.totalOverdueAmount) || 0;
+
+    // Calculate percentages from amounts (always calculate from amounts)
+    const paidPercentage = totalAmount > 0 ? (paidAmount / totalAmount) * 100 : 0;
+    const pendingPercentage = totalAmount > 0 ? (pendingAmount / totalAmount) * 100 : 0;
+    const overduePercentage = totalAmount > 0 ? (overdueAmount / totalAmount) * 100 : 0;
+    const remainingPercentage = totalAmount > 0 ? (remainingAmount / totalAmount) * 100 : 0;
+
+    // Add Paid if amount exists and percentage is valid
+    if (paidAmount > 0 && paidPercentage > 0) {
       data.push({
         label: 'Paid',
-        value: percentages.paidPercentage,
+        value: paidPercentage,
         color: '#22c55e',
       });
     }
 
-    // Add Overdue
-    if (percentages.overduePercentage > 0) {
+    // Add Overdue if amount exists and percentage is valid
+    if (overdueAmount > 0 && overduePercentage > 0) {
       data.push({
         label: 'Overdue',
-        value: percentages.overduePercentage,
+        value: overduePercentage,
         color: '#ef4444',
       });
     }
 
-    // Add Pending
-    if (percentages.pendingPercentage > 0) {
+    // Add Pending if amount exists (KEY FIX - always show if pending amount > 0)
+    if (pendingAmount > 0) {
+      // Use calculated percentage, or default to 100% if calculation fails
+      const finalPendingPercentage = pendingPercentage > 0 ? pendingPercentage : 100;
       data.push({
         label: 'Pending',
-        value: percentages.pendingPercentage,
+        value: finalPendingPercentage,
         color: '#f59e0b',
+      });
+    }
+
+    // Add Remaining if amount exists and no other slices (to avoid duplication)
+    if (remainingAmount > 0 && data.length === 0) {
+      const finalRemainingPercentage = remainingPercentage > 0 ? remainingPercentage : 100;
+      data.push({
+        label: 'Remaining Amount',
+        value: finalRemainingPercentage,
+        color: '#3b82f6',
+      });
+    }
+
+    // Final fallback: If no slices but we have total loan amount, show Total Loan Amount
+    if (data.length === 0 && totalAmount > 0) {
+      data.push({
+        label: 'Total Loan Amount',
+        value: 100,
+        color: '#6366f1',
       });
     }
 

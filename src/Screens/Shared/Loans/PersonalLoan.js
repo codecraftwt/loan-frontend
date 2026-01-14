@@ -8,6 +8,7 @@ import {
   Image,
   ActivityIndicator,
   RefreshControl,
+  Modal,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import moment from 'moment';
@@ -18,6 +19,7 @@ import Header from '../../../Components/Header';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { lenderLoanAPI } from '../../../Services/lenderLoanService';
 import Toast from 'react-native-toast-message';
+import { baseurl } from '../../../Utils/API';
 
 
 const DetailCard = ({ icon, label, value }) => (
@@ -41,6 +43,8 @@ export default function PersonalLoan({ route }) {
   const [loadingInstallments, setLoadingInstallments] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showAllInstallments, setShowAllInstallments] = useState(false);
+  const [proofViewerVisible, setProofViewerVisible] = useState(false);
+  const [selectedProofUrl, setSelectedProofUrl] = useState(null);
 
   // Check if user is a lender
   const isLender = user?.roleId === 1;
@@ -85,6 +89,43 @@ export default function PersonalLoan({ route }) {
   const formatCurrency = (amount) => {
     const numAmount = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
     return `₹${numAmount.toLocaleString('en-IN')}`;
+  };
+
+  // Get proof URL - Cloudinary URLs are already full URLs
+  const getProofUrl = (proof) => {
+    if (!proof) return null;
+    
+    // If it's already a full URL (starts with http:// or https://), return as is
+    if (proof.startsWith('http://') || proof.startsWith('https://')) {
+      return proof;
+    }
+    
+    // If it's a relative path, construct full URL (unlikely for Cloudinary, but handle it)
+    let baseUrl = baseurl.replace('/api', '').replace(/\/$/, '');
+    
+    let proofPath = proof;
+    if (proofPath.startsWith('/')) {
+      proofPath = proofPath.substring(1);
+    }
+    
+    const fullUrl = `${baseUrl}/${proofPath}`;
+    return fullUrl;
+  };
+
+  // Handle viewing loan proof
+  const handleViewProof = () => {
+    const proofUrl = getProofUrl(loanDetails.proof);
+    if (proofUrl) {
+      setSelectedProofUrl(proofUrl);
+      setProofViewerVisible(true);
+    } else {
+      Toast.show({
+        type: 'error',
+        position: 'top',
+        text1: 'Error',
+        text2: 'Loan proof image not available',
+      });
+    }
   };
 
   // Render installment item
@@ -550,6 +591,26 @@ export default function PersonalLoan({ route }) {
           </View>
         </View>
 
+        {/* Loan Proof Section - Only show if proof exists */}
+        {loanDetails.proof && (
+          <View style={styles.proofSection}>
+            <Text style={styles.sectionTitle}>Loan Proof</Text>
+            <TouchableOpacity
+              style={styles.proofCard}
+              onPress={handleViewProof}
+              activeOpacity={0.8}>
+              <View style={styles.proofIconContainer}>
+                <Icon name="file-image" size={24} color="#3B82F6" />
+              </View>
+              <View style={styles.proofTextContainer}>
+                <Text style={styles.proofTitle}>Loan Proof Available</Text>
+                <Text style={styles.proofSubtext}>Tap to view proof document</Text>
+              </View>
+              <Icon name="chevron-right" size={20} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Show message if loan is rejected */}
         {loanDetails.borrowerAcceptanceStatus?.toLowerCase() === 'rejected' && (
           <View style={styles.rejectionMessage}>
@@ -766,6 +827,55 @@ export default function PersonalLoan({ route }) {
           onClose={() => setIsModalVisible(false)}
         />
       )}
+
+      {/* Loan Proof Image Viewer */}
+      <Modal
+        visible={proofViewerVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          setProofViewerVisible(false);
+          setSelectedProofUrl(null);
+        }}>
+        <View style={styles.proofViewerOverlay}>
+          <View style={styles.proofViewerHeader}>
+            <Text style={styles.proofViewerHeaderText}>Loan Proof</Text>
+            <TouchableOpacity
+              onPress={() => {
+                setProofViewerVisible(false);
+                setSelectedProofUrl(null);
+              }}
+              style={styles.proofViewerCloseButton}>
+              <Icon name="x" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+          <ScrollView
+            contentContainerStyle={styles.proofViewerScrollContent}
+            maximumZoomScale={3}
+            minimumZoomScale={1}
+            showsVerticalScrollIndicator={false}
+            showsHorizontalScrollIndicator={false}>
+            {selectedProofUrl && (
+              <Image
+                source={{ uri: selectedProofUrl }}
+                style={styles.proofViewerImage}
+                resizeMode="contain"
+                onError={(error) => {
+                  console.error('Image load error:', error);
+                  console.error('Failed URL:', selectedProofUrl);
+                  Toast.show({
+                    type: 'error',
+                    position: 'top',
+                    text1: 'Error Loading Image',
+                    text2: 'Failed to load loan proof image. Please check the URL.',
+                    visibilityTime: 4000,
+                  });
+                }}
+              />
+            )}
+          </ScrollView>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1385,5 +1495,107 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: m(14),
     color: '#9CA3AF',
+  },
+  
+  // Loan Proof Styles
+  proofSection: {
+    marginBottom: m(16),
+  },
+  proofCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: m(16),
+    padding: m(16),
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+  },
+  proofIconContainer: {
+    width: m(48),
+    height: m(48),
+    borderRadius: m(12),
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: m(12),
+  },
+  proofTextContainer: {
+    flex: 1,
+  },
+  proofTitle: {
+    fontSize: m(16),
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: m(4),
+  },
+  proofSubtext: {
+    fontSize: m(14),
+    color: '#6B7280',
+  },
+  
+  // Proof Viewer Modal Styles
+  proofViewerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+  },
+  proofViewerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: m(16),
+    paddingTop: m(40),
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  proofViewerHeaderText: {
+    fontSize: m(18),
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  proofViewerCloseButton: {
+    padding: m(8),
+  },
+  proofViewerScrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: m(20),
+  },
+  proofViewerImage: {
+    width: '100%',
+    height: m(500),
+    borderRadius: m(8),
+  },
+  
+  // Rejection Message Styles
+  rejectionMessage: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEE2E2',
+    borderRadius: m(16),
+    padding: m(20),
+    marginBottom: m(16),
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    gap: m(12),
+  },
+  rejectionTextContainer: {
+    flex: 1,
+  },
+  rejectionTitle: {
+    fontSize: m(18),
+    fontWeight: '700',
+    color: '#DC2626',
+    marginBottom: m(4),
+  },
+  rejectionSubtitle: {
+    fontSize: m(14),
+    color: '#991B1B',
+    lineHeight: m(20),
   },
 });

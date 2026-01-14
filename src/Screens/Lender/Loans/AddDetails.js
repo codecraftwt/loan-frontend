@@ -12,7 +12,10 @@ import {
   ActivityIndicator,
   Animated,
   Alert,
+  Image,
+  PermissionsAndroid,
 } from 'react-native';
+import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -101,6 +104,8 @@ export default function AddDetails({ route, navigation }) {
   const [pendingLoanData, setPendingLoanData] = useState(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentVerified, setPaymentVerified] = useState(false);
+  const [proofFile, setProofFile] = useState(null);
+  const [proofError, setProofError] = useState('');
 
   // Focus animation
   const focusAnim = new Animated.Value(0);
@@ -121,6 +126,136 @@ export default function AddDetails({ route, navigation }) {
       duration: 300,
       useNativeDriver: false,
     }).start();
+  };
+
+  // Request camera permission for Android
+  const requestCameraPermission = async () => {
+    if (Platform.OS === 'android') {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.CAMERA,
+          {
+            title: 'Camera Permission',
+            message: 'This app needs access to your camera to take photos.',
+            buttonNeutral: 'Ask Me Later',
+            buttonNegative: 'Cancel',
+            buttonPositive: 'OK',
+          }
+        );
+        return granted === PermissionsAndroid.RESULTS.GRANTED;
+      } catch (err) {
+        console.warn(err);
+        return false;
+      }
+    }
+    return true;
+  };
+
+  // Validate proof file
+  const validateProofFile = (file) => {
+    setProofError('');
+    
+    if (!file) {
+      return true; // File is optional
+    }
+
+    // Check file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    const fileType = file.type || 'image/jpeg';
+    
+    if (!allowedTypes.includes(fileType.toLowerCase())) {
+      setProofError('Only JPEG, JPG, and PNG images are allowed.');
+      return false;
+    }
+
+    // Check file size (5MB = 5 * 1024 * 1024 bytes)
+    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+    if (file.fileSize && file.fileSize > maxSize) {
+      setProofError('File size must be less than 5MB.');
+      return false;
+    }
+
+    return true;
+  };
+
+  // Handle proof image picker
+  const handleProofImagePicker = async (action) => {
+    // Request permission if using camera on Android
+    if (action === 'camera' && Platform.OS === 'android') {
+      const hasPermission = await requestCameraPermission();
+      if (!hasPermission) {
+        Toast.show({
+          type: 'error',
+          position: 'top',
+          text1: 'Camera Permission Required',
+          text2: 'Please grant camera permission to take photos.',
+        });
+        return;
+      }
+    }
+
+    const options =
+      action === 'camera'
+        ? {
+            mediaType: 'photo',
+            cameraType: 'back',
+            quality: 0.8,
+            saveToPhotos: true,
+          }
+        : {
+            mediaType: 'photo',
+            quality: 0.8,
+          };
+
+    const launch = action === 'camera' ? launchCamera : launchImageLibrary;
+
+    launch(options, (response) => {
+      if (response.didCancel) {
+        return;
+      }
+
+      if (response.errorCode) {
+        Toast.show({
+          type: 'error',
+          position: 'top',
+          text1: 'Error',
+          text2: response.errorMessage || 'Failed to pick image.',
+        });
+        return;
+      }
+
+      if (response.assets && response.assets[0]) {
+        const asset = response.assets[0];
+        
+        // Validate file
+        if (validateProofFile(asset)) {
+          // Prepare file object for FormData
+          const fileExtension = asset.type?.split('/')[1] || 'jpg';
+          const fileName = asset.fileName || `proof_${Date.now()}.${fileExtension}`;
+          
+          setProofFile({
+            uri: asset.uri,
+            type: asset.type || 'image/jpeg',
+            fileName: fileName,
+            fileSize: asset.fileSize,
+          });
+          setProofError('');
+          
+          Toast.show({
+            type: 'success',
+            position: 'top',
+            text1: 'Proof Image Selected',
+            text2: 'You can change it before submitting.',
+          });
+        }
+      }
+    });
+  };
+
+  // Remove proof file
+  const handleRemoveProof = () => {
+    setProofFile(null);
+    setProofError('');
   };
 
   // Validate form fields
@@ -151,6 +286,18 @@ export default function AddDetails({ route, navigation }) {
     }
     if (isNaN(amount) || parseFloat(amount) <= 0) {
       setErrorMessage('Amount should be a positive number.');
+      return false;
+    }
+    if (parseFloat(amount) < 1000) {
+      setErrorMessage('Amount must be at least ₹1000.');
+      return false;
+    }
+    if (mobileNumber.length !== 10) {
+      setErrorMessage('Mobile number must be exactly 10 digits.');
+      return false;
+    }
+    if (aadhaarNumber.length !== 12) {
+      setErrorMessage('Aadhar number must be exactly 12 digits.');
       return false;
     }
     if (loanStartDate >= loanEndDate) {
@@ -254,6 +401,11 @@ export default function AddDetails({ route, navigation }) {
       purpose: formData.purpose.trim(),
       loanMode: formData.loanMode || 'cash',
     };
+
+    // Only include proof when creating a new loan (not when updating)
+    if (!loanDetails && proofFile) {
+      newData.proof = proofFile;
+    }
 
     // Check if fraud warning should be shown before proceeding
     if (!loanDetails && fraudStatus && fraudStatus.riskLevel && fraudStatus.riskLevel !== 'low') {
@@ -502,6 +654,8 @@ export default function AddDetails({ route, navigation }) {
     setShowOldHistoryButton(false);
     setIsProcessingPayment(false);
     setPaymentVerified(false);
+    setProofFile(null);
+    setProofError('');
     dispatch(clearFraudStatus());
   };
 
@@ -910,6 +1064,70 @@ export default function AddDetails({ route, navigation }) {
                 </View>
               )}
             </View>
+
+            {/* Proof Upload Section - Only show when creating new loan */}
+            {!loanDetails && (
+              <View style={styles.proofSection}>
+                <View style={styles.sectionHeader}>
+                  <Icon name="file-image" size={22} color="#ff7900" />
+                  <Text style={styles.sectionTitle}>Upload Proof (Optional)</Text>
+                </View>
+                
+                <Text style={styles.proofDescription}>
+                  Upload a proof document (JPEG, JPG, PNG, max 5MB)
+                </Text>
+
+              {proofFile ? (
+                <View style={styles.proofPreviewContainer}>
+                  <Image
+                    source={{ uri: proofFile.uri }}
+                    style={styles.proofPreviewImage}
+                    resizeMode="cover"
+                  />
+                  <View style={styles.proofPreviewInfo}>
+                    <Text style={styles.proofPreviewName} numberOfLines={1}>
+                      {proofFile.fileName || 'proof.jpg'}
+                    </Text>
+                    {proofFile.fileSize && (
+                      <Text style={styles.proofPreviewSize}>
+                        {(proofFile.fileSize / 1024 / 1024).toFixed(2)} MB
+                      </Text>
+                    )}
+                  </View>
+                  <TouchableOpacity
+                    style={styles.removeProofButton}
+                    onPress={handleRemoveProof}
+                    activeOpacity={0.7}>
+                    <Icon name="close-circle" size={24} color="#dc2626" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.proofUploadButtons}>
+                  <TouchableOpacity
+                    style={styles.proofUploadButton}
+                    onPress={() => handleProofImagePicker('library')}
+                    activeOpacity={0.8}>
+                    <Icon name="image-outline" size={20} color="#ff7900" />
+                    <Text style={styles.proofUploadButtonText}>Choose from Gallery</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.proofUploadButton}
+                    onPress={() => handleProofImagePicker('camera')}
+                    activeOpacity={0.8}>
+                    <Icon name="camera-outline" size={20} color="#ff7900" />
+                    <Text style={styles.proofUploadButtonText}>Take Photo</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {proofError ? (
+                <View style={styles.proofErrorContainer}>
+                  <Icon name="alert-circle" size={18} color="#dc2626" />
+                  <Text style={styles.proofErrorText}>{proofError}</Text>
+                </View>
+              ) : null}
+              </View>
+            )}
 
             {(errorMessage || error) && (
               <View style={styles.errorCard}>
@@ -1385,5 +1603,90 @@ const styles = StyleSheet.create({
      alignItems: 'center', 
      gap: 6, 
      marginBottom: 6
-  }
+  },
+  proofSection: {
+    marginBottom: m(20),
+  },
+  proofDescription: {
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.primaryRegular,
+    color: '#64748b',
+    marginBottom: m(12),
+    lineHeight: m(18),
+  },
+  proofUploadButtons: {
+    flexDirection: 'row',
+    gap: m(12),
+    marginBottom: m(8),
+  },
+  proofUploadButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: m(14),
+    borderRadius: m(12),
+    borderWidth: 2,
+    borderColor: '#ff7900',
+    backgroundColor: '#FFF',
+    gap: m(8),
+  },
+  proofUploadButtonText: {
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.primarySemiBold,
+    color: '#ff7900',
+  },
+  proofPreviewContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderRadius: m(12),
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    padding: m(12),
+    marginBottom: m(8),
+    gap: m(12),
+  },
+  proofPreviewImage: {
+    width: m(60),
+    height: m(60),
+    borderRadius: m(8),
+    backgroundColor: '#e2e8f0',
+  },
+  proofPreviewInfo: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  proofPreviewName: {
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primarySemiBold,
+    color: '#1e293b',
+    marginBottom: m(4),
+  },
+  proofPreviewSize: {
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.primaryRegular,
+    color: '#64748b',
+  },
+  removeProofButton: {
+    padding: m(4),
+  },
+  proofErrorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    borderRadius: m(8),
+    padding: m(10),
+    gap: m(8),
+    marginTop: m(8),
+  },
+  proofErrorText: {
+    flex: 1,
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.primaryRegular,
+    color: '#b91c1c',
+    lineHeight: m(16),
+  },
 });

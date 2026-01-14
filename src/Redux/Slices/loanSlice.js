@@ -190,22 +190,33 @@ export const createLoan = createAsyncThunk(
         return rejectWithValue('User is not authenticated');
       }
 
-      // Map old field names to new API structure
-      const apiData = {
-        name: loanData.name,
-        aadharCardNo: loanData.aadharCardNo || loanData.aadhaarNumber,
-        mobileNumber: loanData.mobileNumber,
-        address: loanData.address,
-        amount: loanData.amount,
-        purpose: loanData.purpose,
-        loanGivenDate: loanData.loanGivenDate || loanData.loanStartDate,
-        loanEndDate: loanData.loanEndDate,
-        loanMode: loanData.loanMode || 'cash', // Default to cash if not provided
-      };
+      // Create FormData for multipart/form-data (supports file upload)
+      const formData = new FormData();
+      
+      // Add required fields
+      formData.append('name', loanData.name);
+      formData.append('aadharCardNo', loanData.aadharCardNo || loanData.aadhaarNumber);
+      formData.append('mobileNumber', loanData.mobileNumber);
+      formData.append('address', loanData.address);
+      formData.append('amount', loanData.amount.toString());
+      formData.append('purpose', loanData.purpose);
+      formData.append('loanGivenDate', loanData.loanGivenDate || loanData.loanStartDate);
+      formData.append('loanEndDate', loanData.loanEndDate);
+      formData.append('loanMode', loanData.loanMode || 'cash');
 
-      const response = await instance.post('lender/loans/create', apiData, {
+      // Add proof file if provided
+      if (loanData.proof && loanData.proof.uri) {
+        formData.append('proof', {
+          uri: loanData.proof.uri,
+          type: loanData.proof.type || 'image/jpeg',
+          name: loanData.proof.fileName || 'proof.jpg',
+        });
+      }
+
+      const response = await instance.post('lender/loans/create', formData, {
         headers: {
           Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
         },
       });
 
