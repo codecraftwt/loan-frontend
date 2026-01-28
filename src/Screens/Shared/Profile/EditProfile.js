@@ -98,8 +98,25 @@ const EditProfile = ({ navigation }) => {
   };
 
   const handleSaveChanges = async () => {
+    // Validate name field - cannot be empty
+    const trimmedName = editedData.userName?.trim();
+    
+    if (!trimmedName) {
+      Toast.show({ 
+        type: 'error', 
+        text1: 'Name Required', 
+        text2: 'Please enter your name' 
+      });
+      return;
+    }
+
     try {
-      await dispatch(updateUser(editedData)).unwrap();
+      // Update with trimmed name
+      const dataToSave = {
+        ...editedData,
+        userName: trimmedName,
+      };
+      await dispatch(updateUser(dataToSave)).unwrap();
       Toast.show({ type: 'success', text1: 'Profile Updated' });
       navigation.goBack();
     } catch (err) {
@@ -111,27 +128,43 @@ const EditProfile = ({ navigation }) => {
     navigation.goBack();
   };
 
-  const renderField = (icon, label, value, editable = false, keyName, iconColor = '#3B82F6') => (
-    <View style={styles.fieldCard}>
-      <View style={[styles.fieldIconContainer, { backgroundColor: iconColor + '15' }]}>
-        <Icon name={icon} size={22} color={iconColor} />
+  // Handle phone number input - only allow numbers
+  const handlePhoneNumberChange = (text) => {
+    // Remove all non-numeric characters
+    const numericOnly = text.replace(/[^0-9]/g, '');
+    setEditedData({ ...editedData, mobileNo: numericOnly });
+  };
+
+  const renderField = (icon, label, value, editable = false, keyName, iconColor = '#3B82F6') => {
+    const isPhoneField = keyName === 'mobileNo';
+    
+    return (
+      <View style={styles.fieldCard}>
+        <View style={[styles.fieldIconContainer, { backgroundColor: iconColor + '15' }]}>
+          <Icon name={icon} size={22} color={iconColor} />
+        </View>
+        <View style={styles.fieldContent}>
+          <Text style={styles.fieldLabel}>{label}</Text>
+          {editable ? (
+            <TextInput
+              style={styles.fieldInput}
+              value={editedData[keyName]}
+              onChangeText={isPhoneField 
+                ? handlePhoneNumberChange 
+                : (text => setEditedData({ ...editedData, [keyName]: text }))
+              }
+              placeholder={`Enter ${label.toLowerCase()}`}
+              placeholderTextColor="#9CA3AF"
+              keyboardType={isPhoneField ? 'phone-pad' : 'default'}
+              maxLength={isPhoneField ? 10 : undefined}
+            />
+          ) : (
+            <Text style={styles.fieldValue}>{value || 'Not provided'}</Text>
+          )}
+        </View>
       </View>
-      <View style={styles.fieldContent}>
-        <Text style={styles.fieldLabel}>{label}</Text>
-        {editable ? (
-          <TextInput
-            style={styles.fieldInput}
-            value={editedData[keyName]}
-            onChangeText={text => setEditedData({ ...editedData, [keyName]: text })}
-            placeholder={`Enter ${label.toLowerCase()}`}
-            placeholderTextColor="#9CA3AF"
-          />
-        ) : (
-          <Text style={styles.fieldValue}>{value || 'Not provided'}</Text>
-        )}
-      </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <KeyboardAvoidingView

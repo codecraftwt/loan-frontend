@@ -184,10 +184,10 @@ const LoanCard = ({ loan, onPress }) => {
   </View>
   
   {/* Right side icon */}
-  <View style={styles.footerRight}>
-    <TouchableOpacity style={styles.footerIconButton}>
+  {/* <View style={styles.footerRight}> */}
+    <View style={styles.footerIconButton}>
       <Icon name="chevron-right" size={21} color="#6B7280" />
-    </TouchableOpacity>
+    {/* </View> */}
   </View>
 </View>
     </TouchableOpacity>
@@ -681,11 +681,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: m(6),
   },
-  footerRight: {
+  // footerRight: {
+  //   flexDirection: 'row',
+  //   alignItems: 'center',
+  // },
+  footerIconButton: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  footerIconButton: {
     width: m(32),
     height: m(32),
     borderRadius: m(16),

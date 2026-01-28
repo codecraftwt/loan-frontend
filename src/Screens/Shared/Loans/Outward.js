@@ -674,10 +674,10 @@ const Outward = ({ navigation, route }) => {
 
                     {/* Card Footer */}
                     <View style={styles.cardFooter}>
-                      <View style={styles.footerBadge}>
+                      {/* <View style={styles.footerBadge}>
                         <Icon name="person" size={14} color="#ff6700" />
                         <Text style={styles.footerText}>Borrower</Text>
-                      </View>
+                      </View> */}
                       {borrowerPendingPayments && (
                         <View style={styles.pendingPaymentBadge}>
                           <Icon name="schedule" size={14} color="#F59E0B" />
@@ -686,7 +686,7 @@ const Outward = ({ navigation, route }) => {
                           </Text>
                         </View>
                       )}
-                      {hasRisk && !borrowerPendingPayments && riskBadge && (
+                      {/* {hasRisk && !borrowerPendingPayments && riskBadge && (
                         <View style={[
                           styles.fraudWarning,
                           {
@@ -713,13 +713,13 @@ const Outward = ({ navigation, route }) => {
                             {riskBadge.label || 'Risk Alert'}
                           </Text>
                         </View>
-                      )}
-                      {!hasRisk && !borrowerPendingPayments && (
+                      )} */}
+                      {/* {!hasRisk && !borrowerPendingPayments && (
                         <View style={styles.actionHint}>
                           <Icon name="touch-app" size={12} color="#ff6700" />
                           <Text style={styles.actionHintText}>Tap for options</Text>
                         </View>
-                      )}
+                      )} */}
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -1044,45 +1044,45 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: m(8),
-    paddingTop: m(16),
-    borderTopWidth: 1,
+    // marginTop: m(8),
+    // paddingTop: m(16),
+    // borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
   },
-  footerBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF5EB',
-    paddingHorizontal: m(12),
-    paddingVertical: m(8),
-    borderRadius: m(10),
-    gap: m(6),
-    borderWidth: 1,
-    borderColor: '#FFE5D0',
-  },
-  footerText: {
-    fontSize: m(12),
-    fontWeight: '600',
-    color: '#ff6700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  actionHint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    borderRadius: m(10),
-    paddingHorizontal: m(12),
-    paddingVertical: m(8),
-    gap: m(6),
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  actionHintText: {
-    fontSize: m(12),
-    color: '#6B7280',
-    fontWeight: '500',
-  },
+  // footerBadge: {
+  //   flexDirection: 'row',
+  //   alignItems: 'center',
+  //   backgroundColor: '#FFF5EB',
+  //   paddingHorizontal: m(12),
+  //   paddingVertical: m(8),
+  //   borderRadius: m(10),
+  //   gap: m(6),
+  //   borderWidth: 1,
+  //   borderColor: '#FFE5D0',
+  // },
+  // footerText: {
+  //   fontSize: m(12),
+  //   fontWeight: '600',
+  //   color: '#ff6700',
+  //   textTransform: 'uppercase',
+  //   letterSpacing: 0.8,
+  // },
+  // actionHint: {
+  //   flexDirection: 'row',
+  //   alignItems: 'center',
+  //   backgroundColor: '#F9FAFB',
+  //   borderRadius: m(10),
+  //   paddingHorizontal: m(12),
+  //   paddingVertical: m(8),
+  //   gap: m(6),
+  //   borderWidth: 1,
+  //   borderColor: '#E5E7EB',
+  // },
+  // actionHintText: {
+  //   fontSize: m(12),
+  //   color: '#6B7280',
+  //   fontWeight: '500',
+  // },
   highlightedBorrowerCard: {
     borderWidth: 3,
     borderColor: '#b80266',
@@ -1136,19 +1136,19 @@ const styles = StyleSheet.create({
   fraudBadgeContainer: {
     marginLeft: m(8),
   },
-  fraudWarning: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: m(10),
-    paddingHorizontal: m(12),
-    paddingVertical: m(8),
-    gap: m(6),
-    borderWidth: 1,
-  },
-  fraudWarningText: {
-    fontSize: m(12),
-    fontWeight: '600',
-  },
+  // fraudWarning: {
+  //   flexDirection: 'row',
+  //   alignItems: 'center',
+  //   borderRadius: m(10),
+  //   paddingHorizontal: m(12),
+  //   paddingVertical: m(8),
+  //   gap: m(6),
+  //   borderWidth: 1,
+  // },
+  // fraudWarningText: {
+  //   fontSize: m(12),
+  //   fontWeight: '600',
+  // },
   pendingPaymentBorrowerCard: {
     borderWidth: 2,
     borderColor: '#FDE68A',

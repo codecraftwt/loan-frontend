@@ -26,7 +26,7 @@ import moment from 'moment';
 import LoaderSkeleton from '../../../Components/LoaderSkeleton';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
-import DatePicker from 'react-native-date-picker';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
 
 export default function Inward({ navigation }) {
   const dispatch = useDispatch();
@@ -465,11 +465,10 @@ export default function Inward({ navigation }) {
       </Modal>
 
       {/* Date Picker */}
-      <DatePicker
-        modal
-        open={datePickerOpen}
-        date={tempDate}
+      <DateTimePickerModal
+        isVisible={datePickerOpen}
         mode="date"
+        date={tempDate}
         onConfirm={date => {
           if (currentDateType === 'start') {
             setStartDateFilter(date);

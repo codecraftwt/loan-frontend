@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,6 +10,7 @@ import {
   Modal,
   ActivityIndicator,
   Animated,
+  Pressable,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -21,6 +22,7 @@ import BorrowerReputationCard from '../../../Components/BorrowerReputationCard';
 import SubscriptionRestriction from '../../../Components/SubscriptionRestriction';
 import { useSubscription } from '../../../hooks/useSubscription';
 import { getActivePlan } from '../../../Redux/Slices/planPurchaseSlice';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import moment from 'moment';
 import { m } from 'walstar-rn-responsive';
 
@@ -219,6 +221,15 @@ const LoanHistoryCard = ({ loan, onPress }) => {
 
 const FilterModal = ({ visible, onClose, filters, setFilters, applyFilters }) => {
   const [localFilters, setLocalFilters] = useState(filters);
+  const [isStartDatePickerVisible, setStartDatePickerVisible] = useState(false);
+  const [isEndDatePickerVisible, setEndDatePickerVisible] = useState(false);
+
+  // Reset local filters when modal opens
+  useEffect(() => {
+    if (visible) {
+      setLocalFilters(filters);
+    }
+  }, [visible, filters]);
 
   const handleApply = () => {
     applyFilters(localFilters);
@@ -238,6 +249,16 @@ const FilterModal = ({ visible, onClose, filters, setFilters, applyFilters }) =>
     onClose();
   };
 
+  const handleStartDateConfirm = (date) => {
+    setLocalFilters({ ...localFilters, startDate: moment(date).format('YYYY-MM-DD') });
+    setStartDatePickerVisible(false);
+  };
+
+  const handleEndDateConfirm = (date) => {
+    setLocalFilters({ ...localFilters, endDate: moment(date).format('YYYY-MM-DD') });
+    setEndDatePickerVisible(false);
+  };
+
   const statusOptions = [
     { label: 'All', value: '' },
     { label: 'Part Paid', value: 'part paid' },
@@ -250,13 +271,16 @@ const FilterModal = ({ visible, onClose, filters, setFilters, applyFilters }) =>
     <Modal
       visible={visible}
       transparent={true}
-      animationType="fade"
+      animationType="slide"
       onRequestClose={onClose}>
-      <TouchableOpacity
-        style={styles.filterModalOverlay}
-        activeOpacity={1}
-        onPress={onClose}>
+      <View style={styles.filterModalOverlay}>
+        {/* Backdrop - closes modal when pressed */}
+        <Pressable style={styles.filterModalBackdrop} onPress={onClose} />
+        
+        {/* Modal Content - doesn't close when interacting */}
         <View style={styles.filterModalContent}>
+          <View style={styles.filterModalHandle} />
+          
           <View style={styles.filterModalHeader}>
             <View style={styles.filterHeaderLeft}>
               <Icon name="filter-list" size={24} color={ORANGE_THEME.primary} />
@@ -269,7 +293,12 @@ const FilterModal = ({ visible, onClose, filters, setFilters, applyFilters }) =>
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.filterScroll} showsVerticalScrollIndicator={false}>
+          <ScrollView 
+            style={styles.filterScroll} 
+            showsVerticalScrollIndicator={false}
+            nestedScrollEnabled={true}
+            keyboardShouldPersistTaps="handled"
+          >
             {/* Status Filter */}
             <View style={styles.filterSection}>
               <View style={styles.sectionHeader}>
@@ -334,37 +363,47 @@ const FilterModal = ({ visible, onClose, filters, setFilters, applyFilters }) =>
             </View>
 
             {/* Date Range */}
-            <View style={styles.filterSection}>
+            <View style={[styles.filterSection, { borderBottomWidth: 0 }]}>
               <View style={styles.sectionHeader}>
                 <Icon name="calendar-today" size={18} color={ORANGE_THEME.primary} />
                 <Text style={styles.filterLabel}>Date Range</Text>
               </View>
               <View style={styles.dateInputRow}>
-                <View style={styles.dateInputContainer}>
+                <TouchableOpacity 
+                  style={styles.dateInputContainer}
+                  onPress={() => setStartDatePickerVisible(true)}
+                  activeOpacity={0.7}
+                >
                   <View style={styles.inputWithIcon}>
                     <Icon name="event" size={16} color={ORANGE_THEME.textLight} />
-                    <TextInput
-                      style={styles.dateInput}
-                      placeholder="Start Date"
-                      value={localFilters.startDate}
-                      onChangeText={(text) => setLocalFilters({ ...localFilters, startDate: text })}
-                      placeholderTextColor="#9CA3AF"
-                    />
+                    <Text style={[
+                      styles.dateInputText,
+                      !localFilters.startDate && styles.dateInputPlaceholder
+                    ]}>
+                      {localFilters.startDate 
+                        ? moment(localFilters.startDate).format('DD MMM YYYY') 
+                        : 'Start Date'}
+                    </Text>
                   </View>
-                </View>
+                </TouchableOpacity>
                 <Icon name="arrow-right-alt" size={20} color={ORANGE_THEME.primary} style={styles.rangeSeparator} />
-                <View style={styles.dateInputContainer}>
+                <TouchableOpacity 
+                  style={styles.dateInputContainer}
+                  onPress={() => setEndDatePickerVisible(true)}
+                  activeOpacity={0.7}
+                >
                   <View style={styles.inputWithIcon}>
                     <Icon name="event" size={16} color={ORANGE_THEME.textLight} />
-                    <TextInput
-                      style={styles.dateInput}
-                      placeholder="End Date"
-                      value={localFilters.endDate}
-                      onChangeText={(text) => setLocalFilters({ ...localFilters, endDate: text })}
-                      placeholderTextColor="#9CA3AF"
-                    />
+                    <Text style={[
+                      styles.dateInputText,
+                      !localFilters.endDate && styles.dateInputPlaceholder
+                    ]}>
+                      {localFilters.endDate 
+                        ? moment(localFilters.endDate).format('DD MMM YYYY') 
+                        : 'End Date'}
+                    </Text>
                   </View>
-                </View>
+                </TouchableOpacity>
               </View>
             </View>
           </ScrollView>
@@ -384,7 +423,26 @@ const FilterModal = ({ visible, onClose, filters, setFilters, applyFilters }) =>
             </TouchableOpacity>
           </View>
         </View>
-      </TouchableOpacity>
+      </View>
+
+      {/* Date Pickers */}
+      <DateTimePickerModal
+        isVisible={isStartDatePickerVisible}
+        mode="date"
+        onConfirm={handleStartDateConfirm}
+        onCancel={() => setStartDatePickerVisible(false)}
+        date={localFilters.startDate ? new Date(localFilters.startDate) : new Date()}
+        maximumDate={localFilters.endDate ? new Date(localFilters.endDate) : new Date()}
+      />
+      <DateTimePickerModal
+        isVisible={isEndDatePickerVisible}
+        mode="date"
+        onConfirm={handleEndDateConfirm}
+        onCancel={() => setEndDatePickerVisible(false)}
+        date={localFilters.endDate ? new Date(localFilters.endDate) : new Date()}
+        minimumDate={localFilters.startDate ? new Date(localFilters.startDate) : undefined}
+        maximumDate={new Date()}
+      />
     </Modal>
   );
 };
@@ -429,7 +487,7 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
-    }, 500); // 500ms delay
+    }, 300); // 300ms delay
 
     return () => clearTimeout(timer);
   }, [searchQuery]);
@@ -439,24 +497,48 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
 
     const params = {
       page,
-      limit: 10,
+      limit: 100, // Load more to allow client-side filtering
       ...filters,
     };
-
-    // Only add search if it's not empty
-    if (debouncedSearchQuery && debouncedSearchQuery.trim()) {
-      params.search = debouncedSearchQuery.trim();
-    }
 
     dispatch(getBorrowerLoansById({
       borrowerId,
       params,
     }));
-  }, [borrowerId, dispatch, filters, debouncedSearchQuery]);
+  }, [borrowerId, dispatch, filters]);
 
   useEffect(() => {
-    loadHistory(1); // Reset to page 1 when filters or search change
+    loadHistory(1); // Reset to page 1 when filters change
   }, [loadHistory]);
+
+  // Client-side search filtering by lender name and amount
+  const filteredLoans = useMemo(() => {
+    if (!borrowerHistory || borrowerHistory.length === 0) {
+      return [];
+    }
+
+    if (!debouncedSearchQuery || !debouncedSearchQuery.trim()) {
+      return borrowerHistory;
+    }
+
+    const query = debouncedSearchQuery.trim().toLowerCase();
+    
+    return borrowerHistory.filter(loan => {
+      // Search by lender name
+      const lenderName = loan.lenderId?.userName?.toLowerCase() || '';
+      if (lenderName.includes(query)) {
+        return true;
+      }
+
+      // Search by amount (convert to string for partial matching)
+      const amount = loan.amount?.toString() || '';
+      if (amount.includes(query)) {
+        return true;
+      }
+
+      return false;
+    });
+  }, [borrowerHistory, debouncedSearchQuery]);
 
   // Fetch pending payments for lender
   useFocusEffect(
@@ -594,7 +676,7 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
           <Icon name="search" size={22} color={ORANGE_THEME.primary} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search loans by purpose, lender..."
+            placeholder="Search by lender name or amount..."
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholderTextColor={ORANGE_THEME.textLight}
@@ -777,7 +859,7 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
             {debouncedSearchQuery ? 'Search Results' : 'Loan History'}
           </Text>
           <Text style={styles.loansCount}>
-            {borrowerHistory.length} {borrowerHistory.length === 1 ? 'loan' : 'loans'}
+            {filteredLoans.length} {filteredLoans.length === 1 ? 'loan' : 'loans'}
             {debouncedSearchQuery && ` for "${debouncedSearchQuery}"`}
           </Text>
         </View>
@@ -800,7 +882,7 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
               <Text style={styles.retryButtonText}>Try Again</Text>
             </TouchableOpacity>
           </View>
-        ) : borrowerHistory.length === 0 ? (
+        ) : filteredLoans.length === 0 ? (
           <View style={styles.emptyState}>
             <View style={styles.emptyIconContainer}>
               <Icon name="history" size={60} color={ORANGE_THEME.border} />
@@ -832,14 +914,14 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
           </View>
         ) : (
           <>
-            {borrowerHistory.map((loan, index) => (
+            {filteredLoans.map((loan, index) => (
               <LoanHistoryCard
                 key={loan._id || index}
                 loan={loan}
                 onPress={() => handleLoanCardPress(loan)}
               />
             ))}
-            {historyPagination.currentPage < historyPagination.totalPages && (
+            {!debouncedSearchQuery && historyPagination.currentPage < historyPagination.totalPages && (
               <TouchableOpacity
                 style={styles.loadMoreButton}
                 onPress={handleLoadMore}
@@ -1402,14 +1484,26 @@ const styles = StyleSheet.create({
   // Filter Modal
   filterModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
+  },
+  filterModalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   filterModalContent: {
     backgroundColor: ORANGE_THEME.card,
     borderTopLeftRadius: m(24),
     borderTopRightRadius: m(24),
-    maxHeight: '85%',
+    paddingBottom: m(20),
+  },
+  filterModalHandle: {
+    width: m(40),
+    height: m(4),
+    backgroundColor: ORANGE_THEME.border,
+    borderRadius: m(2),
+    alignSelf: 'center',
+    marginTop: m(12),
+    marginBottom: m(8),
   },
   filterModalHeader: {
     flexDirection: 'row',
@@ -1439,9 +1533,10 @@ const styles = StyleSheet.create({
   },
   filterScroll: {
     paddingHorizontal: m(20),
+    maxHeight: m(400),
   },
   filterSection: {
-    paddingVertical: m(20),
+    paddingVertical: m(2),
     borderBottomWidth: 1,
     borderBottomColor: ORANGE_THEME.border,
   },
@@ -1524,12 +1619,26 @@ const styles = StyleSheet.create({
     color: ORANGE_THEME.text,
     paddingHorizontal: m(8),
   },
+  dateInputText: {
+    flex: 1,
+    fontSize: m(14),
+    color: ORANGE_THEME.text,
+    paddingHorizontal: m(8),
+    paddingVertical: m(14),
+    fontWeight: '500',
+  },
+  dateInputPlaceholder: {
+    color: '#9CA3AF',
+  },
   filterModalActions: {
     flexDirection: 'row',
-    padding: m(20),
+    paddingHorizontal: m(20),
+    paddingTop: m(16),
+    paddingBottom: m(10),
     borderTopWidth: 1,
     borderTopColor: ORANGE_THEME.border,
     gap: m(12),
+    backgroundColor: ORANGE_THEME.card,
   },
   filterButton: {
     flex: 1,
@@ -1537,11 +1646,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: m(8),
-    padding: m(14),
+    paddingVertical: m(14),
+    paddingHorizontal: m(16),
     borderRadius: m(12),
+    minHeight: m(50),
   },
   resetButton: {
     backgroundColor: ORANGE_THEME.primaryLight,
+    borderWidth: 1,
+    borderColor: ORANGE_THEME.border,
   },
   resetButtonText: {
     color: ORANGE_THEME.text,

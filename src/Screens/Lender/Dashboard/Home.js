@@ -9,6 +9,7 @@ import {
   Animated,
   Easing,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
@@ -19,6 +20,8 @@ import { getPendingPayments } from '../../../Redux/Slices/lenderPaymentSlice';
 import { getLenderRecentActivities } from '../../../Redux/Slices/lenderActivitiesSlice';
 import { getActivePlan } from '../../../Redux/Slices/planPurchaseSlice';
 import { useDispatch, useSelector } from 'react-redux';
+import lenderLoanAPI from '../../../Services/lenderLoanService';
+import Toast from 'react-native-toast-message';
 import useFetchUserFromStorage from '../../../Redux/hooks/useFetchUserFromStorage';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
@@ -54,6 +57,7 @@ export default function Home() {
 
   const [refreshing, setRefreshing] = useState(false);
   const [showAllActivity, setShowAllActivity] = useState(false);
+  const [loadingActivityId, setLoadingActivityId] = useState(null);
 
   // Enhanced Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -199,10 +203,66 @@ export default function Home() {
   };
 
   // Handle activity card press
-  const handleActivityPress = (activity) => {
+  const handleActivityPress = async (activity) => {
     if (activity.loanId) {
-      // Navigate to Outward (Given) tab screen for loan-related activities
-      navigation.navigate('Given', { highlightLoanId: activity.loanId });
+      const activityId = activity._id || activity.loanId;
+      setLoadingActivityId(activityId);
+      
+      try {
+        // Fetch loan details by ID
+        const response = await lenderLoanAPI.getLoanDetails(activity.loanId);
+        
+        if (response?.data) {
+          // Navigate to LoanDetailScreen with the fetched loan details
+          navigation.navigate('LoanDetailScreen', { 
+            loanDetails: response.data,
+            isEdit: false,
+            highlightActivity: true 
+          });
+        } else {
+          // Fallback: Try to get loan from list
+          const listResponse = await lenderLoanAPI.getLoanFromList(activity.loanId);
+          if (listResponse?.data) {
+            navigation.navigate('LoanDetailScreen', { 
+              loanDetails: listResponse.data,
+              isEdit: false,
+              highlightActivity: true 
+            });
+          } else {
+            Toast.show({
+              type: 'error',
+              text1: 'Loan Not Found',
+              text2: 'Unable to find the loan details',
+            });
+          }
+        }
+      } catch (error) {
+        // Fallback: Try to get loan from list
+        try {
+          const listResponse = await lenderLoanAPI.getLoanFromList(activity.loanId);
+          if (listResponse?.data) {
+            navigation.navigate('LoanDetailScreen', { 
+              loanDetails: listResponse.data,
+              isEdit: false,
+              highlightActivity: true 
+            });
+          } else {
+            Toast.show({
+              type: 'error',
+              text1: 'Error',
+              text2: 'Unable to load loan details',
+            });
+          }
+        } catch (fallbackError) {
+          Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: 'Unable to load loan details',
+          });
+        }
+      } finally {
+        setLoadingActivityId(null);
+      }
     }
   };
 
@@ -430,7 +490,8 @@ export default function Home() {
               <TouchableOpacity
                 key={action.text}
                 style={styles.actionItem}
-                onPress={() => navigation.navigate(action.screen)}>
+                activeOpacity={action.screen ? 0.7 : 1}
+                onPress={() => action.screen && navigation.navigate(action.screen)}>
                 {/* Background Light Shade */}
                 <View style={[styles.actionBackground, { backgroundColor: action.lightColor }]} />
 
@@ -634,6 +695,8 @@ export default function Home() {
           {(showAllActivity ? recentActivities : recentActivities.slice(0, 1)).map(
             (activity, index) => {
               const activityProps = getActivityProperties(activity);
+              const activityId = activity._id || activity.loanId;
+              const isLoading = loadingActivityId === activityId;
               // Ensure unique key by combining multiple identifiers with index
               const uniqueKey = activity._id
                 ? `activity-${activity._id}-${index}`
@@ -646,6 +709,7 @@ export default function Home() {
                 <TouchableOpacity
                   key={uniqueKey}
                   activeOpacity={0.7}
+                  disabled={isLoading}
                   onPress={() => handleActivityPress(activity)}>
                   <Animated.View
                     style={[
@@ -653,8 +717,17 @@ export default function Home() {
                       {
                         transform: [{ translateX: slideUpAnim }],
                         opacity: fadeAnim
-                      }
+                      },
+                      isLoading && styles.activityItemLoading
                     ]}>
+
+                    {/* Loading Overlay */}
+                    {isLoading && (
+                      <View style={styles.activityLoadingOverlay}>
+                        <ActivityIndicator size="small" color="#ff6700" />
+                        <Text style={styles.activityLoadingText}>Loading...</Text>
+                      </View>
+                    )}
 
                     {/* Timeline Indicator */}
                     <View style={styles.timeline}>
@@ -663,7 +736,7 @@ export default function Home() {
                     </View>
 
                     {/* Activity Content */}
-                    <View style={styles.activityContent}>
+                    <View style={[styles.activityContent, isLoading && { opacity: 0.5 }]}>
                       <View style={styles.activityHeader}>
                         <LinearGradient
                           colors={activityProps.gradient}
@@ -1284,6 +1357,29 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.primarySemiBold,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  // Activity Loading State
+  activityItemLoading: {
+    position: 'relative',
+  },
+  activityLoadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+    borderRadius: m(20),
+    flexDirection: 'row',
+    gap: m(8),
+  },
+  activityLoadingText: {
+    fontSize: FontSizes.sm,
+    color: '#ff6700',
+    fontFamily: FontFamily.primarySemiBold,
   },
   // Pending Payments Notification Card
   pendingPaymentCard: {

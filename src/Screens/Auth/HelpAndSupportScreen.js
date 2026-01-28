@@ -41,7 +41,7 @@ export default function HelpAndSupportScreen() {
     <TouchableOpacity style={styles.faqCard} activeOpacity={0.8}>
       <View style={styles.faqHeader}>
         <Text style={styles.faqQuestion}>Q: {item.question}</Text>
-        <Icon name="chevron-down" size={20} color="#6B7280" />
+        {/* <Icon name="chevron-down" size={20} color="#6B7280" /> */}
       </View>
       <Text style={styles.faqAnswer}>A: {item.answer}</Text>
     </TouchableOpacity>
@@ -175,7 +175,7 @@ export default function HelpAndSupportScreen() {
         </View>
 
         {/* Useful Links */}
-        <Text style={styles.sectionTitle}>Useful Links</Text>
+        {/* <Text style={styles.sectionTitle}>Useful Links</Text>
         <View style={styles.linksContainer}>
           {helpData.usefulLinks.map((link, index) => (
             <TouchableOpacity
@@ -186,7 +186,7 @@ export default function HelpAndSupportScreen() {
               <Text style={styles.linkText}>{link.title}</Text>
             </TouchableOpacity>
           ))}
-        </View>
+        </View> */}
 
         {/* Troubleshooting Tips */}
         {/* {helpData.troubleshooting.length > 0 && (

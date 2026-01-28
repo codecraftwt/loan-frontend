@@ -1,4 +1,5 @@
 import messaging from '@react-native-firebase/messaging';
+import firebase from '@react-native-firebase/app';
 import { Platform, PermissionsAndroid, Alert } from 'react-native';
 import notifee from '@notifee/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -11,6 +12,25 @@ class NotificationService {
     this.tokenRefreshUnsubscribe = null;
     this.navigation = null;
     this.notifeeHandlersSetup = false;
+    this.isFirebaseInitialized = false;
+  }
+
+  /**
+   * Check if Firebase is properly initialized
+   */
+  checkFirebaseInitialized() {
+    try {
+      // Check if Firebase apps exist
+      if (firebase.apps.length === 0) {
+        console.warn('Firebase not initialized - no Firebase apps found');
+        return false;
+      }
+      this.isFirebaseInitialized = true;
+      return true;
+    } catch (error) {
+      console.warn('Firebase initialization check failed:', error.message);
+      return false;
+    }
   }
 
   async requestPermission() {
@@ -18,6 +38,12 @@ class NotificationService {
       // Check if Firebase messaging is available
       if (!messaging) {
         console.error('Firebase messaging is not available');
+        return false;
+      }
+
+      // Check if Firebase is initialized
+      if (!this.checkFirebaseInitialized()) {
+        console.warn('Firebase not initialized, cannot request permission');
         return false;
       }
       
@@ -84,6 +110,12 @@ class NotificationService {
    */
   async getFCMToken(retryCount = 0, maxRetries = 3) {
     try {
+      // Check if Firebase is initialized
+      if (!this.checkFirebaseInitialized()) {
+        console.warn('Firebase not initialized, cannot get FCM token');
+        return null;
+      }
+
       // Check if Firebase is properly initialized (iOS only)
       if (Platform.OS === 'ios') {
         try {
@@ -207,47 +239,60 @@ class NotificationService {
       return;
     }
 
-    // Handle foreground messages
-    this.foregroundUnsubscribe = messaging().onMessage(async remoteMessage => {
-      this.displayNotification(remoteMessage);
-    });
+    // Check if Firebase is initialized before setting up handlers
+    if (!this.checkFirebaseInitialized()) {
+      console.warn('Firebase not initialized, skipping notification handlers setup');
+      return;
+    }
 
-    // Handle notification opened from quit state
-    messaging()
-      .getInitialNotification()
-      .then(remoteMessage => {
-        if (remoteMessage) {
-          
-          setTimeout(() => {
-            // Only navigate, don't mark as read
-            this.handleNotificationPress(remoteMessage);
-          }, 1000); // Wait for navigation to be ready
-        }
+    try {
+      // Handle foreground messages
+      this.foregroundUnsubscribe = messaging().onMessage(async remoteMessage => {
+        this.displayNotification(remoteMessage);
       });
 
-    // Handle notification opened from background
-    this.notificationOpenedUnsubscribe = messaging().onNotificationOpenedApp(
-      remoteMessage => {
-        if (!this.navigation) {
-          console.error('Navigation not available when notification opened from background!');
-          // Wait a bit for navigation to be ready
-          setTimeout(() => {
-            if (this.navigation) {
+      // Handle notification opened from quit state
+      messaging()
+        .getInitialNotification()
+        .then(remoteMessage => {
+          if (remoteMessage) {
+            
+            setTimeout(() => {
+              // Only navigate, don't mark as read
               this.handleNotificationPress(remoteMessage);
-            } else {
-              console.error('Navigation still not available after delay!');
-            }
-          }, 500);
-          return;
-        }
-        
-        // Only navigate, don't mark as read
-        this.handleNotificationPress(remoteMessage);
-      }
-    );
+            }, 1000); // Wait for navigation to be ready
+          }
+        })
+        .catch(error => {
+          console.warn('Error getting initial notification:', error.message);
+        });
 
-    // Setup token refresh listener
-    this.setupTokenRefresh();
+      // Handle notification opened from background
+      this.notificationOpenedUnsubscribe = messaging().onNotificationOpenedApp(
+        remoteMessage => {
+          if (!this.navigation) {
+            console.error('Navigation not available when notification opened from background!');
+            // Wait a bit for navigation to be ready
+            setTimeout(() => {
+              if (this.navigation) {
+                this.handleNotificationPress(remoteMessage);
+              } else {
+                console.error('Navigation still not available after delay!');
+              }
+            }, 500);
+            return;
+          }
+          
+          // Only navigate, don't mark as read
+          this.handleNotificationPress(remoteMessage);
+        }
+      );
+
+      // Setup token refresh listener
+      this.setupTokenRefresh();
+    } catch (error) {
+      console.error('Error setting up notification handlers:', error.message);
+    }
   }
 
   /**
@@ -781,23 +826,32 @@ class NotificationService {
    * Setup token refresh listener
    */
   setupTokenRefresh() {
-    this.tokenRefreshUnsubscribe = messaging().onTokenRefresh(async token => {      
-      // Update stored token
-      await AsyncStorage.setItem('fcm_token', token);
-      
-      // Re-register with backend if user is logged in
-      try {
-        const user = await AsyncStorage.getItem('user');
-        if (user) {
-          const userData = JSON.parse(user);
-          if (userData._id) {
-            await this.registerToken(userData._id, token);
-          }
-        }
-      } catch (error) {
-        console.error('Error re-registering refreshed token:', error);
+    try {
+      if (!this.checkFirebaseInitialized()) {
+        console.warn('Firebase not initialized, skipping token refresh setup');
+        return;
       }
-    });
+
+      this.tokenRefreshUnsubscribe = messaging().onTokenRefresh(async token => {      
+        // Update stored token
+        await AsyncStorage.setItem('fcm_token', token);
+        
+        // Re-register with backend if user is logged in
+        try {
+          const user = await AsyncStorage.getItem('user');
+          if (user) {
+            const userData = JSON.parse(user);
+            if (userData._id) {
+              await this.registerToken(userData._id, token);
+            }
+          }
+        } catch (error) {
+          console.error('Error re-registering refreshed token:', error);
+        }
+      });
+    } catch (error) {
+      console.warn('Error setting up token refresh:', error.message);
+    }
   }
 
   /**
