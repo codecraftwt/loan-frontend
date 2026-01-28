@@ -35,6 +35,7 @@ const EditProfile = ({ navigation }) => {
 
   const [isDeleteImagePromptVisible, setIsDeleteImagePromptVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const [editedData, setEditedData] = useState({
     userName: profileData?.userName || '',
@@ -110,6 +111,7 @@ const EditProfile = ({ navigation }) => {
       return;
     }
 
+    setSaving(true);
     try {
       // Update with trimmed name
       const dataToSave = {
@@ -121,6 +123,7 @@ const EditProfile = ({ navigation }) => {
       navigation.goBack();
     } catch (err) {
       Toast.show({ type: 'error', text1: 'Update Failed' });
+      setSaving(false);
     }
   };
 
@@ -258,15 +261,20 @@ const EditProfile = ({ navigation }) => {
         {/* Edit Action Buttons */}
         <View style={styles.editActionButtons}>
           <TouchableOpacity
-            style={styles.saveButton}
+            style={[styles.saveButton, saving && styles.saveButtonDisabled]}
             onPress={handleSaveChanges}
             activeOpacity={0.8}
+            disabled={saving}
           >
             <LinearGradient
-              colors={['#ff9100ff', '#ffa200ff']}
+              colors={saving ? ['#d1d5db', '#9ca3af'] : ['#ff9100ff', '#ffa200ff']}
               style={styles.saveButtonGradient}
             >
-              <Text style={styles.saveButtonText}>Save</Text>
+              {saving ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.saveButtonText}>Save</Text>
+              )}
             </LinearGradient>
           </TouchableOpacity>
 
@@ -505,6 +513,11 @@ const styles = StyleSheet.create({
     width: m(160),
     height: m(56),
     marginHorizontal: m(4),
+  },
+  saveButtonDisabled: {
+    opacity: 0.7,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   saveButtonGradient: {
     flexDirection: 'row',
