@@ -25,7 +25,7 @@ const LoanOTPVerification = ({
   paymentVerified = false,
 }) => {
   const dispatch = useDispatch();
-  const [otp, setOtp] = useState(['', '', '', '']); // 4-digit OTP
+  const [otp, setOtp] = useState(['', '', '', '']);
   const inputRefs = useRef([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -136,7 +136,7 @@ const LoanOTPVerification = ({
         text1: 'OTP Resent',
         text2: 'Please check your mobile number for the OTP.',
       });
-      setResendCooldown(60); // 60 second cooldown
+      setResendCooldown(60);
       setOtp(['', '', '', '']);
       inputRefs.current[0]?.focus();
     } catch (err) {
@@ -445,11 +445,3 @@ const styles = StyleSheet.create({
 });
 
 export default LoanOTPVerification;
-
-
-
-
-
-
-
-

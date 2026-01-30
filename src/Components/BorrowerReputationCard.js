@@ -52,17 +52,17 @@ const BorrowerReputationCard = ({ aadhaarNumber, compact = false }) => {
   const getReputationColor = (level) => {
     switch (level?.toLowerCase()) {
       case 'excellent':
-        return '#10B981'; // Green
+        return '#10B981'; 
       case 'good':
-        return '#3B82F6'; // Blue
+        return '#3B82F6';
       case 'fair':
-        return '#F59E0B'; // Yellow
+        return '#F59E0B';
       case 'below average':
-        return '#F97316'; // Orange
+        return '#F97316';
       case 'poor':
-        return '#EF4444'; // Red
+        return '#EF4444';
       default:
-        return '#6B7280'; // Gray
+        return '#6B7280';
     }
   };
 
@@ -98,7 +98,7 @@ const BorrowerReputationCard = ({ aadhaarNumber, compact = false }) => {
   if (error || !reputation) {
     // Show a subtle card indicating no reputation data available
     if (compact) {
-      return null; // Don't show anything in compact mode if no data
+      return null;
     }
     return (
       <View style={[styles.container, styles.noDataContainer]}>
@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
     padding: m(16),
     marginBottom: m(12),
     borderWidth: 2,
-    borderColor: '#E5E7EB', // Default border color to prevent black flash
+    borderColor: '#E5E7EB',
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -562,7 +562,7 @@ const styles = StyleSheet.create({
     borderRadius: m(12),
     padding: m(12),
     borderWidth: 1.5,
-    borderColor: '#E5E7EB', // Default border color to prevent black flash
+    borderColor: '#E5E7EB',
     marginBottom: m(8),
   },
   compactHeader: {
@@ -629,4 +629,3 @@ const styles = StyleSheet.create({
 });
 
 export default BorrowerReputationCard;
-

@@ -391,7 +391,6 @@ export default function MakePayment() {
         await dispatch(getBorrowerLoans({ borrowerId: user._id })).unwrap();
       }
 
-      // Navigate back to loan details - use current loanSummary (before confirmation)
       // Loan totals will be updated only after lender confirms
       navigation.navigate('BorrowerLoanDetails', { 
         loan: {
@@ -1317,15 +1316,15 @@ const styles = StyleSheet.create({
     color: '#111827',
     paddingVertical: m(12),
   },
-  inputIcon: {
-    marginRight: m(12),
-  },
-  textInput: {
-    flex: 1,
-    fontSize: m(16),
-    color: '#111827',
-    paddingVertical: m(12),
-  },
+  // inputIcon: {
+  //   marginRight: m(12),
+  // },
+  // textInput: {
+  //   flex: 1,
+  //   fontSize: m(16),
+  //   color: '#111827',
+  //   paddingVertical: m(12),
+  // },
   helperText: {
     fontSize: m(12),
     color: '#6B7280',
@@ -1511,4 +1510,3 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
 });
-

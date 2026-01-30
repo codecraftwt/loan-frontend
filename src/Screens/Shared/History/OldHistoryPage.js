@@ -10,18 +10,17 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigation } from '@react-navigation/native';
 import { getLoanByAadhar } from '../../../Redux/Slices/loanSlice';
 import { m } from 'walstar-rn-responsive';
 import LoaderSkeleton from '../../../Components/LoaderSkeleton';
-import AgreementModal from '../../PromptBox/AgreementModal';
 import Header from '../../../Components/Header';
 import { LinearGradient } from 'react-native-linear-gradient';
 
 const OldHistoryPage = ({ route }) => {
   const { aadhaarNumber } = route.params;
+  const navigation = useNavigation();
   const [expandedLoanIndex, setExpandedLoanIndex] = useState(null);
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [selectedLoanAgreement, setSelectedLoanAgreement] = useState(null);
   const dispatch = useDispatch();
   const { loans, totalAmount, loading, error } = useSelector(
     state => state.loans
@@ -35,11 +34,6 @@ const OldHistoryPage = ({ route }) => {
 
   const toggleDetails = index => {
     setExpandedLoanIndex(expandedLoanIndex === index ? null : index);
-  };
-
-  const handleViewAgreement = agreement => {
-    setSelectedLoanAgreement(agreement);
-    setIsModalVisible(true);
   };
 
   const getStatusColor = status => {
@@ -273,7 +267,7 @@ const OldHistoryPage = ({ route }) => {
                     <View style={styles.actionButtons}>
                       <TouchableOpacity
                         style={[styles.actionButton, { backgroundColor: '#FF6700' }]}
-                        onPress={() => handleViewAgreement(loan.agreement)}
+                        onPress={() => navigation.navigate('AgreementScreen', { agreement: loan.agreement })}
                       >
                         <Icon name="file-text" size={18} color="#fff" />
                         <Text style={styles.actionButtonText}>View Agreement</Text>
@@ -286,12 +280,6 @@ const OldHistoryPage = ({ route }) => {
           )}
         </ScrollView>
       )}
-
-      <AgreementModal
-        isVisible={isModalVisible}
-        agreement={selectedLoanAgreement}
-        onClose={() => setIsModalVisible(false)}
-      />
     </View>
   );
 };

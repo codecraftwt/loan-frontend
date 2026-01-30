@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   StatusBar,
   Platform,
+  KeyboardAvoidingView,
+  ScrollView,
 } from 'react-native';
 import Toast from 'react-native-toast-message';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -14,6 +16,7 @@ import {useDispatch} from 'react-redux';
 import {resetPassword} from '../../Redux/Slices/authslice';
 import {m} from 'walstar-rn-responsive';
 import {FontFamily, FontSizes} from '../../constants';
+import LinearGradient from 'react-native-linear-gradient';
 
 export default function CreatePass({navigation, route}) {
   const {email, otp} = route.params;
@@ -65,118 +68,260 @@ export default function CreatePass({navigation, route}) {
   const isButtonDisabled = !validatePassword(newPassword) || !confirmPassword;
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" {...(Platform.OS === 'android' && {backgroundColor: '#fff'})} />
-      <Text style={styles.headerText}>Create New Password</Text>
-      <Text style={styles.instructionText}>
-        Please enter a new password below.
-      </Text>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
+      <StatusBar barStyle="light-content" backgroundColor="#ff6700" />
 
-      <View style={styles.inputWrapper}>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter New Password"
-          secureTextEntry={!passwordVisible}
-          placeholderTextColor="#666666"
-          value={newPassword}
-          onChangeText={setNewPassword}
-        />
-        <TouchableOpacity onPress={() => setPasswordVisible(!passwordVisible)}>
-          <Ionicons
-            name={passwordVisible ? 'eye-off-outline' : 'eye-outline'}
-            size={25}
-            color={'#f26fb7'}
-            style={styles.icon}
-          />
-        </TouchableOpacity>
-      </View>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled">
+        {/* Brand Header */}
+        <View style={styles.headerContent}>
+          <View style={styles.logoContainer}>
+            <Text style={styles.appName}>LoanHub</Text>
+          </View>
+          <Text style={styles.tagline}>Smart Loan Management</Text>
+        </View>
 
-      <View style={styles.inputWrapper}>
-        <TextInput
-          style={styles.input}
-          placeholder="Confirm New Password"
-          secureTextEntry={!confirmVisible}
-          placeholderTextColor="#666666"
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-        />
-        <TouchableOpacity onPress={() => setConfirmVisible(!confirmVisible)}>
-          <Ionicons
-            name={confirmVisible ? 'eye-off-outline' : 'eye-outline'}
-            size={25}
-            color={'#f26fb7'}
-            style={styles.icon}
-          />
-        </TouchableOpacity>
-      </View>
+        {/* Form Card */}
+        <View style={styles.formCard}>
+          <Text style={styles.headerText}>Create New Password</Text>
+          <Text style={styles.instructionText}>
+            Set a strong password that includes at least 6 characters with both letters and numbers.
+          </Text>
 
-      <TouchableOpacity
-        style={[styles.applyButton, {opacity: isButtonDisabled ? 0.5 : 1}]}
-        onPress={handleApply}
-        disabled={isButtonDisabled}>
-        <Text style={styles.applyButtonText}>Apply</Text>
-      </TouchableOpacity>
-    </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>New Password</Text>
+            <View style={styles.inputWrapper}>
+              <Ionicons
+                name="lock-closed-outline"
+                size={20}
+                color="#ff7900"
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Enter new password"
+                secureTextEntry={!passwordVisible}
+                placeholderTextColor="#999"
+                value={newPassword}
+                onChangeText={setNewPassword}
+              />
+              <TouchableOpacity
+                onPress={() => setPasswordVisible(!passwordVisible)}
+                style={styles.eyeButton}>
+                <Ionicons
+                  name={passwordVisible ? 'eye-off-outline' : 'eye-outline'}
+                  size={22}
+                  color="#ff7900"
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Confirm Password</Text>
+            <View style={styles.inputWrapper}>
+              <Ionicons
+                name="lock-closed-outline"
+                size={20}
+                color="#ff7900"
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Re-enter new password"
+                secureTextEntry={!confirmVisible}
+                placeholderTextColor="#999"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+              />
+              <TouchableOpacity
+                onPress={() => setConfirmVisible(!confirmVisible)}
+                style={styles.eyeButton}>
+                <Ionicons
+                  name={confirmVisible ? 'eye-off-outline' : 'eye-outline'}
+                  size={22}
+                  color="#ff7900"
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={[
+              styles.applyButtonContainer,
+              isButtonDisabled && styles.applyButtonDisabled,
+            ]}
+            onPress={handleApply}
+            disabled={isButtonDisabled}>
+            <LinearGradient
+              colors={['#ff6700', '#ff7900', '#ff8500']}
+              start={{x: 0, y: 0}}
+              end={{x: 1, y: 0}}
+              style={styles.applyButtonGradient}>
+              <Text style={styles.applyButtonText}>Update Password</Text>
+              <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+            </LinearGradient>
+          </TouchableOpacity>
+
+          {/* Back to Login */}
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Back to </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+              <Text style={styles.footerLink}>Sign In</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
-    padding: m(20),
-    justifyContent: 'center',
+    backgroundColor: '#f8f8f8',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: m(20),
+    paddingTop: Platform.OS === 'ios' ? m(40) : m(20),
+    paddingBottom: m(40),
+  },
+  headerContent: {
+    alignItems: 'center',
+    marginBottom: m(10),
+  },
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: m(8),
+  },
+  appName: {
+    fontSize: FontSizes['4xl'],
+    fontFamily: FontFamily.secondaryBold,
+    color: '#ff6700',
+  },
+  tagline: {
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.secondaryRegular,
+    color: '#ff6700',
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  formCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: m(20),
+    padding: m(24),
+    marginTop: m(20),
+    borderWidth: 1,
+    borderColor: '#FFEDD5',
+    elevation: 8,
+    shadowColor: '#ff6700',
+    shadowOffset: {width: 0, height: 8},
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
   },
   headerText: {
     fontSize: FontSizes['3xl'],
-    color: '#b80266',
+    color: '#333',
     fontFamily: FontFamily.secondaryBold,
     textAlign: 'center',
-    marginBottom: m(20),
+    marginBottom: m(4),
   },
   instructionText: {
     fontSize: FontSizes.md,
-    color: '#333',
+    color: '#666',
     fontFamily: FontFamily.primaryRegular,
     textAlign: 'center',
-    marginBottom: m(30),
+    marginBottom: m(24),
+  },
+  inputGroup: {
+    marginBottom: m(20),
+  },
+  inputLabel: {
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primarySemiBold,
+    color: '#555',
+    marginBottom: m(8),
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderColor: '#f26fb7',
-    borderWidth: m(1),
-    borderRadius: m(8),
-    marginBottom: m(20),
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: m(2)},
-    shadowOpacity: 0.1,
-    shadowRadius: m(4),
+    backgroundColor: '#FFF9F0',
+    borderRadius: m(12),
+    borderWidth: 1,
+    borderColor: '#FFEDD5',
+    paddingHorizontal: m(16),
+    height: m(56),
   },
   input: {
     flex: 1,
-    height: m(60),
-    paddingHorizontal: m(16),
+    height: m(56),
     fontSize: FontSizes.md,
     fontFamily: FontFamily.primaryRegular,
-    color: '#333333',
+    color: '#333',
+    padding: 0,
+  },
+  inputIcon: {
+    marginRight: m(12),
+  },
+  eyeButton: {
+    padding: m(4),
   },
   icon: {
     paddingHorizontal: m(10),
   },
-  applyButton: {
-    backgroundColor: '#b80266',
-    borderRadius: m(8),
-    height: m(50),
-    justifyContent: 'center',
+  applyButtonContainer: {
+    borderRadius: m(12),
+    marginTop: m(8),
+    overflow: 'hidden',
+    elevation: 4,
+    shadowColor: '#ff6700',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+  },
+  applyButtonGradient: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: m(10),
-    elevation: m(4),
+    justifyContent: 'center',
+    paddingVertical: Platform.OS === 'android' ? m(16) : m(0),
+    gap: m(8),
+  },
+  applyButtonDisabled: {
+    opacity: 0.6,
   },
   applyButtonText: {
     color: '#FFFFFF',
     fontSize: FontSizes.lg,
     fontFamily: FontFamily.primarySemiBold,
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: {width: 1, height: 1},
+    textShadowRadius: 2,
+    paddingVertical: Platform.OS === 'android' ? m(0) : m(16),
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: m(16),
+  },
+  footerText: {
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primaryRegular,
+    color: '#666',
+  },
+  footerLink: {
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primarySemiBold,
+    color: '#ff6700',
   },
 });

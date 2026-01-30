@@ -21,7 +21,6 @@ import Header from '../../../Components/Header';
 import BorrowerReputationCard from '../../../Components/BorrowerReputationCard';
 import SubscriptionRestriction from '../../../Components/SubscriptionRestriction';
 import { useSubscription } from '../../../hooks/useSubscription';
-import { getActivePlan } from '../../../Redux/Slices/planPurchaseSlice';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import moment from 'moment';
 import { m } from 'walstar-rn-responsive';
@@ -441,7 +440,6 @@ const FilterModal = ({ visible, onClose, filters, setFilters, applyFilters }) =>
         onCancel={() => setEndDatePickerVisible(false)}
         date={localFilters.endDate ? new Date(localFilters.endDate) : new Date()}
         minimumDate={localFilters.startDate ? new Date(localFilters.startDate) : undefined}
-        maximumDate={new Date()}
       />
     </Modal>
   );
@@ -497,7 +495,7 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
 
     const params = {
       page,
-      limit: 100, // Load more to allow client-side filtering
+      limit: 100,
       ...filters,
     };
 
@@ -676,7 +674,7 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
           <Icon name="search" size={22} color={ORANGE_THEME.primary} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search by lender name or amount..."
+            placeholder="Search by lender or amount..."
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholderTextColor={ORANGE_THEME.textLight}
@@ -1536,7 +1534,7 @@ const styles = StyleSheet.create({
     maxHeight: m(400),
   },
   filterSection: {
-    paddingVertical: m(2),
+    paddingVertical: m(10),
     borderBottomWidth: 1,
     borderBottomColor: ORANGE_THEME.border,
   },
@@ -1545,6 +1543,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: m(8),
     marginBottom: m(16),
+    // margin
   },
   filterLabel: {
     fontSize: m(16),

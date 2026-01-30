@@ -14,7 +14,7 @@ import Icon from 'react-native-vector-icons/Feather';
 import moment from 'moment';
 import { m } from 'walstar-rn-responsive';
 import { useSelector } from 'react-redux';
-import AgreementModal from '../../PromptBox/AgreementModal';
+import { useNavigation } from '@react-navigation/native';
 import Header from '../../../Components/Header';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { lenderLoanAPI } from '../../../Services/lenderLoanService';
@@ -37,8 +37,8 @@ const DetailCard = ({ icon, label, value }) => (
 export default function PersonalLoan({ route }) {
   const { loanDetails } = route.params;
   const user = useSelector(state => state.auth.user);
+  const navigation = useNavigation();
 
-  const [isModalVisible, setIsModalVisible] = useState(false);
   const [installmentHistory, setInstallmentHistory] = useState(null);
   const [loadingInstallments, setLoadingInstallments] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -628,7 +628,7 @@ export default function PersonalLoan({ route }) {
         {loanDetails.borrowerAcceptanceStatus?.toLowerCase() !== 'rejected' && (
           <TouchableOpacity
             style={styles.agreementButton}
-            onPress={() => setIsModalVisible(true)}>
+            onPress={() => navigation.navigate('AgreementScreen', { agreement: loanDetails.agreement })}>
             <View style={styles.agreementButtonContent}>
               <Icon name="file-text" size={24} color="#3B82F6" />
               <View style={styles.agreementTextContainer}>
@@ -818,15 +818,6 @@ export default function PersonalLoan({ route }) {
           )}
         </View>
       </ScrollView>
-
-      {/* Only show agreement modal if loan is not rejected */}
-      {loanDetails.borrowerAcceptanceStatus?.toLowerCase() !== 'rejected' && (
-        <AgreementModal
-          isVisible={isModalVisible}
-          agreement={loanDetails.agreement}
-          onClose={() => setIsModalVisible(false)}
-        />
-      )}
 
       {/* Loan Proof Image Viewer */}
       <Modal

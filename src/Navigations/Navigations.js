@@ -31,6 +31,7 @@ import Revenue from '../Screens/Admin/Revenue/Revenue';
 import LenderList from '../Screens/Admin/Lenders/LenderList';
 import LenderDetailsScreen from '../Screens/Admin/Lenders/LenderDetailsScreen';
 import BorrowerLoanHistoryScreen from '../Screens/Shared/Borrowers/BorrowerLoanHistoryScreen';
+import AgreementScreen from '../Screens/PromptBox/AgreementScreen';
 // Borrower Loan Screens
 import MyLoans from '../Screens/Borrower/Loans/MyLoans';
 import BorrowerLoanDetails from '../Screens/Borrower/Loans/BorrowerLoanDetails';
@@ -62,6 +63,7 @@ const Navigation = () => {
       <Stack.Screen name="ProfileDetails" component={ProfileDetails} />
       <Stack.Screen name="EditProfile" component={EditProfile} />
       <Stack.Screen name="OldHistoryPage" component={OldHistoryPage} />
+      <Stack.Screen name="AgreementScreen" component={AgreementScreen} />
 
       <Stack.Screen name="SubscriptionScreen" component={SubscriptionScreen} />
       <Stack.Screen name="LenderPlanDetailsScreen" component={LenderPlanDetailsScreen} />

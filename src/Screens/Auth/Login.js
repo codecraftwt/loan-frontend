@@ -73,7 +73,6 @@ export default function LoginScreen({ navigation }) {
     dispatch(login({ emailOrMobile: mobileNumber, password }))
       .unwrap()
       .then((userData) => {
-        // Fetch subscription status for lenders (roleId === 1)
         if (userData?.roleId === 1) {
           dispatch(getActivePlan());
         }
@@ -219,7 +218,6 @@ export default function LoginScreen({ navigation }) {
 
           {/* Alternative Actions */}
           <TouchableOpacity
-            // style={styles.registerButton}
             onPress={() => navigation.navigate('Register')}>
             <View
               style={styles.registerButtonGradient}>

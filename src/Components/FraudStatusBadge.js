@@ -1,4 +1,3 @@
-import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { m } from 'walstar-rn-responsive';
@@ -39,7 +38,6 @@ const FraudStatusBadge = ({riskLevel }) => {
       <Icon name={getIcon()} size={16} color={color} />
       <Text style={[styles.badgeText, { color }]}>
         {riskLevel?.toUpperCase() || 'UNKNOWN'} RISK
-        {/* {riskLevel?.toUpperCase() || 'UNKNOWN'} RISK ({fraudScore || 0} pts) */}
       </Text>
     </View>
   );
@@ -63,6 +61,3 @@ const styles = StyleSheet.create({
 });
 
 export default FraudStatusBadge;
-
-
-

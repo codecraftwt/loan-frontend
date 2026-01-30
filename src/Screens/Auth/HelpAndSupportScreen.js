@@ -10,13 +10,11 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import Toast from 'react-native-toast-message';
-// import { useNavigation } from '@react-navigation/native';
 import { m } from 'walstar-rn-responsive';
 import helpData from '../../data/helpData';
 import Header from '../../Components/Header';
 
 export default function HelpAndSupportScreen() {
-  // const navigation = useNavigation();
   const [message, setMessage] = useState('');
 
   const handleSendMessage = () => {
@@ -173,38 +171,6 @@ export default function HelpAndSupportScreen() {
             </View>
           </View>
         </View>
-
-        {/* Useful Links */}
-        {/* <Text style={styles.sectionTitle}>Useful Links</Text>
-        <View style={styles.linksContainer}>
-          {helpData.usefulLinks.map((link, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.linkItem}
-              onPress={() => Linking.openURL(link.url)}>
-              <Icon name="external-link" size={16} color="#3B82F6" />
-              <Text style={styles.linkText}>{link.title}</Text>
-            </TouchableOpacity>
-          ))}
-        </View> */}
-
-        {/* Troubleshooting Tips */}
-        {/* {helpData.troubleshooting.length > 0 && (
-          <View style={styles.tipsSection}>
-            <View style={styles.tipsHeader}>
-              <Icon name="zap" size={20} color="#F59E0B" />
-              <Text style={styles.tipsTitle}>Quick Fixes</Text>
-            </View>
-            {helpData.troubleshooting.map((tip, index) => (
-              <View key={index} style={styles.tipItem}>
-                <View style={styles.tipBullet}>
-                  <Text style={styles.tipNumber}>{index + 1}</Text>
-                </View>
-                <Text style={styles.tipText}>{tip}</Text>
-              </View>
-            ))}
-          </View>
-        )} */}
 
         {/* Footer */}
         <View style={styles.footer}>
@@ -438,53 +404,6 @@ const styles = StyleSheet.create({
     color: '#3B82F6',
     fontWeight: '500',
   },
-
-  // Tips Section
-  // tipsSection: {
-  //   backgroundColor: '#FFFBEB',
-  //   borderRadius: m(16),
-  //   padding: m(20),
-  //   marginBottom: m(32),
-  //   borderWidth: 1,
-  //   borderColor: '#FEF3C7',
-  // },
-  // tipsHeader: {
-  //   flexDirection: 'row',
-  //   alignItems: 'center',
-  //   gap: m(8),
-  //   marginBottom: m(16),
-  // },
-  // tipsTitle: {
-  //   fontSize: m(18),
-  //   fontWeight: '600',
-  //   color: '#92400E',
-  // },
-  // tipItem: {
-  //   flexDirection: 'row',
-  //   alignItems: 'flex-start',
-  //   marginBottom: m(12),
-  // },
-  // tipBullet: {
-  //   width: m(24),
-  //   height: m(24),
-  //   borderRadius: m(12),
-  //   backgroundColor: '#F59E0B',
-  //   justifyContent: 'center',
-  //   alignItems: 'center',
-  //   marginRight: m(12),
-  //   marginTop: m(2),
-  // },
-  // tipNumber: {
-  //   fontSize: m(12),
-  //   fontWeight: '600',
-  //   color: '#FFFFFF',
-  // },
-  // tipText: {
-  //   flex: 1,
-  //   fontSize: m(14),
-  //   color: '#92400E',
-  //   lineHeight: m(20),
-  // },
 
   // Footer
   footer: {

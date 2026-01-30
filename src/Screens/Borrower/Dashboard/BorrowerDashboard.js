@@ -137,7 +137,13 @@ export default function BorrowerDashboard() {
               <TouchableOpacity
                 key={action.id}
                 style={styles.actionCard}
-                onPress={() => navigation.navigate(action.screen)}>
+                onPress={() => {
+                  if (action.screen === 'BorrowerLoanHistoryScreen' && user?._id) {
+                    navigation.navigate(action.screen, { borrowerId: user._id });
+                  } else {
+                    navigation.navigate(action.screen);
+                  }
+                }}>
                 <View style={[styles.actionIcon, { backgroundColor: action.color + '20' }]}>
                   <Icon name={action.icon} size={24} color={action.color} />
                 </View>
@@ -237,6 +243,18 @@ export default function BorrowerDashboard() {
                         return { name: 'activity', color: '#666' };
                     }
                   };
+                  const handleActivityPress = () => {
+                    if (activity.loanId) {
+                      const loan = loans.find(l => l._id === activity.loanId);
+                      if (loan) {
+                        navigation.navigate('BorrowerLoanDetails', { loan });
+                      } else {
+                        navigation.navigate('MyLoans');
+                      }
+                    } else {
+                      navigation.navigate('MyLoans');
+                    }
+                  };
                   const iconInfo = getActivityIcon(activity.type);
                   const isLast = index === displayedActivities.length - 1;
                 // Create unique key by combining multiple identifiers
@@ -246,12 +264,14 @@ export default function BorrowerDashboard() {
                     ? `${activity.loanId}-${index}` 
                     : `activity-${index}-${activity.type || 'unknown'}`;
                 return (
-                  <View 
-                    key={uniqueKey} 
+                  <TouchableOpacity
+                    key={uniqueKey}
                     style={[
                       styles.activityItem,
                       isLast && styles.activityItemLast
-                    ]}>
+                    ]}
+                    onPress={handleActivityPress}
+                    activeOpacity={0.7}>
                     <View style={[styles.activityIcon, { backgroundColor: iconInfo.color + '20' }]}>
                       <Icon name={iconInfo.name} size={16} color={iconInfo.color} />
                     </View>
@@ -267,7 +287,7 @@ export default function BorrowerDashboard() {
                         ₹{activity.amount.toLocaleString('en-IN')}
                       </Text>
                     )}
-                  </View>
+                  </TouchableOpacity>
                 );
                 });
               })()}
@@ -512,6 +532,3 @@ const styles = StyleSheet.create({
     color: '#999',
   },
 });
-
-
-

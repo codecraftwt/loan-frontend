@@ -43,17 +43,10 @@ export default function Home() {
 
   const user = useSelector(state => state.auth.user);
   const lenderStatistics = useSelector(state => state.loans.lenderStatistics);
-  const { activities: recentActivities, loading: activitiesLoading } = useSelector(
+  const { activities: recentActivities } = useSelector(
     state => state.lenderActivities,
   );
   const { pendingPayments } = useSelector(state => state.lenderPayments);
-
-  // Unused: Calculate total pending payments (commented out as not used)
-  // useEffect(() => {
-  //   if (pendingPayments && pendingPayments.length > 0) {
-  //     const totalPending = pendingPayments.reduce((total, loan) => total + (loan.pendingPayments?.length || 0), 0);
-  //   }
-  // }, [pendingPayments]);
 
   const [refreshing, setRefreshing] = useState(false);
   const [showAllActivity, setShowAllActivity] = useState(false);

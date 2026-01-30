@@ -742,19 +742,21 @@ const styles = StyleSheet.create({
   featureBox: {
     alignItems: 'center',
     flex: 1,
-    paddingHorizontal: 10,
+    paddingHorizontal: 4,
   },
   featureBoxTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 'bold',
     color: '#333',
     marginTop: 8,
     marginBottom: 4,
+    textAlign: 'center',
   },
   featureBoxText: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#666',
     textAlign: 'center',
+    lineHeight: 15,
   },
 });
 

@@ -71,7 +71,7 @@ const DonutChart = ({
       return [];
     }
 
-    let startAngle = toRadians(-90); // start from top
+    let startAngle = toRadians(-90);
 
     return data
       .filter(item => item.value > 0)
@@ -97,7 +97,7 @@ const DonutChart = ({
 
   if (!total) {
     const emptyOuterRadius = radius;
-    const emptyInnerRadius = radius - m(16); // controls ring thickness
+    const emptyInnerRadius = radius - m(16);
 
     return (
       <View style={styles.emptyContainer}>
@@ -200,17 +200,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: m(8),
     width: '100%',
-    minHeight: m(160), // Ensure minimum height for chart visibility
+    minHeight: m(160),
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: m(8),
     width: '100%',
-    minHeight: m(160), // Ensure minimum height for chart visibility
+    minHeight: m(160),
   },
 });
 
 export default DonutChart;
-
-

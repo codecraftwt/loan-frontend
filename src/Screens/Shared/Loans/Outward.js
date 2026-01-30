@@ -582,13 +582,13 @@ const Outward = ({ navigation, route }) => {
                             <Text style={styles.userName} numberOfLines={1}>
                               {borrower.userName}
                             </Text>
-                            {hasRisk && riskBadge && (
+                            {/* {hasRisk && riskBadge && (
                               <View style={styles.fraudBadgeContainer}>
                                 <FraudStatusBadge
                                   riskLevel={riskBadge.level || riskData.riskLevel}
                                 />
                               </View>
-                            )}
+                            )} */}
                           </View>
                           <View style={styles.userMeta}>
                             <Icon name="mail" size={14} color="#6B7280" />
@@ -1133,9 +1133,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: m(8),
   },
-  fraudBadgeContainer: {
-    marginLeft: m(8),
-  },
+  // fraudBadgeContainer: {
+  //   marginLeft: m(8),
+  // },
   // fraudWarning: {
   //   flexDirection: 'row',
   //   alignItems: 'center',

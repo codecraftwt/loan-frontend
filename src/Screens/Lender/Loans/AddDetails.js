@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   TextInput,
@@ -63,7 +63,7 @@ export default function AddDetails({ route, navigation }) {
         loanStartDate: null,
         loanEndDate: null,
         purpose: '',
-        loanMode: 'cash', // Default to cash
+        loanMode: 'cash',
       };
     }
     if (loanDetails) {
@@ -94,6 +94,7 @@ export default function AddDetails({ route, navigation }) {
 
   const [formData, setFormData] = useState(getInitialFormData());
   const [errorMessage, setErrorMessage] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [showOldHistoryButton, setShowOldHistoryButton] = useState(false);
   const [isStartDatePickerVisible, setStartDatePickerVisible] = useState(false);
   const [isEndDatePickerVisible, setEndDatePickerVisible] = useState(false);
@@ -258,7 +259,7 @@ export default function AddDetails({ route, navigation }) {
     setProofError('');
   };
 
-  // Validate form fields
+  // Validate form fields – set per-field errors and return true only if all valid
   const validateForm = () => {
     const {
       name,
@@ -270,43 +271,46 @@ export default function AddDetails({ route, navigation }) {
       loanEndDate,
       purpose,
     } = formData;
+    const errors = {};
 
-    if (
-      !name ||
-      !mobileNumber ||
-      !aadhaarNumber ||
-      !address ||
-      !amount ||
-      !loanStartDate ||
-      !loanEndDate ||
-      !purpose
-    ) {
-      setErrorMessage('All fields are required.');
-      return false;
+    if (!name || !name.trim()) {
+      errors.name = 'Full name is required.';
     }
-    if (isNaN(amount) || parseFloat(amount) <= 0) {
-      setErrorMessage('Amount should be a positive number.');
-      return false;
+    if (!mobileNumber) {
+      errors.mobileNumber = 'Contact number is required.';
+    } else if (mobileNumber.length !== 10) {
+      errors.mobileNumber = 'Mobile number must be exactly 10 digits.';
     }
-    if (parseFloat(amount) < 1000) {
-      setErrorMessage('Amount must be at least ₹1000.');
-      return false;
+    if (!aadhaarNumber) {
+      errors.aadhaarNumber = 'Aadhar number is required.';
+    } else if (aadhaarNumber.length !== 12) {
+      errors.aadhaarNumber = 'Aadhar number must be exactly 12 digits.';
     }
-    if (mobileNumber.length !== 10) {
-      setErrorMessage('Mobile number must be exactly 10 digits.');
-      return false;
+    if (!address || !address.trim()) {
+      errors.address = 'Address is required.';
     }
-    if (aadhaarNumber.length !== 12) {
-      setErrorMessage('Aadhar number must be exactly 12 digits.');
-      return false;
+    if (!amount || !amount.trim()) {
+      errors.amount = 'Loan amount is required.';
+    } else if (isNaN(amount) || parseFloat(amount) <= 0) {
+      errors.amount = 'Amount should be a positive number.';
+    } else if (parseFloat(amount) < 1000) {
+      errors.amount = 'Amount must be at least ₹1000.';
     }
-    if (loanStartDate >= loanEndDate) {
-      setErrorMessage('Loan start date must be before loan end date.');
-      return false;
+    if (!loanStartDate) {
+      errors.loanStartDate = 'Start date is required.';
+    }
+    if (!loanEndDate) {
+      errors.loanEndDate = 'End date is required.';
+    } else if (loanStartDate && loanEndDate && new Date(loanStartDate) >= new Date(loanEndDate)) {
+      errors.loanEndDate = 'End date must be after start date.';
+    }
+    if (!purpose || !purpose.trim()) {
+      errors.purpose = 'Purpose of loan is required.';
     }
 
+    setFieldErrors(errors);
     setErrorMessage('');
-    return true;
+    return Object.keys(errors).length === 0;
   };
 
   // Check plan before loan creation
@@ -651,6 +655,7 @@ export default function AddDetails({ route, navigation }) {
       loanMode: 'cash',
     });
     setErrorMessage('');
+    setFieldErrors({});
     setShowOldHistoryButton(false);
     setIsProcessingPayment(false);
     setPaymentVerified(false);
@@ -694,6 +699,7 @@ export default function AddDetails({ route, navigation }) {
   const handleAadharChange = text => {
     if (!/^\d{0,12}$/.test(text)) return;
     setFormData({ ...formData, aadhaarNumber: text });
+    setFieldErrors(prev => ({ ...prev, aadhaarNumber: '' }));
     setShowOldHistoryButton(text.length === 12);
     // Clear previous fraud status when Aadhaar changes
     if (text.length !== 12) {
@@ -710,12 +716,14 @@ export default function AddDetails({ route, navigation }) {
   const handleContactNoChange = text => {
     if (/^[0-9]{0,10}$/.test(text)) {
       setFormData({ ...formData, mobileNumber: text });
+      setFieldErrors(prev => ({ ...prev, mobileNumber: '' }));
     }
   };
 
   // Handle date picker changes
   const handleDateChange = (type, date) => {
     setFormData({ ...formData, [type]: date });
+    setFieldErrors(prev => ({ ...prev, [type]: '' }));
     if (type === 'loanStartDate') setStartDatePickerVisible(false);
     else setEndDatePickerVisible(false);
   };
@@ -789,7 +797,7 @@ export default function AddDetails({ route, navigation }) {
               <Text style={styles.sectionTitle}>Personal Information</Text>
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={[styles.inputGroup, fieldErrors.name && styles.inputGroupError]}>
               <View style={styles.inputIcon}>
                 <Icon name="account" size={20} color="#666" />
               </View>
@@ -797,14 +805,20 @@ export default function AddDetails({ route, navigation }) {
                 style={[styles.input, isFocused.name && styles.inputFocused]}
                 placeholder="Full Name"
                 value={formData.name}
-                onChangeText={text => setFormData({ ...formData, name: text })}
+                onChangeText={text => {
+                  setFormData({ ...formData, name: text });
+                  setFieldErrors(prev => ({ ...prev, name: '' }));
+                }}
                 placeholderTextColor="#888"
                 onFocus={() => handleFocus('name')}
                 onBlur={() => handleBlur('name')}
               />
             </View>
+            {fieldErrors.name ? (
+              <Text style={styles.fieldErrorText}>{fieldErrors.name}</Text>
+            ) : null}
 
-            <View style={styles.inputGroup}>
+            <View style={[styles.inputGroup, fieldErrors.mobileNumber && styles.inputGroupError]}>
               <View style={styles.inputIcon}>
                 <Icon name="phone" size={20} color="#666" />
               </View>
@@ -819,8 +833,11 @@ export default function AddDetails({ route, navigation }) {
                 onBlur={() => handleBlur('mobileNumber')}
               />
             </View>
+            {fieldErrors.mobileNumber ? (
+              <Text style={styles.fieldErrorText}>{fieldErrors.mobileNumber}</Text>
+            ) : null}
 
-            <View style={styles.inputGroup}>
+            <View style={[styles.inputGroup, fieldErrors.aadhaarNumber && styles.inputGroupError]}>
               <View style={styles.inputIcon}>
                 <Icon name="card-account-details" size={20} color="#666" />
               </View>
@@ -835,6 +852,9 @@ export default function AddDetails({ route, navigation }) {
                 onBlur={() => handleBlur('aadhaarNumber')}
               />
             </View>
+            {fieldErrors.aadhaarNumber ? (
+              <Text style={styles.fieldErrorText}>{fieldErrors.aadhaarNumber}</Text>
+            ) : null}
 
             {showOldHistoryButton && (
               <View style={styles.historyContainer}>
@@ -885,7 +905,7 @@ export default function AddDetails({ route, navigation }) {
               </View>
             )}
 
-            <View style={styles.inputGroup}>
+            <View style={[styles.inputGroup, fieldErrors.address && styles.inputGroupError]}>
               <View style={[styles.inputIcon, styles.textAreaIcon]}>
                 <Icon name="home-map-marker" size={20} color="#666" />
               </View>
@@ -893,7 +913,10 @@ export default function AddDetails({ route, navigation }) {
                 style={[styles.textArea, isFocused.address && styles.inputFocused]}
                 placeholder="Address"
                 value={formData.address}
-                onChangeText={text => setFormData({ ...formData, address: text })}
+                onChangeText={text => {
+                  setFormData({ ...formData, address: text });
+                  setFieldErrors(prev => ({ ...prev, address: '' }));
+                }}
                 multiline
                 numberOfLines={3}
                 placeholderTextColor="#888"
@@ -901,6 +924,9 @@ export default function AddDetails({ route, navigation }) {
                 onBlur={() => handleBlur('address')}
               />
             </View>
+            {fieldErrors.address ? (
+              <Text style={styles.fieldErrorText}>{fieldErrors.address}</Text>
+            ) : null}
 
             {/* Loan Details Section */}
             <View style={[styles.sectionHeader, { marginTop: m(14) }]}>
@@ -909,7 +935,7 @@ export default function AddDetails({ route, navigation }) {
             </View>
 
             <View style={styles.amountContainer}>
-              <View style={styles.amountInputGroup}>
+              <View style={[styles.amountInputGroup, fieldErrors.amount && styles.amountInputGroupError]}>
                 <View style={styles.inputIcon}>
                   <Icon name="currency-inr" size={20} color="#666" />
                 </View>
@@ -917,7 +943,10 @@ export default function AddDetails({ route, navigation }) {
                   style={[styles.amountInput, isFocused.amount && styles.inputFocused]}
                   placeholder="Loan Amount"
                   value={formData.amount}
-                  onChangeText={text => setFormData({ ...formData, amount: text })}
+                  onChangeText={text => {
+                    setFormData({ ...formData, amount: text });
+                    setFieldErrors(prev => ({ ...prev, amount: '' }));
+                  }}
                   keyboardType="numeric"
                   placeholderTextColor="#888"
                   onFocus={() => handleFocus('amount')}
@@ -926,18 +955,22 @@ export default function AddDetails({ route, navigation }) {
                 <Text style={styles.currencyText}>INR</Text>
               </View>
             </View>
+            {fieldErrors.amount ? (
+              <Text style={styles.fieldErrorText}>{fieldErrors.amount}</Text>
+            ) : null}
 
             <View style={styles.dateRow}>
-              <TouchableOpacity
-                style={styles.dateInputContainer}
-                activeOpacity={0.7}
-                onPress={() => {
-                  Keyboard.dismiss();
-                  setStartDatePickerVisible(true);
-                }}>
-                <View style={styles.inputIcon}>
-                  <Icon name="calendar-start" size={20} color="#666" />
-                </View>
+              <View style={{ flex: 1 }}>
+                <TouchableOpacity
+                  style={[styles.dateInputContainer, fieldErrors.loanStartDate && styles.dateInputContainerError]}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    Keyboard.dismiss();
+                    setStartDatePickerVisible(true);
+                  }}>
+                  <View style={styles.inputIcon}>
+                    <Icon name="calendar-start" size={20} color="#666" />
+                  </View>
                 <View style={styles.dateTextContainer}>
                   <Text
                     style={[
@@ -952,16 +985,24 @@ export default function AddDetails({ route, navigation }) {
                     <Text
                       style={styles.dateValue}
                       numberOfLines={1}
+                      ellipsizeMode="tail"
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.8}
                     >
-                      {new Date(formData.loanStartDate).toLocaleDateString()}
+                      {new Date(formData.loanStartDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                     </Text>
                   )}
                 </View>
                 <Icon name="chevron-down" size={20} color="#666" />
               </TouchableOpacity>
+              {fieldErrors.loanStartDate ? (
+                <Text style={styles.fieldErrorText}>{fieldErrors.loanStartDate}</Text>
+              ) : null}
+              </View>
 
+              <View style={{ flex: 1 }}>
               <TouchableOpacity
-                style={styles.dateInputContainer}
+                style={[styles.dateInputContainer, fieldErrors.loanEndDate && styles.dateInputContainerError]}
                 activeOpacity={0.7}
                 onPress={() => {
                   Keyboard.dismiss();
@@ -984,16 +1025,23 @@ export default function AddDetails({ route, navigation }) {
                     <Text
                       style={styles.dateValue}
                       numberOfLines={1}
+                      ellipsizeMode="tail"
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.8}
                     >
-                      {new Date(formData.loanEndDate).toLocaleDateString()}
+                      {new Date(formData.loanEndDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                     </Text>
                   )}
                 </View>
                 <Icon name="chevron-down" size={20} color="#666" />
               </TouchableOpacity>
+              {fieldErrors.loanEndDate ? (
+                <Text style={styles.fieldErrorText}>{fieldErrors.loanEndDate}</Text>
+              ) : null}
+              </View>
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={[styles.inputGroup, fieldErrors.purpose && styles.inputGroupError]}>
               <View style={[styles.inputIcon, styles.textAreaIcon]}>
                 <Icon name="note-text" size={20} color="#666" />
               </View>
@@ -1001,7 +1049,10 @@ export default function AddDetails({ route, navigation }) {
                 style={[styles.textArea, isFocused.purpose && styles.inputFocused]}
                 placeholder="Purpose of Loan"
                 value={formData.purpose}
-                onChangeText={text => setFormData({ ...formData, purpose: text })}
+                onChangeText={text => {
+                  setFormData({ ...formData, purpose: text });
+                  setFieldErrors(prev => ({ ...prev, purpose: '' }));
+                }}
                 multiline
                 numberOfLines={3}
                 placeholderTextColor="#888"
@@ -1009,6 +1060,9 @@ export default function AddDetails({ route, navigation }) {
                 onBlur={() => handleBlur('purpose')}
               />
             </View>
+            {fieldErrors.purpose ? (
+              <Text style={styles.fieldErrorText}>{fieldErrors.purpose}</Text>
+            ) : null}
 
             {/* Loan Mode Selection */}
             <View style={styles.loanModeContainer}>
@@ -1108,7 +1162,7 @@ export default function AddDetails({ route, navigation }) {
                     onPress={() => handleProofImagePicker('library')}
                     activeOpacity={0.8}>
                     <Icon name="image-outline" size={20} color="#ff7900" />
-                    <Text style={styles.proofUploadButtonText}>Choose from Gallery</Text>
+                    <Text style={styles.proofUploadButtonText}>Select from Gallery</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.proofUploadButton}
@@ -1309,13 +1363,25 @@ const styles = StyleSheet.create({
   inputGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: m(12),
+    marginBottom: m(3),
     backgroundColor: '#f8fafc',
     borderRadius: m(12),
     borderWidth: 1,
     borderColor: '#e2e8f0',
     overflow: 'hidden',
     paddingHorizontal: m(14),
+  },
+  inputGroupError: {
+    borderColor: '#dc2626',
+    borderWidth: 2,
+  },
+  fieldErrorText: {
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.primaryRegular,
+    color: '#dc2626',
+    // marginTop: m(4),
+    marginBottom: m(14),
+    marginLeft: m(4),
   },
   inputIcon: {
     padding: m(12),
@@ -1397,7 +1463,7 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.primarySemiBold,
   },
   amountContainer: {
-    marginBottom: m(16),
+    marginBottom: m(3),
   },
   amountInputGroup: {
     flexDirection: 'row',
@@ -1438,8 +1504,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e2e8f0',
     paddingHorizontal: m(12),
-    paddingVertical: m(10),
+    // paddingVertical: m(10),
     minHeight: m(52),
+    marginBottom: m(4),
+  },
+  dateInputContainerError: {
+    borderColor: '#dc2626',
+    borderWidth: 2,
   },
   inputIcon: {
     marginRight: m(8),
@@ -1447,7 +1518,9 @@ const styles = StyleSheet.create({
   dateTextContainer: {
     flex: 1,
     justifyContent: 'center',
-    marginHorizontal: m(8),
+    marginLeft: m(4),
+    marginRight: m(2),
+    // marginBottom: m(4),
   },
   datePlaceholder: {
     fontSize: FontSizes.sm,
@@ -1612,7 +1685,6 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.primaryRegular,
     color: '#64748b',
     marginBottom: m(12),
-    lineHeight: m(18),
   },
   proofUploadButtons: {
     flexDirection: 'row',

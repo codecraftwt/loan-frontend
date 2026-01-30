@@ -719,7 +719,7 @@ export default function Register({ navigation }) {
                 No profile picture
               </Text>
               <Text style={styles.imagePlaceholderSubtext}>
-                Tap below to add one
+                Tap below to add
               </Text>
             </View>
           )}
@@ -882,7 +882,7 @@ export default function Register({ navigation }) {
                   {isLoading ? (
                     <>
                       <Text style={styles.registerButtonText}>
-                        Creating Account...
+                        Creating Account
                       </Text>
                       <Ionicons name="hourglass-outline" size={20} color="#FFFFFF" />
                     </>
@@ -891,11 +891,6 @@ export default function Register({ navigation }) {
                       <Text style={styles.registerButtonText}>
                         Create Account
                       </Text>
-                      <Ionicons
-                        name="checkmark-circle"
-                        size={20}
-                        color="#FFFFFF"
-                      />
                     </>
                   )}
                 </LinearGradient>
@@ -1296,14 +1291,10 @@ const styles = StyleSheet.create({
     color: '#999',
   },
   nextButton: {
-    flex: 2,
+    flex: 1,
     borderRadius: m(12),
     overflow: 'hidden',
-    elevation: 4,
     shadowColor: '#ff6700',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
   },
   nextButtonGradient: {
     flexDirection: 'row',
@@ -1319,7 +1310,7 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.2)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
-    paddingVertical: Platform.OS === 'android' ? m(0) : m(16),
+    paddingVertical: Platform.OS === 'android' ? m(1) : m(16),
   },
   registerButtonContainer: {
     flex: 1,
@@ -1348,7 +1339,7 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.2)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
-    paddingVertical: Platform.OS === 'android' ? m(0) : m(16),
+    paddingVertical: Platform.OS === 'android' ? m(1) : m(16),
   },
   loginContainer: {
     flexDirection: 'row',

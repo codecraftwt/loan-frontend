@@ -140,13 +140,13 @@ export default function LenderList() {
     });
     setTempLimit(10);
     setShowFilters(false);
-    dispatch(getLendersWithPlans({ 
+    dispatch(getLendersWithPlans({
       planStatus: 'all',
       sortBy: 'planPurchaseDate',
       sortOrder: 'desc',
       search: filters.search,
       limit: 10,
-      page: 1 
+      page: 1
     }));
   }, [dispatch, filters.search]);
 
@@ -161,13 +161,13 @@ export default function LenderList() {
       sortOrder: 'desc',
     });
     setTempLimit(10);
-    dispatch(getLendersWithPlans({ 
+    dispatch(getLendersWithPlans({
       planStatus: 'all',
       sortBy: 'planPurchaseDate',
       sortOrder: 'desc',
       search: '',
       limit: 10,
-      page: 1 
+      page: 1
     }));
   }, [dispatch]);
 
@@ -218,117 +218,117 @@ export default function LenderList() {
   // Render lender item
   const renderLenderItem = useCallback(
     ({ item }) => {
-    const lender = item.lender || {};
-    const plan = item.currentPlan || {};
-    const planDetails = item.planPurchaseDetails || {};
-    const planStatus = planDetails.planStatus || 'expired';
-    const isPlanActive = planDetails.isPlanActive || false;
+      const lender = item.lender || {};
+      const plan = item.currentPlan || {};
+      const planDetails = item.planPurchaseDetails || {};
+      const planStatus = planDetails.planStatus || 'expired';
+      const isPlanActive = planDetails.isPlanActive || false;
 
-    return (
-    <View style={styles.lenderCard}>
-      <View style={styles.lenderHeader}>
-        <View style={styles.lenderAvatar}>
-            {lender.profileImage ? (
-              <Text style={styles.avatarText}>IMG</Text>
-            ) : (
-          <Text style={styles.avatarText}>
-                {lender.userName
-                  ?.split(' ')
-              .map(n => n[0])
-              .join('')
-                  .toUpperCase()
-                  .substring(0, 2) || 'L'}
-          </Text>
-            )}
-        </View>
-        <View style={styles.lenderInfo}>
-            <Text style={styles.lenderName}>{lender.userName || 'N/A'}</Text>
-            <Text style={styles.lenderEmail}>{lender.email || 'N/A'}</Text>
-            <Text style={styles.lenderMobile}>
-              {lender.mobileNo || 'N/A'}
-            </Text>
-        </View>
-        <View
-          style={[
-            styles.statusBadge,
-            {
-                backgroundColor: isPlanActive ? '#E8F5E9' : '#FFEBEE',
-            },
-          ]}>
-          <Text
-            style={[
-              styles.statusText,
-                { color: isPlanActive ? '#4CAF50' : '#F44336' },
-            ]}>
-              {planStatus === 'active' ? 'Active Plan' : 'Expired'}
-          </Text>
-        </View>
-      </View>
-
-        {/* Plan Details Section */}
-        {plan.planName && (
-          <View style={styles.planSection}>
-            <View style={styles.planHeader}>
-              <Icon name="package" size={16} color="#ff6700" />
-              <Text style={styles.planTitle}>Current Plan</Text>
-            </View>
-            <View style={styles.planDetails}>
-              <View style={styles.planRow}>
-                <Text style={styles.planLabel}>Plan:</Text>
-                <Text style={styles.planValue}>{plan.planName}</Text>
-              </View>
-              <View style={styles.planRow}>
-                <Text style={styles.planLabel}>Price:</Text>
-                <Text style={styles.planValue}>
-                  {formatCurrency(plan.priceMonthly)}/{plan.duration}
+      return (
+        <View style={styles.lenderCard}>
+          <View style={styles.lenderHeader}>
+            <View style={styles.lenderAvatar}>
+              {lender.profileImage ? (
+                <Text style={styles.avatarText}>IMG</Text>
+              ) : (
+                <Text style={styles.avatarText}>
+                  {lender.userName
+                    ?.split(' ')
+                    .map(n => n[0])
+                    .join('')
+                    .toUpperCase()
+                    .substring(0, 2) || 'L'}
                 </Text>
-              </View>
-              {planDetails.planPurchaseDate && (
-                <View style={styles.planRow}>
-                  <Text style={styles.planLabel}>Purchased:</Text>
-                  <Text style={styles.planValue}>
-                    {formatDate(planDetails.planPurchaseDate)}
-                  </Text>
-        </View>
               )}
-              {planDetails.planExpiryDate && (
-                <View style={styles.planRow}>
-                  <Text style={styles.planLabel}>Expires:</Text>
-                  <Text
-                    style={[
-                      styles.planValue,
-                      !isPlanActive && styles.expiredText,
-                    ]}>
-                    {formatDate(planDetails.planExpiryDate)}
-                  </Text>
-        </View>
-              )}
-              {isPlanActive && planDetails.remainingDays !== undefined && (
-                <View style={styles.planRow}>
-                  <Text style={styles.planLabel}>Remaining:</Text>
-                  <Text style={[styles.planValue, styles.remainingDays]}>
-                    {planDetails.remainingDays} days
-          </Text>
-                </View>
-              )}
-        </View>
-      </View>
-        )}
+            </View>
+            <View style={styles.lenderInfo}>
+              <Text style={styles.lenderName}>{lender.userName || 'N/A'}</Text>
+              <Text style={styles.lenderEmail}>{lender.email || 'N/A'}</Text>
+              <Text style={styles.lenderMobile}>
+                {lender.mobileNo || 'N/A'}
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.statusBadge,
+                {
+                  backgroundColor: isPlanActive ? '#E8F5E9' : '#FFEBEE',
+                },
+              ]}>
+              <Text
+                style={[
+                  styles.statusText,
+                  { color: isPlanActive ? '#4CAF50' : '#F44336' },
+                ]}>
+                {planStatus === 'active' ? 'Active Plan' : 'Expired'}
+              </Text>
+            </View>
+          </View>
 
-      <View style={styles.lenderFooter}>
-        <Text style={styles.joinDate}>
-            Joined: {formatDate(lender.createdAt)}
-        </Text>
-          <TouchableOpacity
-            style={styles.viewButton}
-            onPress={() => handleViewDetails(item)}>
-          <Text style={styles.viewButtonText}>View Details</Text>
-          <Icon name="chevron-right" size={16} color="#ff6700" />
-        </TouchableOpacity>
-      </View>
-    </View>
-    );
-  }, [handleViewDetails]);
+          {/* Plan Details Section */}
+          {plan.planName && (
+            <View style={styles.planSection}>
+              <View style={styles.planHeader}>
+                <Icon name="package" size={16} color="#ff6700" />
+                <Text style={styles.planTitle}>Current Plan</Text>
+              </View>
+              <View style={styles.planDetails}>
+                <View style={styles.planRow}>
+                  <Text style={styles.planLabel}>Plan:</Text>
+                  <Text style={styles.planValue}>{plan.planName}</Text>
+                </View>
+                <View style={styles.planRow}>
+                  <Text style={styles.planLabel}>Price:</Text>
+                  <Text style={styles.planValue}>
+                    {formatCurrency(plan.priceMonthly)}/{plan.duration}
+                  </Text>
+                </View>
+                {planDetails.planPurchaseDate && (
+                  <View style={styles.planRow}>
+                    <Text style={styles.planLabel}>Purchased:</Text>
+                    <Text style={styles.planValue}>
+                      {formatDate(planDetails.planPurchaseDate)}
+                    </Text>
+                  </View>
+                )}
+                {planDetails.planExpiryDate && (
+                  <View style={styles.planRow}>
+                    <Text style={styles.planLabel}>Expires:</Text>
+                    <Text
+                      style={[
+                        styles.planValue,
+                        !isPlanActive && styles.expiredText,
+                      ]}>
+                      {formatDate(planDetails.planExpiryDate)}
+                    </Text>
+                  </View>
+                )}
+                {isPlanActive && planDetails.remainingDays !== undefined && (
+                  <View style={styles.planRow}>
+                    <Text style={styles.planLabel}>Remaining:</Text>
+                    <Text style={[styles.planValue, styles.remainingDays]}>
+                      {planDetails.remainingDays} days
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
+
+          <View style={styles.lenderFooter}>
+            <Text style={styles.joinDate}>
+              Joined: {formatDate(lender.createdAt)}
+            </Text>
+            <TouchableOpacity
+              style={styles.viewButton}
+              onPress={() => handleViewDetails(item)}>
+              <Text style={styles.viewButtonText}>View Details</Text>
+              <Icon name="chevron-right" size={16} color="#ff6700" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    }, [handleViewDetails]);
 
   // Memoized key extractor
   const keyExtractor = useCallback(
@@ -339,88 +339,88 @@ export default function LenderList() {
   // Render filter modal
   const renderFilterModal = useCallback(
     () => (
-    <Modal
-      visible={showFilters}
-      transparent={true}
-      animationType="slide"
-      onRequestClose={() => setShowFilters(false)}>
-      <View style={styles.modalOverlay}>
-        <TouchableOpacity
-          style={StyleSheet.absoluteFill}
-          activeOpacity={1}
-          onPress={() => setShowFilters(false)}
-        />
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Filters</Text>
-            <TouchableOpacity onPress={() => setShowFilters(false)}>
-              <Icon name="x" size={24} color="#333" />
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView 
-            style={styles.modalBody}
-            contentContainerStyle={styles.modalBodyContent}
-            showsVerticalScrollIndicator={true}
-            nestedScrollEnabled={true}>
-            {/* Plan Status Filter */}
-            <View style={styles.filterSection}>
-              <View style={styles.filterSectionHeader}>
-                <Icon name="filter" size={18} color="#ff6700" />
-                <Text style={styles.filterLabel}>Plan Status</Text>
-              </View>
-              <View style={styles.filterOptionsContainer}>
-                {PLAN_STATUS_OPTIONS.map(status => (
-                  <TouchableOpacity
-                    key={status}
-                    style={[
-                      styles.filterOption,
-                      tempFilters.planStatus === status && styles.filterOptionActive,
-                    ]}
-                    onPress={() => handleTempFilterChange('planStatus', status)}>
-                    <View style={styles.filterOptionContent}>
-                      <View style={[
-                        styles.radioButton,
-                        tempFilters.planStatus === status && styles.radioButtonActive
-                      ]}>
-                        {tempFilters.planStatus === status && (
-                          <View style={styles.radioButtonInner} />
-                        )}
-                      </View>
-                      <Text
-                        style={[
-                          styles.filterOptionText,
-                          tempFilters.planStatus === status &&
-                            styles.filterOptionTextActive,
-                        ]}>
-                        {status === 'all' ? 'All Plans' : status.charAt(0).toUpperCase() + status.slice(1)}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </View>
+      <Modal
+        visible={showFilters}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowFilters(false)}>
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => setShowFilters(false)}
+          />
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Filters</Text>
+              <TouchableOpacity onPress={() => setShowFilters(false)}>
+                <Icon name="x" size={24} color="#333" />
+              </TouchableOpacity>
             </View>
-          </ScrollView>
 
-          {/* Modal Footer with Buttons */}
-          <View style={styles.modalFooter}>
-            <TouchableOpacity
-              style={styles.clearButton}
-              onPress={handleClearFilters}>
-              <Icon name="x-circle" size={18} color="#666" />
-              <Text style={styles.clearButtonText}>Clear</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.applyButton}
-              onPress={handleApplyFilters}>
-              <Text style={styles.applyButtonText}>Apply Filters</Text>
-              <Icon name="check" size={18} color="#FFFFFF" />
-            </TouchableOpacity>
+            <ScrollView
+              style={styles.modalBody}
+              contentContainerStyle={styles.modalBodyContent}
+              showsVerticalScrollIndicator={true}
+              nestedScrollEnabled={true}>
+              {/* Plan Status Filter */}
+              <View style={styles.filterSection}>
+                <View style={styles.filterSectionHeader}>
+                  <Icon name="filter" size={18} color="#ff6700" />
+                  <Text style={styles.filterLabel}>Plan Status</Text>
+                </View>
+                <View style={styles.filterOptionsContainer}>
+                  {PLAN_STATUS_OPTIONS.map(status => (
+                    <TouchableOpacity
+                      key={status}
+                      style={[
+                        styles.filterOption,
+                        tempFilters.planStatus === status && styles.filterOptionActive,
+                      ]}
+                      onPress={() => handleTempFilterChange('planStatus', status)}>
+                      <View style={styles.filterOptionContent}>
+                        <View style={[
+                          styles.radioButton,
+                          tempFilters.planStatus === status && styles.radioButtonActive
+                        ]}>
+                          {tempFilters.planStatus === status && (
+                            <View style={styles.radioButtonInner} />
+                          )}
+                        </View>
+                        <Text
+                          style={[
+                            styles.filterOptionText,
+                            tempFilters.planStatus === status &&
+                            styles.filterOptionTextActive,
+                          ]}>
+                          {status === 'all' ? 'All Plans' : status.charAt(0).toUpperCase() + status.slice(1)}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </ScrollView>
+
+            {/* Modal Footer with Buttons */}
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={styles.clearButton}
+                onPress={handleClearFilters}>
+                <Icon name="x-circle" size={18} color="#666" />
+                <Text style={styles.clearButtonText}>Clear</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.applyButton}
+                onPress={handleApplyFilters}>
+                <Text style={styles.applyButtonText}>Apply Filters</Text>
+                <Icon name="check" size={18} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </View>
-    </Modal>
-  ),
+      </Modal>
+    ),
     [showFilters, tempFilters, handleApplyFilters, handleClearFilters, handleTempFilterChange],
   );
 
@@ -517,23 +517,23 @@ export default function LenderList() {
 
         {/* Lender List */}
         {!loading && !error && (
-        <FlatList
+          <FlatList
             data={lenders}
-          renderItem={renderLenderItem}
+            renderItem={renderLenderItem}
             keyExtractor={keyExtractor}
-          scrollEnabled={false}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Icon name="users" size={48} color="#CCC" />
-              <Text style={styles.emptyText}>No lenders found</Text>
+            scrollEnabled={false}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Icon name="users" size={48} color="#CCC" />
+                <Text style={styles.emptyText}>No lenders found</Text>
                 {filters.search && (
                   <Text style={styles.emptySubtext}>
                     Try adjusting your search or filters
                   </Text>
                 )}
-            </View>
-          }
-        />
+              </View>
+            }
+          />
         )}
 
       </ScrollView>

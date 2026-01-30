@@ -8,7 +8,11 @@ import {
   StatusBar,
   Alert,
   Platform,
+  KeyboardAvoidingView,
+  ScrollView,
 } from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import LinearGradient from 'react-native-linear-gradient';
 import {useDispatch} from 'react-redux';
 import {verifyOtp} from '../../Redux/Slices/authslice';
 import Toast from 'react-native-toast-message';
@@ -16,7 +20,7 @@ import {m} from 'walstar-rn-responsive';
 import {FontFamily, FontSizes} from '../../constants';
 
 export default function OTP({navigation, route}) {
-  const {email} = route.params; // The email passed from the Forgot Password screen.
+  const {email} = route.params; 
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const inputRefs = useRef([]);
   const dispatch = useDispatch();
@@ -25,7 +29,7 @@ export default function OTP({navigation, route}) {
 
   // Handle input change and focus logic
   const handleChange = (text, index) => {
-    const numericText = text.replace(/[^0-9]/g, ''); // Allow only numeric input.
+    const numericText = text.replace(/[^0-9]/g, '');
     const newOtp = [...otp];
     newOtp[index] = numericText;
     setOtp(newOtp);
@@ -33,7 +37,7 @@ export default function OTP({navigation, route}) {
     if (numericText && index < otp.length - 1) {
       inputRefs.current[index + 1].focus();
     } else if (!numericText && index > 0) {
-      inputRefs.current[index - 1].focus(); // Go back to previous input if empty
+      inputRefs.current[index - 1].focus();
     }
   };
 
@@ -46,7 +50,7 @@ export default function OTP({navigation, route}) {
     }
 
     setLoading(true);
-    setError(null); // Clear previous error
+    setError(null);
 
     try {
       // Dispatch the verifyOtp action and wait for the response
@@ -77,62 +81,142 @@ export default function OTP({navigation, route}) {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" {...(Platform.OS === 'android' && {backgroundColor: '#fff'})} />
-      <Text style={styles.headerText}>Enter OTP</Text>
-      <Text style={styles.instructionText}>
-        We sent a 6-digit code to your email address.
-      </Text>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
+      <StatusBar barStyle="light-content" backgroundColor="#ff6700" />
 
-      <View style={styles.otpContainer}>
-        {otp.map((digit, index) => (
-          <TextInput
-            key={index}
-            style={styles.otpInput}
-            value={digit}
-            onChangeText={text => handleChange(text, index)}
-            keyboardType="numeric"
-            maxLength={1}
-            ref={el => (inputRefs.current[index] = el)}
-          />
-        ))}
-      </View>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled">
+        {/* Brand Header */}
+        <View style={styles.headerContent}>
+          <View style={styles.logoContainer}>
+            <Text style={styles.appName}>LoanHub</Text>
+          </View>
+          <Text style={styles.tagline}>Smart Loan Management</Text>
+        </View>
 
-      <TouchableOpacity
-        style={[
-          styles.verifyButton,
-          {opacity: otp.some(d => d === '') || loading ? 0.5 : 1},
-        ]}
-        onPress={handleVerify}
-        disabled={otp.some(d => d === '') || loading}>
-        <Text style={styles.verifyButtonText}>
-          {loading ? 'Verifying...' : 'Verify OTP'}
-        </Text>
-      </TouchableOpacity>
-    </View>
+        {/* Form Card */}
+        <View style={styles.formCard}>
+          <Text style={styles.headerText}>Enter OTP</Text>
+          <Text style={styles.instructionText}>
+            We sent a 6-digit verification code to{' '}
+            <Text style={styles.highlightEmail}>{email}</Text>.
+          </Text>
+
+          <View style={styles.otpContainer}>
+            {otp.map((digit, index) => (
+              <TextInput
+                key={index}
+                style={styles.otpInput}
+                value={digit}
+                onChangeText={text => handleChange(text, index)}
+                keyboardType="numeric"
+                maxLength={1}
+                ref={el => (inputRefs.current[index] = el)}
+              />
+            ))}
+          </View>
+
+          <TouchableOpacity
+            style={[
+              styles.verifyButtonContainer,
+              (otp.some(d => d === '') || loading) && styles.verifyButtonDisabled,
+            ]}
+            onPress={handleVerify}
+            disabled={otp.some(d => d === '') || loading}>
+            <LinearGradient
+              colors={['#ff6700', '#ff7900', '#ff8500']}
+              start={{x: 0, y: 0}}
+              end={{x: 1, y: 0}}
+              style={styles.verifyButtonGradient}>
+              <Text style={styles.verifyButtonText}>
+                {loading ? 'Verifying...' : 'Verify OTP'}
+              </Text>
+              {!loading && (
+                <Ionicons name="shield-checkmark-outline" size={20} color="#FFFFFF" />
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+
+          {/* Helper Text */}
+          <Text style={styles.resendHint}>
+            Didn't receive the code? Please check your spam folder or try again later.
+          </Text>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
-    padding: m(20),
-    justifyContent: 'center',
+    backgroundColor: '#f8f8f8',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: m(20),
+    paddingTop: Platform.OS === 'ios' ? m(40) : m(20),
+    paddingBottom: m(40),
+  },
+  headerContent: {
+    alignItems: 'center',
+    marginBottom: m(10),
+  },
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: m(8),
+  },
+  appName: {
+    fontSize: FontSizes['4xl'],
+    fontFamily: FontFamily.secondaryBold,
+    color: '#ff6700',
+  },
+  tagline: {
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.secondaryRegular,
+    color: '#ff6700',
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  formCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: m(20),
+    padding: m(24),
+    marginTop: m(20),
+    borderWidth: 1,
+    borderColor: '#FFEDD5',
+    elevation: 8,
+    shadowColor: '#ff6700',
+    shadowOffset: {width: 0, height: 8},
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
   },
   headerText: {
     fontSize: FontSizes['3xl'],
-    color: '#b80266',
+    color: '#333',
     fontFamily: FontFamily.secondaryBold,
     textAlign: 'center',
-    marginBottom: m(20),
+    marginBottom: m(4),
   },
   instructionText: {
     fontSize: FontSizes.md,
-    color: '#333',
+    color: '#666',
     fontFamily: FontFamily.primaryRegular,
     textAlign: 'center',
-    marginBottom: m(40),
+    marginBottom: m(24),
+  },
+  highlightEmail: {
+    fontFamily: FontFamily.primarySemiBold,
+    color: '#ff6700',
   },
   otpContainer: {
     flexDirection: 'row',
@@ -142,7 +226,7 @@ const styles = StyleSheet.create({
   otpInput: {
     height: m(60),
     width: '14%',
-    borderColor: '#f26fb7',
+    borderColor: '#FFEDD5',
     borderWidth: m(1),
     borderRadius: m(8),
     textAlign: 'center',
@@ -155,18 +239,40 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: m(4),
   },
-  verifyButton: {
-    backgroundColor: '#b80266',
-    borderRadius: m(8),
-    height: m(50),
-    justifyContent: 'center',
+  verifyButtonContainer: {
+    borderRadius: m(12),
+    marginTop: m(16),
+    overflow: 'hidden',
+    elevation: 4,
+    shadowColor: '#ff6700',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+  },
+  verifyButtonGradient: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: m(10),
-    elevation: m(4),
+    justifyContent: 'center',
+    paddingVertical: Platform.OS === 'android' ? m(16) : m(0),
+    gap: m(8),
+  },
+  verifyButtonDisabled: {
+    opacity: 0.6,
   },
   verifyButtonText: {
     color: '#FFFFFF',
     fontSize: FontSizes.lg,
     fontFamily: FontFamily.primarySemiBold,
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: {width: 1, height: 1},
+    textShadowRadius: 2,
+    paddingVertical: Platform.OS === 'android' ? m(0) : m(16),
+  },
+  resendHint: {
+    marginTop: m(16),
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.primaryRegular,
+    color: '#777',
+    textAlign: 'center',
   },
 });

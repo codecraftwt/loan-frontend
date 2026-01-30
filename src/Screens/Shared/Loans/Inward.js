@@ -124,7 +124,7 @@ export default function Inward({ navigation }) {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery);
-    }, 500); // 500ms delay
+    }, 500);
 
     return () => clearTimeout(timer);
   }, [searchQuery]);
@@ -316,7 +316,7 @@ export default function Inward({ navigation }) {
           <TouchableOpacity
             style={styles.filterButton}
             onPress={() => setIsFilterModalVisible(true)}>
-            <Icon name="filter-alt" size={22} color="black" />
+            <Icon name="filter-alt" size={22} color="#FF9800" />
           </TouchableOpacity>
         </View>
       </View>
@@ -327,10 +327,12 @@ export default function Inward({ navigation }) {
         transparent={true}
         animationType="slide"
         onRequestClose={() => setIsFilterModalVisible(false)}>
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setIsFilterModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            onPress={() => setIsFilterModalVisible(false)}
+          />
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Filter Loans</Text>
@@ -339,113 +341,119 @@ export default function Inward({ navigation }) {
               </TouchableOpacity>
             </View>
 
-            {/* Search in Filter Modal */}
-            <View style={styles.searchFilterContainer}>
-              <Text style={styles.filterLabel}>Search by Borrower</Text>
-              <View style={styles.searchInputContainer}>
-                <Icon name="search" size={18} color="#6B7280" />
-                <TextInput
-                  style={styles.searchFilterInput}
-                  placeholder="Search by name, email or mobile"
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  placeholderTextColor="#9CA3AF"
-                />
-              </View>
-            </View>
-
-            {/* Date Filters */}
-            <View style={styles.dateFilterContainer}>
-              <Text style={styles.filterLabel}>Date Range</Text>
-              <View style={styles.dateRow}>
-                <TouchableOpacity
-                  style={styles.dateInput}
-                  onPress={() => {
-                    setCurrentDateType('start');
-                    setTempDate(startDateFilter || new Date());
-                    setDatePickerOpen(true);
-                  }}>
-                  <Icon name="calendar-today" size={18} color="#6B7280" />
-                  <Text style={styles.dateText}>
-                    {startDateFilter
-                      ? formatDate(startDateFilter)
-                      : 'Start Date'}
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.dateInput}
-                  onPress={() => {
-                    setCurrentDateType('end');
-                    setTempDate(endDateFilter || new Date());
-                    setDatePickerOpen(true);
-                  }}>
-                  <Icon name="calendar-today" size={18} color="#6B7280" />
-                  <Text style={styles.dateText}>
-                    {endDateFilter
-                      ? formatDate(endDateFilter)
-                      : 'End Date'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Amount Filters */}
-            <View style={styles.amountFilterContainer}>
-              <Text style={styles.filterLabel}>Amount Range</Text>
-              <View style={styles.amountRow}>
-                <View style={styles.amountInputContainer}>
-                  <Text style={styles.amountPrefix}>₹</Text>
+            <ScrollView 
+              style={styles.modalScrollContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled={true}>
+              {/* Search in Filter Modal */}
+              <View style={styles.searchFilterContainer}>
+                <Text style={styles.filterLabel}>Search by Borrower</Text>
+                <View style={styles.searchInputContainer}>
+                  <Icon name="search" size={18} color="#6B7280" />
                   <TextInput
-                    style={[styles.input, styles.amountInput]}
-                    placeholder="Min"
-                    value={minAmount}
-                    onChangeText={text => setMinAmount(text.replace(/[^0-9]/g, ''))}
-                    keyboardType="numeric"
-                    placeholderTextColor="#9CA3AF"
-                  />
-                </View>
-                <Text style={styles.amountSeparator}>-</Text>
-                <View style={styles.amountInputContainer}>
-                  <Text style={styles.amountPrefix}>₹</Text>
-                  <TextInput
-                    style={[styles.input, styles.amountInput]}
-                    placeholder="Max"
-                    value={maxAmount}
-                    onChangeText={text => setMaxAmount(text.replace(/[^0-9]/g, ''))}
-                    keyboardType="numeric"
+                    style={styles.searchFilterInput}
+                    placeholder="Search by name, email or mobile"
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
                     placeholderTextColor="#9CA3AF"
                   />
                 </View>
               </View>
-            </View>
 
-            {/* Status Filter */}
-            <View style={styles.statusFilterContainer}>
-              <Text style={styles.filterLabel}>Status</Text>
-              <View style={styles.statusButtons}>
-                {['all', 'pending', 'paid'].map(status => (
+              {/* Date Filters */}
+              <View style={styles.dateFilterContainer}>
+                <Text style={styles.filterLabel}>Date Range</Text>
+                <View style={styles.dateRow}>
                   <TouchableOpacity
-                    key={status}
-                    style={[
-                      styles.statusButton,
-                      statusFilter === status || (status === 'all' && !statusFilter)
-                        ? styles.statusButtonActive
-                        : styles.statusButtonInactive,
-                    ]}
-                    onPress={() => setStatusFilter(status === 'all' ? null : status)}>
-                    <Text style={[
-                      styles.statusButtonText,
-                      statusFilter === status || (status === 'all' && !statusFilter)
-                        ? styles.statusButtonTextActive
-                        : styles.statusButtonTextInactive,
-                    ]}>
-                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    style={styles.dateInput}
+                    onPress={() => {
+                      setCurrentDateType('start');
+                      setTempDate(startDateFilter || new Date());
+                      setDatePickerOpen(true);
+                    }}>
+                    <Icon name="calendar-today" size={18} color="#6B7280" />
+                    <Text style={styles.dateText}>
+                      {startDateFilter
+                        ? formatDate(startDateFilter)
+                        : 'Start Date'}
                     </Text>
                   </TouchableOpacity>
-                ))}
+
+                  <TouchableOpacity
+                    style={styles.dateInput}
+                    onPress={() => {
+                      setCurrentDateType('end');
+                      setTempDate(endDateFilter || new Date());
+                      setDatePickerOpen(true);
+                    }}>
+                    <Icon name="calendar-today" size={18} color="#6B7280" />
+                    <Text style={styles.dateText}>
+                      {endDateFilter
+                        ? formatDate(endDateFilter)
+                        : 'End Date'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
+
+              {/* Amount Filters */}
+              <View style={styles.amountFilterContainer}>
+                <Text style={styles.filterLabel}>Amount Range</Text>
+                <View style={styles.amountRow}>
+                  <View style={styles.amountInputContainer}>
+                    <Text style={styles.amountPrefix}>₹</Text>
+                    <TextInput
+                      style={[styles.input, styles.amountInput]}
+                      placeholder="Min"
+                      value={minAmount}
+                      onChangeText={text => setMinAmount(text.replace(/[^0-9]/g, ''))}
+                      keyboardType="numeric"
+                      placeholderTextColor="#9CA3AF"
+                    />
+                  </View>
+                  <Text style={styles.amountSeparator}>-</Text>
+                  <View style={styles.amountInputContainer}>
+                    <Text style={styles.amountPrefix}>₹</Text>
+                    <TextInput
+                      style={[styles.input, styles.amountInput]}
+                      placeholder="Max"
+                      value={maxAmount}
+                      onChangeText={text => setMaxAmount(text.replace(/[^0-9]/g, ''))}
+                      keyboardType="numeric"
+                      placeholderTextColor="#9CA3AF"
+                    />
+                  </View>
+                </View>
+              </View>
+
+              {/* Status Filter */}
+              <View style={styles.statusFilterContainer}>
+                <Text style={styles.filterLabel}>Status</Text>
+                <View style={styles.statusButtons}>
+                  {['all', 'pending', 'paid'].map(status => (
+                    <TouchableOpacity
+                      key={status}
+                      style={[
+                        styles.statusButton,
+                        statusFilter === status || (status === 'all' && !statusFilter)
+                          ? styles.statusButtonActive
+                          : styles.statusButtonInactive,
+                      ]}
+                      onPress={() => setStatusFilter(status === 'all' ? null : status)}>
+                      <Text style={[
+                        styles.statusButtonText,
+                        statusFilter === status || (status === 'all' && !statusFilter)
+                          ? styles.statusButtonTextActive
+                          : styles.statusButtonTextInactive,
+                      ]}>
+                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </ScrollView>
 
             {/* Modal Buttons */}
             <View style={styles.modalButtons}>
@@ -461,7 +469,7 @@ export default function Inward({ navigation }) {
               </TouchableOpacity>
             </View>
           </View>
-        </TouchableOpacity>
+        </View>
       </Modal>
 
       {/* Date Picker */}
@@ -802,12 +810,19 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
+  modalBackdrop: {
+    flex: 1,
+  },
   modalContent: {
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: m(20),
     borderTopRightRadius: m(20),
     padding: m(24),
+    paddingBottom: m(16),
     maxHeight: '80%',
+  },
+  modalScrollContent: {
+    flexGrow: 0,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -914,7 +929,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statusButtonActive: {
-    backgroundColor: 'black',
+    backgroundColor: '#FF9800',
   },
   statusButtonInactive: {
     backgroundColor: '#F3F4F6',
@@ -944,7 +959,7 @@ const styles = StyleSheet.create({
     marginRight: m(8),
   },
   applyButton: {
-    backgroundColor: 'black',
+    backgroundColor: '#FF9800',
     marginLeft: m(8),
   },
   clearButtonText: {

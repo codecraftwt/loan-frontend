@@ -1,5 +1,3 @@
-// src/constants/colors.ts
-
 const colors = {
   primary: '#b80266',
   secondary: '#03DAC6', // Secondary brand color

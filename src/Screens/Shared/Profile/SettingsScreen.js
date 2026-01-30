@@ -11,12 +11,9 @@ import Icon from 'react-native-vector-icons/Feather';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
 
-export default function SettingsScreen() {
+export default function SettingsScreen({ navigation }) {
   // State for toggles
-  const [emailNotifications, setEmailNotifications] = useState(true);
   const [pushNotifications, setPushNotifications] = useState(false);
-  const [biometricEnabled, setBiometricEnabled] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
 
   const settingsSections = [
     {
@@ -30,21 +27,6 @@ export default function SettingsScreen() {
           type: 'toggle',
           color: '#3B82F6',
         },
-        // {
-        //   icon: 'mail',
-        //   label: 'Email Notifications',
-        //   value: emailNotifications,
-        //   onToggle: setEmailNotifications,
-        //   type: 'toggle',
-        //   color: '#8B5CF6',
-        // },
-        // {
-        //   icon: 'settings',
-        //   label: 'Notification Settings',
-        //   type: 'navigate',
-        //   onPress: () => {},
-        //   color: '#10B981',
-        // },
       ],
     },
     {
@@ -54,89 +36,19 @@ export default function SettingsScreen() {
           icon: 'lock',
           label: 'Change Password',
           type: 'navigate',
-          onPress: () => {},
+          onPress: () => navigation.navigate('ForgotPassword'),
           color: '#EF4444',
         },
-        {
-          icon: 'fingerprint',
-          label: 'Biometric Authentication',
-          value: biometricEnabled,
-          onToggle: setBiometricEnabled,
-          type: 'toggle',
-          color: '#F59E0B',
-        },
         // {
-        //   icon: 'shield',
-        //   label: 'Two-Factor Authentication',
-        //   type: 'navigate',
-        //   onPress: () => {},
-        //   color: '#6366F1',
-        // },
-        // {
-        //   icon: 'key',
-        //   label: 'Security Settings',
-        //   type: 'navigate',
-        //   onPress: () => {},
-        //   color: '#8B5CF6',
+        //   icon: 'fingerprint',
+        //   label: 'Biometric Authentication',
+        //   value: biometricEnabled,
+        //   onToggle: setBiometricEnabled,
+        //   type: 'toggle',
+        //   color: '#F59E0B',
         // },
       ],
     },
-    // {
-    //   title: 'Preferences',
-    //   items: [
-    //     {
-    //       icon: 'moon',
-    //       label: 'Dark Mode',
-    //       value: darkMode,
-    //       onToggle: setDarkMode,
-    //       type: 'toggle',
-    //       color: '#1F2937',
-    //     },
-    //     {
-    //       icon: 'globe',
-    //       label: 'Language',
-    //       type: 'navigate',
-    //       onPress: () => {},
-    //       subtitle: 'English',
-    //       color: '#3B82F6',
-    //     },
-    //     {
-    //       icon: 'dollar-sign',
-    //       label: 'Currency',
-    //       type: 'navigate',
-    //       onPress: () => {},
-    //       subtitle: 'USD',
-    //       color: '#10B981',
-    //     },
-    //   ],
-    // },
-    // {
-    //   title: 'Data & Storage',
-    //   items: [
-        // {
-        //   icon: 'download',
-        //   label: 'Download Data',
-        //   type: 'navigate',
-        //   onPress: () => {},
-        //   color: '#3B82F6',
-        // },
-        // {
-        //   icon: 'trash-2',
-        //   label: 'Clear Cache',
-        //   type: 'navigate',
-        //   onPress: () => {},
-        //   color: '#EF4444',
-        // },
-        // {
-        //   icon: 'database',
-        //   label: 'Storage Usage',
-        //   type: 'navigate',
-        //   onPress: () => {},
-        //   subtitle: '125 MB',
-        //   color: '#8B5CF6',
-        // },
-    //   ],
-    // },
     {
       title: 'About',
       items: [

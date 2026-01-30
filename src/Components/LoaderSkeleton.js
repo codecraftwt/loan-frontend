@@ -1,4 +1,3 @@
-import React from 'react';
 import {StyleSheet, View, Animated, Easing} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 
@@ -46,7 +45,6 @@ const LoaderSkeleton = () => {
             <View style={styles.skeletonTextSmall} />
           </View>
         </View>
-        {/* <View style={styles.skeletonFooter} /> */}
       </View>
 
       <View style={styles.skeletonCard}>
@@ -58,7 +56,6 @@ const LoaderSkeleton = () => {
             <View style={styles.skeletonTextSmall} />
           </View>
         </View>
-        {/* <View style={styles.skeletonFooter} /> */}
       </View>
     </View>
   );
@@ -117,13 +114,6 @@ const styles = StyleSheet.create({
     width: '40%',
     height: 12,
     marginBottom: 5,
-    borderRadius: 4,
-  },
-  skeletonFooter: {
-    marginTop: 10,
-    backgroundColor: '#e0e0e0',
-    height: 12,
-    width: '40%',
     borderRadius: 4,
   },
 });

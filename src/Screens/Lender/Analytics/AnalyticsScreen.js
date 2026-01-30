@@ -11,7 +11,6 @@ import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
 import SubscriptionRestriction from '../../../Components/SubscriptionRestriction';
 import { useSubscription } from '../../../hooks/useSubscription';
-import { getActivePlan } from '../../../Redux/Slices/planPurchaseSlice';
 import { getLenderStatistics } from '../../../Redux/Slices/loanSlice';
 import DonutChart from '../../../Components/DonutChart';
 import { FontFamily, FontSizes } from '../../../constants';
