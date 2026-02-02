@@ -532,7 +532,7 @@ export default function PendingPayments() {
   if (loading && !refreshing) {
     return (
       <View style={styles.container}>
-        <Header title="Pending Payments" />
+        <Header title="Pending Payments" showBackButton />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#3B82F6" />
           <Text style={styles.loadingText}>Loading pending payments...</Text>
@@ -548,7 +548,7 @@ export default function PendingPayments() {
 
   return (
     <View style={styles.container}>
-      <Header title="Pending Payments" />
+      <Header title="Pending Payments" showBackButton />
 
       {error && !loading && (
         <View style={styles.errorContainer}>

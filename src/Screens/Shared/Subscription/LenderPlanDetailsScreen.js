@@ -689,13 +689,11 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 10,
     backgroundColor: 'rgba(255, 152, 0, 0.1)',
-    // backgroundColor: '#D0F0C0',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
   },
   activeFeatureIcon: {
-    // backgroundColor: '#FF9800',
     backgroundColor: '#D0F0C0',
   },
   featureText: {
@@ -794,4 +792,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-

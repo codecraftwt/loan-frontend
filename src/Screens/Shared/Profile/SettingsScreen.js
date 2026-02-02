@@ -39,14 +39,6 @@ export default function SettingsScreen({ navigation }) {
           onPress: () => navigation.navigate('ForgotPassword'),
           color: '#EF4444',
         },
-        // {
-        //   icon: 'fingerprint',
-        //   label: 'Biometric Authentication',
-        //   value: biometricEnabled,
-        //   onToggle: setBiometricEnabled,
-        //   type: 'toggle',
-        //   color: '#F59E0B',
-        // },
       ],
     },
     {

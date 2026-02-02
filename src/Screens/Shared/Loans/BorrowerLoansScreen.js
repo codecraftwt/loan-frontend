@@ -681,10 +681,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: m(6),
   },
-  // footerRight: {
-  //   flexDirection: 'row',
-  //   alignItems: 'center',
-  // },
   footerIconButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -701,5 +697,3 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 });
-
-
