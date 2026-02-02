@@ -58,7 +58,7 @@ export default function Register({ navigation }) {
 
   const requestCameraPermission = async () => {
     if (Platform.OS !== 'android') {
-      return true; // iOS handles permissions differently
+      return true;
     }
     try {
       const granted = await PermissionsAndroid.request(
@@ -82,13 +82,9 @@ export default function Register({ navigation }) {
   // Simple input handlers - no validation while typing
   const handleNameChange = text => {
     setName(text);
-    setNameError(''); // Clear error when user types
+    setNameError('');
   };
 
-  // const handleEmailChange = text => {
-  //   setEmail(text);
-  //   setEmailError(''); // Clear error when user types
-  // };
   const handleEmailChange = text => {
     // Convert the first letter to lowercase and keep the rest of the string intact
     const modifiedText = text.charAt(0).toLowerCase() + text.slice(1);
@@ -100,25 +96,25 @@ export default function Register({ navigation }) {
 
   const handleAddressChange = text => {
     setAddress(text);
-    setAddressError(''); // Clear error when user types
+    setAddressError('');
   };
 
   const handlePasswordChange = text => {
     setPassword(text);
-    setPasswordError(''); // Clear error when user types
-    setConfirmPasswordError(''); // Clear confirm password error too
+    setPasswordError('');
+    setConfirmPasswordError('');
   };
 
   const handleConfirmPasswordChange = text => {
     setConfirmPassword(text);
-    setConfirmPasswordError(''); // Clear error when user types
+    setConfirmPasswordError('');
   };
 
   const handleAadharChange = text => {
     const numericText = text.replace(/[^0-9]/g, '');
     if (numericText.length <= 12) {
       setAadharNumber(numericText);
-      setAadharError(''); // Clear error when user types
+      setAadharError('');
     }
   };
 
@@ -126,7 +122,7 @@ export default function Register({ navigation }) {
     const numericText = text.replace(/[^0-9]/g, '');
     if (numericText.length <= 10) {
       setMobileNumber(numericText);
-      setMobileError(''); // Clear error when user types
+      setMobileError('');
     }
   };
 
@@ -134,7 +130,7 @@ export default function Register({ navigation }) {
     const upperText = text.toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (upperText.length <= 10) {
       setPanCardNumber(upperText);
-      setPanCardError(''); // Clear error when user types
+      setPanCardError('');
     }
   };
 
@@ -254,7 +250,7 @@ export default function Register({ navigation }) {
         type: 'error',
         text1: 'Camera permission is required.',
       });
-      return; // Stop if permission was denied
+      return;
     }
   }
     const options =
@@ -778,9 +774,14 @@ export default function Register({ navigation }) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
-      <StatusBar barStyle="light-content" backgroundColor="#ff6700" />
+      <LinearGradient
+        colors={['#ff6700', '#ff8800ff', '#ff9100ff', '#ffa200ff']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.gradientBackground}>
+        <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-      <ScrollView
+        <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -915,6 +916,7 @@ export default function Register({ navigation }) {
           </Text>
         </View>
       </ScrollView>
+       </LinearGradient>
     </KeyboardAvoidingView>
   );
 }
@@ -922,7 +924,7 @@ export default function Register({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: '#ff6700',
   },
   gradientHeader: {
     paddingTop: Platform.OS === 'ios' ? m(50) : m(38),
@@ -940,7 +942,7 @@ const styles = StyleSheet.create({
   appName: {
     fontSize: FontSizes['4xl'],
     fontFamily: FontFamily.secondaryBold,
-    color: '#ff6700',
+    color: 'white',
     textShadowColor: 'rgba(0, 0, 0, 0.2)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
@@ -948,12 +950,13 @@ const styles = StyleSheet.create({
   tagline: {
     fontSize: FontSizes.md,
     fontFamily: FontFamily.secondaryRegular,
-    color: '#ff6700',
+    color: 'white',
     textAlign: 'center',
     fontStyle: 'italic',
   },
   scrollView: {
     flex: 1,
+    backgroundColor: 'transparent',
   },
   scrollContent: {
     paddingHorizontal: m(20),
@@ -976,7 +979,7 @@ const styles = StyleSheet.create({
     width: m(40),
     height: m(40),
     borderRadius: m(20),
-    backgroundColor: '#E5E7EB',
+    backgroundColor: 'lightgrey',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
@@ -989,7 +992,7 @@ const styles = StyleSheet.create({
   progressStepText: {
     fontSize: FontSizes.md,
     fontFamily: FontFamily.primarySemiBold,
-    color: '#6B7280',
+    color: '#FFFFFF',
   },
   progressLine: {
     width: m(60),

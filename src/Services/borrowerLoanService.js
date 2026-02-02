@@ -287,4 +287,3 @@ export const borrowerLoanAPI = {
 };
 
 export default borrowerLoanAPI;
-

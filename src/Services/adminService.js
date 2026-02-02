@@ -1,7 +1,6 @@
 import axiosInstance from '../Utils/AxiosInstance';
 
 // Admin API Services
-
 export const adminAPI = {
   // Get lenders with plan purchase details
   getLendersWithPlans: async (params = {}) => {
@@ -23,13 +22,6 @@ export const adminAPI = {
       return response.data;
     } catch (error) {
       console.error('Error fetching lenders with plans:', error);
-      // console.error('Error details:', {
-      //   message: error.message,
-      //   status: error.response?.status,
-      //   statusText: error.response?.statusText,
-      //   data: error.response?.data,
-      //   url: error.config?.url
-      // });
       throw error;
     }
   },
@@ -51,13 +43,6 @@ export const adminAPI = {
       return response.data;
     } catch (error) {
       console.error('Error fetching revenue statistics:', error);
-      // console.error('Error details:', {
-      //   message: error.message,
-      //   status: error.response?.status,
-      //   statusText: error.response?.statusText,
-      //   data: error.response?.data,
-      //   url: error.config?.url
-      // });
       throw error;
     }
   },
@@ -75,13 +60,13 @@ export const adminAPI = {
       return response.data;
     } catch (error) {
       console.error('Error fetching admin recent activities:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        url: error.config?.url
-      });
+      // console.error('Error details:', {
+      //   message: error.message,
+      //   status: error.response?.status,
+      //   statusText: error.response?.statusText,
+      //   data: error.response?.data,
+      //   url: error.config?.url
+      // });
       throw error;
     }
   },

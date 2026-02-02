@@ -331,6 +331,7 @@ export default function PersonalLoan({ route }) {
     return loanDetails.paymentStatus || loanDetails.status;
   };
 
+  // status param unused – display uses getDisplayStatus()
   const getStatusColor = (status) => {
     const displayStatus = getDisplayStatus();
     switch (displayStatus?.toLowerCase()) {
@@ -345,6 +346,7 @@ export default function PersonalLoan({ route }) {
     }
   };
 
+  // status param unused – display uses getDisplayStatus()
   const getStatusIcon = (status) => {
     const displayStatus = getDisplayStatus();
     switch (displayStatus?.toLowerCase()) {

@@ -157,7 +157,7 @@ export default function AddDetails({ route, navigation }) {
     setProofError('');
     
     if (!file) {
-      return true; // File is optional
+      return true;
     }
 
     // Check file type
@@ -170,7 +170,7 @@ export default function AddDetails({ route, navigation }) {
     }
 
     // Check file size (5MB = 5 * 1024 * 1024 bytes)
-    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+    const maxSize = 5 * 1024 * 1024;
     if (file.fileSize && file.fileSize > maxSize) {
       setProofError('File size must be less than 5MB.');
       return false;
@@ -1379,7 +1379,6 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.sm,
     fontFamily: FontFamily.primaryRegular,
     color: '#dc2626',
-    // marginTop: m(4),
     marginBottom: m(14),
     marginLeft: m(4),
   },
@@ -1390,7 +1389,6 @@ const styles = StyleSheet.create({
   textAreaIcon: {
     alignSelf: 'flex-start',
     paddingTop: m(16),
-
   },
   input: {
     flex: 1,
@@ -1474,7 +1472,6 @@ const styles = StyleSheet.create({
     borderColor: '#e2e8f0',
     overflow: 'hidden',
     paddingHorizontal: m(12),
-
   },
   amountInput: {
     flex: 1,
@@ -1504,7 +1501,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e2e8f0',
     paddingHorizontal: m(12),
-    // paddingVertical: m(10),
     minHeight: m(52),
     marginBottom: m(4),
   },
@@ -1520,7 +1516,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginLeft: m(4),
     marginRight: m(2),
-    // marginBottom: m(4),
   },
   datePlaceholder: {
     fontSize: FontSizes.sm,

@@ -182,7 +182,6 @@ const Outward = ({ navigation, route }) => {
         setBorrowerRiskAssessment(prev => {
           // Check if we already have risk assessment for this borrower
           if (prev[aadhaarNumber]) return prev;
-          // console.log('Risk assessment fetched for', aadhaarNumber, ':', result.payload);
           return {
             ...prev,
             [aadhaarNumber]: result.payload,
@@ -190,11 +189,9 @@ const Outward = ({ navigation, route }) => {
         });
       } else if (getRiskAssessment.rejected.match(result)) {
         // Silently handle rejections - borrower may not have loan history
-        // console.log('Risk assessment rejected for', aadhaarNumber, ':', result.payload);
       }
     } catch (error) {
       // Silently handle errors - borrower may not have loan history
-      // console.log('Error fetching risk assessment:', error);
     }
   }, [dispatch]);
 

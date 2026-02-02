@@ -99,10 +99,15 @@ export default function LoginScreen({ navigation }) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
-      <StatusBar barStyle="light-content" backgroundColor="#ff6700" />
+      <LinearGradient
+        colors={['#ff6700', '#ff8800ff', '#ff9100ff', '#ffa200ff']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.gradientBackground}>
+        <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-      {/* ScrollView to prevent keyboard hiding content */}
-      <ScrollView
+        {/* ScrollView to prevent keyboard hiding content */}
+        <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -233,6 +238,7 @@ export default function LoginScreen({ navigation }) {
           </TouchableOpacity>
         </View>
       </ScrollView>
+      </LinearGradient>
     </KeyboardAvoidingView>
   );
 }
@@ -272,10 +278,12 @@ const styles = StyleSheet.create({
   // ScrollView to prevent keyboard hiding
   scrollView: {
     flex: 1,
+    backgroundColor: 'transparent',
   },
   scrollContent: {
     paddingBottom: m(40),
-    backgroundColor: '#f8f8f8',
+    // backgroundColor: '#f8f8f8'
+    // backgroundColor: '#ff6700',
   },
 
   // Form Card

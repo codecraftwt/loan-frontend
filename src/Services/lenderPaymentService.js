@@ -1,7 +1,6 @@
 import axiosInstance from '../Utils/AxiosInstance';
 
 // Lender Payment API Services
-
 export const lenderPaymentAPI = {
   // Get all pending payments for the lender
   getPendingPayments: async (params = {}) => {
@@ -38,13 +37,13 @@ export const lenderPaymentAPI = {
       
       // Log other errors normally
       console.error('Error fetching pending payments:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        url: error.config?.url,
-      });
+      // console.error('Error details:', {
+      //   message: error.message,
+      //   status: error.response?.status,
+      //   statusText: error.response?.statusText,
+      //   data: error.response?.data,
+      //   url: error.config?.url,
+      // });
       
       throw error;
     }
@@ -123,4 +122,3 @@ export const lenderPaymentAPI = {
 };
 
 export default lenderPaymentAPI;
-

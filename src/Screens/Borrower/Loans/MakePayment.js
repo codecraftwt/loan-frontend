@@ -1316,15 +1316,6 @@ const styles = StyleSheet.create({
     color: '#111827',
     paddingVertical: m(12),
   },
-  // inputIcon: {
-  //   marginRight: m(12),
-  // },
-  // textInput: {
-  //   flex: 1,
-  //   fontSize: m(16),
-  //   color: '#111827',
-  //   paddingVertical: m(12),
-  // },
   helperText: {
     fontSize: m(12),
     color: '#6B7280',

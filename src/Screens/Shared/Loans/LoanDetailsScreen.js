@@ -329,10 +329,7 @@ export default function LoanDetailScreen({ route, navigation }) {
     }
   };
 
-  const handlePaymentAction = (payment, type) => {
-    // Log the payment object to debug any ID issues
-    console.log('Payment object received:', JSON.stringify(payment, null, 2));
-    
+  const handlePaymentAction = (payment, type) => { 
     // Ensure payment has an ID before proceeding
     const extractedPaymentId = payment?.paymentId || payment?._id || payment?.id;
     if (!extractedPaymentId) {

@@ -143,10 +143,6 @@ export default function Home() {
   const remainingLoans = (lenderStatistics?.counts?.pendingLoans || 0) +
     (lenderStatistics?.counts?.overdueLoans || 0);
 
-  // Calculate remaining amount (pending + overdue)
-  // const remainingAmount = (lenderStatistics?.totalPendingAmount || 0) + 
-  //                         (lenderStatistics?.totalOverdueAmount || 0);
-
   // Helper function to map activity type to UI properties
   const getActivityProperties = (activity) => {
     const activityType = activity.type || '';

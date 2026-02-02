@@ -1,7 +1,6 @@
 import axiosInstance from '../Utils/AxiosInstance';
 
 // Lender Loan API Services
-
 export const lenderLoanAPI = {
   // Get loan details by ID (for lenders)
   getLoanDetails: async (loanId) => {
@@ -32,7 +31,6 @@ export const lenderLoanAPI = {
       }
       return null;
     } catch (error) {
-      // console.error('Error fetching loan from list:', error);
       throw error;
     }
   },
@@ -159,4 +157,3 @@ export const lenderLoanAPI = {
 };
 
 export default lenderLoanAPI;
-
