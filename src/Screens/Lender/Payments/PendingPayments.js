@@ -29,7 +29,6 @@ import { baseurl } from '../../../Utils/API';
 import { FontFamily, FontSizes } from '../../../constants';
 
 export default function PendingPayments() {
-  // const navigation = useNavigation();
   const dispatch = useDispatch();
   const {
     pendingPayments,
@@ -43,7 +42,7 @@ export default function PendingPayments() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [actionModalVisible, setActionModalVisible] = useState(false);
-  const [actionType, setActionType] = useState(null); // 'confirm' or 'reject'
+  const [actionType, setActionType] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
   const [confirmNotes, setConfirmNotes] = useState('');
   const [imageViewerVisible, setImageViewerVisible] = useState(false);

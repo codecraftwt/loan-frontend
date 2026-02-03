@@ -90,7 +90,6 @@ export default function Inward({ navigation }) {
       // Match by Aadhaar
       const aadhaarMatch = loan.borrowerAadhaar && borrower.aadhaarNumber && 
         loan.borrowerAadhaar === borrower.aadhaarNumber;
-      
       return nameMatch || mobileMatch || aadhaarMatch;
     });
     
@@ -138,16 +137,28 @@ export default function Inward({ navigation }) {
     dispatch(getLoanByLender(filters));
   }, [debouncedSearch, dispatch]);
 
-  const handleClearFilters = () => {
-    setStartDateFilter(null);
-    setEndDateFilter(null);
-    setMinAmount('');
-    setMaxAmount('');
-    setStatusFilter(null);
-    setSearchQuery('');
-    setDebouncedSearch('');
-    dispatch(getLoanByLender());
-    setIsFilterModalVisible(false);
+  // Check if any filter has a value
+  const hasActiveFilters = Boolean(
+    startDateFilter ||
+    endDateFilter ||
+    minAmount ||
+    maxAmount ||
+    statusFilter ||
+    searchQuery
+  );
+
+  const handleResetOrClose = () => {
+    if (hasActiveFilters) {
+      setStartDateFilter(null);
+      setEndDateFilter(null);
+      setMinAmount('');
+      setMaxAmount('');
+      setStatusFilter(null);
+      setSearchQuery('');
+      setDebouncedSearch('');
+    } else {
+      setIsFilterModalVisible(false);
+    }
   };
 
   const handleSubmitFilters = async () => {
@@ -206,7 +217,6 @@ export default function Inward({ navigation }) {
                 scrollViewRef.current?.scrollTo({ y: Math.max(0, y - 100), animated: true });
               },
               () => {
-                // Fallback: scroll to approximate position
                 const estimatedY = loanIndex * 200;
                 scrollViewRef.current?.scrollTo({ y: Math.max(0, estimatedY - 100), animated: true });
               }
@@ -296,7 +306,7 @@ export default function Inward({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <Header title="Given Loans" />
+      <Header title="Given Loans"/>
 
       {/* Search and Filter Section */}
       <View style={[
@@ -304,7 +314,7 @@ export default function Inward({ navigation }) {
         isLender && !hasActivePlan && { opacity: 0.5 }
       ]}>
         <View style={styles.searchContainer}>
-          <Icon name="search" size={20} color="#6B7280" style={styles.searchIcon} />
+          <Icon name="search" size={20} color="#6B7280" style={styles.searchIcon}/>
           <TextInput
             style={styles.searchInput}
             placeholder="Search by borrower name"
@@ -316,7 +326,7 @@ export default function Inward({ navigation }) {
           <TouchableOpacity
             style={styles.filterButton}
             onPress={() => setIsFilterModalVisible(true)}>
-            <Icon name="filter-alt" size={22} color="#FF9800" />
+            <Icon name="filter-list" size={24} color="#FF9800"/>
           </TouchableOpacity>
         </View>
       </View>
@@ -459,13 +469,37 @@ export default function Inward({ navigation }) {
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.clearButton]}
-                onPress={handleClearFilters}>
-                <Text style={styles.clearButtonText}>Clear All</Text>
+                onPress={handleResetOrClose}>
+                <Icon 
+                  name={hasActiveFilters ? "refresh" : "close"} 
+                  size={18} 
+                  color="#6B7280" 
+                  style={styles.buttonIcon}
+                />
+                <Text style={styles.clearButtonText}>
+                  {hasActiveFilters ? "Reset" : "Close"}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, styles.applyButton]}
-                onPress={handleSubmitFilters}>
-                <Text style={styles.applyButtonText}>Apply Filters</Text>
+                style={[
+                  styles.modalButton, 
+                  styles.applyButton,
+                  !hasActiveFilters && styles.applyButtonDisabled
+                ]}
+                onPress={handleSubmitFilters}
+                disabled={!hasActiveFilters}>
+                <Icon 
+                  name="check" 
+                  size={18} 
+                  color={hasActiveFilters ? "#FFFFFF" : "#9CA3AF"} 
+                  style={styles.buttonIcon}
+                />
+                <Text style={[
+                  styles.applyButtonText,
+                  !hasActiveFilters && styles.applyButtonTextDisabled
+                ]}>
+                  Apply Filters
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -532,11 +566,6 @@ export default function Inward({ navigation }) {
                 const amount = typeof loan.amount === 'number' ? loan.amount : parseFloat(loan.amount) || 0;
                 return sum + amount;
               }, 0);
-              
-              // const totalPaid = loans.reduce((sum, loan) => {
-              //   const paid = typeof loan.totalPaid === 'number' ? loan.totalPaid : parseFloat(loan.totalPaid) || 0;
-              //   return sum + paid;
-              // }, 0);
               
               const totalRemaining = loans.reduce((sum, loan) => {
                 const remaining = typeof loan.remainingAmount === 'number' ? loan.remainingAmount : parseFloat(loan.remainingAmount) || 0;
@@ -950,9 +979,15 @@ const styles = StyleSheet.create({
   },
   modalButton: {
     flex: 1,
+    flexDirection: 'row',
     paddingVertical: m(14),
     borderRadius: m(12),
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: m(8),
+  },
+  buttonIcon: {
+    marginRight: m(4),
   },
   clearButton: {
     backgroundColor: '#F3F4F6',
@@ -961,6 +996,9 @@ const styles = StyleSheet.create({
   applyButton: {
     backgroundColor: '#FF9800',
     marginLeft: m(8),
+  },
+  applyButtonDisabled: {
+    backgroundColor: '#E5E7EB',
   },
   clearButtonText: {
     color: '#6B7280',
@@ -971,6 +1009,9 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: m(16),
     fontWeight: '600',
+  },
+  applyButtonTextDisabled: {
+    color: '#9CA3AF',
   },
 
   // Loan List

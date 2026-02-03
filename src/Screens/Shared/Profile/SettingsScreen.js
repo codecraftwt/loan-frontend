@@ -6,29 +6,14 @@ import {
   ScrollView,
   Switch,
 } from 'react-native';
-import React, { useState } from 'react';
+// import React, { useState } from 'react';
 import Icon from 'react-native-vector-icons/Feather';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
 
 export default function SettingsScreen({ navigation }) {
-  // State for toggles
-  const [pushNotifications, setPushNotifications] = useState(false);
 
   const settingsSections = [
-    {
-      title: 'Notifications',
-      items: [
-        {
-          icon: 'bell',
-          label: 'Push Notifications',
-          value: pushNotifications,
-          onToggle: setPushNotifications,
-          type: 'toggle',
-          color: '#3B82F6',
-        },
-      ],
-    },
     {
       title: 'Security',
       items: [
@@ -48,28 +33,28 @@ export default function SettingsScreen({ navigation }) {
           icon: 'info',
           label: 'Terms of Service',
           type: 'navigate',
-          onPress: () => {},
+          onPress: () => navigation.navigate('TermsOfService'),
           color: '#6B7280',
         },
         {
           icon: 'file-text',
           label: 'Privacy Policy',
           type: 'navigate',
-          onPress: () => {},
+          onPress: () => navigation.navigate('PrivacyPolicy'),
           color: '#6B7280',
         },
         {
           icon: 'users',
           label: 'About Us',
           type: 'navigate',
-          onPress: () => {},
+          onPress: () => navigation.navigate('AboutUs'),
           color: '#6B7280',
         },
         {
           icon: 'star',
           label: 'Rate App',
           type: 'navigate',
-          onPress: () => {},
+          onPress: () => navigation.navigate('RateApp'),
           color: '#F59E0B',
         },
       ],

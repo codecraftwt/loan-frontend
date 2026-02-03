@@ -64,7 +64,7 @@ export default function SplashScreen({navigation}) {
 
     setTimeout(() => {
       checkLoginStatus();
-    }, 2500); // Increased slightly for better animation visibility
+    }, 2500);
   }, [dispatch, navigation]);
 
   return (
@@ -85,7 +85,6 @@ export default function SplashScreen({navigation}) {
           },
         ]}>
         <View style={styles.logoWrapper}>
-          {/* Optional: Add a subtle shadow/glow effect */}
           <View style={styles.logoGlow} />
           <Image
             resizeMode="contain"

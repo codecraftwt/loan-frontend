@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   View,
   TextInput,
@@ -376,7 +376,7 @@ export default function AddDetails({ route, navigation }) {
     if (!loanDetails) {
       const hasValidPlan = await checkPlanBeforeLoanCreation();
       if (!hasValidPlan) {
-        return; // User will be redirected to plans screen
+        return;
       }
     }
 
@@ -468,7 +468,6 @@ export default function AddDetails({ route, navigation }) {
               });
             }
           } else {
-            // Fallback: navigate if loan data structure is unexpected
             Toast.show({
               type: 'success',
               position: 'top',
@@ -477,7 +476,6 @@ export default function AddDetails({ route, navigation }) {
             navigation.navigate('BottomNavigation', { screen: 'Outward' });
           }
         } else {
-          // For updates, navigate directly
           Toast.show({
             type: 'success',
             position: 'top',
@@ -960,7 +958,7 @@ export default function AddDetails({ route, navigation }) {
             ) : null}
 
             <View style={styles.dateRow}>
-              <View style={{ flex: 1 }}>
+              <View style={styles.dateColumn}>
                 <TouchableOpacity
                   style={[styles.dateInputContainer, fieldErrors.loanStartDate && styles.dateInputContainerError]}
                   activeOpacity={0.7}
@@ -969,75 +967,67 @@ export default function AddDetails({ route, navigation }) {
                     setStartDatePickerVisible(true);
                   }}>
                   <View style={styles.inputIcon}>
-                    <Icon name="calendar-start" size={20} color="#666" />
+                    <Icon name="calendar-start" size={18} color="#666" />
                   </View>
-                <View style={styles.dateTextContainer}>
-                  <Text
-                    style={[
-                      styles.datePlaceholder,
-                      formData.loanStartDate && styles.datePlaceholderFilled
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {formData.loanStartDate ? 'Start Date' : 'Start Date'}
-                  </Text>
-                  {formData.loanStartDate && (
+                  <View style={styles.dateTextContainer}>
                     <Text
-                      style={styles.dateValue}
-                      numberOfLines={1}
-                      ellipsizeMode="tail"
-                      adjustsFontSizeToFit
-                      minimumFontScale={0.8}
-                    >
-                      {new Date(formData.loanStartDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      style={[
+                        styles.datePlaceholder,
+                        formData.loanStartDate && styles.datePlaceholderFilled
+                      ]}
+                      numberOfLines={1}>
+                      {formData.loanStartDate ? 'Start Date' : 'Start Date'}
                     </Text>
-                  )}
-                </View>
-                <Icon name="chevron-down" size={20} color="#666" />
-              </TouchableOpacity>
-              {fieldErrors.loanStartDate ? (
-                <Text style={styles.fieldErrorText}>{fieldErrors.loanStartDate}</Text>
-              ) : null}
+                    {formData.loanStartDate && (
+                      <Text
+                        style={styles.dateValue}
+                        numberOfLines={1}
+                        ellipsizeMode="tail">
+                        {new Date(formData.loanStartDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </Text>
+                    )}
+                  </View>
+                  <Icon name="chevron-down" size={18} color="#94a3b8" />
+                </TouchableOpacity>
+                {fieldErrors.loanStartDate ? (
+                  <Text style={styles.dateFieldError}>{fieldErrors.loanStartDate}</Text>
+                ) : null}
               </View>
 
-              <View style={{ flex: 1 }}>
-              <TouchableOpacity
-                style={[styles.dateInputContainer, fieldErrors.loanEndDate && styles.dateInputContainerError]}
-                activeOpacity={0.7}
-                onPress={() => {
-                  Keyboard.dismiss();
-                  setEndDatePickerVisible(true);
-                }}>
-                <View style={styles.inputIcon}>
-                  <Icon name="calendar-end" size={20} color="#666" />
-                </View>
-                <View style={styles.dateTextContainer}>
-                  <Text
-                    style={[
-                      styles.datePlaceholder,
-                      formData.loanEndDate && styles.datePlaceholderFilled
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {formData.loanEndDate ? 'End Date' : 'End Date'}
-                  </Text>
-                  {formData.loanEndDate && (
+              <View style={styles.dateColumn}>
+                <TouchableOpacity
+                  style={[styles.dateInputContainer, fieldErrors.loanEndDate && styles.dateInputContainerError]}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    Keyboard.dismiss();
+                    setEndDatePickerVisible(true);
+                  }}>
+                  <View style={styles.inputIcon}>
+                    <Icon name="calendar-end" size={18} color="#666" />
+                  </View>
+                  <View style={styles.dateTextContainer}>
                     <Text
-                      style={styles.dateValue}
-                      numberOfLines={1}
-                      ellipsizeMode="tail"
-                      adjustsFontSizeToFit
-                      minimumFontScale={0.8}
-                    >
-                      {new Date(formData.loanEndDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      style={[
+                        styles.datePlaceholder,
+                        formData.loanEndDate && styles.datePlaceholderFilled
+                      ]}
+                      numberOfLines={1}>
+                      {formData.loanEndDate ? 'End Date' : 'End Date'}
                     </Text>
-                  )}
-                </View>
-                <Icon name="chevron-down" size={20} color="#666" />
-              </TouchableOpacity>
-              {fieldErrors.loanEndDate ? (
-                <Text style={styles.fieldErrorText}>{fieldErrors.loanEndDate}</Text>
-              ) : null}
+                    {formData.loanEndDate && (
+                      <Text
+                        style={styles.dateValue}
+                        numberOfLines={1}
+                        ellipsizeMode="tail">
+                        {new Date(formData.loanEndDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </Text>
+                    )}
+                  </View>
+                  <Icon name="chevron-down" size={18} color="#94a3b8" />
+                </TouchableOpacity>
+                {fieldErrors.loanEndDate ? (
+                  <Text style={styles.dateFieldError}>{fieldErrors.loanEndDate}</Text>
+                ) : null}
               </View>
             </View>
 
@@ -1293,30 +1283,36 @@ export default function AddDetails({ route, navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#f1f5f9',
   },
   scrollViewContainer: {
     flex: 1,
   },
   scrollContent: {
+    paddingHorizontal: m(16),
+    paddingTop: m(16),
     paddingBottom: m(40),
   },
+
+  // Header Card
   headerCard: {
     backgroundColor: '#FFF',
-    marginHorizontal: m(20),
-    marginTop: m(20),
-    marginBottom: m(10),
-    padding: m(24),
-    borderRadius: m(20),
+    marginBottom: m(16),
+    paddingVertical: m(20),
+    paddingHorizontal: m(20),
+    borderRadius: m(16),
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
     elevation: 3,
+  },
+  addLoanCont: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(8),
+    marginBottom: m(6),
   },
   headerTitle: {
     fontSize: FontSizes.lg,
@@ -1325,32 +1321,33 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   headerSubtitle: {
-    fontSize: FontSizes.base,
+    fontSize: FontSizes.sm,
     fontFamily: FontFamily.secondaryRegular,
     color: '#64748b',
     textAlign: 'center',
-    lineHeight: m(20),
+    lineHeight: m(18),
   },
+
+  // Form Container
   formContainer: {
     backgroundColor: '#FFF',
-    marginHorizontal: m(20),
-    marginBottom: m(20),
-    padding: m(24),
-    borderRadius: m(20),
+    marginBottom: m(16),
+    paddingVertical: m(20),
+    paddingHorizontal: m(16),
+    borderRadius: m(16),
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
     elevation: 3,
   },
+
+  // Section Header
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: m(20),
-    paddingBottom: m(10),
+    marginBottom: m(16),
+    paddingBottom: m(12),
     borderBottomWidth: 1,
     borderBottomColor: '#f1f5f9',
   },
@@ -1360,67 +1357,71 @@ const styles = StyleSheet.create({
     color: '#1e293b',
     marginLeft: m(10),
   },
+
+  // Input Group
   inputGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: m(3),
+    marginBottom: m(12),
     backgroundColor: '#f8fafc',
     borderRadius: m(12),
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#e2e8f0',
-    overflow: 'hidden',
-    paddingHorizontal: m(14),
+    paddingHorizontal: m(12),
+    minHeight: m(52),
   },
   inputGroupError: {
     borderColor: '#dc2626',
     borderWidth: 2,
   },
   fieldErrorText: {
-    fontSize: FontSizes.sm,
-    fontFamily: FontFamily.primaryRegular,
+    fontSize: FontSizes.xs,
+    fontFamily: FontFamily.primaryMedium,
     color: '#dc2626',
-    marginBottom: m(14),
+    marginTop: m(-8),
+    marginBottom: m(12),
     marginLeft: m(4),
   },
   inputIcon: {
-    padding: m(12),
-    backgroundColor: '#f1f5f9',
+    marginRight: m(10),
   },
   textAreaIcon: {
     alignSelf: 'flex-start',
-    paddingTop: m(16),
+    marginTop: m(14),
   },
   input: {
     flex: 1,
-    padding: m(12),
+    paddingVertical: m(14),
+    paddingHorizontal: m(4),
     fontSize: FontSizes.base,
     fontFamily: FontFamily.primaryRegular,
     color: '#1e293b',
-    backgroundColor: '#f8fafc',
   },
   inputFocused: {
-    borderColor: '#ff7900',
-    backgroundColor: '#FFF',
+    // Handled by borderColor on parent
   },
   textArea: {
     flex: 1,
-    padding: m(12),
+    paddingVertical: m(14),
+    paddingHorizontal: m(4),
     fontSize: FontSizes.base,
     fontFamily: FontFamily.primaryRegular,
     color: '#1e293b',
-    minHeight: m(70),
+    minHeight: m(80),
     textAlignVertical: 'top',
-    backgroundColor: '#f8fafc',
   },
+
+  // History / Error Sections
   historyContainer: {
-    marginBottom: m(20),
+    marginTop: m(4),
+    marginBottom: m(16),
   },
   errorContainer: {
     backgroundColor: '#fef2f2',
     borderWidth: 1,
     borderColor: '#fecaca',
     borderRadius: m(12),
-    padding: m(16),
+    padding: m(14),
   },
   errorHeader: {
     flexDirection: 'row',
@@ -1438,10 +1439,10 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.primaryRegular,
     color: '#b91c1c',
     lineHeight: m(18),
-    marginBottom: m(8),
+    marginBottom: m(6),
   },
   errorNote: {
-    fontSize: FontSizes.sm,
+    fontSize: FontSizes.xs,
     fontFamily: FontFamily.primaryRegular,
     color: '#92400e',
     lineHeight: m(16),
@@ -1451,77 +1452,84 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: m(14),
+    paddingVertical: m(12),
+    paddingHorizontal: m(16),
     borderRadius: m(12),
-    gap: m(10),
+    gap: m(8),
   },
   oldHistoryButtonText: {
     color: '#FFF',
     fontSize: FontSizes.base,
     fontFamily: FontFamily.primarySemiBold,
   },
+
+  // Amount Input
   amountContainer: {
-    marginBottom: m(3),
+    marginBottom: m(12),
   },
   amountInputGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f8fafc',
     borderRadius: m(12),
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#e2e8f0',
-    overflow: 'hidden',
     paddingHorizontal: m(12),
+    minHeight: m(52),
+  },
+  amountInputGroupError: {
+    borderColor: '#dc2626',
+    borderWidth: 2,
   },
   amountInput: {
     flex: 1,
-    padding: m(12),
+    paddingVertical: m(14),
+    paddingHorizontal: m(4),
     fontSize: FontSizes.md,
     fontFamily: FontFamily.primarySemiBold,
     color: '#1e293b',
-    backgroundColor: '#f8fafc',
   },
   currencyText: {
-    paddingHorizontal: m(16),
-    fontSize: FontSizes.base,
+    paddingLeft: m(8),
+    paddingRight: m(4),
+    fontSize: FontSizes.sm,
     fontFamily: FontFamily.primaryMedium,
     color: '#64748b',
   },
+
+  // Date Row
   dateRow: {
     flexDirection: 'row',
-    gap: m(12),
-    marginBottom: m(20),
+    gap: m(10),
+    marginBottom: m(12),
+  },
+  dateColumn: {
+    flex: 1,
   },
   dateInputContainer: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f8fafc',
     borderRadius: m(12),
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#e2e8f0',
     paddingHorizontal: m(12),
+    paddingVertical: m(10),
     minHeight: m(52),
-    marginBottom: m(4),
   },
   dateInputContainerError: {
     borderColor: '#dc2626',
     borderWidth: 2,
   },
-  inputIcon: {
-    marginRight: m(8),
-  },
   dateTextContainer: {
     flex: 1,
     justifyContent: 'center',
-    marginLeft: m(4),
-    marginRight: m(2),
+    marginLeft: m(6),
   },
   datePlaceholder: {
     fontSize: FontSizes.sm,
     fontFamily: FontFamily.primaryRegular,
-    color: '#888',
-    lineHeight: m(18),
+    color: '#94a3b8',
   },
   datePlaceholderFilled: {
     fontSize: FontSizes.xs,
@@ -1529,12 +1537,20 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.primaryMedium,
   },
   dateValue: {
-    fontSize: FontSizes.base,
+    fontSize: FontSizes.sm,
     fontFamily: FontFamily.primarySemiBold,
     color: '#1e293b',
-    lineHeight: m(20),
     marginTop: m(2),
   },
+  dateFieldError: {
+    fontSize: FontSizes.xs,
+    fontFamily: FontFamily.primaryMedium,
+    color: '#dc2626',
+    marginTop: m(4),
+    marginLeft: m(4),
+  },
+
+  // Error Card
   errorCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1542,8 +1558,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#fecaca',
     borderRadius: m(12),
-    padding: m(16),
-    marginBottom: m(20),
+    padding: m(14),
+    marginBottom: m(16),
     gap: m(10),
   },
   errorText: {
@@ -1553,22 +1569,25 @@ const styles = StyleSheet.create({
     color: '#b91c1c',
     lineHeight: m(18),
   },
+
+  // Action Buttons
   actionButtons: {
     flexDirection: 'row',
     gap: m(12),
-    marginTop: m(10),
+    marginTop: m(8),
   },
   resetButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: m(10),
+    paddingVertical: m(14),
+    paddingHorizontal: m(12),
     borderRadius: m(12),
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#e2e8f0',
     backgroundColor: '#f8fafc',
-    gap: m(8),
+    gap: m(6),
   },
   resetButtonText: {
     fontSize: FontSizes.base,
@@ -1580,51 +1599,63 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: m(10),
+    paddingVertical: m(14),
+    paddingHorizontal: m(12),
     borderRadius: m(12),
     backgroundColor: '#ff7900',
-    gap: m(10),
+    gap: m(8),
+    shadowColor: '#ff7900',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 4,
   },
   submitButtonDisabled: {
     backgroundColor: '#ffa54d',
-    opacity: 0.8,
+    opacity: 0.7,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   submitButtonText: {
     fontSize: FontSizes.base,
     fontFamily: FontFamily.primarySemiBold,
     color: '#FFF',
   },
+
+  // Loan Mode
   loanModeContainer: {
-    marginBottom: m(20),
+    marginTop: m(4),
+    marginBottom: m(16),
   },
   loanModeLabel: {
-    fontSize: FontSizes.base,
+    fontSize: FontSizes.sm,
     fontFamily: FontFamily.primarySemiBold,
     color: '#374151',
-    marginBottom: m(12),
+    marginBottom: m(10),
   },
   loanModeButtons: {
     flexDirection: 'row',
-    gap: m(12),
+    gap: m(10),
   },
   loanModeButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: m(14),
+    paddingVertical: m(12),
+    paddingHorizontal: m(10),
     borderRadius: m(12),
     borderWidth: 2,
     borderColor: '#E5E7EB',
     backgroundColor: '#F9FAFB',
-    gap: m(8),
+    gap: m(6),
   },
   loanModeButtonActive: {
     backgroundColor: '#ff7900',
     borderColor: '#ff7900',
   },
   loanModeButtonText: {
-    fontSize: FontSizes.base,
+    fontSize: FontSizes.sm,
     fontFamily: FontFamily.primarySemiBold,
     color: '#6B7280',
   },
@@ -1637,69 +1668,68 @@ const styles = StyleSheet.create({
     backgroundColor: '#EFF6FF',
     borderRadius: m(10),
     padding: m(12),
-    marginTop: m(12),
-    gap: m(10),
+    marginTop: m(10),
+    gap: m(8),
     borderWidth: 1,
     borderColor: '#BFDBFE',
   },
   onlinePaymentInfoText: {
     flex: 1,
-    fontSize: FontSizes.sm,
+    fontSize: FontSizes.xs,
     fontFamily: FontFamily.primaryRegular,
     color: '#1E40AF',
-    lineHeight: m(18),
+    lineHeight: m(16),
   },
+
+  // Fraud Badge
   fraudBadgeContainer: {
-    marginTop: m(12),
+    marginTop: m(10),
   },
   fraudLoadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: m(12),
+    padding: m(10),
     backgroundColor: '#f8fafc',
-    borderRadius: m(12),
-    gap: m(10),
+    borderRadius: m(10),
+    gap: m(8),
   },
   fraudLoadingText: {
-    fontSize: FontSizes.sm,
+    fontSize: FontSizes.xs,
     color: '#64748b',
     fontFamily: FontFamily.primaryRegular,
   },
-  addLoanCont:{
-    flexDirection: 'row',
-     alignItems: 'center', 
-     gap: 6, 
-     marginBottom: 6
-  },
+
+  // Proof Section
   proofSection: {
-    marginBottom: m(20),
+    marginTop: m(4),
+    marginBottom: m(16),
   },
   proofDescription: {
-    fontSize: FontSizes.sm,
+    fontSize: FontSizes.xs,
     fontFamily: FontFamily.primaryRegular,
     color: '#64748b',
-    marginBottom: m(12),
+    marginBottom: m(10),
   },
   proofUploadButtons: {
     flexDirection: 'row',
-    gap: m(12),
-    marginBottom: m(8),
+    gap: m(10),
   },
   proofUploadButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: m(14),
+    paddingVertical: m(12),
+    paddingHorizontal: m(10),
     borderRadius: m(12),
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: '#ff7900',
-    backgroundColor: '#FFF',
-    gap: m(8),
+    backgroundColor: '#FFF7ED',
+    gap: m(6),
   },
   proofUploadButtonText: {
-    fontSize: FontSizes.sm,
+    fontSize: FontSizes.xs,
     fontFamily: FontFamily.primarySemiBold,
     color: '#ff7900',
   },
@@ -1710,13 +1740,12 @@ const styles = StyleSheet.create({
     borderRadius: m(12),
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    padding: m(12),
-    marginBottom: m(8),
-    gap: m(12),
+    padding: m(10),
+    gap: m(10),
   },
   proofPreviewImage: {
-    width: m(60),
-    height: m(60),
+    width: m(56),
+    height: m(56),
     borderRadius: m(8),
     backgroundColor: '#e2e8f0',
   },
@@ -1725,13 +1754,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   proofPreviewName: {
-    fontSize: FontSizes.base,
+    fontSize: FontSizes.sm,
     fontFamily: FontFamily.primarySemiBold,
     color: '#1e293b',
-    marginBottom: m(4),
+    marginBottom: m(2),
   },
   proofPreviewSize: {
-    fontSize: FontSizes.sm,
+    fontSize: FontSizes.xs,
     fontFamily: FontFamily.primaryRegular,
     color: '#64748b',
   },
@@ -1746,12 +1775,12 @@ const styles = StyleSheet.create({
     borderColor: '#fecaca',
     borderRadius: m(8),
     padding: m(10),
-    gap: m(8),
-    marginTop: m(8),
+    gap: m(6),
+    marginTop: m(10),
   },
   proofErrorText: {
     flex: 1,
-    fontSize: FontSizes.sm,
+    fontSize: FontSizes.xs,
     fontFamily: FontFamily.primaryRegular,
     color: '#b91c1c',
     lineHeight: m(16),

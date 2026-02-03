@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
@@ -99,15 +99,10 @@ export default function LoginScreen({ navigation }) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
-      <LinearGradient
-        colors={['#ff6700', '#ff8800ff', '#ff9100ff', '#ffa200ff']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.gradientBackground}>
-        <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <StatusBar barStyle="light-content" backgroundColor="#ff6700" />
 
-        {/* ScrollView to prevent keyboard hiding content */}
-        <ScrollView
+      {/* ScrollView to prevent keyboard hiding content */}
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -238,7 +233,6 @@ export default function LoginScreen({ navigation }) {
           </TouchableOpacity>
         </View>
       </ScrollView>
-      </LinearGradient>
     </KeyboardAvoidingView>
   );
 }
@@ -248,7 +242,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f8f8',
   },
-
   headerContent: {
     borderBottomLeftRadius: m(25),
     borderBottomRightRadius: m(25),
@@ -278,12 +271,11 @@ const styles = StyleSheet.create({
   // ScrollView to prevent keyboard hiding
   scrollView: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: '#ff6700',
   },
   scrollContent: {
     paddingBottom: m(40),
-    // backgroundColor: '#f8f8f8'
-    // backgroundColor: '#ff6700',
+    backgroundColor: '#ff6700',
   },
 
   // Form Card

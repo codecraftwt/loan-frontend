@@ -184,10 +184,8 @@ const LoanCard = ({ loan, onPress }) => {
   </View>
   
   {/* Right side icon */}
-  {/* <View style={styles.footerRight}> */}
     <View style={styles.footerIconButton}>
       <Icon name="chevron-right" size={21} color="#6B7280" />
-    {/* </View> */}
   </View>
 </View>
     </TouchableOpacity>

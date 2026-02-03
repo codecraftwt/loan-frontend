@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -19,7 +19,6 @@ import { getAllBorrowers, searchBorrowers } from '../../../Redux/Slices/borrower
 import { getRiskAssessment } from '../../../Redux/Slices/loanSlice';
 import { getPendingPayments } from '../../../Redux/Slices/lenderPaymentSlice';
 import { useFocusEffect } from '@react-navigation/native';
-import FraudStatusBadge from '../../../Components/FraudStatusBadge';
 import BorrowerReputationCard from '../../../Components/BorrowerReputationCard';
 import LoaderSkeleton from '../../../Components/LoaderSkeleton';
 import SubscriptionRestriction from '../../../Components/SubscriptionRestriction';
@@ -397,15 +396,7 @@ const Outward = ({ navigation, route }) => {
             <Icon name="add" size={24} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
-        {borrowers && borrowers.length > 0 && (
-          <View style={styles.statsContainer}>
-            <Text style={styles.statsText}>
-              {borrowers.length} {borrowers.length === 1 ? 'Borrower' : 'Borrowers'}
-            </Text>
-          </View>
-        )}
       </View>
-
 
       {/* Borrower Action Modal */}
       <Modal
@@ -579,13 +570,6 @@ const Outward = ({ navigation, route }) => {
                             <Text style={styles.userName} numberOfLines={1}>
                               {borrower.userName}
                             </Text>
-                            {/* {hasRisk && riskBadge && (
-                              <View style={styles.fraudBadgeContainer}>
-                                <FraudStatusBadge
-                                  riskLevel={riskBadge.level || riskData.riskLevel}
-                                />
-                              </View>
-                            )} */}
                           </View>
                           <View style={styles.userMeta}>
                             <Icon name="mail" size={14} color="#6B7280" />
@@ -683,40 +667,6 @@ const Outward = ({ navigation, route }) => {
                           </Text>
                         </View>
                       )}
-                      {/* {hasRisk && !borrowerPendingPayments && riskBadge && (
-                        <View style={[
-                          styles.fraudWarning,
-                          {
-                            backgroundColor: riskLevel === 'critical' ? '#FEE2E2' :
-                              riskLevel === 'high' ? '#FED7AA' :
-                                riskLevel === 'medium' ? '#FEF3C7' : '#D1FAE5'
-                          }
-                        ]}>
-                          <Icon
-                            name="warning"
-                            size={12}
-                            color={riskLevel === 'critical' ? '#DC2626' :
-                              riskLevel === 'high' ? '#EA580C' :
-                                riskLevel === 'medium' ? '#D97706' : '#059669'}
-                          />
-                          <Text style={[
-                            styles.fraudWarningText,
-                            {
-                              color: riskLevel === 'critical' ? '#DC2626' :
-                                riskLevel === 'high' ? '#EA580C' :
-                                  riskLevel === 'medium' ? '#D97706' : '#059669'
-                            }
-                          ]}>
-                            {riskBadge.label || 'Risk Alert'}
-                          </Text>
-                        </View>
-                      )} */}
-                      {/* {!hasRisk && !borrowerPendingPayments && (
-                        <View style={styles.actionHint}>
-                          <Icon name="touch-app" size={12} color="#ff6700" />
-                          <Text style={styles.actionHintText}>Tap for options</Text>
-                        </View>
-                      )} */}
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -725,7 +675,6 @@ const Outward = ({ navigation, route }) => {
           )}
         </ScrollView>
       )}
-      
       </KeyboardAvoidingView>
       
       {/* Subscription Restriction Overlay */}
@@ -801,19 +750,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
-  },
-  statsContainer: {
-    marginTop: m(12),
-    paddingTop: m(12),
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-  },
-  statsText: {
-    fontSize: m(13),
-    fontWeight: '600',
-    color: '#6B7280',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
 
   // Filter Modal
@@ -1041,46 +977,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    // marginTop: m(8),
-    // paddingTop: m(16),
-    // borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
   },
-  // footerBadge: {
-  //   flexDirection: 'row',
-  //   alignItems: 'center',
-  //   backgroundColor: '#FFF5EB',
-  //   paddingHorizontal: m(12),
-  //   paddingVertical: m(8),
-  //   borderRadius: m(10),
-  //   gap: m(6),
-  //   borderWidth: 1,
-  //   borderColor: '#FFE5D0',
-  // },
-  // footerText: {
-  //   fontSize: m(12),
-  //   fontWeight: '600',
-  //   color: '#ff6700',
-  //   textTransform: 'uppercase',
-  //   letterSpacing: 0.8,
-  // },
-  // actionHint: {
-  //   flexDirection: 'row',
-  //   alignItems: 'center',
-  //   backgroundColor: '#F9FAFB',
-  //   borderRadius: m(10),
-  //   paddingHorizontal: m(12),
-  //   paddingVertical: m(8),
-  //   gap: m(6),
-  //   borderWidth: 1,
-  //   borderColor: '#E5E7EB',
-  // },
-  // actionHintText: {
-  //   fontSize: m(12),
-  //   color: '#6B7280',
-  //   fontWeight: '500',
-  // },
-  highlightedBorrowerCard: {
+    highlightedBorrowerCard: {
     borderWidth: 3,
     borderColor: '#b80266',
     backgroundColor: '#FFF5F5',
@@ -1130,22 +1029,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: m(8),
   },
-  // fraudBadgeContainer: {
-  //   marginLeft: m(8),
-  // },
-  // fraudWarning: {
-  //   flexDirection: 'row',
-  //   alignItems: 'center',
-  //   borderRadius: m(10),
-  //   paddingHorizontal: m(12),
-  //   paddingVertical: m(8),
-  //   gap: m(6),
-  //   borderWidth: 1,
-  // },
-  // fraudWarningText: {
-  //   fontSize: m(12),
-  //   fontWeight: '600',
-  // },
   pendingPaymentBorrowerCard: {
     borderWidth: 2,
     borderColor: '#FDE68A',

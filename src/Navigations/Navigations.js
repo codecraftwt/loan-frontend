@@ -16,6 +16,10 @@ import ProfileDetails from '../Screens/Shared/Profile/ProfileDetails';
 import EditProfile from '../Screens/Shared/Profile/EditProfile';
 import OldHistoryPage from '../Screens/Shared/History/OldHistoryPage';
 import SettingsScreen from '../Screens/Shared/Profile/SettingsScreen';
+import TermsOfServiceScreen from '../Screens/Shared/Profile/TermsOfServiceScreen';
+import PrivacyPolicyScreen from '../Screens/Shared/Profile/PrivacyPolicyScreen';
+import AboutUsScreen from '../Screens/Shared/Profile/AboutUsScreen';
+import RateAppScreen from '../Screens/Shared/Profile/RateAppScreen';
 import SubscriptionScreen from '../Screens/Shared/Subscription/SubscriptionScreen';
 import LenderPlanDetailsScreen from '../Screens/Shared/Subscription/LenderPlanDetailsScreen';
 import HelpAndSupportScreen from '../Screens/Auth/HelpAndSupportScreen';
@@ -73,6 +77,10 @@ const Navigation = () => {
       />
 
       <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="TermsOfService" component={TermsOfServiceScreen} />
+      <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+      <Stack.Screen name="AboutUs" component={AboutUsScreen} />
+      <Stack.Screen name="RateApp" component={RateAppScreen} />
       <Stack.Screen name="AnalyticsScreen" component={AnalyticsScreen} />
       <Stack.Screen name="BorrowerAnalyticsScreen" component={BorrowerAnalyticsScreen} />
       

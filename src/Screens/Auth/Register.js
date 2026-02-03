@@ -58,7 +58,7 @@ export default function Register({ navigation }) {
 
   const requestCameraPermission = async () => {
     if (Platform.OS !== 'android') {
-      return true;
+      return true; // iOS handles permissions differently
     }
     try {
       const granted = await PermissionsAndroid.request(
@@ -774,14 +774,9 @@ export default function Register({ navigation }) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
-      <LinearGradient
-        colors={['#ff6700', '#ff8800ff', '#ff9100ff', '#ffa200ff']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.gradientBackground}>
-        <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <StatusBar barStyle="light-content" backgroundColor="#ff6700" />
 
-        <ScrollView
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -916,7 +911,6 @@ export default function Register({ navigation }) {
           </Text>
         </View>
       </ScrollView>
-       </LinearGradient>
     </KeyboardAvoidingView>
   );
 }
@@ -956,7 +950,6 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    backgroundColor: 'transparent',
   },
   scrollContent: {
     paddingHorizontal: m(20),
