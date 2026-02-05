@@ -23,60 +23,80 @@ export default function ForgotPassword({navigation}) {
 
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Validate Email Format
+  // Handle email input change (do not show validation error while typing)
   const validateEmail = text => {
     setEmail(text);
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    if (emailRegex.test(text)) {
+    // Clear previous error when user starts editing again
+    if (emailError) {
       setEmailError('');
-    } else {
-      setEmailError('Please enter a valid email address.');
     }
   };
 
-  // Check if form is valid
-  const isFormValid = () => email.length > 0 && !emailError;
+  const isEmailFormatValid = () => {
+    const trimmedEmail = email.trim();
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    return trimmedEmail.length > 0 && emailRegex.test(trimmedEmail);
+  };
 
   // Handle form submission (forgot password)
   const handleForgotPassword = async () => {
-    if (isFormValid()) {
-      try {
-        const response = await dispatch(forgotPassword(email));
+    if (isSubmitting) {
+      return;
+    }
 
-        if (
-          response?.payload?.message === 'Verification code sent to your email'
-        ) {
-          navigation.navigate('OTP', {email});
+    const trimmedEmail = email.trim();
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
-          Toast.show({
-            type: 'success',
-            position: 'top',
-            text1: response.payload.message,
-          });
-        } else {
-          const errorMessage =
-            response?.payload?.message ||
-            response?.payload ||
-            'An error occurred. Please try again.';
+    if (!trimmedEmail) {
+      setEmailError('Please enter your email address.');
+      return;
+    }
 
-          Toast.show({
-            type: 'error',
-            position: 'top',
-            text1: errorMessage,
-          });
-        }
-      } catch (error) {
-        console.error('Error during forgot password:', error);
+    if (!emailRegex.test(trimmedEmail)) {
+      setEmailError('Please enter a valid email address.');
+      return;
+    }
+
+    setEmailError('');
+    setIsSubmitting(true);
+
+    try {
+      const response = await dispatch(forgotPassword(trimmedEmail));
+
+      if (
+        response?.payload?.message === 'Verification code sent to your email'
+      ) {
+        navigation.navigate('OTP', {email: trimmedEmail});
+
+        Toast.show({
+          type: 'success',
+          position: 'top',
+          text1: response.payload.message,
+        });
+      } else {
+        const errorMessage =
+          response?.payload?.message ||
+          response?.payload ||
+          'An error occurred. Please try again.';
 
         Toast.show({
           type: 'error',
           position: 'top',
-          text1: error?.message || 'An unexpected error occurred.',
+          text1: errorMessage,
         });
       }
-    } else {
-      alert('Please enter a valid email address.');
+    } catch (error) {
+      console.error('Error during forgot password:', error);
+
+      Toast.show({
+        type: 'error',
+        position: 'top',
+        text1: error?.message || 'An unexpected error occurred.',
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -86,6 +106,15 @@ export default function ForgotPassword({navigation}) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}>
       <StatusBar barStyle="light-content" backgroundColor="#ff6700" />
+
+      {/* Top Back Button */}
+      <View style={styles.topBar}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
 
       <ScrollView
         style={styles.scrollView}
@@ -114,12 +143,18 @@ export default function ForgotPassword({navigation}) {
               style={[
                 styles.inputContainer,
                 !!emailError && styles.inputError,
-                isFormValid() && styles.inputSuccess,
+                isEmailFormatValid() && !emailError && styles.inputSuccess,
               ]}>
               <Ionicons
                 name="mail-outline"
                 size={20}
-                color={emailError ? '#FF4444' : isFormValid() ? '#28a745' : '#ff7900'}
+                color={
+                  emailError
+                    ? '#FF4444'
+                    : isEmailFormatValid()
+                    ? '#28a745'
+                    : '#ff7900'
+                }
                 style={styles.inputIcon}
               />
               <TextInput
@@ -131,7 +166,7 @@ export default function ForgotPassword({navigation}) {
                 value={email}
                 onChangeText={validateEmail}
               />
-              {isFormValid() && (
+              {isEmailFormatValid() && !emailError && (
                 <Ionicons name="checkmark-circle" size={20} color="#28a745" />
               )}
             </View>
@@ -144,16 +179,18 @@ export default function ForgotPassword({navigation}) {
           <TouchableOpacity
             style={[
               styles.continueButtonContainer,
-              (!isFormValid()) && styles.continueButtonDisabled,
+              (isSubmitting || !email.trim()) && styles.continueButtonDisabled,
             ]}
             onPress={handleForgotPassword}
-            disabled={!isFormValid()}>
+            disabled={isSubmitting || !email.trim()}>
             <LinearGradient
               colors={['#ff6700', '#ff7900', '#ff8500']}
               start={{x: 0, y: 0}}
               end={{x: 1, y: 0}}
               style={styles.continueButtonGradient}>
-              <Text style={styles.continueButtonText}>Send OTP</Text>
+              <Text style={styles.continueButtonText}>
+                {isSubmitting ? 'Sending...' : 'Send OTP'}
+              </Text>
               <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
             </LinearGradient>
           </TouchableOpacity>
@@ -321,5 +358,19 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.base,
     fontFamily: FontFamily.primarySemiBold,
     color: '#ff6700',
+  },
+  topBar: {
+    paddingTop: Platform.OS === 'android' ? m(10) : m(20),
+    paddingHorizontal: m(16),
+  },
+  backButton: {
+    width: m(36),
+    height: m(36),
+    borderRadius: m(18),
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.08)',
   },
 });

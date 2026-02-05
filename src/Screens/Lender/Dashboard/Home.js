@@ -10,6 +10,8 @@ import {
   Easing,
   Platform,
   ActivityIndicator,
+  BackHandler,
+  Alert,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
@@ -120,7 +122,40 @@ export default function Home() {
         }),
       ]).start();
 
-    }, [dispatch, user]),
+      // Handle Android hardware back button: confirm before exiting app
+      const onBackPress = () => {
+        if (Platform.OS === 'android') {
+          Alert.alert(
+            'Exit App',
+            'Do you want to exit the app?',
+            [
+              {
+                text: 'No',
+                style: 'cancel',
+              },
+              {
+                text: 'Yes',
+                onPress: () => BackHandler.exitApp(),
+              },
+            ],
+            { cancelable: true },
+          );
+          // Return true to prevent default navigation (e.g., going to Login)
+          return true;
+        }
+        return false;
+      };
+
+      const backHandler = BackHandler.addEventListener(
+        'hardwareBackPress',
+        onBackPress,
+      );
+
+      // Cleanup when screen loses focus
+      return () => {
+        backHandler.remove();
+      };
+    }, [dispatch, user, fadeAnim, slideUpAnim, scaleAnim]),
   );
 
   const onRefresh = async () => {
