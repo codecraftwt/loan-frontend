@@ -31,10 +31,7 @@ const DetailItem = ({ icon, label, value }) => (
   </View>
 );
 
-/**
- * FeatureBadge Component
- * Renders a feature badge if enabled
- */
+// FeatureBadge Component
 const FeatureBadge = ({ label, enabled }) => {
   if (!enabled) return null;
   return (
@@ -45,10 +42,7 @@ const FeatureBadge = ({ label, enabled }) => {
   );
 };
 
-/**
- * PlanDetailsScreen Component
- * Displays detailed information about a subscription plan
- */
+// PlanDetailsScreen Component
 export default function PlanDetailsScreen() {
   const navigation = useNavigation();
   const route = useRoute();

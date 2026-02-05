@@ -58,7 +58,7 @@ export default function Register({ navigation }) {
 
   const requestCameraPermission = async () => {
     if (Platform.OS !== 'android') {
-      return true; // iOS handles permissions differently
+      return true;
     }
     try {
       const granted = await PermissionsAndroid.request(
@@ -772,8 +772,8 @@ export default function Register({ navigation }) {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}>
       <StatusBar barStyle="light-content" backgroundColor="#ff6700" />
 
       <ScrollView
@@ -950,11 +950,14 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+    backgroundColor: '#ff6700',
   },
   scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: m(20),
     paddingTop: m(10),
     paddingBottom: m(100),
+    backgroundColor: '#ff6700',
   },
   progressContainer: {
     flexDirection: 'row',

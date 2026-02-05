@@ -1,4 +1,5 @@
-import React from 'react';import { View, Text, StyleSheet } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 
 // Define the toastConfig with proper ReactNode return type

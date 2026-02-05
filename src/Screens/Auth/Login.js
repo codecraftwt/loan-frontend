@@ -97,8 +97,8 @@ export default function LoginScreen({ navigation }) {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}>
       <StatusBar barStyle="light-content" backgroundColor="#ff6700" />
 
       {/* ScrollView to prevent keyboard hiding content */}
@@ -178,7 +178,7 @@ export default function LoginScreen({ navigation }) {
                 <Ionicons
                   name={passwordVisible ? 'eye-off-outline' : 'eye-outline'}
                   size={20}
-                  color="#ff7900"
+                  color="#10B981"
                 />
               </TouchableOpacity>
             </View>
@@ -240,7 +240,7 @@ export default function LoginScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: '#ff6700',
   },
   headerContent: {
     borderBottomLeftRadius: m(25),
@@ -258,12 +258,12 @@ const styles = StyleSheet.create({
   appName: {
     fontSize: FontSizes['4xl'],
     fontFamily: FontFamily.secondaryBold,
-    color: '#ff6700',
+    color: '#FFFFFF',
   },
   tagline: {
     fontSize: FontSizes.md,
     fontFamily: FontFamily.secondaryRegular,
-    color: '#ff6700',
+    color: '#FFFFFF',
     textAlign: 'center',
     fontStyle: 'italic',
   },
@@ -274,6 +274,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ff6700',
   },
   scrollContent: {
+    flexGrow: 1,
     paddingBottom: m(40),
     backgroundColor: '#ff6700',
   },

@@ -34,7 +34,7 @@ class NotificationService {
   }
 
   async requestPermission() {
-    try {      
+    try {
       // Check if Firebase messaging is available
       if (!messaging) {
         console.error('Firebase messaging is not available');
@@ -46,7 +46,7 @@ class NotificationService {
         console.warn('Firebase not initialized, cannot request permission');
         return false;
       }
-      
+
       if (Platform.OS === 'android') {
         // For Android 13+ (API 33+), explicit permission is required
         if (Platform.Version >= 33) {
@@ -60,20 +60,20 @@ class NotificationService {
               buttonPositive: 'OK',
             }
           );
-          
+
           if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
             console.warn('Notification permission denied by user');
             return false;
           }
         }
-        
+
         // For all Android versions, request Firebase permission
-          try {
-            const authStatus = await messaging().requestPermission();
+        try {
+          const authStatus = await messaging().requestPermission();
           const enabled =
             authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
             authStatus === messaging.AuthorizationStatus.PROVISIONAL;
-          
+
           if (!enabled) {
             console.warn('Firebase notification permission not granted');
             return false;
@@ -97,7 +97,7 @@ class NotificationService {
           return false;
         }
       }
-      
+
       return true;
     } catch (error) {
       console.error('Error requesting permission:', error);
@@ -131,18 +131,18 @@ class NotificationService {
       }
 
       const token = await messaging().getToken();
-      
+
       if (!token) {
         throw new Error('FCM token is null or undefined');
       }
-      
+
       // Store token locally
       await AsyncStorage.setItem('fcm_token', token);
-      
+
       return token;
     } catch (error) {
       console.error('Error getting FCM token:', error);
-      
+
       // Provide helpful error messages based on error type
       if (error.code === 'messaging/unknown' || error.message?.includes('AUTHENTICATION_FAILED')) {
         console.error('❌ FCM Authentication Failed. Common causes:');
@@ -156,7 +156,7 @@ class NotificationService {
         // console.error('2. Add SHA-1 and SHA-256 to Firebase Console > Project Settings > Your Android App');
         // console.error('3. Download the updated google-services.json and replace android/app/google-services.json');
         // console.error('4. Ensure Cloud Messaging API is enabled in Google Cloud Console');
-        
+
         // Retry with exponential backoff for transient errors
         if (retryCount < maxRetries) {
           const delay = Math.pow(2, retryCount) * 1000;
@@ -171,7 +171,7 @@ class NotificationService {
           return this.getFCMToken(retryCount + 1, maxRetries);
         }
       }
-      
+
       return null;
     }
   }
@@ -187,7 +187,7 @@ class NotificationService {
       });
 
       const data = response.data;
-      
+
       if (response.status === 200 || response.status === 201) {
         return { success: true, data };
       } else {
@@ -211,7 +211,7 @@ class NotificationService {
       });
 
       const data = response.data;
-      
+
       if (response.status === 200 || response.status === 201) {
         return { success: true, data };
       } else {
@@ -232,7 +232,7 @@ class NotificationService {
     this.navigation = navigation;
   }
 
-// Setup notification handlers
+  // Setup notification handlers
   setupNotificationHandlers() {
     // Prevent duplicate handlers
     if (this.foregroundUnsubscribe) {
@@ -256,7 +256,7 @@ class NotificationService {
         .getInitialNotification()
         .then(remoteMessage => {
           if (remoteMessage) {
-            
+
             setTimeout(() => {
               // Only navigate, don't mark as read
               this.handleNotificationPress(remoteMessage);
@@ -282,7 +282,7 @@ class NotificationService {
             }, 500);
             return;
           }
-          
+
           // Only navigate, don't mark as read
           this.handleNotificationPress(remoteMessage);
         }
@@ -305,7 +305,7 @@ class NotificationService {
     try {
       const readNotifications = await AsyncStorage.getItem('read_notifications');
       let readList = readNotifications ? JSON.parse(readNotifications) : [];
-      
+
       if (!readList.includes(notificationId)) {
         readList.push(notificationId);
         await AsyncStorage.setItem('read_notifications', JSON.stringify(readList));
@@ -394,36 +394,35 @@ class NotificationService {
       case 'overdue_loan':
         this.handleOverdueLoanNotification(data);
         break;
-      
+
       case 'pending_payment':
         this.handlePendingPaymentNotification(data);
         break;
-      
+
       case 'pending_loan':
         this.handlePendingLoanNotification(data);
         break;
-      
+
       case 'subscription_reminder':
         this.handleSubscriptionReminderNotification(data);
         break;
-      
+
       case 'mobile_number_change':
         this.handleMobileNumberChangeNotification(data);
         break;
-      
+
       case 'fraud_alert':
         this.handleFraudAlertNotification(data);
         break;
-      
+
       default:
         // Handle by screen if type is not recognized
         this.handleNotificationByScreen(data);
     }
   }
 
-  /**
-   * Handle overdue loan notification
-   */
+  // Handle overdue loan notification
+
   handleOverdueLoanNotification(data) {
     const navigationParams = {
       notificationId: data.notificationId,
@@ -446,16 +445,14 @@ class NotificationService {
     }
   }
 
-  /**
-   * Handle pending payment notification
-   */
+  //  Handle pending payment notification
   handlePendingPaymentNotification(data) {
     const navigationParams = {
       notificationId: data.notificationId,
       notificationType: 'pending_payment',
       paymentAmount: data.paymentAmount,
       paymentMode: data.paymentMode,
-                    borrowerName: data.borrowerName,
+      borrowerName: data.borrowerName,
     };
 
     if (data.screen === 'LoanDetails' && data.loanId) {
@@ -465,14 +462,14 @@ class NotificationService {
         highlightPendingPayment: true,
       });
     } else {
-                // Fallback to Outward screen
-                this.navigation.navigate('Outward', navigationParams);
-              }
+      // Fallback to Outward screen
+      this.navigation.navigate('Outward', navigationParams);
+    }
   }
 
-  /**
-   * Handle pending loan notification
-   */
+
+  // Handle pending loan notification
+
   handlePendingLoanNotification(data) {
     const navigationParams = {
       notificationId: data.notificationId,
@@ -488,10 +485,10 @@ class NotificationService {
         borrowerName: data.borrowerName,
         lenderName: data.lenderName,
       });
-            } else {
+    } else {
       // Fallback to Outward screen
-              this.navigation.navigate('Outward', navigationParams);
-            }
+      this.navigation.navigate('Outward', navigationParams);
+    }
   }
 
   /**
@@ -509,47 +506,43 @@ class NotificationService {
     if (data.screen === 'Subscription') {
       try {
         this.navigation.navigate('SubscriptionScreen', navigationParams);
-            } catch (error) {
+      } catch (error) {
         console.error('Navigation error (Subscription):', error);
-              this.navigation.navigate('BottomNavigation');
-            }
+        this.navigation.navigate('BottomNavigation');
+      }
     } else {
       // Fallback to subscription screen anyway
-            try {
+      try {
         this.navigation.navigate('SubscriptionScreen', navigationParams);
-            } catch (error) {
-              this.navigation.navigate('BottomNavigation');
-            }
-        }
+      } catch (error) {
+        this.navigation.navigate('BottomNavigation');
+      }
+    }
   }
 
-  /**
-   * Handle mobile number change notification
-   */
+  //  Handle mobile number change notification
   handleMobileNumberChangeNotification(data) {
     const navigationParams = {
       notificationId: data.notificationId,
       notificationType: 'mobile_number_change',
     };
 
-            if (data.borrowerId) {
-              navigationParams.highlightBorrowerId = data.borrowerId;
-            }
-            if (data.mobileNumber) {
-              navigationParams.highlightMobileNumber = data.mobileNumber;
-            }
+    if (data.borrowerId) {
+      navigationParams.highlightBorrowerId = data.borrowerId;
+    }
+    if (data.mobileNumber) {
+      navigationParams.highlightMobileNumber = data.mobileNumber;
+    }
 
-            try {
-              this.navigation.navigate('Outward', navigationParams);
-            } catch (error) {
+    try {
+      this.navigation.navigate('Outward', navigationParams);
+    } catch (error) {
       console.error('Navigation error (mobile number change):', error);
-                this.navigation.navigate('BottomNavigation');
+      this.navigation.navigate('BottomNavigation');
     }
   }
 
-  /**
-   * Handle fraud alert notification
-   */
+  //  Handle fraud alert notification
   handleFraudAlertNotification(data) {
     const navigationParams = {
       notificationId: data.notificationId,
@@ -572,11 +565,11 @@ class NotificationService {
     } else if (data.screen === 'CreateLoan') {
       try {
         this.navigation.navigate('AddDetails', navigationParams);
-            } catch (error) {
+      } catch (error) {
         console.error('Navigation error (fraud alert - CreateLoan):', error);
-              this.navigation.navigate('BottomNavigation');
-        }
-      } else {
+        this.navigation.navigate('BottomNavigation');
+      }
+    } else {
       // Default to Outward screen
       try {
         this.navigation.navigate('Outward', navigationParams);
@@ -586,9 +579,7 @@ class NotificationService {
     }
   }
 
-  /**
-   * Handle notification by screen (fallback for unknown types)
-   */
+  // Handle notification by screen (fallback for unknown types)
   handleNotificationByScreen(data) {
     if (!data.screen) {
       // No screen specified, navigate to home
@@ -607,12 +598,12 @@ class NotificationService {
     }
 
     // Add borrower info if present
-        if (data.borrowerId) {
-          navigationParams.highlightBorrowerId = data.borrowerId;
-        }
-        if (data.mobileNumber) {
-          navigationParams.highlightMobileNumber = data.mobileNumber;
-        }
+    if (data.borrowerId) {
+      navigationParams.highlightBorrowerId = data.borrowerId;
+    }
+    if (data.mobileNumber) {
+      navigationParams.highlightMobileNumber = data.mobileNumber;
+    }
 
     switch (data.screen) {
       case 'LoanDetails':
@@ -622,7 +613,7 @@ class NotificationService {
           this.navigation.navigate('Outward', navigationParams);
         }
         break;
-      
+
       case 'Subscription':
         try {
           this.navigation.navigate('SubscriptionScreen', navigationParams);
@@ -631,7 +622,7 @@ class NotificationService {
           this.navigation.navigate('BottomNavigation');
         }
         break;
-      
+
       case 'Outward':
         try {
           this.navigation.navigate('Outward', navigationParams);
@@ -640,16 +631,16 @@ class NotificationService {
           this.navigation.navigate('BottomNavigation');
         }
         break;
-      
+
       case 'Inward':
         try {
           this.navigation.navigate('LoanRequest', navigationParams);
         } catch (error) {
           console.error('Navigation error (Inward):', error);
-            this.navigation.navigate('BottomNavigation');
+          this.navigation.navigate('BottomNavigation');
         }
         break;
-      
+
       default:
         // Try to navigate to screen name directly
         try {
@@ -660,13 +651,11 @@ class NotificationService {
         }
     }
   }
-
-  /**
-   * Display notification (for foreground)
-   */
+ 
+  //  Display notification (for foreground)
   async displayNotification(remoteMessage) {
     const { notification, data } = remoteMessage;
-    
+
     // Create notification channel for Android (required for Notifee)
     if (Platform.OS === 'android') {
       await notifee.createChannel({
@@ -677,7 +666,7 @@ class NotificationService {
         vibration: true,
       });
     }
-    
+
     // Display notification using Notifee for better appearance
     try {
       // Add notification ID to data for tracking
@@ -708,9 +697,7 @@ class NotificationService {
             },
           ],
           // Add color for better visibility
-          color: '#b80266', // Your app's primary color
-          // Use app launcher icon as notification icon (should exist in your app)
-          // To use custom icon: add ic_notification.png to android/app/src/main/res/drawable/
+          color: '#b80266',
           smallIcon: 'ic_launcher',
           showTimestamp: true,
         },
@@ -734,7 +721,7 @@ class NotificationService {
           notification.title || 'Notification',
           notification.body || '',
           [
-            { 
+            {
               text: 'OK',
               onPress: () => {
                 if (data) {
@@ -761,9 +748,9 @@ class NotificationService {
     notifee.onForegroundEvent(async ({ type, detail }) => {
       // Type 1 = PRESS (notification body tapped)
       // Type 0 = ACTION_PRESS (action button tapped)
-      
-      if (type === 1) { // PRESS - notification body was tapped (navigate only, don't mark as read)
-        
+
+      if (type === 1) {
+
         if (!this.navigation) {
           console.error('Navigation not available when notification tapped!');
           // Wait a bit for navigation to be ready
@@ -781,7 +768,7 @@ class NotificationService {
           }, 500);
           return;
         }
-        
+
         if (detail.notification?.data) {
           // Create a mock remoteMessage object for navigation
           const mockRemoteMessage = {
@@ -832,10 +819,10 @@ class NotificationService {
         return;
       }
 
-      this.tokenRefreshUnsubscribe = messaging().onTokenRefresh(async token => {      
+      this.tokenRefreshUnsubscribe = messaging().onTokenRefresh(async token => {
         // Update stored token
         await AsyncStorage.setItem('fcm_token', token);
-        
+
         // Re-register with backend if user is logged in
         try {
           const user = await AsyncStorage.getItem('user');

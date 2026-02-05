@@ -31,10 +31,6 @@ const DURATION_OPTIONS = [
   { label: '1 year', value: '1 year' },
 ];
 
-/**
- * CreateEditPlan Component
- * Form for creating or editing subscription plans
- */
 export default function CreateEditPlan() {
   const navigation = useNavigation();
   const route = useRoute();

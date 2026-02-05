@@ -6,7 +6,6 @@ import {
   ScrollView,
   Switch,
 } from 'react-native';
-// import React, { useState } from 'react';
 import Icon from 'react-native-vector-icons/Feather';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';

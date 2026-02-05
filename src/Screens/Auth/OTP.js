@@ -1,4 +1,4 @@
-import React, {useState, useRef} from 'react';
+import React, {useState, useRef, useEffect, useCallback} from 'react';
 import {
   StyleSheet,
   Text,
@@ -14,7 +14,7 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import {useDispatch} from 'react-redux';
-import {verifyOtp} from '../../Redux/Slices/authslice';
+import {verifyOtp, resendOtp} from '../../Redux/Slices/authslice';
 import Toast from 'react-native-toast-message';
 import {m} from 'walstar-rn-responsive';
 import {FontFamily, FontSizes} from '../../constants';
@@ -25,7 +25,20 @@ export default function OTP({navigation, route}) {
   const inputRefs = useRef([]);
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [countdown, setCountdown] = useState(0);
+  
+  // Countdown timer effect for resend OTP
+  useEffect(() => {
+    let timer;
+    if (countdown > 0) {
+      timer = setInterval(() => {
+        setCountdown(prev => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [countdown]);
 
   // Handle input change and focus logic
   const handleChange = (text, index) => {
@@ -40,6 +53,43 @@ export default function OTP({navigation, route}) {
       inputRefs.current[index - 1].focus();
     }
   };
+
+  // Handle Resend OTP
+  const handleResendOtp = useCallback(async () => {
+    if (countdown > 0 || resendLoading) return;
+
+    setResendLoading(true);
+    try {
+      const result = await dispatch(resendOtp(email)).unwrap();
+      
+      Toast.show({
+        type: 'success',
+        position: 'top',
+        text1: result.message || 'OTP sent to your email',
+      });
+      
+      // Start countdown timer (60 seconds cooldown)
+      setCountdown(60);
+    } catch (err) {
+      // Handle rate limiting error
+      if (err?.isRateLimited && err?.retryAfterSeconds) {
+        setCountdown(err.retryAfterSeconds);
+        Toast.show({
+          type: 'info',
+          position: 'top',
+          text1: `Please wait ${err.retryAfterSeconds} seconds before resending`,
+        });
+      } else {
+        Toast.show({
+          type: 'error',
+          position: 'top',
+          text1: err?.message || err || 'Failed to resend OTP',
+        });
+      }
+    } finally {
+      setResendLoading(false);
+    }
+  }, [dispatch, email, countdown, resendLoading]);
 
   // Handle OTP verification
   const handleVerify = async () => {
@@ -83,8 +133,8 @@ export default function OTP({navigation, route}) {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}>
       <StatusBar barStyle="light-content" backgroundColor="#ff6700" />
 
       <ScrollView
@@ -143,10 +193,36 @@ export default function OTP({navigation, route}) {
             </LinearGradient>
           </TouchableOpacity>
 
-          {/* Helper Text */}
-          <Text style={styles.resendHint}>
-            Didn't receive the code? Please check your spam folder or try again later.
-          </Text>
+          {/* Resend OTP Section */}
+          <View style={styles.resendContainer}>
+            <Text style={styles.resendHint}>
+              Didn't receive the code?{' '}
+            </Text>
+            {countdown > 0 ? (
+              <Text style={styles.countdownText}>
+                Resend in {countdown}s
+              </Text>
+            ) : (
+              <TouchableOpacity
+                onPress={handleResendOtp}
+                disabled={resendLoading}>
+                <Text style={[
+                  styles.resendLink,
+                  resendLoading && styles.resendLinkDisabled
+                ]}>
+                  {resendLoading ? 'Sending...' : 'Resend OTP'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Back Button */}
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Wrong email? </Text>
+            <TouchableOpacity onPress={() => navigation.goBack()}>
+              <Text style={styles.footerLink}>Go Back</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -156,15 +232,18 @@ export default function OTP({navigation, route}) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: '#ff6700',
   },
   scrollView: {
     flex: 1,
+    backgroundColor: '#ff6700',
   },
   scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: m(20),
-    paddingTop: Platform.OS === 'ios' ? m(40) : m(20),
-    paddingBottom: m(40),
+    paddingVertical: m(40),
+    justifyContent: 'center',
+    backgroundColor: '#ff6700',
   },
   headerContent: {
     alignItems: 'center',
@@ -178,12 +257,12 @@ const styles = StyleSheet.create({
   appName: {
     fontSize: FontSizes['4xl'],
     fontFamily: FontFamily.secondaryBold,
-    color: '#ff6700',
+    color: '#FFFFFF',
   },
   tagline: {
     fontSize: FontSizes.base,
     fontFamily: FontFamily.secondaryRegular,
-    color: '#ff6700',
+    color: '#FFFFFF',
     textAlign: 'center',
     fontStyle: 'italic',
   },
@@ -268,11 +347,45 @@ const styles = StyleSheet.create({
     textShadowRadius: 2,
     paddingVertical: Platform.OS === 'android' ? m(0) : m(16),
   },
-  resendHint: {
+  resendContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginTop: m(16),
+  },
+  resendHint: {
     fontSize: FontSizes.sm,
     fontFamily: FontFamily.primaryRegular,
     color: '#777',
-    textAlign: 'center',
+  },
+  countdownText: {
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.primarySemiBold,
+    color: '#ff6700',
+  },
+  resendLink: {
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.primarySemiBold,
+    color: '#ff6700',
+    textDecorationLine: 'underline',
+  },
+  resendLinkDisabled: {
+    opacity: 0.6,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: m(20),
+  },
+  footerText: {
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primaryRegular,
+    color: '#666',
+  },
+  footerLink: {
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primarySemiBold,
+    color: '#ff6700',
   },
 });

@@ -370,7 +370,7 @@ const Outward = ({ navigation, route }) => {
             <Icon name="search" size={22} color="#ff6700" style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search by name, phone, or email..."
+              placeholder="Search by name or mobile"
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholderTextColor="#9CA3AF"

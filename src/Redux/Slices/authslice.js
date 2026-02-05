@@ -272,6 +272,31 @@ export const verifyOtp = createAsyncThunk(
   },
 );
 
+// Thunk for resending OTP (rate limited - 60 second cooldown)
+export const resendOtp = createAsyncThunk(
+  'auth/resend-otp',
+  async (email, {rejectWithValue}) => {
+    try {
+      const response = await instance.post('auth/resend-otp', {email});
+      return response.data;
+    } catch (error) {
+      console.error('Resend OTP error:', error.response?.data?.message);
+      // Handle rate limiting (429 status)
+      if (error.response?.status === 429) {
+        return rejectWithValue({
+          message: error.response.data.message || 'Please wait before requesting another code.',
+          retryAfterSeconds: error.response.data.retryAfterSeconds || 60,
+          isRateLimited: true,
+        });
+      }
+      return rejectWithValue(
+        error.response?.data?.message ||
+          'An error occurred. Please try again later.',
+      );
+    }
+  },
+);
+
 // Thunk for resetting password
 export const resetPassword = createAsyncThunk(
   'auth/reset-password',
@@ -318,8 +343,10 @@ const authSlice = createSlice({
     error: null,
     isLoading: false,
     isProfileLoading: false,
+    isResendingOtp: false, // For resend OTP loading state
     forgotPasswordMessage: null, // For storing success message from forgot-password
     resetPasswordMessage: null,
+    resendOtpMessage: null, // For storing success message from resend-otp
   },
   reducers: {
     logout: state => {
@@ -427,6 +454,20 @@ const authSlice = createSlice({
         state.error =
           action.payload || 'Error sending OTP. Please try again later.';
         state.forgotPasswordMessage = null;
+      })
+
+      // Resend OTP reducers
+      .addCase(resendOtp.pending, state => {
+        state.isResendingOtp = true;
+        state.error = null;
+      })
+      .addCase(resendOtp.fulfilled, (state, action) => {
+        state.isResendingOtp = false;
+        state.resendOtpMessage = action.payload.message;
+      })
+      .addCase(resendOtp.rejected, (state, action) => {
+        state.isResendingOtp = false;
+        state.error = action.payload?.message || action.payload || 'Error resending OTP.';
       })
 
       // Reset Password reducers

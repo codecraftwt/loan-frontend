@@ -83,8 +83,8 @@ export default function ForgotPassword({navigation}) {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}>
       <StatusBar barStyle="light-content" backgroundColor="#ff6700" />
 
       <ScrollView
@@ -174,16 +174,18 @@ export default function ForgotPassword({navigation}) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: '#ff6700',
   },
   scrollView: {
     flex: 1,
+    backgroundColor: '#ff6700',
   },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: m(20),
     paddingVertical: m(40),
     justifyContent: 'center',
+    backgroundColor: '#ff6700',
   },
   headerContent: {
     alignItems: 'center',
@@ -197,12 +199,12 @@ const styles = StyleSheet.create({
   appName: {
     fontSize: FontSizes['4xl'],
     fontFamily: FontFamily.secondaryBold,
-    color: '#ff6700',
+    color: '#FFFFFF',
   },
   tagline: {
     fontSize: FontSizes.base,
     fontFamily: FontFamily.secondaryRegular,
-    color: '#ff6700',
+    color: '#FFFFFF',
     textAlign: 'center',
     fontStyle: 'italic',
   },
