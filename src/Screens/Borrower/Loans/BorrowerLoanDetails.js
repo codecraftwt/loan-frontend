@@ -235,7 +235,7 @@ export default function BorrowerLoanDetails() {
       <View style={styles.detailIconContainer}>
         <Icon name={icon} size={20} color="#3B82F6" />
       </View>
-      <View style={styles.detailContent}>
+      <View style={styles.lenderDetails}>
         <Text style={styles.detailLabel}>{label}</Text>
         {isStatus ? (
           <View style={[styles.statusBadge, { backgroundColor: getStatusColor(value) + '20' }]}>
@@ -254,7 +254,7 @@ export default function BorrowerLoanDetails() {
   const PaymentHistoryItem = ({ item }) => (
     <View style={styles.paymentHistoryItem}>
       <View style={styles.paymentHeader}>
-        <View style={styles.paymentAmount}>
+        <View style={styles.lenderDetails}>
           <Text style={styles.paymentAmountText}>{formatCurrency(item.amount)}</Text>
           <Text style={styles.paymentMode}>
             {item.paymentMode?.charAt(0).toUpperCase() + item.paymentMode?.slice(1) || 'N/A'}
@@ -409,7 +409,7 @@ export default function BorrowerLoanDetails() {
               <View style={styles.proofIconContainer}>
                 <Icon name="file-image" size={24} color="#3B82F6" />
               </View>
-              <View style={styles.proofTextContainer}>
+              <View style={styles.lenderDetails}>
                 <Text style={styles.proofTitle}>Loan Proof Available</Text>
                 <Text style={styles.proofSubtext}>Tap to view proof document</Text>
               </View>
@@ -763,9 +763,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: m(12),
   },
-  detailContent: {
-    flex: 1,
-  },
+  // detailContent: {
+  //   flex: 1,
+  // },
   detailLabel: {
     fontSize: m(12),
     color: '#6B7280',
@@ -790,9 +790,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: m(8),
   },
-  paymentAmount: {
-    flex: 1,
-  },
+  // paymentAmount: {
+  //   flex: 1,
+  // },
   paymentAmountText: {
     fontSize: m(16),
     fontWeight: '700',
@@ -952,9 +952,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: m(12),
   },
-  proofTextContainer: {
-    flex: 1,
-  },
+  // proofTextContainer: {
+  //   flex: 1,
+  // },
   proofTitle: {
     fontSize: m(16),
     fontWeight: '600',

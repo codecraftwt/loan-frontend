@@ -499,9 +499,7 @@ const styles = StyleSheet.create({
     paddingBottom: m(100),
   },
 
-  // ============================================
   // LOADING & EMPTY STATES
-  // ============================================
   loadingContainer: {
     paddingVertical: m(80),
     alignItems: 'center',
@@ -551,9 +549,7 @@ const styles = StyleSheet.create({
     lineHeight: m(22),
   },
 
-  // ============================================
   // COMBINED SUMMARY CARD
-  // ============================================
   summaryCard: {
     borderRadius: m(24),
     overflow: 'hidden',
@@ -643,9 +639,7 @@ const styles = StyleSheet.create({
     marginVertical: m(8),
   },
 
-  // ============================================
   // CHART CARD
-  // ============================================
   chartCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: m(24),
@@ -731,9 +725,7 @@ const styles = StyleSheet.create({
     marginTop: m(2),
   },
 
-  // ============================================
   // BREAKDOWN CARD
-  // ============================================
   breakdownCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: m(24),
@@ -819,9 +811,7 @@ const styles = StyleSheet.create({
     borderRadius: m(5),
   },
 
-  // ============================================
   // DETAILS CARD
-  // ============================================
   detailsCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: m(24),
@@ -900,9 +890,7 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.primaryBold,
   },
 
-  // ============================================
   // TIPS CARD
-  // ============================================
   tipsCard: {
     borderRadius: m(20),
     overflow: 'hidden',

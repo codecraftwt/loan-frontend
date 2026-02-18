@@ -55,10 +55,6 @@ const formatDate = dateString => {
 // Plan status filter options
 const PLAN_STATUS_OPTIONS = ['all', 'active', 'expired'];
 
-/**
- * LenderList Component
- * Displays list of lenders with their plan purchase details, search, and filtering
- */
 export default function LenderList() {
   const dispatch = useDispatch();
   const { lenders, loading, error, pagination, filters, limit } = useSelector(

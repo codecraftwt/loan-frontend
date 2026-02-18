@@ -281,7 +281,7 @@ export default function AnalyticsScreen() {
                   <View style={styles.summaryIconContainer}>
                     <Ionicons name="wallet" size={24} color="#fff" />
                   </View>
-                  <View style={styles.summaryTitleContainer}>
+                  <View style={styles.analyticsRowInfo}>
                     <Text style={styles.summaryLabel}>Total Given</Text>
                     <Text style={styles.summaryValue}>
                       ₹{formatCurrency(lenderStatistics.totalLoanAmount)}
@@ -488,7 +488,7 @@ export default function AnalyticsScreen() {
                 <View style={styles.tipsIconContainer}>
                   <Ionicons name="bulb" size={24} color="#2563EB" />
                 </View>
-                <View style={styles.tipsContent}>
+                <View style={styles.analyticsRowInfo}>
                   <Text style={styles.tipsTitle}>Pro Tip</Text>
                   <Text style={styles.tipsText}>
                     Send timely reminders to borrowers to improve your collection rate and maintain healthy cash flow.
@@ -841,9 +841,7 @@ const styles = StyleSheet.create({
     borderRadius: m(5),
   },
 
-  // ============================================
   // DETAILS CARD
-  // ============================================
   detailsCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: m(24),
@@ -922,9 +920,7 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.primaryBold,
   },
 
-  // ============================================
   // TIPS CARD
-  // ============================================
   tipsCard: {
     borderRadius: m(20),
     overflow: 'hidden',
@@ -944,9 +940,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: m(14),
   },
-  tipsContent: {
-    flex: 1,
-  },
+  // tipsContent: {
+  //   flex: 1,
+  // },
   tipsTitle: {
     fontSize: FontSizes.base,
     fontFamily: FontFamily.secondaryBold,

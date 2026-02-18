@@ -171,10 +171,6 @@ const PlanCard = ({ plan, planDetails, isExpanded, onToggle, isActive }) => {
   );
 };
 
-/**
- * LenderDetailsScreen Component
- * Displays detailed information about a lender including their plans
- */
 export default function LenderDetailsScreen() {
   const route = useRoute();
   const { lenderData } = route.params || {};

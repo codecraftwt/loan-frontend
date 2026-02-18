@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,6 +10,7 @@ import {
   Easing,
   Platform,
   ActivityIndicator,
+  FlatList,
   BackHandler,
   Alert,
 } from 'react-native';
@@ -52,7 +53,7 @@ export default function Home() {
 
   const [refreshing, setRefreshing] = useState(false);
   const [showAllActivity, setShowAllActivity] = useState(false);
-  const [loadingActivityId, setLoadingActivityId] = useState(null);
+  const [isOpeningActivity, setIsOpeningActivity] = useState(false);
 
   // Enhanced Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -229,10 +230,8 @@ export default function Home() {
   // Handle activity card press
   const handleActivityPress = async (activity) => {
     if (activity.loanId) {
-      const activityId = activity._id || activity.loanId;
-      setLoadingActivityId(activityId);
-      
       try {
+        setIsOpeningActivity(true);
         // Fetch loan details by ID
         const response = await lenderLoanAPI.getLoanDetails(activity.loanId);
         
@@ -285,7 +284,7 @@ export default function Home() {
           });
         }
       } finally {
-        setLoadingActivityId(null);
+        setIsOpeningActivity(false);
       }
     }
   };
@@ -293,6 +292,13 @@ export default function Home() {
   return (
     <View style={styles.container}>
       <Header title="Home" />
+
+      {isOpeningActivity && (
+        <View style={styles.fullscreenLoader}>
+          <ActivityIndicator size="large" color="#ff6700" />
+          <Text style={styles.fullscreenLoaderText}>Opening loan details...</Text>
+        </View>
+      )}
 
       <ScrollView
         contentContainerStyle={styles.content}
@@ -694,8 +700,8 @@ export default function Home() {
             styles.activitySection,
             {
               opacity: fadeAnim,
-              transform: [{ translateY: slideUpAnim }]
-            }
+              transform: [{ translateY: slideUpAnim }],
+            },
           ]}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionTitleContainer}>
@@ -716,42 +722,66 @@ export default function Home() {
             </TouchableOpacity>
           </View>
 
-          {(showAllActivity ? recentActivities : recentActivities.slice(0, 1)).map(
-            (activity, index) => {
-              const activityProps = getActivityProperties(activity);
-              const activityId = activity._id || activity.loanId;
-              const isLoading = loadingActivityId === activityId;
-              // Ensure unique key by combining multiple identifiers with index
-              const uniqueKey = activity._id
-                ? `activity-${activity._id}-${index}`
-                : activity.loanId
-                  ? `activity-${activity.loanId}-${index}`
-                  : activity.timestamp
-                    ? `activity-${activity.timestamp}-${index}`
-                    : `activity-${index}`;
-              return (
-                <TouchableOpacity
-                  key={uniqueKey}
-                  activeOpacity={0.7}
-                  disabled={isLoading}
-                  onPress={() => handleActivityPress(activity)}>
-                  <Animated.View
-                    style={[
-                      styles.activityItem,
-                      {
-                        transform: [{ translateX: slideUpAnim }],
-                        opacity: fadeAnim
-                      },
-                      isLoading && styles.activityItemLoading
-                    ]}>
+          <FlatList
+            data={showAllActivity ? recentActivities : recentActivities.slice(0, 1)}
+            keyExtractor={(activity, index) => {
+              if (activity._id) {
+                return `activity-${activity._id}-${index}`;
+              }
+              if (activity.loanId) {
+                return `activity-${activity.loanId}-${index}`;
+              }
+              if (activity.timestamp) {
+                return `activity-${activity.timestamp}-${index}`;
+              }
+              return `activity-${index}`;
+            }}
+            scrollEnabled={false}
+            renderItem={({ item, index }) => {
+              const activityProps = getActivityProperties(item);
+              const isLast =
+                index <
+                ((showAllActivity ? recentActivities.length : 1) - 1);
 
-                    {/* Loading Overlay */}
-                    {isLoading && (
-                      <View style={styles.activityLoadingOverlay}>
-                        <ActivityIndicator size="small" color="#ff6700" />
-                        <Text style={styles.activityLoadingText}>Loading...</Text>
-                      </View>
-                    )}
+              return (
+                <LenderActivityItem
+                  activity={item}
+                  activityProps={activityProps}
+                  showLine={isLast}
+                  onPress={() => handleActivityPress(item)}
+                  slideUpAnim={slideUpAnim}
+                  fadeAnim={fadeAnim}
+                />
+              );
+            }}
+          />
+        </Animated.View>
+      </ScrollView>
+    </View>
+  );
+}
+
+const LenderActivityItem = memo(
+  ({
+    activity,
+    activityProps,
+    showLine,
+    onPress,
+    slideUpAnim,
+    fadeAnim,
+  }) => {
+    return (
+      <TouchableOpacity
+        activeOpacity={0.7}
+        onPress={onPress}>
+        <Animated.View
+          style={[
+            styles.activityItem,
+            {
+              transform: [{ translateX: slideUpAnim }],
+              opacity: fadeAnim,
+            },
+          ]}>
 
                     {/* Timeline Indicator */}
                     <View style={styles.timeline}>
@@ -1401,6 +1431,23 @@ const styles = StyleSheet.create({
     gap: m(8),
   },
   activityLoadingText: {
+    fontSize: FontSizes.sm,
+    color: '#ff6700',
+    fontFamily: FontFamily.primarySemiBold,
+  },
+  fullscreenLoader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 50,
+  },
+  fullscreenLoaderText: {
+    marginTop: m(8),
     fontSize: FontSizes.sm,
     color: '#ff6700',
     fontFamily: FontFamily.primarySemiBold,

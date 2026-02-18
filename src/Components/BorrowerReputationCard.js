@@ -423,9 +423,7 @@ const BreakdownItem = ({ label, value, max, color, icon, isPenalty = false }) =>
 };
 
 const styles = StyleSheet.create({
-  // ============================================
   // MAIN CONTAINER STYLES
-  // ============================================
   container: {
     backgroundColor: '#FFFFFF',
     borderRadius: m(20),
@@ -444,9 +442,7 @@ const styles = StyleSheet.create({
     padding: m(12),
   },
 
-  // ============================================
   // LOADING STATE STYLES
-  // ============================================
   loadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -460,9 +456,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  // ============================================
   // HEADER BANNER STYLES
-  // ============================================
   headerBanner: {
     paddingVertical: m(16),
     paddingHorizontal: m(16),
@@ -513,9 +507,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  // ============================================
   // SCORE CARD STYLES (Main Score Display)
-  // ============================================
   scoreCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -574,9 +566,7 @@ const styles = StyleSheet.create({
     lineHeight: m(18),
   },
 
-  // ============================================
   // METRICS SECTION STYLES (Loan Stats Grid)
-  // ============================================
   metricsSection: {
     padding: m(16),
   },
@@ -627,9 +617,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
-  // ============================================
   // OVERDUE ALERT STYLES
-  // ============================================
   overdueAlert: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -663,9 +651,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-  // ============================================
   // LEGACY STYLES (kept for compatibility)
-  // ============================================
   iconContainer: {
     width: m(48),
     height: m(48),
@@ -674,9 +660,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  // ============================================
   // BREAKDOWN SECTION STYLES
-  // ============================================
   breakdownSection: {
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
@@ -728,9 +712,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#4B5563',
   },
 
-  // ============================================
   // BREAKDOWN CONTENT STYLES
-  // ============================================
   breakdownContent: {
     padding: m(16),
     backgroundColor: '#F9FAFB',
@@ -752,9 +734,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  // ============================================
   // BREAKDOWN ITEM STYLES
-  // ============================================
   breakdownItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -791,9 +771,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-  // ============================================
   // FINAL SCORE CARD STYLES
-  // ============================================
   finalScoreCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -840,9 +818,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // ============================================
   // COMPACT VIEW STYLES (Small Card Variant)
-  // ============================================
   compactCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: m(12),
@@ -889,9 +865,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
 
-  // ============================================
   // NO DATA / EMPTY STATE STYLES
-  // ============================================
   noDataContainer: {
     borderColor: '#E5E7EB',
     backgroundColor: '#F9FAFB',

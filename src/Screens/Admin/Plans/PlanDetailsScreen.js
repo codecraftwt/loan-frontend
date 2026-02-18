@@ -13,10 +13,6 @@ import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
 import moment from 'moment';
 
-/**
- * DetailItem Component
- * Renders a detail row with icon, label, and value
- */
 const DetailItem = ({ icon, label, value }) => (
   <View style={styles.detailItem}>
     <View style={styles.detailIconContainer}>

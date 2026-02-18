@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback, memo } from 'react';
 import {
   View,
   Text,
@@ -230,7 +230,7 @@ export default function BorrowerDashboard() {
               {(item.lenderId?.userName || 'L').charAt(0).toUpperCase()}
             </Text>
           </View>
-          <View style={styles.loanCardInfo}>
+          <View style={styles.welcomeText}>
             <Text style={styles.loanLenderName} numberOfLines={1}>
               {item.lenderId?.userName || 'Unknown Lender'}
             </Text>
@@ -467,7 +467,7 @@ export default function BorrowerDashboard() {
               <Text style={styles.progressCircleText}>{Math.round(completionRate)}%</Text>
             </View>
 
-            <View style={styles.progressContent}>
+            <View style={styles.welcomeText}>
               <View style={styles.progressHeader}>
                 <View>
                   <Text style={styles.progressTitle}>Repayment Progress</Text>
@@ -569,98 +569,53 @@ export default function BorrowerDashboard() {
               <Text style={styles.loadingText}>Loading activities...</Text>
             </View>
           ) : recentActivities.length > 0 ? (
-            <>
-              {(() => {
-                const displayedActivities = showAllActivities
+            <FlatList
+              data={
+                showAllActivities
                   ? recentActivities
-                  : recentActivities.slice(0, 3);
-                return displayedActivities.map((activity, index) => {
-                  const activityProps = getActivityProperties(activity);
-                  const handleActivityPress = () => {
-                    if (activity.loanId) {
-                      const loan = loans.find(l => l._id === activity.loanId);
-                      if (loan) {
-                        navigation.navigate('BorrowerLoanDetails', { loan });
-                      } else {
-                        navigation.navigate('MyLoans');
-                      }
+                  : recentActivities.slice(0, 3)
+              }
+              keyExtractor={(activity, index) => {
+                if (activity._id) {
+                  return `${activity._id}-${index}`;
+                }
+                if (activity.loanId) {
+                  return `${activity.loanId}-${index}`;
+                }
+                return `activity-${index}-${activity.type || 'unknown'}`;
+              }}
+              scrollEnabled={false}
+              renderItem={({ item, index }) => {
+                const activityProps = getActivityProperties(item);
+                const isLast =
+                  index ===
+                  ((showAllActivities
+                    ? recentActivities.length
+                    : Math.min(recentActivities.length, 3)) - 1);
+
+                const handleActivityPress = () => {
+                  if (item.loanId) {
+                    const loan = loans.find(l => l._id === item.loanId);
+                    if (loan) {
+                      navigation.navigate('BorrowerLoanDetails', { loan });
                     } else {
                       navigation.navigate('MyLoans');
                     }
-                  };
-                  const isLast = index === displayedActivities.length - 1;
-                  const uniqueKey = activity._id
-                    ? `${activity._id}-${index}`
-                    : activity.loanId
-                    ? `${activity.loanId}-${index}`
-                    : `activity-${index}-${activity.type || 'unknown'}`;
+                  } else {
+                    navigation.navigate('MyLoans');
+                  }
+                };
 
-                  return (
-                    <TouchableOpacity
-                      key={uniqueKey}
-                      activeOpacity={0.7}
-                      onPress={handleActivityPress}>
-                      <View style={styles.activityItem}>
-                        {/* Timeline */}
-                        <View style={styles.timeline}>
-                          <View
-                            style={[
-                              styles.timelineDot,
-                              { backgroundColor: activityProps.color },
-                            ]}
-                          />
-                          {!isLast && <View style={styles.timelineLine} />}
-                        </View>
-
-                        {/* Activity Content */}
-                        <View style={styles.activityContent}>
-                          <View style={styles.activityHeader}>
-                            <LinearGradient
-                              colors={activityProps.gradient}
-                              style={styles.activityIcon}>
-                              <Icon
-                                name={activityProps.icon}
-                                size={16}
-                                color="#fff"
-                              />
-                            </LinearGradient>
-                            <View style={styles.activityText}>
-                              <Text style={styles.activityTitle}>
-                                {activity.shortMessage || activity.type}
-                              </Text>
-                              <Text
-                                style={styles.activityDescription}
-                                numberOfLines={2}>
-                                {activity.message || ''}
-                              </Text>
-                            </View>
-                            {activity.amount && (
-                              <View style={styles.activityAmountContainer}>
-                                <Text
-                                  style={[
-                                    styles.activityAmount,
-                                    { color: activityProps.color },
-                                  ]}>
-                                  ₹{activity.amount.toLocaleString('en-IN')}
-                                </Text>
-                              </View>
-                            )}
-                          </View>
-                          <View style={styles.activityFooter}>
-                            <View style={styles.timeContainer}>
-                              <Icon name="clock" size={12} color="#7f8c8d" />
-                              <Text style={styles.activityTime}>
-                                {activity.relativeTime || 'Recently'}
-                              </Text>
-                            </View>
-                          </View>
-                        </View>
-                      </View>
-                    </TouchableOpacity>
-                  );
-                });
-              })()}
-            </>
+                return (
+                  <BorrowerActivityItem
+                    activity={item}
+                    activityProps={activityProps}
+                    isLast={isLast}
+                    onPress={handleActivityPress}
+                  />
+                );
+              }}
+            />
           ) : (
             <View style={styles.emptyContainer}>
               <Icon name="inbox" size={40} color="#E5E7EB" />
@@ -672,6 +627,65 @@ export default function BorrowerDashboard() {
     </View>
   );
 }
+
+const BorrowerActivityItem = memo(
+  ({ activity, activityProps, isLast, onPress }) => {
+    return (
+      <TouchableOpacity activeOpacity={0.7} onPress={onPress}>
+        <View style={styles.activityItem}>
+          {/* Timeline */}
+          <View style={styles.timeline}>
+            <View
+              style={[
+                styles.timelineDot,
+                { backgroundColor: activityProps.color },
+              ]}
+            />
+            {!isLast && <View style={styles.timelineLine} />}
+          </View>
+
+          {/* Activity Content */}
+          <View style={styles.activityContent}>
+            <View style={styles.activityHeader}>
+              <LinearGradient
+                colors={activityProps.gradient}
+                style={styles.activityIcon}>
+                <Icon name={activityProps.icon} size={16} color="#fff" />
+              </LinearGradient>
+              <View style={styles.welcomeText}>
+                <Text style={styles.activityTitle}>
+                  {activity.shortMessage || activity.type}
+                </Text>
+                <Text style={styles.activityDescription} numberOfLines={2}>
+                  {activity.message || ''}
+                </Text>
+              </View>
+              {activity.amount && (
+                <View style={styles.activityAmountContainer}>
+                  <Text
+                    style={[
+                      styles.activityAmount,
+                      { color: activityProps.color },
+                    ]}>
+                    ₹{activity.amount.toLocaleString('en-IN')}
+                  </Text>
+                </View>
+              )}
+            </View>
+            <View style={styles.activityFooter}>
+              <View style={styles.timeContainer}>
+                <Icon name="clock" size={12} color="#7f8c8d" />
+                <Text style={styles.activityTime}>
+                  {activity.relativeTime || 'Recently'}
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  },
+);
 
 const styles = StyleSheet.create({
   container: {
@@ -685,9 +699,7 @@ const styles = StyleSheet.create({
     paddingBottom: m(100),
   },
 
-  // ============================================
   // WELCOME SECTION STYLES
-  // ============================================
   welcomeCard: {
     marginHorizontal: m(16),
     marginTop: m(20),
@@ -931,9 +943,9 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 10,
   },
-  progressContent: {
-    flex: 1,
-  },
+  // progressContent: {
+  //   flex: 1,
+  // },
   progressHeader: {
     marginBottom: m(16),
   },
@@ -1012,9 +1024,7 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.primaryRegular,
   },
 
-  // ============================================
   // MY LOANS SECTION STYLES
-  // ============================================
   loansSection: {
     paddingHorizontal: m(16),
     marginBottom: m(16),
@@ -1093,9 +1103,9 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontFamily: FontFamily.primaryBold,
   },
-  loanCardInfo: {
-    flex: 1,
-  },
+  // loanCardInfo: {
+  //   flex: 1,
+  // },
   loanLenderName: {
     fontSize: FontSizes.base,
     fontFamily: FontFamily.primarySemiBold,
@@ -1171,9 +1181,7 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.primarySemiBold,
   },
 
-  // ============================================
   // ACTIVITY SECTION STYLES
-  // ============================================
   activitySection: {
     paddingHorizontal: m(16),
     marginBottom: m(24),
@@ -1239,9 +1247,9 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 4,
   },
-  activityText: {
-    flex: 1,
-  },
+  // activityText: {
+  //   flex: 1,
+  // },
   activityTitle: {
     fontSize: FontSizes.md,
     fontFamily: FontFamily.primarySemiBold,
@@ -1281,9 +1289,7 @@ const styles = StyleSheet.create({
     marginLeft: m(4),
   },
 
-  // ============================================
   // LOADING & EMPTY STATES
-  // ============================================
   loadingContainer: {
     padding: m(30),
     alignItems: 'center',

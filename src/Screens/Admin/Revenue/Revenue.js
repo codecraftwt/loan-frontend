@@ -87,7 +87,6 @@ export default function Revenue() {
   // Initial load
   useEffect(() => {
     loadRevenue();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Update temp filters when modal opens
