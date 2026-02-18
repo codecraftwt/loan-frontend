@@ -811,29 +811,33 @@ const LenderActivityItem = memo(
                         </View>
                       </View>
 
-                      <View style={styles.activityFooter}>
-                        <View style={styles.timeContainer}>
-                          <Icon name="clock" size={12} color="#7f8c8d" />
-                          <Text style={styles.activityTime}>
-                            {activity.relativeTime || 'Recently'}
-                          </Text>
-                        </View>
-                        <View style={[styles.statusBadge, { backgroundColor: `${activityProps.color}15` }]}>
-                          <Text style={[styles.statusText, { color: activityProps.color }]}>
-                            {activity.type === 'loan_given' ? 'Given' : 'Taken'}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-                  </Animated.View>
-                </TouchableOpacity>
-              );
-            })}
+            <View style={styles.activityFooter}>
+              <View style={styles.timeContainer}>
+                <Icon name="clock" size={12} color="#7f8c8d" />
+                <Text style={styles.activityTime}>
+                  {activity.relativeTime || 'Recently'}
+                </Text>
+              </View>
+              <View
+                style={[
+                  styles.statusBadge,
+                  { backgroundColor: `${activityProps.color}15` },
+                ]}>
+                <Text
+                  style={[
+                    styles.statusText,
+                    { color: activityProps.color },
+                  ]}>
+                  {activity.type === 'loan_given' ? 'Given' : 'Taken'}
+                </Text>
+              </View>
+            </View>
+          </View>
         </Animated.View>
-      </ScrollView>
-    </View>
-  );
-}
+      </TouchableOpacity>
+    );
+  },
+);
 
 const styles = StyleSheet.create({
   container: {
