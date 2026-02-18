@@ -51,7 +51,7 @@ const DetailItem = ({ icon, label, value, isStatus, onStatusChange }) => {
 };
 
 export default function LoanDetailScreen({ route, navigation }) {
-  const { loanDetails, isEdit } = route.params;
+  const { loanDetails: initialLoanDetails, loanId: routeLoanId, isEdit } = route.params || {};
   const dispatch = useDispatch();
   const { updateError } = useSelector(state => state.loans);
   const user = useSelector(state => state.auth.user);
@@ -61,7 +61,13 @@ export default function LoanDetailScreen({ route, navigation }) {
   const [selectedStatus, setSelectedStatus] = useState(null);
   const [pendingPaymentsForLoan, setPendingPaymentsForLoan] = useState([]);
   const [loadingPendingPayments, setLoadingPendingPayments] = useState(false);
-  const [currentLoanDetails, setCurrentLoanDetails] = useState(loanDetails);
+  const [currentLoanDetails, setCurrentLoanDetails] = useState(initialLoanDetails);
+  const [loadingLoanDetails, setLoadingLoanDetails] = useState(!initialLoanDetails && !!routeLoanId);
+  const [loadError, setLoadError] = useState(null);
+
+  // Resolved loan details: either from params or fetched by loanId
+  const loanDetails = currentLoanDetails || initialLoanDetails;
+  const loanId = loanDetails?._id || loanDetails?.loanId || routeLoanId;
   const [actionModalVisible, setActionModalVisible] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [actionType, setActionType] = useState(null);
@@ -72,13 +78,51 @@ export default function LoanDetailScreen({ route, navigation }) {
 
   const isLender = user?.roleId === 1;
 
+  // Fetch loan details when only loanId is passed (e.g. from recent activity)
+  useEffect(() => {
+    const fetchByLoanId = async () => {
+      if (!routeLoanId || initialLoanDetails) {
+        setLoadingLoanDetails(false);
+        return;
+      }
+      try {
+        setLoadError(null);
+        const response = await lenderLoanAPI.getLoanDetails(routeLoanId);
+        if (response?.data) {
+          setCurrentLoanDetails(response.data);
+        } else {
+          const listResponse = await lenderLoanAPI.getLoanFromList(routeLoanId);
+          if (listResponse?.data) {
+            setCurrentLoanDetails(listResponse.data);
+          } else {
+            setLoadError('Loan not found');
+          }
+        }
+      } catch (error) {
+        try {
+          const listResponse = await lenderLoanAPI.getLoanFromList(routeLoanId);
+          if (listResponse?.data) {
+            setCurrentLoanDetails(listResponse.data);
+          } else {
+            setLoadError('Unable to load loan details');
+          }
+        } catch (fallbackError) {
+          setLoadError('Unable to load loan details');
+        }
+      } finally {
+        setLoadingLoanDetails(false);
+      }
+    };
+    fetchByLoanId();
+  }, [routeLoanId, initialLoanDetails]);
+
   // Fetch loan details and check for pending confirmations
   useFocusEffect(
     useCallback(() => {
-      if (isLender && loanDetails?._id) {
+      if (isLender && loanId) {
         fetchLoanDetailsWithConfirmations();
       }
-    }, [isLender, loanDetails?._id])
+    }, [isLender, loanId])
   );
 
   useEffect(() => {
@@ -90,7 +134,7 @@ export default function LoanDetailScreen({ route, navigation }) {
     // PRIORITY 1: Check pendingPayments from Redux (has proper paymentId fields)
     if (pendingPayments && pendingPayments.length > 0) {
       const loanPendingPayments = pendingPayments.find(
-        loan => loan.loanId === loanDetails?._id || loan._id === loanDetails?._id
+        loan => loan.loanId === loanId || loan._id === loanId
       );
       if (loanPendingPayments && loanPendingPayments.pendingPayments) {
         const validPayments = loanPendingPayments.pendingPayments.filter(hasValidId);
@@ -136,10 +180,10 @@ export default function LoanDetailScreen({ route, navigation }) {
       }
     }
     setPendingPaymentsForLoan([]);
-  }, [pendingPayments, currentLoanDetails, loanDetails, isLender]);
+  }, [pendingPayments, currentLoanDetails, loanDetails, loanId, isLender]);
 
   const fetchLoanDetailsWithConfirmations = async () => {
-    if (!isLender || !loanDetails?._id) return;
+    if (!isLender || !loanId) return;
 
     setLoadingPendingPayments(true);
     try {
@@ -149,7 +193,7 @@ export default function LoanDetailScreen({ route, navigation }) {
         if (result.payments && result.payments.length > 0) {
           // Find payments for this loan
           const loanPending = result.payments.find(
-            loan => loan.loanId === loanDetails._id || loan._id === loanDetails._id
+            loan => loan.loanId === loanId || loan._id === loanId
           );
           if (loanPending?.pendingPayments && loanPending.pendingPayments.length > 0) {
             // Verify payments have proper IDs before using
@@ -170,7 +214,7 @@ export default function LoanDetailScreen({ route, navigation }) {
 
       // PRIORITY 2: Try to fetch loan details from API (pendingConfirmations)
       try {
-        const response = await lenderLoanAPI.getLoanDetails(loanDetails._id);
+        const response = await lenderLoanAPI.getLoanDetails(loanId);
         if (response?.data) {
           setCurrentLoanDetails(response.data);
           if (response.data.pendingConfirmations?.payments) {
@@ -536,6 +580,52 @@ export default function LoanDetailScreen({ route, navigation }) {
       default: return 'clock';
     }
   };
+
+  // Show loading or error state when fetching by loanId
+  if (loadingLoanDetails || (!loanDetails && routeLoanId)) {
+    return (
+      <View style={styles.container}>
+        <Header title="Loan Details" showBackButton />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#ff6700" />
+          <Text style={styles.loadingText}>Loading loan details...</Text>
+        </View>
+      </View>
+    );
+  }
+  if (loadError) {
+    return (
+      <View style={styles.container}>
+        <Header title="Loan Details" showBackButton />
+        <View style={styles.loadingContainer}>
+          <Icon name="alert-circle" size={48} color="#EF4444" />
+          <Text style={styles.errorText}>{loadError}</Text>
+          <TouchableOpacity
+            style={styles.errorRetryButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.errorRetryText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+  if (!loanDetails) {
+    return (
+      <View style={styles.container}>
+        <Header title="Loan Details" showBackButton />
+        <View style={styles.loadingContainer}>
+          <Text style={styles.errorText}>Loan details not available</Text>
+          <TouchableOpacity
+            style={styles.errorRetryButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.errorRetryText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   // Calculate loan amounts
   const loanAmount = typeof loanDetails.amount === 'number'
@@ -1072,6 +1162,35 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: m(24),
+  },
+  loadingText: {
+    marginTop: m(12),
+    fontSize: m(16),
+    color: '#6B7280',
+  },
+  errorText: {
+    marginTop: m(12),
+    fontSize: m(16),
+    color: '#6B7280',
+    textAlign: 'center',
+  },
+  errorRetryButton: {
+    marginTop: m(20),
+    paddingHorizontal: m(24),
+    paddingVertical: m(12),
+    backgroundColor: '#ff6700',
+    borderRadius: m(12),
+  },
+  errorRetryText: {
+    fontSize: m(16),
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   scrollView: {
     flex: 1,

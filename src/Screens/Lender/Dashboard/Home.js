@@ -9,10 +9,10 @@ import {
   Animated,
   Easing,
   Platform,
-  ActivityIndicator,
   FlatList,
   BackHandler,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
@@ -23,8 +23,6 @@ import { getPendingPayments } from '../../../Redux/Slices/lenderPaymentSlice';
 import { getLenderRecentActivities } from '../../../Redux/Slices/lenderActivitiesSlice';
 import { getActivePlan } from '../../../Redux/Slices/planPurchaseSlice';
 import { useDispatch, useSelector } from 'react-redux';
-import lenderLoanAPI from '../../../Services/lenderLoanService';
-import Toast from 'react-native-toast-message';
 import useFetchUserFromStorage from '../../../Redux/hooks/useFetchUserFromStorage';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
@@ -43,6 +41,7 @@ const formatCurrency = value => {
 export default function Home() {
   const navigation = useNavigation();
   const dispatch = useDispatch();
+  const { width: windowWidth } = useWindowDimensions();
 
   const user = useSelector(state => state.auth.user);
   const lenderStatistics = useSelector(state => state.loans.lenderStatistics);
@@ -53,7 +52,6 @@ export default function Home() {
 
   const [refreshing, setRefreshing] = useState(false);
   const [showAllActivity, setShowAllActivity] = useState(false);
-  const [isOpeningActivity, setIsOpeningActivity] = useState(false);
 
   // Enhanced Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -227,78 +225,18 @@ export default function Home() {
     return { icon, color, gradient };
   };
 
-  // Handle activity card press
-  const handleActivityPress = async (activity) => {
+  const handleActivityPress = (activity) => {
     if (activity.loanId) {
-      try {
-        setIsOpeningActivity(true);
-        // Fetch loan details by ID
-        const response = await lenderLoanAPI.getLoanDetails(activity.loanId);
-        
-        if (response?.data) {
-          // Navigate to LoanDetailScreen with the fetched loan details
-          navigation.navigate('LoanDetailScreen', { 
-            loanDetails: response.data,
-            isEdit: false,
-            highlightActivity: true 
-          });
-        } else {
-          // Fallback: Try to get loan from list
-          const listResponse = await lenderLoanAPI.getLoanFromList(activity.loanId);
-          if (listResponse?.data) {
-            navigation.navigate('LoanDetailScreen', { 
-              loanDetails: listResponse.data,
-              isEdit: false,
-              highlightActivity: true 
-            });
-          } else {
-            Toast.show({
-              type: 'error',
-              text1: 'Loan Not Found',
-              text2: 'Unable to find the loan details',
-            });
-          }
-        }
-      } catch (error) {
-        // Fallback: Try to get loan from list
-        try {
-          const listResponse = await lenderLoanAPI.getLoanFromList(activity.loanId);
-          if (listResponse?.data) {
-            navigation.navigate('LoanDetailScreen', { 
-              loanDetails: listResponse.data,
-              isEdit: false,
-              highlightActivity: true 
-            });
-          } else {
-            Toast.show({
-              type: 'error',
-              text1: 'Error',
-              text2: 'Unable to load loan details',
-            });
-          }
-        } catch (fallbackError) {
-          Toast.show({
-            type: 'error',
-            text1: 'Error',
-            text2: 'Unable to load loan details',
-          });
-        }
-      } finally {
-        setIsOpeningActivity(false);
-      }
+      navigation.navigate('LoanDetailScreen', {
+        loanId: activity.loanId,
+        isEdit: false,
+      });
     }
   };
 
   return (
     <View style={styles.container}>
       <Header title="Home" />
-
-      {isOpeningActivity && (
-        <View style={styles.fullscreenLoader}>
-          <ActivityIndicator size="large" color="#ff6700" />
-          <Text style={styles.fullscreenLoaderText}>Opening loan details...</Text>
-        </View>
-      )}
 
       <ScrollView
         contentContainerStyle={styles.content}
@@ -503,7 +441,7 @@ export default function Home() {
               {
                 icon: 'users',
                 text: 'Contacts',
-                // screen: 'ContactsScreen',
+                screen: 'ContactsScreen',
                 gradient: ['#27ae60', '#2ecc71'],
                 description: 'Manage contacts',
                 lightColor: '#C0ECCC'
@@ -611,7 +549,7 @@ export default function Home() {
             })}
           </View>
         </View>
-        {/* Progress Card */}
+        {/* Progress Card - responsive layout */}
         <Animated.View
           style={[
             styles.progressCard,
@@ -627,10 +565,16 @@ export default function Home() {
             colors={['#667eea', '#764ba2', '#667eea']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={styles.progressGradient}
+            style={[
+              styles.progressGradient,
+              windowWidth < 380 && styles.progressGradientColumn
+            ]}
           >
             {/* Progress Circle */}
-            <View style={styles.progressCircleContainer}>
+            <View style={[
+              styles.progressCircleContainer,
+              windowWidth < 380 && styles.progressCircleContainerColumn
+            ]}>
               <View style={styles.progressCircleBackground}>
                 <Animated.View style={[styles.progressCircleFill, {
                   transform: [{
@@ -646,25 +590,25 @@ export default function Home() {
 
             <View style={styles.progressContent}>
               <View style={styles.progressHeader}>
-                <View>
+                <View style={styles.progressHeaderText}>
                   <Text style={styles.progressTitle}>Loan Completion</Text>
-                  <Text style={styles.progressText}>
+                  <Text style={styles.progressText} numberOfLines={2}>
                     {lenderStatistics?.counts?.paidLoans || 0} of {lenderStatistics?.counts?.totalLoans || 1} loans completed
                   </Text>
-                  <Text style={styles.progressAmountText}>
+                  <Text style={styles.progressAmountText} numberOfLines={1}>
                     ₹{formatCurrency(lenderStatistics?.totalPaidAmount || 0)} of ₹{formatCurrency(lenderStatistics?.totalLoanAmount || 0)}
                   </Text>
                 </View>
                 <View style={styles.progressStats}>
                   <View style={styles.statRow}>
                     <View style={[styles.statDot, { backgroundColor: '#ffd700' }]} />
-                    <Text style={styles.statText}>
+                    <Text style={styles.statText} numberOfLines={1}>
                       Completed ({lenderStatistics?.counts?.paidLoans || 0})
                     </Text>
                   </View>
                   <View style={styles.statRow}>
                     <View style={[styles.statDot, { backgroundColor: 'rgba(255,255,255,0.3)' }]} />
-                    <Text style={styles.statText}>
+                    <Text style={styles.statText} numberOfLines={1}>
                       Remaining ({remainingLoans})
                     </Text>
                   </View>
@@ -678,7 +622,7 @@ export default function Home() {
                     style={[
                       styles.progressFill,
                       {
-                        width: `${completionRate}%`,
+                        width: `${Math.min(completionRate, 100)}%`,
                       }
                     ]}
                   >
@@ -786,11 +730,11 @@ const LenderActivityItem = memo(
                     {/* Timeline Indicator */}
                     <View style={styles.timeline}>
                       <View style={[styles.timelineDot, { backgroundColor: activityProps.color }]} />
-                      {index < (showAllActivity ? recentActivities.length - 1 : 0) && <View style={styles.timelineLine} />}
+                      {showLine && <View style={styles.timelineLine} />}
                     </View>
 
                     {/* Activity Content */}
-                    <View style={[styles.activityContent, isLoading && { opacity: 0.5 }]}>
+                    <View style={styles.activityContent}>
                       <View style={styles.activityHeader}>
                         <LinearGradient
                           colors={activityProps.gradient}
@@ -1115,7 +1059,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  // Progress Card
+  // Progress Card - responsive
   progressCard: {
     marginHorizontal: m(16),
     marginBottom: m(16),
@@ -1132,27 +1076,36 @@ const styles = StyleSheet.create({
   },
   progressPattern: {
     position: 'absolute',
-    top: -50,
-    right: -50,
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    top: m(-50),
+    right: m(-50),
+    width: m(100),
+    height: m(100),
+    borderRadius: m(50),
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     zIndex: 1,
   },
   progressGradient: {
-    padding: m(20),
-    flexDirection: Platform.OS === 'ios' ? 'column' : 'row',
-    alignItems: Platform.OS === 'ios' ? 'flex-start' : 'center',
+    padding: m(16),
+    flexDirection: 'row',
+    alignItems: 'center',
     position: 'relative',
     overflow: 'hidden',
+  },
+  progressGradientColumn: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    padding: m(18),
   },
   // Progress Circle
   progressCircleContainer: {
     alignItems: 'center',
-    marginRight: Platform.OS === 'ios' ? 0 : m(20),
-    marginBottom: Platform.OS === 'ios' ? m(16) : 0,
+    justifyContent: 'center',
+    marginRight: m(16),
     position: 'relative',
+  },
+  progressCircleContainerColumn: {
+    marginRight: 0,
+    marginBottom: m(14),
   },
   progressCircleBackground: {
     width: m(80),
@@ -1166,6 +1119,8 @@ const styles = StyleSheet.create({
   },
   progressCircleFill: {
     position: 'absolute',
+    left: m(5),
+    top: m(5),
     width: m(70),
     height: m(70),
     borderRadius: m(35),
@@ -1186,9 +1141,13 @@ const styles = StyleSheet.create({
   // Progress Content
   progressContent: {
     flex: 1,
+    minWidth: 0,
   },
   progressHeader: {
-    marginBottom: m(16),
+    marginBottom: m(12),
+  },
+  progressHeaderText: {
+    marginBottom: m(8),
   },
   progressTitle: {
     fontSize: FontSizes.lg,
@@ -1209,15 +1168,19 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.xs,
     color: 'rgba(255, 255, 255, 0.9)',
     fontFamily: FontFamily.primarySemiBold,
-    marginBottom: m(12),
+    marginBottom: m(8),
   },
   progressStats: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
+    gap: m(8),
   },
   statRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+    minWidth: 0,
   },
   statDot: {
     width: m(8),
@@ -1229,13 +1192,16 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.xs,
     color: 'rgba(255, 255, 255, 0.7)',
     fontFamily: FontFamily.primaryRegular,
+    flex: 1,
   },
   // Enhanced Progress Bar
   progressBarContainer: {
     marginTop: m(8),
+    width: '100%',
   },
   progressBar: {
     height: m(12),
+    width: '100%',
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: m(6),
     overflow: 'hidden',

@@ -473,7 +473,7 @@ export default function AddDetails({ route, navigation }) {
               position: 'top',
               text1: 'Loan created successfully',
             });
-            navigation.navigate('BottomNavigation', { screen: 'Outward' });
+            navigation.navigate('BottomNavigation', { screen: 'Borrowers' });
           }
         } else {
           Toast.show({
@@ -481,7 +481,7 @@ export default function AddDetails({ route, navigation }) {
             position: 'top',
             text1: 'Loan updated successfully',
           });
-          navigation.navigate('BottomNavigation', { screen: 'Outward' });
+          navigation.navigate('BottomNavigation', { screen: 'Borrowers' });
         }
       } else {
         // Handle plan-related errors
@@ -735,7 +735,7 @@ export default function AddDetails({ route, navigation }) {
       text1: 'Loan confirmed',
       text2: 'Borrower has accepted the loan.',
     });
-    navigation.navigate('BottomNavigation', { screen: 'Outward' });
+    navigation.navigate('BottomNavigation', { screen: 'Borrowers' });
   };
 
   const handleOTPSkip = () => {
@@ -746,13 +746,13 @@ export default function AddDetails({ route, navigation }) {
       text1: 'OTP Verification Skipped',
       text2: 'Loan is pending. You can verify OTP later.',
     });
-    navigation.navigate('BottomNavigation', { screen: 'Outward' });
+    navigation.navigate('BottomNavigation', { screen: 'Borrowers' });
   };
 
   const handleOTPClose = () => {
     setIsOTPModalVisible(false);
     // If user closes without verifying or skipping, still navigate
-    navigation.navigate('BottomNavigation', { screen: 'Outward' });
+    navigation.navigate('BottomNavigation', { screen: 'Borrowers' });
   };
 
   return (

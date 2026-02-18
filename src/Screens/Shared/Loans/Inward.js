@@ -20,7 +20,7 @@ import { getPendingPayments } from '../../../Redux/Slices/lenderPaymentSlice';
 import FraudStatusBadge from '../../../Components/FraudStatusBadge';
 import SubscriptionRestriction from '../../../Components/SubscriptionRestriction';
 import { useSubscription } from '../../../hooks/useSubscription';
-import { getActivePlan } from '../../../Redux/Slices/planPurchaseSlice';
+// getActivePlan is already dispatched in Home screen on app focus
 import { useFocusEffect, useRoute } from '@react-navigation/native';
 import moment from 'moment';
 import LoaderSkeleton from '../../../Components/LoaderSkeleton';
@@ -195,9 +195,8 @@ export default function Inward({ navigation }) {
       }
       dispatch(getLoanByLender(filters));
       
-      // Fetch active plan and pending payments for lender
+      // Fetch pending payments for lender
       if (isLender) {
-        dispatch(getActivePlan());
         dispatch(getPendingPayments({ page: 1, limit: 100 }));
       }
     }, [dispatch, debouncedSearch, isLender]),
@@ -311,7 +310,7 @@ export default function Inward({ navigation }) {
       {/* Search and Filter Section */}
       <View style={[
         styles.searchSection,
-        isLender && !hasActivePlan && { opacity: 0.5 }
+        isLender && !planLoading && !hasActivePlan && { opacity: 0.5 }
       ]}>
         <View style={styles.searchContainer}>
           <Icon name="search" size={20} color="#6B7280" style={styles.searchIcon}/>
@@ -321,7 +320,7 @@ export default function Inward({ navigation }) {
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholderTextColor="#9CA3AF"
-            editable={isLender ? hasActivePlan : true}
+            editable={isLender ? (planLoading || hasActivePlan) : true}
           />
           <TouchableOpacity
             style={styles.filterButton}
@@ -530,18 +529,18 @@ export default function Inward({ navigation }) {
           ref={scrollViewRef}
           style={[
             styles.loanListContainer,
-            isLender && !hasActivePlan && { opacity: 0.5 }
+            isLender && !planLoading && !hasActivePlan && { opacity: 0.5 }
           ]}
           contentContainerStyle={styles.scrollContent}
           refreshControl={
             <RefreshControl 
               refreshing={loading} 
               onRefresh={onRefresh}
-              enabled={isLender ? hasActivePlan : true}
+              enabled={isLender ? (planLoading || hasActivePlan) : true}
             />
           }
           showsVerticalScrollIndicator={false}
-          scrollEnabled={isLender ? hasActivePlan : true}>
+          scrollEnabled={isLender ? (planLoading || hasActivePlan) : true}>
               {lenderLoans?.length === 0 ? (
             <View style={styles.emptyState}>
               <Icon 

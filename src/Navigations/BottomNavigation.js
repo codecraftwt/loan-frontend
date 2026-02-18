@@ -5,7 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import { m } from 'walstar-rn-responsive';
-import Fonts from '../constants/fonts';
+// import Fonts from '../constants/fonts';
 
 // Lender screens
 import Home from '../Screens/Lender/Dashboard/Home';
@@ -75,7 +75,10 @@ export default function BottomNavigation() {
               position: 'absolute',
               left: m(16),
               right: m(16),
-              bottom: insets.bottom,
+              // bottom: insets.bottom,
+              bottom: Platform.OS === 'ios'
+                ? insets.bottom - 12
+                : insets.bottom,
               height: m(68),
               backgroundColor: '#e5dad1',
               borderTopWidth: 0,
@@ -152,7 +155,10 @@ export default function BottomNavigation() {
               position: 'absolute',
               left: m(16),
               right: m(16),
-              bottom: insets.bottom,
+              // bottom: insets.bottom,
+              bottom: Platform.OS === 'ios'
+                ? insets.bottom - 12
+                : insets.bottom,
               height: m(69),
               backgroundColor: '#e5dad1',
               borderTopWidth: 0,
@@ -219,8 +225,11 @@ export default function BottomNavigation() {
             position: 'absolute',
             left: m(16),
             right: m(16),
-            bottom: insets.bottom,
-            height: m(69),
+            // bottom: insets.bottom,
+            bottom: Platform.OS === 'ios'
+          ? insets.bottom - 12
+          : insets.bottom,
+            height: m(70),
             backgroundColor: '#e5dad1',
             borderTopWidth: 0,
             paddingTop: m(10),

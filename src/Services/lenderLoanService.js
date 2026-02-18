@@ -154,6 +154,18 @@ export const lenderLoanAPI = {
       };
     }
   },
+
+  // Get all borrowers contacts
+  getBorrowers: async () => {
+    try {
+      const response = await axiosInstance.get('lender/loans/borrowerscontacts');
+      // api/lender/loans/borrowerscontacts
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching borrowers:', error);
+      throw error;
+    }
+  },
 };
 
 export default lenderLoanAPI;

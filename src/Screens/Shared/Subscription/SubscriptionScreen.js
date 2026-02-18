@@ -4,7 +4,7 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
+  // SafeAreaView,
   ScrollView,
   Alert,
   ActivityIndicator,
@@ -23,7 +23,7 @@ const SubscriptionScreen = ({ navigation }) => {
     expiryDate,
     remainingDays,
     plansLoading,
-    purchaseLoading,
+    // purchaseLoading,
     plansError,
     fetchPlans,
     purchaseSubscription,
@@ -31,7 +31,7 @@ const SubscriptionScreen = ({ navigation }) => {
   } = useSubscription();
 
   const user = useSelector(state => state.auth.user);
-  const [processing, setProcessing] = useState(false);
+  const [processingPlanId, setProcessingPlanId] = useState(null);
 
   useEffect(() => {
     fetchPlans();
@@ -72,6 +72,12 @@ const SubscriptionScreen = ({ navigation }) => {
 
   const handleBuyFromCard = async (plan, event) => {
     event?.stopPropagation?.();
+    
+    // Prevent multiple clicks
+    if (processingPlanId !== null) {
+      return;
+    }
+    
     if (!plan?._id) {
       Alert.alert('Error', 'Plan ID is missing');
       return;
@@ -91,7 +97,7 @@ const SubscriptionScreen = ({ navigation }) => {
   };
 
   const proceedWithPaymentFromCard = async (plan) => {
-    setProcessing(true);
+    setProcessingPlanId(plan._id);
 
     try {
       const result = await purchaseSubscription(plan._id, user);
@@ -127,12 +133,13 @@ const SubscriptionScreen = ({ navigation }) => {
         [{ text: 'OK' }]
       );
     } finally {
-      setProcessing(false);
+      setProcessingPlanId(null);
     }
   };
 
   const renderPlanCard = (plan) => {
     const planName = plan.planName || plan.name || '';
+    const isProcessing = processingPlanId !== null;
 
     return (
       <TouchableOpacity
@@ -141,7 +148,8 @@ const SubscriptionScreen = ({ navigation }) => {
           styles.planCard,
           styles.popularPlanCard,
         ]}
-        onPress={() => handlePlanPress(plan)}
+        onPress={() => !isProcessing && handlePlanPress(plan)}
+        disabled={isProcessing}
         activeOpacity={0.9}>
 
         <View style={styles.planCardContent}>
@@ -200,7 +208,7 @@ const SubscriptionScreen = ({ navigation }) => {
               styles.popularBuyButton,
             ]}
             onPress={(e) => handleBuyFromCard(plan, e)}
-            disabled={purchaseLoading || processing}
+            disabled={isProcessing}
             activeOpacity={0.8}>
             <LinearGradient
               colors={['#ffa011ff', '#ff7722ff']}
@@ -210,8 +218,11 @@ const SubscriptionScreen = ({ navigation }) => {
               ]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}>
-              {purchaseLoading || processing ? (
-                <ActivityIndicator size="small" color={"#FF9800"} />
+              {processingPlanId === plan._id ? (
+                <View style={styles.loaderContainer}>
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <Text style={styles.loadingButtonText}>Processing...</Text>
+                </View>
               ) : (
                 <>
                   <Icon
@@ -236,7 +247,7 @@ const SubscriptionScreen = ({ navigation }) => {
 
   if (plansLoading) {
     return (
-      <SafeAreaView style={styles.safeContainer}>
+      <View style={styles.container}>
         <Header title="Subscription Plans" showBackButton />
         <View style={styles.loadingContainer}>
           <View style={styles.loadingAnimation}>
@@ -244,13 +255,13 @@ const SubscriptionScreen = ({ navigation }) => {
           </View>
           <Text style={styles.loadingText}>Loading premium plans...</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (plansError) {
     return (
-      <SafeAreaView style={styles.safeContainer}>
+      <View style={styles.container}>
         <Header title="Subscription Plans" showBackButton />
         <View style={styles.errorContainer}>
           <View style={styles.errorIconContainer}>
@@ -272,22 +283,19 @@ const SubscriptionScreen = ({ navigation }) => {
             </LinearGradient>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeContainer}>
-      {/* Header with custom styling */}
-      <View style={styles.headerWrapper}>
-        <Header title="Upgrade Your Plan" showBackButton />
-      </View>
+    <View style={styles.container}>
+      <Header title="Upgrade Your Plan" showBackButton />
       <ScrollView
         showsVerticalScrollIndicator={false}
+        scrollEnabled={processingPlanId === null}
         contentContainerStyle={styles.scrollContent}>
 
-
-        <View style={styles.container}>
+        <View style={styles.contentContainer}>
           {/* Hero Section */}
           <View style={styles.heroSection}>
             <LinearGradient
@@ -310,6 +318,7 @@ const SubscriptionScreen = ({ navigation }) => {
             <TouchableOpacity
               style={styles.activePlanBanner}
               onPress={handleActivePlanPress}
+              disabled={processingPlanId !== null}
               activeOpacity={0.9}>
               <LinearGradient
                 colors={remainingDays > 0 ? ['#60ea64ff', '#72da78ff'] : ['#FF5722', '#FF9800']}
@@ -391,22 +400,19 @@ const SubscriptionScreen = ({ navigation }) => {
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  safeContainer: {
+  container: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: '#f8f9fa',
   },
   scrollContent: {
     flexGrow: 1,
   },
-  headerWrapper: {
-    backgroundColor: '#FF9800',
-  },
-  container: {
+  contentContainer: {
     flex: 1,
     paddingHorizontal: 20,
     paddingVertical: 20,
@@ -697,6 +703,17 @@ const styles = StyleSheet.create({
   },
   popularBuyButtonText: {
     color: '#FFFFFF',
+  },
+  loaderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  loadingButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   noPlansContainer: {
     alignItems: 'center',

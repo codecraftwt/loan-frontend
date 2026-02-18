@@ -19,11 +19,11 @@ import { LinearGradient } from 'react-native-linear-gradient';
 const OldHistoryPage = ({ route }) => {
   const { aadhaarNumber } = route.params;
   const navigation = useNavigation();
-  const [expandedLoanIndex, setExpandedLoanIndex] = useState(null);
   const dispatch = useDispatch();
   const { loans, totalAmount, loading, error } = useSelector(
     state => state.loans
   );
+  const [expandedLoanIndex, setExpandedLoanIndex] = useState(null);
 
   useEffect(() => {
     if (aadhaarNumber) {

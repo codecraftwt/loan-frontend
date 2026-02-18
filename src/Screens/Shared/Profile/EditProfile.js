@@ -30,13 +30,11 @@ import useFetchUserFromStorage from '../../../Redux/hooks/useFetchUserFromStorag
 const EditProfile = ({ navigation }) => {
   const dispatch = useDispatch();
   const profileData = useSelector(state => state.auth.user);
-
   useFetchUserFromStorage();
 
   const [isDeleteImagePromptVisible, setIsDeleteImagePromptVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-
   const [editedData, setEditedData] = useState({
     userName: profileData?.userName || '',
     mobileNo: profileData?.mobileNo || '',

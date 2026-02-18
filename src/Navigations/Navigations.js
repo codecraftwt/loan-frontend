@@ -20,6 +20,7 @@ import TermsOfServiceScreen from '../Screens/Shared/Profile/TermsOfServiceScreen
 import PrivacyPolicyScreen from '../Screens/Shared/Profile/PrivacyPolicyScreen';
 import AboutUsScreen from '../Screens/Shared/Profile/AboutUsScreen';
 import RateAppScreen from '../Screens/Shared/Profile/RateAppScreen';
+import ChangePasswordScreen from '../Screens/Shared/Profile/ChangePasswordScreen';
 import SubscriptionScreen from '../Screens/Shared/Subscription/SubscriptionScreen';
 import LenderPlanDetailsScreen from '../Screens/Shared/Subscription/LenderPlanDetailsScreen';
 import HelpAndSupportScreen from '../Screens/Auth/HelpAndSupportScreen';
@@ -27,6 +28,7 @@ import PersonalLoan from '../Screens/Shared/Loans/PersonalLoan';
 import BorrowerLoansScreen from '../Screens/Shared/Loans/BorrowerLoansScreen';
 import AnalyticsScreen from '../Screens/Lender/Analytics/AnalyticsScreen';
 import BorrowerAnalyticsScreen from '../Screens/Borrower/Analytics/BorrowerAnalyticsScreen';
+import ContactsScreen from '../Screens/Shared/Contacts/ContactsScreen';
 // Admin screens
 import PlansList from '../Screens/Admin/Plans/PlansList';
 import CreateEditPlan from '../Screens/Admin/Plans/CreateEditPlan';
@@ -77,12 +79,14 @@ const Navigation = () => {
       />
 
       <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
       <Stack.Screen name="TermsOfService" component={TermsOfServiceScreen} />
       <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
       <Stack.Screen name="AboutUs" component={AboutUsScreen} />
       <Stack.Screen name="RateApp" component={RateAppScreen} />
       <Stack.Screen name="AnalyticsScreen" component={AnalyticsScreen} />
       <Stack.Screen name="BorrowerAnalyticsScreen" component={BorrowerAnalyticsScreen} />
+      <Stack.Screen name="ContactsScreen" component={ContactsScreen} />
       
       {/* Lender Payment Screens */}
       <Stack.Screen name="PendingPayments" component={PendingPayments} />

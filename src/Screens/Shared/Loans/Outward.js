@@ -44,7 +44,6 @@ const Outward = ({ navigation, route }) => {
   const [pendingHighlightParams, setPendingHighlightParams] = useState(null);
   const [borrowerRiskAssessment, setBorrowerRiskAssessment] = useState({});
 
-
   // Handle navigation from notification
   useEffect(() => {
   if (route?.params) {

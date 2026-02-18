@@ -11,7 +11,6 @@ import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
 
 export default function SettingsScreen({ navigation }) {
-
   const settingsSections = [
     {
       title: 'Security',
@@ -20,7 +19,7 @@ export default function SettingsScreen({ navigation }) {
           icon: 'lock',
           label: 'Change Password',
           type: 'navigate',
-          onPress: () => navigation.navigate('ForgotPassword'),
+          onPress: () => navigation.navigate('ChangePassword'),
           color: '#EF4444',
         },
       ],
