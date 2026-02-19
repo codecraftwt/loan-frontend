@@ -4,6 +4,72 @@ import { Alert } from 'react-native';
 // Your Razorpay key (use test key for development)
 const RAZORPAY_KEY = 'rzp_test_eXyUgxz2VtmepU'; 
 
+/**
+ * Normalize the various error shapes Razorpay SDK can return into a
+ * consistent { isUserCancelled, isNetworkError, message } object.
+ *
+ * Known shapes from Razorpay Android SDK:
+ *  A) { code: 2 }                              – explicit user cancel
+ *  B) { code: 0, description: '{"error":{…}}', error: {…} }
+ *  C) { error: { code, source, reason, … } }   – nested object
+ *  D) JSON string                               – entire error as string
+ */
+const parseRazorpayError = (error) => {
+  let innerError = null;
+
+  // 1. Try error.error (nested object from SDK)
+  if (error?.error && typeof error.error === 'object') {
+    innerError = error.error;
+    // Could be double-nested: error.error.error
+    if (innerError?.error && typeof innerError.error === 'object') {
+      innerError = innerError.error;
+    }
+  }
+
+  // 2. Razorpay Android SDK packs a JSON string inside `description` (shape B)
+  if (!innerError && typeof error?.description === 'string' && error.description.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(error.description);
+      innerError = parsed?.error || parsed;
+    } catch (_) { /* ignore */ }
+  }
+
+  // 3. Entire error is a JSON string (shape D)
+  if (!innerError && typeof error === 'string' && error.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(error);
+      innerError = parsed?.error || parsed;
+    } catch (_) { /* ignore */ }
+  }
+
+  const errorObj = innerError || error;
+  const topLevelCode = error?.code;
+  const source = errorObj?.source;
+  const reason = errorObj?.reason;
+  const description = errorObj?.description;
+
+  // User cancellation takes priority over everything else
+  const isUserCancelled =
+    topLevelCode === 2 ||
+    (source === 'customer' && reason === 'payment_error') ||
+    (source === 'customer' && String(description).toLowerCase().includes('cancel'));
+
+  // Network error only when NOT a user cancellation
+  const isNetworkError = !isUserCancelled && (topLevelCode === 0 || topLevelCode === 3);
+
+  const hasUsefulDescription =
+    description &&
+    description !== 'undefined' &&
+    !description.startsWith('{') &&
+    description.length < 200;
+
+  const message = hasUsefulDescription
+    ? description
+    : 'Payment failed. Please try again.';
+
+  return { isUserCancelled, isNetworkError, message };
+};
+
 export const initializeRazorpay = () => {
   // Razorpay initialization (if needed)
   return true;
@@ -82,26 +148,25 @@ export const openRazorpayCheckout = (order, user) => {
       })
       .catch((error) => {
         console.error('Razorpay error - Full error:', error);
-        
-        if (error.code === 2) {
-          // User cancelled
+
+        const parsed = parseRazorpayError(error);
+
+        if (parsed.isUserCancelled) {
           reject({
             type: 'USER_CANCELLED',
             message: 'Payment cancelled by user',
-            code: error.code,
+            code: 2,
           });
-        } else if (error.code === 0 || error.code === 3) {
-          // Network error or payment failed
+        } else if (parsed.isNetworkError) {
           reject({
             type: 'PAYMENT_FAILED',
-            message: error.description || error.message || 'Payment failed. Please try again.',
+            message: 'Network error. Please check your connection and try again.',
             code: error.code,
           });
         } else {
-          // Other errors
           reject({
             type: 'PAYMENT_FAILED',
-            message: error.description || error.message || 'Payment failed. Please try again.',
+            message: parsed.message,
             error: error,
             code: error.code,
           });
@@ -230,26 +295,25 @@ export const openRazorpayCheckoutForLoan = (order, user, loan) => {
       })
       .catch((error) => {
         console.error('Razorpay error - Full error:', error);
-        
-        if (error.code === 2) {
-          // User cancelled
+
+        const parsed = parseRazorpayError(error);
+
+        if (parsed.isUserCancelled) {
           reject({
             type: 'USER_CANCELLED',
             message: 'Payment cancelled by user',
-            code: error.code,
+            code: 2,
           });
-        } else if (error.code === 0 || error.code === 3) {
-          // Network error or payment failed
+        } else if (parsed.isNetworkError) {
           reject({
             type: 'PAYMENT_FAILED',
-            message: error.description || error.message || 'Payment failed. Please try again.',
+            message: 'Network error. Please check your connection and try again.',
             code: error.code,
           });
         } else {
-          // Other errors
           reject({
             type: 'PAYMENT_FAILED',
-            message: error.description || error.message || 'Payment failed. Please try again.',
+            message: parsed.message,
             error: error,
             code: error.code,
           });
@@ -332,26 +396,25 @@ export const openRazorpayCheckoutForLoanCreation = (razorpayOrder, lender, loan)
       })
       .catch((error) => {
         console.error('Razorpay loan creation error:', error);
-        
-        if (error.code === 2) {
-          // User cancelled
+
+        const parsed = parseRazorpayError(error);
+
+        if (parsed.isUserCancelled) {
           reject({
             type: 'USER_CANCELLED',
             message: 'Payment cancelled by user',
-            code: error.code,
+            code: 2,
           });
-        } else if (error.code === 0 || error.code === 3) {
-          // Network error or payment failed
+        } else if (parsed.isNetworkError) {
           reject({
             type: 'PAYMENT_FAILED',
-            message: error.description || error.message || 'Payment failed. Please try again.',
+            message: 'Network error. Please check your connection and try again.',
             code: error.code,
           });
         } else {
-          // Other errors
           reject({
             type: 'PAYMENT_FAILED',
-            message: error.description || error.message || 'Payment failed. Please try again.',
+            message: parsed.message,
             error: error,
             code: error.code,
           });

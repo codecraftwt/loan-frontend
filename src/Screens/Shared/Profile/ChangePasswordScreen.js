@@ -28,6 +28,7 @@ const ChangePasswordScreen = ({ navigation }) => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [focusedField, setFocusedField] = useState(null);
+  const [submitted, setSubmitted] = useState(false);
 
   const newPasswordRef = useRef(null);
   const confirmPasswordRef = useRef(null);
@@ -49,7 +50,7 @@ const ChangePasswordScreen = ({ navigation }) => {
 
   const passwordStrength = getPasswordStrength(newPassword);
   const passwordsMatch = confirmNewPassword.length > 0 && newPassword === confirmNewPassword;
-  const passwordsMismatch = confirmNewPassword.length > 0 && newPassword !== confirmNewPassword;
+  const passwordsMismatch = submitted && confirmNewPassword.length > 0 && newPassword !== confirmNewPassword;
 
   const validate = () => {
     if (!currentPassword.trim() || !newPassword.trim() || !confirmNewPassword.trim()) {
@@ -72,6 +73,7 @@ const ChangePasswordScreen = ({ navigation }) => {
   };
 
   const handleChangePassword = async () => {
+    setSubmitted(true);
     if (!validate()) return;
 
     setLoading(true);
@@ -87,6 +89,7 @@ const ChangePasswordScreen = ({ navigation }) => {
         setCurrentPassword('');
         setNewPassword('');
         setConfirmNewPassword('');
+        setSubmitted(false);
         setTimeout(() => navigation.goBack(), 1500);
       }
     } catch (error) {
@@ -111,7 +114,7 @@ const ChangePasswordScreen = ({ navigation }) => {
   }) => {
     const isFocused = focusedField === fieldKey;
     const isMatchField = fieldKey === 'confirm';
-    const showMatchIcon = isMatchField && confirmNewPassword.length > 0;
+    const showMatchIcon = isMatchField && confirmNewPassword.length > 0 && (passwordsMatch || submitted);
 
     return (
       <View
