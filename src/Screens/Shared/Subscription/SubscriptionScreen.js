@@ -115,8 +115,23 @@ const SubscriptionScreen = ({ navigation }) => {
             },
           ]
         );
-      } else if (result.type !== 'CANCELLED') {
+      } else if (result.type === 'CANCELLED') {
+        Alert.alert(
+          'Payment Cancelled',
+          'You have cancelled the payment. You can try again whenever you\'re ready.',
+          [{ text: 'OK' }]
+        );
+      } else {
         let errorMessage = result.message || 'Payment failed. Please try again.';
+
+        // Sanitize raw JSON / API error objects that aren't user-friendly
+        if (
+          errorMessage.startsWith('{') ||
+          errorMessage.startsWith('[') ||
+          errorMessage === 'undefined'
+        ) {
+          errorMessage = 'Payment failed. Please try again.';
+        }
 
         if (result.message?.includes('signature') || result.message?.includes('verification')) {
           errorMessage = result.message +

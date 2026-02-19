@@ -49,6 +49,7 @@ export default function Home() {
     state => state.lenderActivities,
   );
   const { pendingPayments } = useSelector(state => state.lenderPayments);
+  const { isActive: isSubscriptionActive } = useSelector(state => state.planPurchase);
 
   const [refreshing, setRefreshing] = useState(false);
   const [showAllActivity, setShowAllActivity] = useState(false);
@@ -226,6 +227,20 @@ export default function Home() {
   };
 
   const handleActivityPress = (activity) => {
+    if (!isSubscriptionActive) {
+      Alert.alert(
+        'Subscription Required',
+        'Purchase a plan to view recent activities.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'View Plans',
+            onPress: () => navigation.navigate('SubscriptionScreen'),
+          },
+        ],
+      );
+      return;
+    }
     if (activity.loanId) {
       navigation.navigate('LoanDetailScreen', {
         loanId: activity.loanId,

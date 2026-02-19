@@ -139,10 +139,16 @@ export const useSubscription = () => {
       let errorType = 'PAYMENT_ERROR';
       
       if (error.message) {
-        errorMessage = error.message;
+        // Discard raw JSON or "undefined" strings – show a friendly fallback instead
+        const msg = error.message;
+        if (msg.startsWith('{') || msg.startsWith('[') || msg === 'undefined') {
+          errorMessage = 'Payment failed. Please try again.';
+        } else {
+          errorMessage = msg;
+        }
         
         // Provide more helpful messages for signature errors
-        if (error.message.includes('signature') || error.message.includes('Invalid signature')) {
+        if (msg.includes('signature') || msg.includes('Invalid signature')) {
           errorMessage = 'Payment verification failed. The payment was successful, but verification failed. Please contact support with your payment ID: ' + 
             (paymentResult?.data?.razorpay_payment_id || 'N/A');
         }
@@ -151,6 +157,12 @@ export const useSubscription = () => {
       if (error.type) {
         errorType = error.type;
       } else if (error.code === 2) {
+        errorType = 'CANCELLED';
+      }
+
+      // Also detect user cancellation from nested Razorpay error shape
+      const innerError = error?.error || error;
+      if (innerError?.source === 'customer' && innerError?.reason === 'payment_error') {
         errorType = 'CANCELLED';
       }
       
