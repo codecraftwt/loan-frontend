@@ -53,6 +53,8 @@ export default function Register({ navigation }) {
   const [mobileError, setMobileError] = useState('');
   const [panCardError, setPanCardError] = useState('');
 
+  const[errors,setErrors]= useState({})
+
   const { isLoading } = useSelector(state => state.auth || {});
   const dispatch = useDispatch();
 
@@ -135,104 +137,98 @@ export default function Register({ navigation }) {
   };
 
   // Validation functions - only called on button click
-  const validateStep1 = () => {
-    let hasError = false;
+const validateStep1 = () => {
+  let temp = {};
+  let valid = true;
 
-    if (!name || name.trim().length < 1) {
-      setNameError('Name is required.');
-      hasError = true;
+  if (!name || name.trim().length < 1) {
+    temp.name = 'Full Name is required.';
+    valid = false;
+  }
+
+  if (!email || email.trim().length < 1) {
+    temp.email = 'Email is required.';
+    valid = false;
+  } else {
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(email)) {
+      temp.email = 'Enter a valid email.';
+      valid = false;
     }
+  }
 
-    if (!email || email.trim().length < 1) {
-      setEmailError('Email is required.');
-      hasError = true;
-    } else {
-      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-      if (!emailRegex.test(email)) {
-        setEmailError('Please enter a valid email address.');
-        hasError = true;
-      }
+  if (!address || address.trim().length < 1) {
+    temp.address = 'Address is required.';
+    valid = false;
+  }
+
+  if (!password || password.length < 6) {
+    temp.password = 'Password must be at least 6 characters.';
+    valid = false;
+  }
+
+  if (!confirmPassword) {
+    temp.confirmPassword = 'Confirm your password.';
+    valid = false;
+  } else if (password !== confirmPassword) {
+    temp.confirmPassword = 'Passwords do not match.';
+    valid = false;
+  }
+
+  setErrors(temp);
+  setNameError(temp.name || '');
+  setEmailError(temp.email || '');
+  setAddressError(temp.address || '');
+  setPasswordError(temp.password || '');
+  setConfirmPasswordError(temp.confirmPassword || '');
+  return valid;
+};
+
+const validateStep2 = () => {
+  let temp = {};
+  let valid = true;
+
+  if (!aadharNumber || aadharNumber.length !== 12) {
+    temp.aadharNumber = 'Aadhar must be 12 digits.';
+    valid = false;
+  }
+
+  if (!mobileNumber || mobileNumber.length !== 10) {
+    temp.mobileNumber = 'Mobile must be 10 digits.';
+    valid = false;
+  } else if (!/^[6-9]/.test(mobileNumber)) {
+    temp.mobileNumber = 'Mobile must start with 6-9.';
+    valid = false;
+  }
+
+  if (panCardNumber) {
+    const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+    if (!panRegex.test(panCardNumber)) {
+      temp.panCardNumber = 'Invalid PAN format.';
+      valid = false;
     }
+  }
 
-    if (!address || address.trim().length < 1) {
-      setAddressError('Address is required.');
-      hasError = true;
-    }
+  setErrors(temp);
+  setAadharError(temp.aadharNumber || '');
+  setMobileError(temp.mobileNumber || '');
+  setPanCardError(temp.panCardNumber || '');
+  return valid;
+};
 
-    if (!password || password.length < 6) {
-      setPasswordError('Password must be at least 6 characters.');
-      hasError = true;
-    }
+const handleNext = () => {
+  if (currentStep === 1) {
+    const ok = validateStep1();
+    if (!ok) return;
+    setCurrentStep(2);
+  }
 
-    if (!confirmPassword) {
-      setConfirmPasswordError('Please confirm your password.');
-      hasError = true;
-    } else if (password !== confirmPassword) {
-      setConfirmPasswordError('Passwords do not match.');
-      hasError = true;
-    }
-
-    return !hasError;
-  };
-
-  const validateStep2 = () => {
-    let hasError = false;
-
-    if (!aadharNumber || aadharNumber.length !== 12) {
-      setAadharError('Aadhar number must be exactly 12 digits.');
-      hasError = true;
-    }
-
-    if (!mobileNumber || mobileNumber.length !== 10) {
-      setMobileError('Mobile number must be 10 digits.');
-      hasError = true;
-    }
-
-    if (panCardNumber && panCardNumber.length > 0) {
-      if (panCardNumber.length !== 10) {
-        setPanCardError(
-          'PAN card must be 10 characters (5 letters, 4 digits, 1 letter).',
-        );
-        hasError = true;
-      } else {
-        const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
-        if (!panRegex.test(panCardNumber)) {
-          setPanCardError('Invalid PAN card format.');
-          hasError = true;
-        }
-      }
-    }
-
-    if (roleId !== 0 && roleId !== 1 && roleId !== 2) {
-      hasError = true;
-    }
-
-    return !hasError;
-  };
-
-  const handleNext = () => {
-    if (currentStep === 1) {
-      if (!validateStep1()) {
-        Toast.show({
-          type: 'error',
-          position: 'top',
-          text1: 'Please fill in all fields correctly.',
-        });
-        return;
-      }
-      setCurrentStep(2);
-    } else if (currentStep === 2) {
-      if (!validateStep2()) {
-        Toast.show({
-          type: 'error',
-          position: 'top',
-          text1: 'Please fill in all fields correctly.',
-        });
-        return;
-      }
-      setCurrentStep(3);
-    }
-  };
+  if (currentStep === 2) {
+    const ok = validateStep2();
+    if (!ok) return;
+    setCurrentStep(3);
+  }
+};
 
   const handleBack = () => {
     if (currentStep > 1) {

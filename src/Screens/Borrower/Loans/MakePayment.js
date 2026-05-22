@@ -391,16 +391,19 @@ export default function MakePayment() {
         await dispatch(getBorrowerLoans({ borrowerId: user._id })).unwrap();
       }
 
-      // Loan totals will be updated only after lender confirms
-      navigation.navigate('BorrowerLoanDetails', { 
+      // Update the previous screen's (BorrowerLoanDetails) data
+      navigation.setParams({
         loan: {
           ...loan,
-          // Use loanSummary for current values (before lender confirmation)
           totalPaid: verifyResponse.data?.loanSummary?.currentPaidAmount ?? loan.totalPaid,
           remainingAmount: verifyResponse.data?.loanSummary?.currentRemainingAmount ?? loan.remainingAmount,
           paymentStatus: verifyResponse.data?.loanSummary?.loanStatus || loan.paymentStatus,
+          updatedAt: new Date().toISOString(),
         }
       });
+
+    // Go back to the updated screen
+    navigation.goBack();
 
     } catch (error) {
       setLoading(false);
@@ -568,16 +571,26 @@ export default function MakePayment() {
         text2: response.message || 'Payment submitted successfully. Awaiting lender confirmation.',
       });
 
+      // After successful payment
+
       // Refresh loan data after successful payment
-      // Navigate back to loan details with updated loan data
-      navigation.navigate('BorrowerLoanDetails', { 
-        loan: {
-          ...loan,
-          totalPaid: response.data?.totalPaid || loan.totalPaid,
-          remainingAmount: response.data?.remainingAmount || loan.remainingAmount,
-          paymentStatus: response.data?.paymentStatus || loan.paymentStatus,
-        }
-      });
+          if (user?._id) {
+            await dispatch(getBorrowerLoans({ borrowerId: user._id })).unwrap();
+          }
+
+        // Update the previous screen's (BorrowerLoanDetails) data
+        navigation.setParams({
+          loan: {
+            ...loan,
+            totalPaid: response.data?.totalPaid || loan.totalPaid,
+            remainingAmount: response.data?.remainingAmount || loan.remainingAmount,
+            paymentStatus: response.data?.paymentStatus || loan.paymentStatus,
+            updatedAt: new Date().toISOString(),
+          }
+        });
+
+        // Go back to the updated screen
+        navigation.goBack();
     } catch (error) {
       console.error('Payment submission error:', error);
       console.error('Error details:', {

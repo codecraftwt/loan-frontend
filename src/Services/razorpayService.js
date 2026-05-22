@@ -2,7 +2,9 @@ import RazorpayCheckout from 'react-native-razorpay';
 import { Alert } from 'react-native';
 
 // Your Razorpay key (use test key for development)
-const RAZORPAY_KEY = 'rzp_test_eXyUgxz2VtmepU'; 
+//old test key
+// const RAZORPAY_KEY = 'rzp_test_eXyUgxz2VtmepU'; 
+const RAZORPAY_KEY = 'rzp_test_SN1JoYwhNqRjPV'; 
 
 /**
  * Normalize the various error shapes Razorpay SDK can return into a
