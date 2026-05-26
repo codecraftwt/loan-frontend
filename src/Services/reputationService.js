@@ -15,7 +15,7 @@ export const reputationAPI = {
       if (!aadhaarNumber || aadhaarNumber.length !== 12) {
         throw new Error('Invalid Aadhaar number. Must be 12 digits.');
       }
-
+      
       const response = await axiosInstance.get(
         `lender/loans/reputation/${aadhaarNumber}`
       );
@@ -32,6 +32,7 @@ export const reputationAPI = {
         error: response.data?.message || 'Failed to fetch reputation',
       };
     } catch (error) {
+      console.error('Reputation API error:', error.response?.data || error.message);
       // Handle 404 - borrower not found or no loan history (expected case, don't log as error)
       if (error.response?.status === 404) {
         return {

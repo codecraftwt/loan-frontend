@@ -45,16 +45,19 @@ const ORANGE_THEME = {
 
 const LoanHistoryCard = ({ loan, onPress }) => {
   const [scaleAnim] = useState(new Animated.Value(1));
-  
+
   // Check if loan is overdue
-  const isOverdue = loan.loanEndDate &&
+  const isOverdue =
+    loan.loanEndDate &&
     moment(loan.loanEndDate).isBefore(moment(), 'day') &&
     loan.remainingAmount > 0;
-  
-  // Get effective status
-  const effectiveStatus = isOverdue ? 'overdue' : (loan.paymentStatus || 'pending');
 
-  const getStatusColor = (status) => {
+  // Get effective status
+  const effectiveStatus = isOverdue
+    ? 'overdue'
+    : loan.paymentStatus || 'pending';
+
+  const getStatusColor = status => {
     switch (status?.toLowerCase()) {
       case 'paid':
         return ORANGE_THEME.success;
@@ -69,7 +72,7 @@ const LoanHistoryCard = ({ loan, onPress }) => {
     }
   };
 
-  const getStatusIcon = (status) => {
+  const getStatusIcon = status => {
     switch (status?.toLowerCase()) {
       case 'paid':
         return 'check-circle';
@@ -104,13 +107,13 @@ const LoanHistoryCard = ({ loan, onPress }) => {
         style={[
           styles.loanCard,
           isOverdue && styles.overdueCard,
-          { borderLeftColor: getStatusColor(effectiveStatus) }
+          { borderLeftColor: getStatusColor(effectiveStatus) },
         ]}
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        activeOpacity={0.9}>
-        
+        activeOpacity={0.9}
+      >
         {/* Overdue Banner */}
         {isOverdue && (
           <View style={styles.overdueBanner}>
@@ -125,26 +128,42 @@ const LoanHistoryCard = ({ loan, onPress }) => {
         <View style={styles.loanCardHeader}>
           <View style={styles.loanInfo}>
             <View style={styles.amountContainer}>
-              <Icon name="account-balance-wallet" size={20} color={ORANGE_THEME.primary} />
-              <Text style={styles.loanAmount}>₹{loan.amount?.toLocaleString() || '0'}</Text>
+              <Icon
+                name="account-balance-wallet"
+                size={20}
+                color={ORANGE_THEME.primary}
+              />
+              <Text style={styles.loanAmount}>
+                ₹{loan.amount?.toLocaleString() || '0'}
+              </Text>
             </View>
-            <Text style={styles.loanPurpose}>{loan.purpose || 'Loan Amount'}</Text>
+            <Text style={styles.loanPurpose}>
+              {loan.purpose || 'Loan Amount'}
+            </Text>
           </View>
-          <View style={[
-            styles.statusBadge,
-            {
-              backgroundColor: getStatusColor(effectiveStatus) + '15',
-              borderLeftWidth: 4,
-              borderLeftColor: getStatusColor(effectiveStatus),
-            }
-          ]}>
+          <View
+            style={[
+              styles.statusBadge,
+              {
+                backgroundColor: getStatusColor(effectiveStatus) + '15',
+                borderLeftWidth: 4,
+                borderLeftColor: getStatusColor(effectiveStatus),
+              },
+            ]}
+          >
             <Icon
               name={getStatusIcon(effectiveStatus)}
               size={18}
               color={getStatusColor(effectiveStatus)}
             />
-            <Text style={[styles.statusText, { color: getStatusColor(effectiveStatus) }]}>
-              {effectiveStatus?.charAt(0).toUpperCase() + effectiveStatus?.slice(1) || 'Unknown'}
+            <Text
+              style={[
+                styles.statusText,
+                { color: getStatusColor(effectiveStatus) },
+              ]}
+            >
+              {effectiveStatus?.charAt(0).toUpperCase() +
+                effectiveStatus?.slice(1) || 'Unknown'}
             </Text>
           </View>
         </View>
@@ -157,17 +176,29 @@ const LoanHistoryCard = ({ loan, onPress }) => {
                   styles.progressFill,
                   {
                     width: `${((loan.totalPaid || 0) / loan.amount) * 100}%`,
-                    backgroundColor: getStatusColor(effectiveStatus)
-                  }
+                    backgroundColor: getStatusColor(effectiveStatus),
+                  },
                 ]}
               />
             </View>
             <View style={styles.progressLabels}>
-              <Text style={[styles.progressLabel, { color: ORANGE_THEME.success }]}>
+              <Text
+                style={[styles.progressLabel, { color: ORANGE_THEME.success }]}
+              >
                 Paid: ₹{loan.totalPaid?.toLocaleString('en-IN') || '0'}
               </Text>
-              <Text style={[styles.progressLabel, { color: isOverdue ? ORANGE_THEME.error : ORANGE_THEME.warning }]}>
-                Remaining: ₹{loan.remainingAmount?.toLocaleString('en-IN') || loan.amount}
+              <Text
+                style={[
+                  styles.progressLabel,
+                  {
+                    color: isOverdue
+                      ? ORANGE_THEME.error
+                      : ORANGE_THEME.warning,
+                  },
+                ]}
+              >
+                Remaining: ₹
+                {loan.remainingAmount?.toLocaleString('en-IN') || loan.amount}
               </Text>
             </View>
           </View>
@@ -175,16 +206,27 @@ const LoanHistoryCard = ({ loan, onPress }) => {
           <View style={styles.detailRow}>
             <View style={styles.detailItem}>
               <View style={styles.detailIconContainer}>
-                <Icon name="event" size={16} color={isOverdue ? ORANGE_THEME.error : ORANGE_THEME.text} />
+                <Icon
+                  name="event"
+                  size={16}
+                  color={isOverdue ? ORANGE_THEME.error : ORANGE_THEME.text}
+                />
               </View>
               <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>Due Date</Text>
-                <Text style={[styles.detailValue, { color: isOverdue ? ORANGE_THEME.error : ORANGE_THEME.text }]}>
+                <Text
+                  style={[
+                    styles.detailValue,
+                    {
+                      color: isOverdue ? ORANGE_THEME.error : ORANGE_THEME.text,
+                    },
+                  ]}
+                >
                   {moment(loan.loanEndDate).format('DD MMM YYYY')}
                 </Text>
               </View>
             </View>
-            
+
             {loan.lenderId && (
               <View style={styles.detailItem}>
                 <View style={styles.detailIconContainer}>
@@ -202,14 +244,22 @@ const LoanHistoryCard = ({ loan, onPress }) => {
 
           <View style={styles.loanFooter}>
             <View style={styles.dateContainer}>
-              <Icon name="access-time" size={14} color={ORANGE_THEME.textLight} />
+              <Icon
+                name="access-time"
+                size={14}
+                color={ORANGE_THEME.textLight}
+              />
               <Text style={styles.loanDate}>
                 {moment(loan.createdAt).format('DD MMM YYYY')}
               </Text>
             </View>
             <View style={styles.viewButton}>
               <Text style={styles.viewButtonText}>View Details</Text>
-              <Icon name="arrow-forward" size={16} color={ORANGE_THEME.primary} />
+              <Icon
+                name="arrow-forward"
+                size={16}
+                color={ORANGE_THEME.primary}
+              />
             </View>
           </View>
         </View>
@@ -218,7 +268,13 @@ const LoanHistoryCard = ({ loan, onPress }) => {
   );
 };
 
-const FilterModal = ({ visible, onClose, filters, setFilters, applyFilters }) => {
+const FilterModal = ({
+  visible,
+  onClose,
+  filters,
+  setFilters,
+  applyFilters,
+}) => {
   const [localFilters, setLocalFilters] = useState(filters);
   const [isStartDatePickerVisible, setStartDatePickerVisible] = useState(false);
   const [isEndDatePickerVisible, setEndDatePickerVisible] = useState(false);
@@ -233,10 +289,10 @@ const FilterModal = ({ visible, onClose, filters, setFilters, applyFilters }) =>
   // Check if any filter has a value
   const hasActiveFilters = Boolean(
     localFilters.status ||
-    localFilters.startDate ||
-    localFilters.endDate ||
-    localFilters.minAmount ||
-    localFilters.maxAmount
+      localFilters.startDate ||
+      localFilters.endDate ||
+      localFilters.minAmount ||
+      localFilters.maxAmount,
   );
 
   const handleApply = () => {
@@ -260,13 +316,19 @@ const FilterModal = ({ visible, onClose, filters, setFilters, applyFilters }) =>
     }
   };
 
-  const handleStartDateConfirm = (date) => {
-    setLocalFilters({ ...localFilters, startDate: moment(date).format('YYYY-MM-DD') });
+  const handleStartDateConfirm = date => {
+    setLocalFilters({
+      ...localFilters,
+      startDate: moment(date).format('YYYY-MM-DD'),
+    });
     setStartDatePickerVisible(false);
   };
 
-  const handleEndDateConfirm = (date) => {
-    setLocalFilters({ ...localFilters, endDate: moment(date).format('YYYY-MM-DD') });
+  const handleEndDateConfirm = date => {
+    setLocalFilters({
+      ...localFilters,
+      endDate: moment(date).format('YYYY-MM-DD'),
+    });
     setEndDatePickerVisible(false);
   };
 
@@ -283,29 +345,28 @@ const FilterModal = ({ visible, onClose, filters, setFilters, applyFilters }) =>
       visible={visible}
       transparent={true}
       animationType="slide"
-      onRequestClose={onClose}>
+      onRequestClose={onClose}
+    >
       <View style={styles.filterModalOverlay}>
         {/* Backdrop - closes modal when pressed */}
         <Pressable style={styles.filterModalBackdrop} onPress={onClose} />
-        
+
         {/* Modal Content - doesn't close when interacting */}
         <View style={styles.filterModalContent}>
           <View style={styles.filterModalHandle} />
-          
+
           <View style={styles.filterModalHeader}>
             <View style={styles.filterHeaderLeft}>
               <Icon name="filter-list" size={24} color={ORANGE_THEME.primary} />
               <Text style={styles.filterModalTitle}>Filter Loans</Text>
             </View>
-            <TouchableOpacity 
-              style={styles.closeButton}
-              onPress={onClose}>
+            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
               <Icon name="close" size={24} color={ORANGE_THEME.textLight} />
             </TouchableOpacity>
           </View>
 
-          <ScrollView 
-            style={styles.filterScroll} 
+          <ScrollView
+            style={styles.filterScroll}
             showsVerticalScrollIndicator={false}
             nestedScrollEnabled={true}
             keyboardShouldPersistTaps="handled"
@@ -317,18 +378,25 @@ const FilterModal = ({ visible, onClose, filters, setFilters, applyFilters }) =>
                 <Text style={styles.filterLabel}>Status</Text>
               </View>
               <View style={styles.statusFilterGrid}>
-                {statusOptions.map((option) => (
+                {statusOptions.map(option => (
                   <TouchableOpacity
                     key={option.value}
                     style={[
                       styles.statusOption,
-                      localFilters.status === option.value && styles.statusOptionSelected,
+                      localFilters.status === option.value &&
+                        styles.statusOptionSelected,
                     ]}
-                    onPress={() => setLocalFilters({ ...localFilters, status: option.value })}>
-                    <Text style={[
-                      styles.statusOptionText,
-                      localFilters.status === option.value && styles.statusOptionTextSelected,
-                    ]}>
+                    onPress={() =>
+                      setLocalFilters({ ...localFilters, status: option.value })
+                    }
+                  >
+                    <Text
+                      style={[
+                        styles.statusOptionText,
+                        localFilters.status === option.value &&
+                          styles.statusOptionTextSelected,
+                      ]}
+                    >
                       {option.label}
                     </Text>
                   </TouchableOpacity>
@@ -339,32 +407,53 @@ const FilterModal = ({ visible, onClose, filters, setFilters, applyFilters }) =>
             {/* Amount Range */}
             <View style={styles.filterSection}>
               <View style={styles.sectionHeader}>
-                <Icon name="attach-money" size={18} color={ORANGE_THEME.primary} />
+                <Icon
+                  name="attach-money"
+                  size={18}
+                  color={ORANGE_THEME.primary}
+                />
                 <Text style={styles.filterLabel}>Amount Range</Text>
               </View>
               <View style={styles.amountInputRow}>
                 <View style={styles.amountInputContainer}>
                   <View style={styles.inputWithIcon}>
-                    <Icon name="arrow-downward" size={16} color={ORANGE_THEME.textLight} />
+                    <Icon
+                      name="arrow-downward"
+                      size={16}
+                      color={ORANGE_THEME.textLight}
+                    />
                     <TextInput
                       style={styles.amountInput}
                       placeholder="Min"
                       value={localFilters.minAmount}
-                      onChangeText={(text) => setLocalFilters({ ...localFilters, minAmount: text })}
+                      onChangeText={text =>
+                        setLocalFilters({ ...localFilters, minAmount: text })
+                      }
                       keyboardType="numeric"
                       placeholderTextColor="#9CA3AF"
                     />
                   </View>
                 </View>
-                <Icon name="remove" size={20} color={ORANGE_THEME.primary} style={styles.rangeSeparator} />
+                <Icon
+                  name="remove"
+                  size={20}
+                  color={ORANGE_THEME.primary}
+                  style={styles.rangeSeparator}
+                />
                 <View style={styles.amountInputContainer}>
                   <View style={styles.inputWithIcon}>
-                    <Icon name="arrow-upward" size={16} color={ORANGE_THEME.textLight} />
+                    <Icon
+                      name="arrow-upward"
+                      size={16}
+                      color={ORANGE_THEME.textLight}
+                    />
                     <TextInput
                       style={styles.amountInput}
                       placeholder="Max"
                       value={localFilters.maxAmount}
-                      onChangeText={(text) => setLocalFilters({ ...localFilters, maxAmount: text })}
+                      onChangeText={text =>
+                        setLocalFilters({ ...localFilters, maxAmount: text })
+                      }
                       keyboardType="numeric"
                       placeholderTextColor="#9CA3AF"
                     />
@@ -376,7 +465,11 @@ const FilterModal = ({ visible, onClose, filters, setFilters, applyFilters }) =>
             {/* Date Range */}
             <View style={[styles.filterSection, { borderBottomWidth: 0 }]}>
               <View style={styles.sectionHeader}>
-                <Icon name="calendar-today" size={18} color={ORANGE_THEME.primary} />
+                <Icon
+                  name="calendar-today"
+                  size={18}
+                  color={ORANGE_THEME.primary}
+                />
                 <Text style={styles.filterLabel}>Date Range</Text>
               </View>
               <View style={styles.dateInputRow}>
@@ -386,29 +479,46 @@ const FilterModal = ({ visible, onClose, filters, setFilters, applyFilters }) =>
                   activeOpacity={0.7}
                 >
                   <View style={styles.inputWithIcon}>
-                    <Icon name="event" size={16} color={ORANGE_THEME.textLight} />
-                    <Text style={[
-                      styles.dateInputText,
-                      !localFilters.startDate && styles.dateInputPlaceholder
-                    ]}>
+                    <Icon
+                      name="event"
+                      size={16}
+                      color={ORANGE_THEME.textLight}
+                    />
+                    <Text
+                      style={[
+                        styles.dateInputText,
+                        !localFilters.startDate && styles.dateInputPlaceholder,
+                      ]}
+                    >
                       {localFilters.startDate
                         ? moment(localFilters.startDate).format('DD MMM YYYY')
                         : 'Start Date'}
                     </Text>
                   </View>
                 </TouchableOpacity>
-                <Icon name="arrow-right-alt" size={20} color={ORANGE_THEME.primary} style={styles.rangeSeparator} />
-                <TouchableOpacity 
+                <Icon
+                  name="arrow-right-alt"
+                  size={20}
+                  color={ORANGE_THEME.primary}
+                  style={styles.rangeSeparator}
+                />
+                <TouchableOpacity
                   style={styles.dateInputContainer}
                   onPress={() => setEndDatePickerVisible(true)}
                   activeOpacity={0.7}
                 >
                   <View style={styles.inputWithIcon}>
-                    <Icon name="event" size={16} color={ORANGE_THEME.textLight} />
-                    <Text style={[
-                      styles.dateInputText,
-                      !localFilters.endDate && styles.dateInputPlaceholder
-                    ]}>
+                    <Icon
+                      name="event"
+                      size={16}
+                      color={ORANGE_THEME.textLight}
+                    />
+                    <Text
+                      style={[
+                        styles.dateInputText,
+                        !localFilters.endDate && styles.dateInputPlaceholder,
+                      ]}
+                    >
                       {localFilters.endDate
                         ? moment(localFilters.endDate).format('DD MMM YYYY')
                         : 'End Date'}
@@ -422,29 +532,37 @@ const FilterModal = ({ visible, onClose, filters, setFilters, applyFilters }) =>
           <View style={styles.filterModalActions}>
             <TouchableOpacity
               style={[styles.filterButton, styles.resetButton]}
-              onPress={handleResetOrClose}>
+              onPress={handleResetOrClose}
+            >
               <Icon
-                name={hasActiveFilters ? "refresh" : "close"}
+                name={hasActiveFilters ? 'refresh' : 'close'}
                 size={18}
                 color={ORANGE_THEME.textLight}
               />
               <Text style={styles.resetButtonText}>
-                {hasActiveFilters ? "Reset" : "Close"}
+                {hasActiveFilters ? 'Reset' : 'Close'}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
                 styles.filterButton,
                 styles.applyButton,
-                !hasActiveFilters && styles.applyButtonDisabled
+                !hasActiveFilters && styles.applyButtonDisabled,
               ]}
               onPress={handleApply}
-              disabled={!hasActiveFilters}>
-              <Icon name="check" size={18} color={hasActiveFilters ? "#FFFFFF" : "#9CA3AF"} />
-              <Text style={[
-                styles.applyButtonText,
-                !hasActiveFilters && styles.applyButtonTextDisabled
-              ]}>
+              disabled={!hasActiveFilters}
+            >
+              <Icon
+                name="check"
+                size={18}
+                color={hasActiveFilters ? '#FFFFFF' : '#9CA3AF'}
+              />
+              <Text
+                style={[
+                  styles.applyButtonText,
+                  !hasActiveFilters && styles.applyButtonTextDisabled,
+                ]}
+              >
                 Apply Filters
               </Text>
             </TouchableOpacity>
@@ -458,16 +576,24 @@ const FilterModal = ({ visible, onClose, filters, setFilters, applyFilters }) =>
         mode="date"
         onConfirm={handleStartDateConfirm}
         onCancel={() => setStartDatePickerVisible(false)}
-        date={localFilters.startDate ? new Date(localFilters.startDate) : new Date()}
-        maximumDate={localFilters.endDate ? new Date(localFilters.endDate) : new Date()}
+        date={
+          localFilters.startDate ? new Date(localFilters.startDate) : new Date()
+        }
+        maximumDate={
+          localFilters.endDate ? new Date(localFilters.endDate) : new Date()
+        }
       />
       <DateTimePickerModal
         isVisible={isEndDatePickerVisible}
         mode="date"
         onConfirm={handleEndDateConfirm}
         onCancel={() => setEndDatePickerVisible(false)}
-        date={localFilters.endDate ? new Date(localFilters.endDate) : new Date()}
-        minimumDate={localFilters.startDate ? new Date(localFilters.startDate) : undefined}
+        date={
+          localFilters.endDate ? new Date(localFilters.endDate) : new Date()
+        }
+        minimumDate={
+          localFilters.startDate ? new Date(localFilters.startDate) : undefined
+        }
       />
     </Modal>
   );
@@ -484,7 +610,7 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
     summary: historySummary,
     pagination: historyPagination,
   } = useSelector(state => state.borrowerLoans);
-  
+
   const { pendingPayments } = useSelector(state => state.lenderPayments);
   const user = useSelector(state => state.auth.user);
   const isLender = user?.roleId === 1;
@@ -504,10 +630,12 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [showReputation, setShowReputation] = useState(false);
 
-  const aadhaarNumber = borrowerDetails?.aadharCardNo ||
+  const aadhaarNumber =
+    borrowerDetails?.aadharCardNo ||
     borrowerDetails?.aadhaarNumber ||
-    (borrowerHistory && borrowerHistory.length > 0 ?
-      (borrowerHistory[0].aadhaarNumber || borrowerHistory[0].aadharCardNo) : null);
+    (borrowerHistory && borrowerHistory.length > 0
+      ? borrowerHistory[0].aadhaarNumber || borrowerHistory[0].aadharCardNo
+      : null);
 
   // Debounce search query
   useEffect(() => {
@@ -518,20 +646,25 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const loadHistory = useCallback((page = 1) => {
-    if (!borrowerId) return;
+  const loadHistory = useCallback(
+    (page = 1) => {
+      if (!borrowerId) return;
 
-    const params = {
-      page,
-      limit: 100,
-      ...filters,
-    };
+      const params = {
+        page,
+        limit: 100,
+        ...filters,
+      };
 
-    dispatch(getBorrowerLoansById({
-      borrowerId,
-      params,
-    }));
-  }, [borrowerId, dispatch, filters]);
+      dispatch(
+        getBorrowerLoansById({
+          borrowerId,
+          params,
+        }),
+      );
+    },
+    [borrowerId, dispatch, filters],
+  );
 
   useEffect(() => {
     loadHistory(1);
@@ -548,7 +681,7 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
     }
 
     const query = debouncedSearchQuery.trim().toLowerCase();
-    
+
     return borrowerHistory.filter(loan => {
       // Search by lender name
       const lenderName = loan.lenderId?.userName?.toLowerCase() || '';
@@ -572,68 +705,83 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
       if (isLender) {
         dispatch(getPendingPayments({ page: 1, limit: 100 }));
       }
-    }, [dispatch, isLender])
+    }, [dispatch, isLender]),
   );
 
   // Helper function to get pending payments for this borrower
   const getBorrowerPendingPayments = useCallback(() => {
-    if (!isLender || !pendingPayments || !Array.isArray(pendingPayments) || pendingPayments.length === 0) {
+    if (
+      !isLender ||
+      !pendingPayments ||
+      !Array.isArray(pendingPayments) ||
+      pendingPayments.length === 0
+    ) {
       return null;
     }
-    
+
     // Get borrower identifier
     const borrowerName = borrowerDetails?.userName || borrowerDetails?.name;
     const borrowerMobile = borrowerDetails?.mobileNo;
-    const borrowerAadhaar = borrowerDetails?.aadharCardNo || borrowerDetails?.aadhaarNumber;
-    
+    const borrowerAadhaar =
+      borrowerDetails?.aadharCardNo || borrowerDetails?.aadhaarNumber;
+
     if (!borrowerName && !borrowerMobile && !borrowerAadhaar) {
       return null;
     }
-    
+
     // Find loans with pending payments for this borrower
     const borrowerLoans = pendingPayments.filter(loan => {
       // Match by name
-      const nameMatch = (
-        (loan.loanName && borrowerName &&
+      const nameMatch =
+        (loan.loanName &&
+          borrowerName &&
           loan.loanName.toLowerCase() === borrowerName.toLowerCase()) ||
-        (loan.borrowerName && borrowerName &&
-          loan.borrowerName.toLowerCase() === borrowerName.toLowerCase())
-      );
-      
+        (loan.borrowerName &&
+          borrowerName &&
+          loan.borrowerName.toLowerCase() === borrowerName.toLowerCase());
+
       // Match by mobile
-      const mobileMatch = loan.borrowerMobile && borrowerMobile && (
-        loan.borrowerMobile === borrowerMobile ||
-        loan.borrowerMobile === borrowerMobile.replace(/^\+91/, '') ||
-        loan.borrowerMobile.replace(/^\+91/, '') === borrowerMobile
-      );
-      
+      const mobileMatch =
+        loan.borrowerMobile &&
+        borrowerMobile &&
+        (loan.borrowerMobile === borrowerMobile ||
+          loan.borrowerMobile === borrowerMobile.replace(/^\+91/, '') ||
+          loan.borrowerMobile.replace(/^\+91/, '') === borrowerMobile);
+
       // Match by Aadhaar
-      const aadhaarMatch = loan.borrowerAadhaar && borrowerAadhaar &&
+      const aadhaarMatch =
+        loan.borrowerAadhaar &&
+        borrowerAadhaar &&
         loan.borrowerAadhaar === borrowerAadhaar;
-      
+
       return nameMatch || mobileMatch || aadhaarMatch;
     });
-    
+
     if (borrowerLoans.length === 0) return null;
-    
+
     // Aggregate all pending payments
     let totalPendingCount = 0;
     let totalPendingAmount = 0;
-    
+
     borrowerLoans.forEach(loan => {
-      if (loan.pendingPayments && Array.isArray(loan.pendingPayments) && loan.pendingPayments.length > 0) {
+      if (
+        loan.pendingPayments &&
+        Array.isArray(loan.pendingPayments) &&
+        loan.pendingPayments.length > 0
+      ) {
         totalPendingCount += loan.pendingPayments.length;
         loan.pendingPayments.forEach(payment => {
-          const amount = typeof payment.amount === 'number'
-            ? payment.amount
-            : parseFloat(payment.amount) || 0;
+          const amount =
+            typeof payment.amount === 'number'
+              ? payment.amount
+              : parseFloat(payment.amount) || 0;
           totalPendingAmount += amount;
         });
       }
     });
-    
+
     if (totalPendingCount === 0) return null;
-    
+
     return {
       count: totalPendingCount,
       amount: totalPendingAmount,
@@ -648,33 +796,39 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
     setRefreshing(false);
   }, [loadHistory]);
 
-  const handleLoanCardPress = (loan) => {
+  const handleLoanCardPress = loan => {
     if (isLender && !hasActivePlan) {
       return;
     }
-    navigation.navigate('LoanDetailScreen', { loanId: loan._id, loanDetails: loan });
+    navigation.navigate('LoanDetailScreen', {
+      loanId: loan._id,
+      loanDetails: loan,
+    });
   };
 
-  const applyFilters = (newFilters) => {
+  const applyFilters = newFilters => {
     setFilters(newFilters);
   };
 
   const handleLoadMore = () => {
-    if (historyPagination.currentPage < historyPagination.totalPages && !historyLoading) {
+    if (
+      historyPagination.currentPage < historyPagination.totalPages &&
+      !historyLoading
+    ) {
       loadHistory(historyPagination.currentPage + 1);
     }
   };
 
-  const formatCurrency = (amount) => {
+  const formatCurrency = amount => {
     return `₹${amount?.toLocaleString('en-IN') || '0'}`;
   };
 
   if (!borrowerId) {
     return (
       <View style={styles.container}>
-        <Header 
-          title="Loan History" 
-          showBackButton 
+        <Header
+          title="Loan History"
+          showBackButton
           headerStyle={{ backgroundColor: ORANGE_THEME.primary }}
         />
         <View style={styles.errorContainer}>
@@ -687,19 +841,26 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
 
   return (
     <View style={styles.container}>
-      <Header 
-        title="Loan History" 
-        showBackButton 
+      <Header
+        title="Loan History"
+        showBackButton
         headerStyle={{ backgroundColor: ORANGE_THEME.primary }}
       />
 
       {/* Search and Filter Bar */}
-      <View style={[
-        styles.searchFilterContainer,
-        isLender && !hasActivePlan && { opacity: 0.5 }
-      ]}>
+      <View
+        style={[
+          styles.searchFilterContainer,
+          isLender && !hasActivePlan && { opacity: 0.5 },
+        ]}
+      >
         <View style={styles.searchContainer}>
-          <Icon name="search" size={22} color={ORANGE_THEME.primary} style={styles.searchIcon} />
+          <Icon
+            name="search"
+            size={22}
+            color={ORANGE_THEME.primary}
+            style={styles.searchIcon}
+          />
           <TextInput
             style={styles.searchInput}
             placeholder="Search by lender or amount..."
@@ -716,9 +877,14 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
         </View>
         <TouchableOpacity
           style={styles.filterButtonContainer}
-          onPress={() => setFilterModalVisible(true)}>
+          onPress={() => setFilterModalVisible(true)}
+        >
           <Icon name="tune" size={24} color={ORANGE_THEME.primary} />
-          {(filters.status || filters.startDate || filters.endDate || filters.minAmount || filters.maxAmount) && (
+          {(filters.status ||
+            filters.startDate ||
+            filters.endDate ||
+            filters.minAmount ||
+            filters.maxAmount) && (
             <View style={styles.filterIndicator}>
               <Icon name="circle" size={8} color={ORANGE_THEME.primary} />
             </View>
@@ -730,12 +896,12 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
       <ScrollView
         style={[
           styles.scrollContainer,
-          isLender && !hasActivePlan && { opacity: 0.5 }
+          isLender && !hasActivePlan && { opacity: 0.5 },
         ]}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl 
-            refreshing={refreshing} 
+          <RefreshControl
+            refreshing={refreshing}
             onRefresh={onRefresh}
             colors={[ORANGE_THEME.primary]}
             tintColor={ORANGE_THEME.primary}
@@ -743,28 +909,33 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
           />
         }
         showsVerticalScrollIndicator={false}
-        scrollEnabled={isLender ? hasActivePlan : true}>
-        
+        scrollEnabled={isLender ? hasActivePlan : true}
+      >
         {/* Pending Payments Badge for Lender */}
-        {isLender && borrowerPendingPayments && borrowerPendingPayments.count > 0 && (
-          <View style={styles.pendingPaymentBanner}>
-            <Icon name="notifications" size={20} color="#FFFFFF" />
-            <View style={styles.pendingPaymentBannerContent}>
-              <Text style={styles.pendingPaymentBannerTitle}>
-                {borrowerPendingPayments.count} Pending Payment{borrowerPendingPayments.count !== 1 ? 's' : ''}
-              </Text>
-              <Text style={styles.pendingPaymentBannerSubtitle}>
-                Total: {formatCurrency(borrowerPendingPayments.amount)} awaiting your review
-              </Text>
+        {isLender &&
+          borrowerPendingPayments &&
+          borrowerPendingPayments.count > 0 && (
+            <View style={styles.pendingPaymentBanner}>
+              <Icon name="notifications" size={20} color="#FFFFFF" />
+              <View style={styles.pendingPaymentBannerContent}>
+                <Text style={styles.pendingPaymentBannerTitle}>
+                  {borrowerPendingPayments.count} Pending Payment
+                  {borrowerPendingPayments.count !== 1 ? 's' : ''}
+                </Text>
+                <Text style={styles.pendingPaymentBannerSubtitle}>
+                  Total: {formatCurrency(borrowerPendingPayments.amount)}{' '}
+                  awaiting your review
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.pendingPaymentButton}
+                onPress={() => navigation.navigate('PendingPayments')}
+              >
+                <Text style={styles.pendingPaymentButtonText}>Review</Text>
+                <Icon name="arrow-forward" size={16} color="#FFFFFF" />
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              style={styles.pendingPaymentButton}
-              onPress={() => navigation.navigate('PendingPayments')}>
-              <Text style={styles.pendingPaymentButtonText}>Review</Text>
-              <Icon name="arrow-forward" size={16} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
-        )}
+          )}
 
         {/* Summary Section - Hide when searching */}
         {historySummary && !debouncedSearchQuery && (
@@ -774,35 +945,79 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
                 <Icon name="analytics" size={24} color={ORANGE_THEME.primary} />
                 <Text style={styles.summaryTitle}>Loan Overview</Text>
               </View>
-              <TouchableOpacity style={styles.refreshButton} onPress={onRefresh}>
+              <TouchableOpacity
+                style={styles.refreshButton}
+                onPress={onRefresh}
+              >
                 <Icon name="refresh" size={20} color={ORANGE_THEME.primary} />
               </TouchableOpacity>
             </View>
-            
+
             <View style={styles.summaryCards}>
-              <View style={[styles.summaryCard, { backgroundColor: ORANGE_THEME.primaryLight }]}>
-                <View style={[styles.summaryIconContainer, { backgroundColor: ORANGE_THEME.primary + '20' }]}>
+              <View
+                style={[
+                  styles.summaryCard,
+                  { backgroundColor: ORANGE_THEME.primaryLight },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.summaryIconContainer,
+                    { backgroundColor: ORANGE_THEME.primary + '20' },
+                  ]}
+                >
                   <Icon name="receipt" size={20} color={ORANGE_THEME.primary} />
                 </View>
-                <Text style={styles.summaryNumber}>{historySummary.totalLoans || 0}</Text>
+                <Text style={styles.summaryNumber}>
+                  {historySummary.totalLoans || 0}
+                </Text>
                 <Text style={styles.summaryLabel}>Total Loans</Text>
               </View>
-              
-              <View style={[styles.summaryCard, { backgroundColor: '#EFF6FF' }]}>
-                <View style={[styles.summaryIconContainer, { backgroundColor: ORANGE_THEME.info + '20' }]}>
-                  <Icon name="trending-up" size={20} color={ORANGE_THEME.info} />
+
+              <View
+                style={[styles.summaryCard, { backgroundColor: '#EFF6FF' }]}
+              >
+                <View
+                  style={[
+                    styles.summaryIconContainer,
+                    { backgroundColor: ORANGE_THEME.info + '20' },
+                  ]}
+                >
+                  <Icon
+                    name="trending-up"
+                    size={20}
+                    color={ORANGE_THEME.info}
+                  />
                 </View>
-                <Text style={[styles.summaryNumber, { color: ORANGE_THEME.info }]}>
+                <Text
+                  style={[styles.summaryNumber, { color: ORANGE_THEME.info }]}
+                >
                   {historySummary.activeLoans || 0}
                 </Text>
                 <Text style={styles.summaryLabel}>Active</Text>
               </View>
-              
-              <View style={[styles.summaryCard, { backgroundColor: '#FEF3C7' }]}>
-                <View style={[styles.summaryIconContainer, { backgroundColor: ORANGE_THEME.warning + '20' }]}>
-                  <Icon name="check-circle" size={20} color={ORANGE_THEME.warning} />
+
+              <View
+                style={[styles.summaryCard, { backgroundColor: '#FEF3C7' }]}
+              >
+                <View
+                  style={[
+                    styles.summaryIconContainer,
+                    { backgroundColor: ORANGE_THEME.warning + '20' },
+                  ]}
+                >
+                  <Icon
+                    name="check-circle"
+                    size={20}
+                    color={ORANGE_THEME.warning}
+                  />
                 </View>
-                <Text style={[styles.summaryNumber, { color: ORANGE_THEME.warning }]}>
+                <Text
+                  style={[
+                    styles.summaryNumber,
+                    { color: ORANGE_THEME.warning },
+                  ]}
+                >
                   {historySummary.completedLoans || 0}
                 </Text>
                 <Text style={styles.summaryLabel}>Completed</Text>
@@ -812,30 +1027,48 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
             <View style={styles.amountSummary}>
               <View style={styles.amountSummaryCard}>
                 <View style={styles.amountHeader}>
-                  <Icon name="account-balance" size={18} color={ORANGE_THEME.info} />
+                  <Icon
+                    name="account-balance"
+                    size={18}
+                    color={ORANGE_THEME.info}
+                  />
                   <Text style={styles.amountLabel}>Total Borrowed</Text>
                 </View>
-                <Text style={[styles.amountValue, { color: ORANGE_THEME.info }]}>
+                <Text
+                  style={[styles.amountValue, { color: ORANGE_THEME.info }]}
+                >
                   {formatCurrency(historySummary.totalAmountBorrowed)}
                 </Text>
               </View>
-              
+
               <View style={styles.amountSummaryCard}>
                 <View style={styles.amountHeader}>
-                  <Icon name="payments" size={18} color={ORANGE_THEME.success} />
+                  <Icon
+                    name="payments"
+                    size={18}
+                    color={ORANGE_THEME.success}
+                  />
                   <Text style={styles.amountLabel}>Total Paid</Text>
                 </View>
-                <Text style={[styles.amountValue, { color: ORANGE_THEME.success }]}>
+                <Text
+                  style={[styles.amountValue, { color: ORANGE_THEME.success }]}
+                >
                   {formatCurrency(historySummary.totalAmountPaid)}
                 </Text>
               </View>
-              
+
               <View style={styles.amountSummaryCard}>
                 <View style={styles.amountHeader}>
-                  <Icon name="pending-actions" size={18} color={ORANGE_THEME.error} />
+                  <Icon
+                    name="pending-actions"
+                    size={18}
+                    color={ORANGE_THEME.error}
+                  />
                   <Text style={styles.amountLabel}>Remaining</Text>
                 </View>
-                <Text style={[styles.amountValue, { color: ORANGE_THEME.error }]}>
+                <Text
+                  style={[styles.amountValue, { color: ORANGE_THEME.error }]}
+                >
                   {formatCurrency(historySummary.totalAmountRemaining)}
                 </Text>
               </View>
@@ -844,40 +1077,59 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
         )}
 
         {/* Reputation Score Section - Hide when searching */}
-        {aadhaarNumber && aadhaarNumber.length === 12 && !debouncedSearchQuery && (
-          <View style={styles.reputationContainer}>
-            <TouchableOpacity
-              style={styles.reputationToggle}
-              onPress={() => setShowReputation(!showReputation)}
-              activeOpacity={0.8}>
-              <View style={styles.reputationHeader}>
-                <View style={styles.reputationTitleContainer}>
-                  <View style={styles.reputationIconContainer}>
-                    <Icon name="verified" size={24} color={ORANGE_THEME.primary} />
+        {/* In the BorrowerLoanHistoryScreen component, update the reputation section: */}
+
+        {/* Reputation Score Section - Only for lenders */}
+        {isLender &&
+          aadhaarNumber &&
+          aadhaarNumber.length === 12 &&
+          !debouncedSearchQuery && (
+            <View style={styles.reputationContainer}>
+              <TouchableOpacity
+                style={styles.reputationToggle}
+                onPress={() => setShowReputation(!showReputation)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.reputationHeader}>
+                  <View style={styles.reputationTitleContainer}>
+                    <View style={styles.reputationIconContainer}>
+                      <Icon
+                        name="verified"
+                        size={24}
+                        color={ORANGE_THEME.primary}
+                      />
+                    </View>
+                    <View>
+                      <Text style={styles.reputationTitle}>
+                        Credit Reputation
+                      </Text>
+                      <Text style={styles.reputationSubtitle}>
+                        View reliability score & insights
+                      </Text>
+                    </View>
                   </View>
-                  <View>
-                    <Text style={styles.reputationTitle}>Credit Reputation</Text>
-                    <Text style={styles.reputationSubtitle}>View reliability score & insights</Text>
-                  </View>
+                  <Icon
+                    name={
+                      showReputation
+                        ? 'keyboard-arrow-up'
+                        : 'keyboard-arrow-down'
+                    }
+                    size={28}
+                    color={ORANGE_THEME.primary}
+                  />
                 </View>
-                <Icon
-                  name={showReputation ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
-                  size={28}
-                  color={ORANGE_THEME.primary}
-                />
-              </View>
-            </TouchableOpacity>
-            
-            {showReputation && (
-              <View style={styles.reputationCardWrapper}>
-                <BorrowerReputationCard 
-                  aadhaarNumber={aadhaarNumber} 
-                  compact={false}
-                />
-              </View>
-            )}
-          </View>
-        )}
+              </TouchableOpacity>
+
+              {showReputation && (
+                <View style={styles.reputationCardWrapper}>
+                  <BorrowerReputationCard
+                    aadhaarNumber={aadhaarNumber}
+                    compact={false}
+                  />
+                </View>
+              )}
+            </View>
+          )}
 
         {/* Loans List Header */}
         <View style={styles.loansHeader}>
@@ -885,7 +1137,8 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
             {debouncedSearchQuery ? 'Search Results' : 'Loan History'}
           </Text>
           <Text style={styles.loansCount}>
-            {filteredLoans.length} {filteredLoans.length === 1 ? 'loan' : 'loans'}
+            {filteredLoans.length}{' '}
+            {filteredLoans.length === 1 ? 'loan' : 'loans'}
             {debouncedSearchQuery && ` for "${debouncedSearchQuery}"`}
           </Text>
         </View>
@@ -915,12 +1168,22 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
             </View>
             <Text style={styles.emptyTitle}>No Loan History Found</Text>
             <Text style={styles.emptySubtitle}>
-              {debouncedSearchQuery || filters.status || filters.startDate || filters.endDate || filters.minAmount || filters.maxAmount ?
-                'No loans match your search criteria. Try adjusting your filters.' :
-                'This borrower has no loan history yet'}
+              {debouncedSearchQuery ||
+              filters.status ||
+              filters.startDate ||
+              filters.endDate ||
+              filters.minAmount ||
+              filters.maxAmount
+                ? 'No loans match your search criteria. Try adjusting your filters.'
+                : 'This borrower has no loan history yet'}
             </Text>
-            {(debouncedSearchQuery || filters.status || filters.startDate || filters.endDate || filters.minAmount || filters.maxAmount) && (
-              <TouchableOpacity 
+            {(debouncedSearchQuery ||
+              filters.status ||
+              filters.startDate ||
+              filters.endDate ||
+              filters.minAmount ||
+              filters.maxAmount) && (
+              <TouchableOpacity
                 style={styles.clearFilterButton}
                 onPress={() => {
                   setSearchQuery('');
@@ -932,7 +1195,8 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
                     minAmount: '',
                     maxAmount: '',
                   });
-                }}>
+                }}
+              >
                 <Icon name="clear" size={16} color={ORANGE_THEME.primary} />
                 <Text style={styles.clearFilterText}>Clear All Filters</Text>
               </TouchableOpacity>
@@ -947,28 +1211,37 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
                 onPress={() => handleLoanCardPress(loan)}
               />
             ))}
-            {!debouncedSearchQuery && historyPagination.currentPage < historyPagination.totalPages && (
-              <TouchableOpacity
-                style={styles.loadMoreButton}
-                onPress={handleLoadMore}
-                disabled={historyLoading}>
-                {historyLoading ? (
-                  <ActivityIndicator size="small" color={ORANGE_THEME.primary} />
-                ) : (
-                  <>
-                    <Text style={styles.loadMoreText}>Load More Loans</Text>
-                    <Icon name="expand-more" size={20} color={ORANGE_THEME.primary} />
-                  </>
-                )}
-              </TouchableOpacity>
-            )}
+            {!debouncedSearchQuery &&
+              historyPagination.currentPage < historyPagination.totalPages && (
+                <TouchableOpacity
+                  style={styles.loadMoreButton}
+                  onPress={handleLoadMore}
+                  disabled={historyLoading}
+                >
+                  {historyLoading ? (
+                    <ActivityIndicator
+                      size="small"
+                      color={ORANGE_THEME.primary}
+                    />
+                  ) : (
+                    <>
+                      <Text style={styles.loadMoreText}>Load More Loans</Text>
+                      <Icon
+                        name="expand-more"
+                        size={20}
+                        color={ORANGE_THEME.primary}
+                      />
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
           </>
         )}
       </ScrollView>
 
       {/* Subscription Restriction Overlay */}
       {isLender && !planLoading && !hasActivePlan && (
-        <SubscriptionRestriction 
+        <SubscriptionRestriction
           message="Purchase a plan to view borrower loan history"
           asOverlay={true}
         />

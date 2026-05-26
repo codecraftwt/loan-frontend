@@ -42,9 +42,14 @@ import { FontFamily, FontSizes } from '../../../constants';
 
 export default function AddDetails({ route, navigation }) {
   const dispatch = useDispatch();
-  const { error, aadharError, loading, fraudStatus, fraudLoading, paymentVerifying } = useSelector(
-    state => state.loans,
-  );
+  const {
+    error,
+    aadharError,
+    loading,
+    fraudStatus,
+    fraudLoading,
+    paymentVerifying,
+  } = useSelector(state => state.loans);
   const user = useSelector(state => state.auth.user);
   const { loanDetails, borrowerData } = route.params || {};
   const { hasActivePlan } = useSubscription();
@@ -107,11 +112,13 @@ export default function AddDetails({ route, navigation }) {
   const [paymentVerified, setPaymentVerified] = useState(false);
   const [proofFile, setProofFile] = useState(null);
   const [proofError, setProofError] = useState('');
+  // Add this state near your other useState declarations
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Focus animation
   const focusAnim = new Animated.Value(0);
 
-  const handleFocus = (field) => {
+  const handleFocus = field => {
     setIsFocused({ [field]: true });
     Animated.timing(focusAnim, {
       toValue: 1,
@@ -120,7 +127,7 @@ export default function AddDetails({ route, navigation }) {
     }).start();
   };
 
-  const handleBlur = (field) => {
+  const handleBlur = field => {
     setIsFocused({ [field]: false });
     Animated.timing(focusAnim, {
       toValue: 0,
@@ -141,7 +148,7 @@ export default function AddDetails({ route, navigation }) {
             buttonNeutral: 'Ask Me Later',
             buttonNegative: 'Cancel',
             buttonPositive: 'OK',
-          }
+          },
         );
         return granted === PermissionsAndroid.RESULTS.GRANTED;
       } catch (err) {
@@ -153,9 +160,9 @@ export default function AddDetails({ route, navigation }) {
   };
 
   // Validate proof file
-  const validateProofFile = (file) => {
+  const validateProofFile = file => {
     setProofError('');
-    
+
     if (!file) {
       return true;
     }
@@ -163,7 +170,7 @@ export default function AddDetails({ route, navigation }) {
     // Check file type
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
     const fileType = file.type || 'image/jpeg';
-    
+
     if (!allowedTypes.includes(fileType.toLowerCase())) {
       setProofError('Only JPEG, JPG, and PNG images are allowed.');
       return false;
@@ -180,7 +187,7 @@ export default function AddDetails({ route, navigation }) {
   };
 
   // Handle proof image picker
-  const handleProofImagePicker = async (action) => {
+  const handleProofImagePicker = async action => {
     // Request permission if using camera on Android
     if (action === 'camera' && Platform.OS === 'android') {
       const hasPermission = await requestCameraPermission();
@@ -210,7 +217,7 @@ export default function AddDetails({ route, navigation }) {
 
     const launch = action === 'camera' ? launchCamera : launchImageLibrary;
 
-    launch(options, (response) => {
+    launch(options, response => {
       if (response.didCancel) {
         return;
       }
@@ -227,13 +234,14 @@ export default function AddDetails({ route, navigation }) {
 
       if (response.assets && response.assets[0]) {
         const asset = response.assets[0];
-        
+
         // Validate file
         if (validateProofFile(asset)) {
           // Prepare file object for FormData
           const fileExtension = asset.type?.split('/')[1] || 'jpg';
-          const fileName = asset.fileName || `proof_${Date.now()}.${fileExtension}`;
-          
+          const fileName =
+            asset.fileName || `proof_${Date.now()}.${fileExtension}`;
+
           setProofFile({
             uri: asset.uri,
             type: asset.type || 'image/jpeg',
@@ -241,7 +249,7 @@ export default function AddDetails({ route, navigation }) {
             fileSize: asset.fileSize,
           });
           setProofError('');
-          
+
           Toast.show({
             type: 'success',
             position: 'top',
@@ -301,7 +309,11 @@ export default function AddDetails({ route, navigation }) {
     }
     if (!loanEndDate) {
       errors.loanEndDate = 'End date is required.';
-    } else if (loanStartDate && loanEndDate && new Date(loanStartDate) >= new Date(loanEndDate)) {
+    } else if (
+      loanStartDate &&
+      loanEndDate &&
+      new Date(loanStartDate) >= new Date(loanEndDate)
+    ) {
       errors.loanEndDate = 'End date must be after start date.';
     }
     if (!purpose || !purpose.trim()) {
@@ -326,9 +338,9 @@ export default function AddDetails({ route, navigation }) {
             { text: 'Cancel', style: 'cancel' },
             {
               text: 'View Plans',
-              onPress: () => navigation.navigate('SubscriptionScreen')
+              onPress: () => navigation.navigate('SubscriptionScreen'),
             },
-          ]
+          ],
         );
         return false;
       }
@@ -341,9 +353,9 @@ export default function AddDetails({ route, navigation }) {
             { text: 'Cancel', style: 'cancel' },
             {
               text: 'Renew Plan',
-              onPress: () => navigation.navigate('SubscriptionScreen')
+              onPress: () => navigation.navigate('SubscriptionScreen'),
             },
-          ]
+          ],
         );
         return false;
       }
@@ -359,9 +371,9 @@ export default function AddDetails({ route, navigation }) {
           { text: 'Cancel', style: 'cancel' },
           {
             text: 'Proceed Anyway',
-            onPress: () => { }
+            onPress: () => {},
           },
-        ]
+        ],
       );
       return false;
     }
@@ -369,13 +381,23 @@ export default function AddDetails({ route, navigation }) {
 
   // Handle form submission
   const handleSubmit = async () => {
+    // Prevent multiple submissions
+    if (isSubmitting || loading || isProcessingPayment || paymentVerifying || planLoading) {
+      return;
+    }
+
     Keyboard.dismiss();
     if (!validateForm()) return;
 
+    // Lock submission before any async work
+    setIsSubmitting(true);
+
     // Check plan before creating loan (only for new loans, not updates)
+    let hasValidPlan = true;
     if (!loanDetails) {
-      const hasValidPlan = await checkPlanBeforeLoanCreation();
+      hasValidPlan = await checkPlanBeforeLoanCreation();
       if (!hasValidPlan) {
+        setIsSubmitting(false);
         return;
       }
     }
@@ -383,47 +405,64 @@ export default function AddDetails({ route, navigation }) {
     const aadharNumber = formData.aadhaarNumber?.trim();
     if (!aadharNumber || aadharNumber.length !== 12) {
       setErrorMessage('Please enter a valid 12-digit Aadhar number.');
+      setIsSubmitting(false);
       return;
     }
 
-    // Format dates for new API
-    const loanStartDate = formData.loanStartDate instanceof Date
-      ? formData.loanStartDate.toISOString()
-      : formData.loanStartDate;
-    const loanEndDate = formData.loanEndDate instanceof Date
-      ? formData.loanEndDate.toISOString()
-      : formData.loanEndDate;
+    try {
+      // Format dates for new API
+      const loanStartDate =
+        formData.loanStartDate instanceof Date
+          ? formData.loanStartDate.toISOString()
+          : formData.loanStartDate;
+      const loanEndDate =
+        formData.loanEndDate instanceof Date
+          ? formData.loanEndDate.toISOString()
+          : formData.loanEndDate;
 
-    const newData = {
-      name: formData.name.trim(),
-      mobileNumber: formData.mobileNumber.trim(),
-      aadharCardNo: aadharNumber,
-      address: formData.address.trim(),
-      amount: parseFloat(formData.amount),
-      loanGivenDate: loanStartDate,
-      loanEndDate: loanEndDate,
-      purpose: formData.purpose.trim(),
-      loanMode: formData.loanMode || 'cash',
-    };
+      const newData = {
+        name: formData.name.trim(),
+        mobileNumber: formData.mobileNumber.trim(),
+        aadharCardNo: aadharNumber,
+        address: formData.address.trim(),
+        amount: parseFloat(formData.amount),
+        loanGivenDate: loanStartDate,
+        loanEndDate: loanEndDate,
+        purpose: formData.purpose.trim(),
+        loanMode: formData.loanMode || 'cash',
+      };
 
-    // Only include proof when creating a new loan (not when updating)
-    if (!loanDetails && proofFile) {
-      newData.proof = proofFile;
+      // Only include proof when creating a new loan (not when updating)
+      if (!loanDetails && proofFile) {
+        newData.proof = proofFile;
+      }
+
+      // Check if fraud warning should be shown before proceeding
+      if (
+        !loanDetails &&
+        fraudStatus &&
+        fraudStatus.riskLevel &&
+        fraudStatus.riskLevel !== 'low'
+      ) {
+        setPendingLoanData(newData);
+        setShowFraudWarning(true);
+        setIsSubmitting(false); // Reset flag as we're showing warning
+        return;
+      }
+
+      // Proceed with loan creation
+      await proceedWithLoanCreation(newData);
+    } catch (error) {
+      console.error('Error in handleSubmit:', error);
+      setIsSubmitting(false);
+    } finally {
+      // Reset submitting flag after completion
+      // Note: Don't reset immediately if we're navigating away
+      // The navigation will handle cleanup
     }
-
-    // Check if fraud warning should be shown before proceeding
-    if (!loanDetails && fraudStatus && fraudStatus.riskLevel && fraudStatus.riskLevel !== 'low') {
-      setPendingLoanData(newData);
-      setShowFraudWarning(true);
-      return;
-    }
-
-    // Proceed with loan creation
-    await proceedWithLoanCreation(newData);
   };
-
   // Proceed with loan creation (after fraud warning if shown)
-  const proceedWithLoanCreation = async (newData) => {
+  const proceedWithLoanCreation = async newData => {
     try {
       const action = loanDetails
         ? updateLoan({ ...newData, id: loanDetails._id })
@@ -436,35 +475,36 @@ export default function AddDetails({ route, navigation }) {
       ) {
         // Check for fraud warning in response
         const responsePayload = response.payload;
-        if (responsePayload?.warning && responsePayload.warning.fraudDetected && !loanDetails) {
-          // Show fraud warning even after loan creation
+        if (
+          responsePayload?.warning &&
+          responsePayload.warning.fraudDetected &&
+          !loanDetails
+        ) {
           Alert.alert(
             'Fraud Alert',
-            responsePayload.warning.recommendation || 'Fraud risk detected for this borrower.',
-            [{ text: 'OK' }]
+            responsePayload.warning.recommendation ||
+              'Fraud risk detected for this borrower.',
+            [{ text: 'OK' }],
           );
         }
 
         // For new loans, check if online payment is required
         if (!loanDetails && createLoan.fulfilled.match(response)) {
-          // Handle API response structure: response.payload.data or response.payload
           const loanData = responsePayload?.data || responsePayload;
 
           if (loanData && loanData._id) {
-            // Check if this is an online payment loan with Razorpay order
             if (loanData.loanMode === 'online' && loanData.razorpayOrder) {
-              // Store loan data and initiate Razorpay payment
               setCreatedLoanData(loanData);
               await handleRazorpayPayment(loanData);
             } else {
-              // Cash mode - directly show OTP verification
               setCreatedLoanData(loanData);
               setIsOTPModalVisible(true);
               Toast.show({
                 type: 'success',
                 position: 'top',
                 text1: 'Loan created successfully',
-                text2: 'OTP sent to borrower. Please verify to confirm the loan.',
+                text2:
+                  'OTP sent to borrower. Please verify to confirm the loan.',
               });
             }
           } else {
@@ -483,38 +523,34 @@ export default function AddDetails({ route, navigation }) {
           });
           navigation.navigate('BottomNavigation', { screen: 'Borrowers' });
         }
+        // Reset submitting flag on success
+        setIsSubmitting(false);
       } else {
         // Handle plan-related errors
-        if (response.payload?.type === 'SUBSCRIPTION_REQUIRED' ||
-          response.payload?.errorCode === 'PLAN_REQUIRED') {
+        if (
+          response.payload?.type === 'SUBSCRIPTION_REQUIRED' ||
+          response.payload?.errorCode === 'PLAN_REQUIRED'
+        ) {
           Alert.alert(
             'Plan Required',
-            response.payload?.message || 'You need to purchase a plan to create loans.',
+            response.payload?.message ||
+              'You need to purchase a plan to create loans.',
             [
               { text: 'Cancel', style: 'cancel' },
               {
                 text: 'View Plans',
-                onPress: () => navigation.navigate('SubscriptionScreen')
+                onPress: () => navigation.navigate('SubscriptionScreen'),
               },
-            ]
+            ],
           );
+          setIsSubmitting(false);
           return;
         }
 
-        let errorMsg =
+        const errorMsg =
+          response.error ||
           response.payload?.message ||
-          response.payload?.error?.message ||
-          (Array.isArray(response.payload?.errors)
-            ? response.payload.errors.join(', ')
-            : response.payload?.errors) ||
-          response.payload?.error ||
-          'An error occurred.';
-
-        if (errorMsg.includes('Aadhar number does not exist') ||
-          errorMsg.includes('Aadhar number') && errorMsg.includes('not exist')) {
-          errorMsg = 'The borrower with this Aadhar number is not registered. Please ask them to register first, or verify the Aadhar number is correct.';
-        }
-
+          'Failed to create loan. Please try again.';
         setErrorMessage(errorMsg);
         Toast.show({
           type: 'error',
@@ -523,10 +559,12 @@ export default function AddDetails({ route, navigation }) {
           text2: errorMsg,
           visibilityTime: 5000,
         });
+        setIsSubmitting(false);
       }
     } catch (error) {
       console.error('Error submitting data:', error);
-      const errorMsg = error.message || 'An error occurred while saving the loan.';
+      const errorMsg =
+        error.message || 'An error occurred while saving the loan.';
       setErrorMessage(errorMsg);
       Toast.show({
         type: 'error',
@@ -534,13 +572,14 @@ export default function AddDetails({ route, navigation }) {
         text1: 'Error',
         text2: errorMsg,
       });
+      setIsSubmitting(false);
     }
   };
 
   // Handle Razorpay payment for online loan disbursement
-  const handleRazorpayPayment = async (loanData) => {
+  const handleRazorpayPayment = async loanData => {
     setIsProcessingPayment(true);
-    
+
     try {
       Toast.show({
         type: 'info',
@@ -553,7 +592,7 @@ export default function AddDetails({ route, navigation }) {
       const paymentResult = await openRazorpayCheckoutForLoanCreation(
         loanData.razorpayOrder,
         user,
-        loanData
+        loanData,
       );
 
       if (paymentResult.success) {
@@ -562,7 +601,7 @@ export default function AddDetails({ route, navigation }) {
       }
     } catch (error) {
       setIsProcessingPayment(false);
-      
+
       if (error.type === 'USER_CANCELLED') {
         Alert.alert(
           'Payment Cancelled',
@@ -570,9 +609,10 @@ export default function AddDetails({ route, navigation }) {
           [
             {
               text: 'Go to Loans',
-              onPress: () => navigation.navigate('BottomNavigation', { screen: 'Outward' }),
+              onPress: () =>
+                navigation.navigate('BottomNavigation', { screen: 'Outward' }),
             },
-          ]
+          ],
         );
       } else {
         Alert.alert(
@@ -581,9 +621,10 @@ export default function AddDetails({ route, navigation }) {
           [
             {
               text: 'Go to Loans',
-              onPress: () => navigation.navigate('BottomNavigation', { screen: 'Outward' }),
+              onPress: () =>
+                navigation.navigate('BottomNavigation', { screen: 'Outward' }),
             },
-          ]
+          ],
         );
       }
     }
@@ -592,12 +633,14 @@ export default function AddDetails({ route, navigation }) {
   // Verify Razorpay payment with backend
   const verifyRazorpayPayment = async (loanId, paymentData) => {
     try {
-      const verifyResult = await dispatch(verifyLoanPayment({
-        loanId,
-        razorpay_payment_id: paymentData.razorpay_payment_id,
-        razorpay_order_id: paymentData.razorpay_order_id,
-        razorpay_signature: paymentData.razorpay_signature,
-      })).unwrap();
+      const verifyResult = await dispatch(
+        verifyLoanPayment({
+          loanId,
+          razorpay_payment_id: paymentData.razorpay_payment_id,
+          razorpay_order_id: paymentData.razorpay_order_id,
+          razorpay_signature: paymentData.razorpay_signature,
+        }),
+      ).unwrap();
 
       setIsProcessingPayment(false);
 
@@ -610,14 +653,14 @@ export default function AddDetails({ route, navigation }) {
             ...verifyResult.data.loan,
           }));
         }
-        
+
         Toast.show({
           type: 'success',
           position: 'top',
           text1: 'Payment Verified Successfully',
           text2: 'Please verify OTP to confirm the loan.',
         });
-        
+
         // Show OTP verification modal
         setIsOTPModalVisible(true);
       } else {
@@ -625,16 +668,18 @@ export default function AddDetails({ route, navigation }) {
       }
     } catch (error) {
       setIsProcessingPayment(false);
-      
+
       Alert.alert(
         'Payment Verification Failed',
-        error.message || 'Could not verify the payment. Please contact support.',
+        error.message ||
+          'Could not verify the payment. Please contact support.',
         [
           {
             text: 'Go to Loans',
-            onPress: () => navigation.navigate('BottomNavigation', { screen: 'Outward' }),
+            onPress: () =>
+              navigation.navigate('BottomNavigation', { screen: 'Outward' }),
           },
-        ]
+        ],
       );
     }
   };
@@ -674,6 +719,7 @@ export default function AddDetails({ route, navigation }) {
   const handleFraudWarningCancel = () => {
     setShowFraudWarning(false);
     setPendingLoanData(null);
+    setIsSubmitting(false); // Reset the flag
   };
 
   const handleFraudWarningViewHistory = () => {
@@ -688,7 +734,7 @@ export default function AddDetails({ route, navigation }) {
       Alert.alert(
         'Invalid Aadhaar Number',
         'Please enter a valid 12-digit Aadhaar number to view history.',
-        [{ text: 'OK' }]
+        [{ text: 'OK' }],
       );
     }
   };
@@ -726,7 +772,7 @@ export default function AddDetails({ route, navigation }) {
     else setEndDatePickerVisible(false);
   };
 
-  const handleOTPVerifySuccess = (verifiedLoanData) => {
+  const handleOTPVerifySuccess = verifiedLoanData => {
     setIsOTPModalVisible(false);
     setCreatedLoanData(null);
     Toast.show({
@@ -759,7 +805,8 @@ export default function AddDetails({ route, navigation }) {
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 20}>
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 20}
+    >
       <Header
         title={loanDetails ? 'Edit Loan Details' : 'Add Loan Details'}
         showBackButton
@@ -768,358 +815,446 @@ export default function AddDetails({ route, navigation }) {
       <ScrollView
         style={[
           styles.scrollViewContainer,
-          isLender && !hasActivePlan && { opacity: 0.5 }
+          isLender && !hasActivePlan && { opacity: 0.5 },
         ]}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         onScrollBeginDrag={Keyboard.dismiss}
-        scrollEnabled={isLender ? hasActivePlan : true}>
-
+        scrollEnabled={isLender ? hasActivePlan : true}
+      >
         <View style={styles.headerCard}>
-            <View style={styles.addLoanCont}>
-              <MaterialIcons name="add" color="#ff8500" size={24} />
-              <Text style={styles.headerTitle}>
-                {loanDetails ? 'Update Loan Information' : 'Add New Loan'}
-              </Text>
-            </View>
-            <Text style={styles.headerSubtitle}>
-              Fill the form below to {loanDetails ? 'update' : 'create'} loan details
+          <View style={styles.addLoanCont}>
+            <MaterialIcons name="add" color="#ff8500" size={24} />
+            <Text style={styles.headerTitle}>
+              {loanDetails ? 'Update Loan Information' : 'Add New Loan'}
             </Text>
           </View>
+          <Text style={styles.headerSubtitle}>
+            Fill the form below to {loanDetails ? 'update' : 'create'} loan
+            details
+          </Text>
+        </View>
 
-          <View style={styles.formContainer}>
-            {/* Personal Information Section */}
-            <View style={styles.sectionHeader}>
-              <Icon name="account-details" size={22} color="#ff7900" />
-              <Text style={styles.sectionTitle}>Personal Information</Text>
+        <View style={styles.formContainer}>
+          {/* Personal Information Section */}
+          <View style={styles.sectionHeader}>
+            <Icon name="account-details" size={22} color="#ff7900" />
+            <Text style={styles.sectionTitle}>Personal Information</Text>
+          </View>
+
+          <View
+            style={[
+              styles.inputGroup,
+              fieldErrors.name && styles.inputGroupError,
+            ]}
+          >
+            <View style={styles.inputIcon}>
+              <Icon name="account" size={20} color="#666" />
             </View>
+            <TextInput
+              style={[styles.input, isFocused.name && styles.inputFocused]}
+              placeholder="Full Name"
+              value={formData.name}
+              onChangeText={text => {
+                setFormData({ ...formData, name: text });
+                setFieldErrors(prev => ({ ...prev, name: '' }));
+              }}
+              placeholderTextColor="#888"
+              onFocus={() => handleFocus('name')}
+              onBlur={() => handleBlur('name')}
+            />
+          </View>
+          {fieldErrors.name ? (
+            <Text style={styles.fieldErrorText}>{fieldErrors.name}</Text>
+          ) : null}
 
-            <View style={[styles.inputGroup, fieldErrors.name && styles.inputGroupError]}>
-              <View style={styles.inputIcon}>
-                <Icon name="account" size={20} color="#666" />
-              </View>
-              <TextInput
-                style={[styles.input, isFocused.name && styles.inputFocused]}
-                placeholder="Full Name"
-                value={formData.name}
-                onChangeText={text => {
-                  setFormData({ ...formData, name: text });
-                  setFieldErrors(prev => ({ ...prev, name: '' }));
-                }}
-                placeholderTextColor="#888"
-                onFocus={() => handleFocus('name')}
-                onBlur={() => handleBlur('name')}
-              />
+          <View
+            style={[
+              styles.inputGroup,
+              fieldErrors.mobileNumber && styles.inputGroupError,
+            ]}
+          >
+            <View style={styles.inputIcon}>
+              <Icon name="phone" size={20} color="#666" />
             </View>
-            {fieldErrors.name ? (
-              <Text style={styles.fieldErrorText}>{fieldErrors.name}</Text>
-            ) : null}
+            <TextInput
+              style={[
+                styles.input,
+                isFocused.mobileNumber && styles.inputFocused,
+              ]}
+              placeholder="Contact Number"
+              value={formData.mobileNumber}
+              onChangeText={handleContactNoChange}
+              keyboardType="phone-pad"
+              placeholderTextColor="#888"
+              onFocus={() => handleFocus('mobileNumber')}
+              onBlur={() => handleBlur('mobileNumber')}
+            />
+          </View>
+          {fieldErrors.mobileNumber ? (
+            <Text style={styles.fieldErrorText}>
+              {fieldErrors.mobileNumber}
+            </Text>
+          ) : null}
 
-            <View style={[styles.inputGroup, fieldErrors.mobileNumber && styles.inputGroupError]}>
-              <View style={styles.inputIcon}>
-                <Icon name="phone" size={20} color="#666" />
-              </View>
-              <TextInput
-                style={[styles.input, isFocused.mobileNumber && styles.inputFocused]}
-                placeholder="Contact Number"
-                value={formData.mobileNumber}
-                onChangeText={handleContactNoChange}
-                keyboardType="phone-pad"
-                placeholderTextColor="#888"
-                onFocus={() => handleFocus('mobileNumber')}
-                onBlur={() => handleBlur('mobileNumber')}
-              />
+          <View
+            style={[
+              styles.inputGroup,
+              fieldErrors.aadhaarNumber && styles.inputGroupError,
+            ]}
+          >
+            <View style={styles.inputIcon}>
+              <Icon name="card-account-details" size={20} color="#666" />
             </View>
-            {fieldErrors.mobileNumber ? (
-              <Text style={styles.fieldErrorText}>{fieldErrors.mobileNumber}</Text>
-            ) : null}
+            <TextInput
+              style={[
+                styles.input,
+                isFocused.aadhaarNumber && styles.inputFocused,
+              ]}
+              placeholder="Aadhar Card No"
+              value={formData.aadhaarNumber}
+              onChangeText={handleAadharChange}
+              keyboardType="numeric"
+              placeholderTextColor="#888"
+              onFocus={() => handleFocus('aadhaarNumber')}
+              onBlur={() => handleBlur('aadhaarNumber')}
+            />
+          </View>
+          {fieldErrors.aadhaarNumber ? (
+            <Text style={styles.fieldErrorText}>
+              {fieldErrors.aadhaarNumber}
+            </Text>
+          ) : null}
 
-            <View style={[styles.inputGroup, fieldErrors.aadhaarNumber && styles.inputGroupError]}>
-              <View style={styles.inputIcon}>
-                <Icon name="card-account-details" size={20} color="#666" />
-              </View>
-              <TextInput
-                style={[styles.input, isFocused.aadhaarNumber && styles.inputFocused]}
-                placeholder="Aadhar Card No"
-                value={formData.aadhaarNumber}
-                onChangeText={handleAadharChange}
-                keyboardType="numeric"
-                placeholderTextColor="#888"
-                onFocus={() => handleFocus('aadhaarNumber')}
-                onBlur={() => handleBlur('aadhaarNumber')}
-              />
-            </View>
-            {fieldErrors.aadhaarNumber ? (
-              <Text style={styles.fieldErrorText}>{fieldErrors.aadhaarNumber}</Text>
-            ) : null}
+          {showOldHistoryButton && (
+            <View style={styles.historyContainer}>
+              {aadharError ? (
+                <View style={styles.errorContainer}>
+                  <View style={styles.errorHeader}>
+                    <Icon name="alert-circle" size={20} color="#dc2626" />
+                    <Text style={styles.errorTitle}>User Not Found</Text>
+                  </View>
+                  <Text style={styles.errorMessage}>
+                    {aadharError.message ||
+                      aadharError ||
+                      'User with this Aadhar number not found'}
+                  </Text>
+                  <Text style={styles.errorNote}>
+                    Note: The borrower must be registered in the system before
+                    creating a loan.
+                  </Text>
+                </View>
+              ) : (
+                <>
+                  <TouchableOpacity
+                    style={styles.oldHistoryButton}
+                    onPress={() =>
+                      navigation.navigate('OldHistoryPage', {
+                        aadhaarNumber: formData.aadhaarNumber,
+                      })
+                    }
+                  >
+                    <Icon name="history" size={20} color="#FFF" />
+                    <Text style={styles.oldHistoryButtonText}>
+                      View Loan History
+                    </Text>
+                  </TouchableOpacity>
 
-            {showOldHistoryButton && (
-              <View style={styles.historyContainer}>
-                {aadharError ? (
-                  <View style={styles.errorContainer}>
-                    <View style={styles.errorHeader}>
-                      <Icon name="alert-circle" size={20} color="#dc2626" />
-                      <Text style={styles.errorTitle}>User Not Found</Text>
+                  {/* Fraud Status Badge */}
+                  {fraudStatus && fraudStatus.success && (
+                    <View style={styles.fraudBadgeContainer}>
+                      {fraudLoading ? (
+                        <View style={styles.fraudLoadingContainer}>
+                          <ActivityIndicator size="small" color="#ff7900" />
+                          <Text style={styles.fraudLoadingText}>
+                            Checking fraud status...
+                          </Text>
+                        </View>
+                      ) : fraudStatus.riskLevel &&
+                        fraudStatus.riskLevel !== 'low' ? (
+                        <FraudStatusBadge
+                          fraudScore={fraudStatus.fraudScore}
+                          riskLevel={fraudStatus.riskLevel}
+                        />
+                      ) : null}
                     </View>
-                    <Text style={styles.errorMessage}>
-                      {aadharError.message || aadharError || 'User with this Aadhar number not found'}
-                    </Text>
-                    <Text style={styles.errorNote}>
-                      Note: The borrower must be registered in the system before creating a loan.
-                    </Text>
-                  </View>
-                ) : (
-                  <>
-                    <TouchableOpacity
-                      style={styles.oldHistoryButton}
-                      onPress={() =>
-                        navigation.navigate('OldHistoryPage', {
-                          aadhaarNumber: formData.aadhaarNumber,
-                        })
-                      }>
-                      <Icon name="history" size={20} color="#FFF" />
-                      <Text style={styles.oldHistoryButtonText}>View Loan History</Text>
-                    </TouchableOpacity>
-
-                    {/* Fraud Status Badge */}
-                    {fraudStatus && fraudStatus.success && (
-                      <View style={styles.fraudBadgeContainer}>
-                        {fraudLoading ? (
-                          <View style={styles.fraudLoadingContainer}>
-                            <ActivityIndicator size="small" color="#ff7900" />
-                            <Text style={styles.fraudLoadingText}>Checking fraud status...</Text>
-                          </View>
-                        ) : fraudStatus.riskLevel && fraudStatus.riskLevel !== 'low' ? (
-                          <FraudStatusBadge
-                            fraudScore={fraudStatus.fraudScore}
-                            riskLevel={fraudStatus.riskLevel}
-                          />
-                        ) : null}
-                      </View>
-                    )}
-                  </>
-                )}
-              </View>
-            )}
-
-            <View style={[styles.inputGroup, fieldErrors.address && styles.inputGroupError]}>
-              <View style={[styles.inputIcon, styles.textAreaIcon]}>
-                <Icon name="home-map-marker" size={20} color="#666" />
-              </View>
-              <TextInput
-                style={[styles.textArea, isFocused.address && styles.inputFocused]}
-                placeholder="Address"
-                value={formData.address}
-                onChangeText={text => {
-                  setFormData({ ...formData, address: text });
-                  setFieldErrors(prev => ({ ...prev, address: '' }));
-                }}
-                multiline
-                numberOfLines={3}
-                placeholderTextColor="#888"
-                onFocus={() => handleFocus('address')}
-                onBlur={() => handleBlur('address')}
-              />
-            </View>
-            {fieldErrors.address ? (
-              <Text style={styles.fieldErrorText}>{fieldErrors.address}</Text>
-            ) : null}
-
-            {/* Loan Details Section */}
-            <View style={[styles.sectionHeader, { marginTop: m(14) }]}>
-              <Icon name="cash-multiple" size={22} color="#ff7900" />
-              <Text style={styles.sectionTitle}>Loan Details</Text>
-            </View>
-
-            <View style={styles.amountContainer}>
-              <View style={[styles.amountInputGroup, fieldErrors.amount && styles.amountInputGroupError]}>
-                <View style={styles.inputIcon}>
-                  <Icon name="currency-inr" size={20} color="#666" />
-                </View>
-                <TextInput
-                  style={[styles.amountInput, isFocused.amount && styles.inputFocused]}
-                  placeholder="Loan Amount"
-                  value={formData.amount}
-                  onChangeText={text => {
-                    setFormData({ ...formData, amount: text });
-                    setFieldErrors(prev => ({ ...prev, amount: '' }));
-                  }}
-                  keyboardType="numeric"
-                  placeholderTextColor="#888"
-                  onFocus={() => handleFocus('amount')}
-                  onBlur={() => handleBlur('amount')}
-                />
-                <Text style={styles.currencyText}>INR</Text>
-              </View>
-            </View>
-            {fieldErrors.amount ? (
-              <Text style={styles.fieldErrorText}>{fieldErrors.amount}</Text>
-            ) : null}
-
-            <View style={styles.dateRow}>
-              <View style={styles.dateColumn}>
-                <TouchableOpacity
-                  style={[styles.dateInputContainer, fieldErrors.loanStartDate && styles.dateInputContainerError]}
-                  activeOpacity={0.7}
-                  onPress={() => {
-                    Keyboard.dismiss();
-                    setStartDatePickerVisible(true);
-                  }}>
-                  <View style={styles.inputIcon}>
-                    <Icon name="calendar-start" size={18} color="#666" />
-                  </View>
-                  <View style={styles.dateTextContainer}>
-                    <Text
-                      style={[
-                        styles.datePlaceholder,
-                        formData.loanStartDate && styles.datePlaceholderFilled
-                      ]}
-                      numberOfLines={1}>
-                      {formData.loanStartDate ? 'Start Date' : 'Start Date'}
-                    </Text>
-                    {formData.loanStartDate && (
-                      <Text
-                        style={styles.dateValue}
-                        numberOfLines={1}
-                        ellipsizeMode="tail">
-                        {new Date(formData.loanStartDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                      </Text>
-                    )}
-                  </View>
-                  <Icon name="chevron-down" size={18} color="#94a3b8" />
-                </TouchableOpacity>
-                {fieldErrors.loanStartDate ? (
-                  <Text style={styles.dateFieldError}>{fieldErrors.loanStartDate}</Text>
-                ) : null}
-              </View>
-
-              <View style={styles.dateColumn}>
-                <TouchableOpacity
-                  style={[styles.dateInputContainer, fieldErrors.loanEndDate && styles.dateInputContainerError]}
-                  activeOpacity={0.7}
-                  onPress={() => {
-                    Keyboard.dismiss();
-                    setEndDatePickerVisible(true);
-                  }}>
-                  <View style={styles.inputIcon}>
-                    <Icon name="calendar-end" size={18} color="#666" />
-                  </View>
-                  <View style={styles.dateTextContainer}>
-                    <Text
-                      style={[
-                        styles.datePlaceholder,
-                        formData.loanEndDate && styles.datePlaceholderFilled
-                      ]}
-                      numberOfLines={1}>
-                      {formData.loanEndDate ? 'End Date' : 'End Date'}
-                    </Text>
-                    {formData.loanEndDate && (
-                      <Text
-                        style={styles.dateValue}
-                        numberOfLines={1}
-                        ellipsizeMode="tail">
-                        {new Date(formData.loanEndDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                      </Text>
-                    )}
-                  </View>
-                  <Icon name="chevron-down" size={18} color="#94a3b8" />
-                </TouchableOpacity>
-                {fieldErrors.loanEndDate ? (
-                  <Text style={styles.dateFieldError}>{fieldErrors.loanEndDate}</Text>
-                ) : null}
-              </View>
-            </View>
-
-            <View style={[styles.inputGroup, fieldErrors.purpose && styles.inputGroupError]}>
-              <View style={[styles.inputIcon, styles.textAreaIcon]}>
-                <Icon name="note-text" size={20} color="#666" />
-              </View>
-              <TextInput
-                style={[styles.textArea, isFocused.purpose && styles.inputFocused]}
-                placeholder="Purpose of Loan"
-                value={formData.purpose}
-                onChangeText={text => {
-                  setFormData({ ...formData, purpose: text });
-                  setFieldErrors(prev => ({ ...prev, purpose: '' }));
-                }}
-                multiline
-                numberOfLines={3}
-                placeholderTextColor="#888"
-                onFocus={() => handleFocus('purpose')}
-                onBlur={() => handleBlur('purpose')}
-              />
-            </View>
-            {fieldErrors.purpose ? (
-              <Text style={styles.fieldErrorText}>{fieldErrors.purpose}</Text>
-            ) : null}
-
-            {/* Loan Mode Selection */}
-            <View style={styles.loanModeContainer}>
-              <Text style={styles.loanModeLabel}>Payment Mode</Text>
-              <View style={styles.loanModeButtons}>
-                <TouchableOpacity
-                  style={[
-                    styles.loanModeButton,
-                    formData.loanMode === 'cash' && styles.loanModeButtonActive,
-                  ]}
-                  onPress={() => setFormData({ ...formData, loanMode: 'cash' })}>
-                  <Icon
-                    name="cash"
-                    size={20}
-                    color={formData.loanMode === 'cash' ? '#FFFFFF' : '#666'}
-                  />
-                  <Text
-                    style={[
-                      styles.loanModeButtonText,
-                      formData.loanMode === 'cash' && styles.loanModeButtonTextActive,
-                    ]}>
-                    Cash
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.loanModeButton,
-                    formData.loanMode === 'online' && styles.loanModeButtonActive,
-                  ]}
-                  onPress={() => setFormData({ ...formData, loanMode: 'online' })}>
-                  <Icon
-                    name="credit-card"
-                    size={20}
-                    color={formData.loanMode === 'online' ? '#FFFFFF' : '#666'}
-                  />
-                  <Text
-                    style={[
-                      styles.loanModeButtonText,
-                      formData.loanMode === 'online' && styles.loanModeButtonTextActive,
-                    ]}>
-                    Online
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              
-              {/* Online Payment Info */}
-              {formData.loanMode === 'online' && (
-                <View style={styles.onlinePaymentInfo}>
-                  <Icon name="information" size={18} color="#3B82F6" />
-                  <Text style={styles.onlinePaymentInfoText}>
-                    Payment will be processed via Razorpay. You'll be redirected to complete the payment after creating the loan.
-                  </Text>
-                </View>
+                  )}
+                </>
               )}
             </View>
+          )}
 
-            {/* Proof Upload Section - Only show when creating new loan */}
-            {!loanDetails && (
-              <View style={styles.proofSection}>
-                <View style={styles.sectionHeader}>
-                  <Icon name="file-image" size={22} color="#ff7900" />
-                  <Text style={styles.sectionTitle}>Upload Proof (Optional)</Text>
+          <View
+            style={[
+              styles.inputGroup,
+              fieldErrors.address && styles.inputGroupError,
+            ]}
+          >
+            <View style={[styles.inputIcon, styles.textAreaIcon]}>
+              <Icon name="home-map-marker" size={20} color="#666" />
+            </View>
+            <TextInput
+              style={[
+                styles.textArea,
+                isFocused.address && styles.inputFocused,
+              ]}
+              placeholder="Address"
+              value={formData.address}
+              onChangeText={text => {
+                setFormData({ ...formData, address: text });
+                setFieldErrors(prev => ({ ...prev, address: '' }));
+              }}
+              multiline
+              numberOfLines={3}
+              placeholderTextColor="#888"
+              onFocus={() => handleFocus('address')}
+              onBlur={() => handleBlur('address')}
+            />
+          </View>
+          {fieldErrors.address ? (
+            <Text style={styles.fieldErrorText}>{fieldErrors.address}</Text>
+          ) : null}
+
+          {/* Loan Details Section */}
+          <View style={[styles.sectionHeader, { marginTop: m(14) }]}>
+            <Icon name="cash-multiple" size={22} color="#ff7900" />
+            <Text style={styles.sectionTitle}>Loan Details</Text>
+          </View>
+
+          <View style={styles.amountContainer}>
+            <View
+              style={[
+                styles.amountInputGroup,
+                fieldErrors.amount && styles.amountInputGroupError,
+              ]}
+            >
+              <View style={styles.inputIcon}>
+                <Icon name="currency-inr" size={20} color="#666" />
+              </View>
+              <TextInput
+                style={[
+                  styles.amountInput,
+                  isFocused.amount && styles.inputFocused,
+                ]}
+                placeholder="Loan Amount"
+                value={formData.amount}
+                onChangeText={text => {
+                  setFormData({ ...formData, amount: text });
+                  setFieldErrors(prev => ({ ...prev, amount: '' }));
+                }}
+                keyboardType="numeric"
+                placeholderTextColor="#888"
+                onFocus={() => handleFocus('amount')}
+                onBlur={() => handleBlur('amount')}
+              />
+              <Text style={styles.currencyText}>INR</Text>
+            </View>
+          </View>
+          {fieldErrors.amount ? (
+            <Text style={styles.fieldErrorText}>{fieldErrors.amount}</Text>
+          ) : null}
+
+          <View style={styles.dateRow}>
+            <View style={styles.dateColumn}>
+              <TouchableOpacity
+                style={[
+                  styles.dateInputContainer,
+                  fieldErrors.loanStartDate && styles.dateInputContainerError,
+                ]}
+                activeOpacity={0.7}
+                onPress={() => {
+                  Keyboard.dismiss();
+                  setStartDatePickerVisible(true);
+                }}
+              >
+                <View style={styles.inputIcon}>
+                  <Icon name="calendar-start" size={18} color="#666" />
                 </View>
-                
-                <Text style={styles.proofDescription}>
-                  Upload a proof document (JPEG, JPG, PNG, max 5MB)
+                <View style={styles.dateTextContainer}>
+                  <Text
+                    style={[
+                      styles.datePlaceholder,
+                      formData.loanStartDate && styles.datePlaceholderFilled,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {formData.loanStartDate ? 'Start Date' : 'Start Date'}
+                  </Text>
+                  {formData.loanStartDate && (
+                    <Text
+                      style={styles.dateValue}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
+                      {new Date(formData.loanStartDate).toLocaleDateString(
+                        'en-GB',
+                        { day: '2-digit', month: 'short', year: 'numeric' },
+                      )}
+                    </Text>
+                  )}
+                </View>
+                <Icon name="chevron-down" size={18} color="#94a3b8" />
+              </TouchableOpacity>
+              {fieldErrors.loanStartDate ? (
+                <Text style={styles.dateFieldError}>
+                  {fieldErrors.loanStartDate}
                 </Text>
+              ) : null}
+            </View>
+
+            <View style={styles.dateColumn}>
+              <TouchableOpacity
+                style={[
+                  styles.dateInputContainer,
+                  fieldErrors.loanEndDate && styles.dateInputContainerError,
+                ]}
+                activeOpacity={0.7}
+                onPress={() => {
+                  Keyboard.dismiss();
+                  setEndDatePickerVisible(true);
+                }}
+              >
+                <View style={styles.inputIcon}>
+                  <Icon name="calendar-end" size={18} color="#666" />
+                </View>
+                <View style={styles.dateTextContainer}>
+                  <Text
+                    style={[
+                      styles.datePlaceholder,
+                      formData.loanEndDate && styles.datePlaceholderFilled,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {formData.loanEndDate ? 'End Date' : 'End Date'}
+                  </Text>
+                  {formData.loanEndDate && (
+                    <Text
+                      style={styles.dateValue}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
+                      {new Date(formData.loanEndDate).toLocaleDateString(
+                        'en-GB',
+                        { day: '2-digit', month: 'short', year: 'numeric' },
+                      )}
+                    </Text>
+                  )}
+                </View>
+                <Icon name="chevron-down" size={18} color="#94a3b8" />
+              </TouchableOpacity>
+              {fieldErrors.loanEndDate ? (
+                <Text style={styles.dateFieldError}>
+                  {fieldErrors.loanEndDate}
+                </Text>
+              ) : null}
+            </View>
+          </View>
+
+          <View
+            style={[
+              styles.inputGroup,
+              fieldErrors.purpose && styles.inputGroupError,
+            ]}
+          >
+            <View style={[styles.inputIcon, styles.textAreaIcon]}>
+              <Icon name="note-text" size={20} color="#666" />
+            </View>
+            <TextInput
+              style={[
+                styles.textArea,
+                isFocused.purpose && styles.inputFocused,
+              ]}
+              placeholder="Purpose of Loan"
+              value={formData.purpose}
+              onChangeText={text => {
+                setFormData({ ...formData, purpose: text });
+                setFieldErrors(prev => ({ ...prev, purpose: '' }));
+              }}
+              multiline
+              numberOfLines={3}
+              placeholderTextColor="#888"
+              onFocus={() => handleFocus('purpose')}
+              onBlur={() => handleBlur('purpose')}
+            />
+          </View>
+          {fieldErrors.purpose ? (
+            <Text style={styles.fieldErrorText}>{fieldErrors.purpose}</Text>
+          ) : null}
+
+          {/* Loan Mode Selection */}
+          <View style={styles.loanModeContainer}>
+            <Text style={styles.loanModeLabel}>Payment Mode</Text>
+            <View style={styles.loanModeButtons}>
+              <TouchableOpacity
+                style={[
+                  styles.loanModeButton,
+                  formData.loanMode === 'cash' && styles.loanModeButtonActive,
+                ]}
+                onPress={() => setFormData({ ...formData, loanMode: 'cash' })}
+              >
+                <Icon
+                  name="cash"
+                  size={20}
+                  color={formData.loanMode === 'cash' ? '#FFFFFF' : '#666'}
+                />
+                <Text
+                  style={[
+                    styles.loanModeButtonText,
+                    formData.loanMode === 'cash' &&
+                      styles.loanModeButtonTextActive,
+                  ]}
+                >
+                  Cash
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.loanModeButton,
+                  formData.loanMode === 'online' && styles.loanModeButtonActive,
+                ]}
+                onPress={() => setFormData({ ...formData, loanMode: 'online' })}
+              >
+                <Icon
+                  name="credit-card"
+                  size={20}
+                  color={formData.loanMode === 'online' ? '#FFFFFF' : '#666'}
+                />
+                <Text
+                  style={[
+                    styles.loanModeButtonText,
+                    formData.loanMode === 'online' &&
+                      styles.loanModeButtonTextActive,
+                  ]}
+                >
+                  Online
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Online Payment Info */}
+            {formData.loanMode === 'online' && (
+              <View style={styles.onlinePaymentInfo}>
+                <Icon name="information" size={18} color="#3B82F6" />
+                <Text style={styles.onlinePaymentInfoText}>
+                  Payment will be processed via Razorpay. You'll be redirected
+                  to complete the payment after creating the loan.
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Proof Upload Section - Only show when creating new loan */}
+          {!loanDetails && (
+            <View style={styles.proofSection}>
+              <View style={styles.sectionHeader}>
+                <Icon name="file-image" size={22} color="#ff7900" />
+                <Text style={styles.sectionTitle}>Upload Proof (Optional)</Text>
+              </View>
+
+              <Text style={styles.proofDescription}>
+                Upload a proof document (JPEG, JPG, PNG, max 5MB)
+              </Text>
 
               {proofFile ? (
                 <View style={styles.proofPreviewContainer}>
@@ -1141,7 +1276,8 @@ export default function AddDetails({ route, navigation }) {
                   <TouchableOpacity
                     style={styles.removeProofButton}
                     onPress={handleRemoveProof}
-                    activeOpacity={0.7}>
+                    activeOpacity={0.7}
+                  >
                     <Icon name="close-circle" size={24} color="#dc2626" />
                   </TouchableOpacity>
                 </View>
@@ -1150,14 +1286,18 @@ export default function AddDetails({ route, navigation }) {
                   <TouchableOpacity
                     style={styles.proofUploadButton}
                     onPress={() => handleProofImagePicker('library')}
-                    activeOpacity={0.8}>
+                    activeOpacity={0.8}
+                  >
                     <Icon name="image-outline" size={20} color="#ff7900" />
-                    <Text style={styles.proofUploadButtonText}>Select from Gallery</Text>
+                    <Text style={styles.proofUploadButtonText}>
+                      Select from Gallery
+                    </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.proofUploadButton}
                     onPress={() => handleProofImagePicker('camera')}
-                    activeOpacity={0.8}>
+                    activeOpacity={0.8}
+                  >
                     <Icon name="camera-outline" size={20} color="#ff7900" />
                     <Text style={styles.proofUploadButtonText}>Take Photo</Text>
                   </TouchableOpacity>
@@ -1170,62 +1310,89 @@ export default function AddDetails({ route, navigation }) {
                   <Text style={styles.proofErrorText}>{proofError}</Text>
                 </View>
               ) : null}
-              </View>
-            )}
-
-            {(errorMessage || error) && (
-              <View style={styles.errorCard}>
-                <Icon name="alert" size={20} color="#dc2626" />
-                <Text style={styles.errorText}>
-                  {errorMessage || error?.message || 'An unknown error occurred.'}
-                </Text>
-              </View>
-            )}
-
-            {/* Action Buttons */}
-            <View style={styles.actionButtons}>
-              <TouchableOpacity
-                style={styles.resetButton}
-                onPress={resetForm}
-                activeOpacity={0.8}>
-                <Icon name="refresh" size={20} color="#666" />
-                <Text style={styles.resetButtonText}>Reset</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.submitButton,
-                  (loading || isProcessingPayment || paymentVerifying) && styles.submitButtonDisabled,
-                ]}
-                onPress={handleSubmit}
-                disabled={loading || isProcessingPayment || paymentVerifying}
-                activeOpacity={0.8}>
-                {(loading || isProcessingPayment || paymentVerifying) ? (
-                  <>
-                    <ActivityIndicator size="small" color="#FFF" />
-                    <Text style={styles.submitButtonText}>
-                      {isProcessingPayment ? 'Processing Payment...' : 
-                       paymentVerifying ? 'Verifying Payment...' : 'Creating...'}
-                    </Text>
-                  </>
-                ) : (
-                  <>
-                    <Icon
-                      name={loanDetails ? "check-circle" : 
-                            formData.loanMode === 'online' ? "credit-card-check" : "plus-circle"}
-                      size={20}
-                      color="#FFF"
-                    />
-                    <Text style={styles.submitButtonText}>
-                      {loanDetails ? 'Update Loan' : 
-                       formData.loanMode === 'online' ? 'Create & Pay Online' : 'Create Loan'}
-                    </Text>
-                  </>
-                )}
-              </TouchableOpacity>
             </View>
+          )}
+
+          {(errorMessage || error) && (
+            <View style={styles.errorCard}>
+              <Icon name="alert" size={20} color="#dc2626" />
+              <Text style={styles.errorText}>
+                {errorMessage || error?.message || 'An unknown error occurred.'}
+              </Text>
+            </View>
+          )}
+
+          {/* Action Buttons */}
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={styles.resetButton}
+              onPress={resetForm}
+              activeOpacity={0.8}
+            >
+              <Icon name="refresh" size={20} color="#666" />
+              <Text style={styles.resetButtonText}>Reset</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.submitButton,
+                (loading ||
+                  isProcessingPayment ||
+                  paymentVerifying ||
+                  isSubmitting ||
+                  planLoading) &&
+                  styles.submitButtonDisabled,
+              ]}
+              onPress={handleSubmit}
+              disabled={
+                loading ||
+                isProcessingPayment ||
+                paymentVerifying ||
+                isSubmitting ||
+                planLoading
+              }
+              activeOpacity={0.8}
+            >
+              {loading ||
+              isProcessingPayment ||
+              paymentVerifying ||
+              isSubmitting ? (
+                <>
+                  <ActivityIndicator size="small" color="#FFF" />
+                  <Text style={styles.submitButtonText}>
+                    {isProcessingPayment
+                      ? 'Processing Payment...'
+                      : paymentVerifying
+                      ? 'Verifying Payment...'
+                      : 'Creating...'}
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Icon
+                    name={
+                      loanDetails
+                        ? 'check-circle'
+                        : formData.loanMode === 'online'
+                        ? 'credit-card-check'
+                        : 'plus-circle'
+                    }
+                    size={20}
+                    color="#FFF"
+                  />
+                  <Text style={styles.submitButtonText}>
+                    {loanDetails
+                      ? 'Update Loan'
+                      : formData.loanMode === 'online'
+                      ? 'Create & Pay Online'
+                      : 'Create Loan'}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
           </View>
-        </ScrollView>
+        </View>
+      </ScrollView>
 
       {/* Date Pickers */}
       <DateTimePickerModal
@@ -1268,10 +1435,10 @@ export default function AddDetails({ route, navigation }) {
         onCancel={handleFraudWarningCancel}
         onViewHistory={handleFraudWarningViewHistory}
       />
-      
+
       {/* Subscription Restriction Overlay */}
       {isLender && !planLoading && !hasActivePlan && (
-        <SubscriptionRestriction 
+        <SubscriptionRestriction
           message="Purchase a plan to add new loans"
           asOverlay={true}
         />

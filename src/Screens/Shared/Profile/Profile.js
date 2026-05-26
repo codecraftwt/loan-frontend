@@ -80,12 +80,6 @@ export default function Profile() {
       onPress: () => navigation.navigate('HelpAndSupportScreen'),
       color: '#8B5CF6',
     },
-    {
-      icon: 'shield',
-      label: 'Privacy & Security',
-      onPress: () => { },
-      color: '#EF4444',
-    },
   ];
 
   return (

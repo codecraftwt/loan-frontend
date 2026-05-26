@@ -149,6 +149,15 @@ const BorrowerReputationCard = ({ aadhaarNumber, compact = false }) => {
     <View style={[styles.container, { borderColor: color + '30' }]}>
       {/* Header Banner */}
       <View style={[styles.headerBanner, { backgroundColor: color + '10' }]}>
+        {/* Top Row - Badge at top right */}
+        <View style={styles.badgeTopRow}>
+          <View style={[styles.levelBadge, { backgroundColor: color }]}>
+            <Icon name={getReputationIcon(reputationLevel)} size={14} color="#FFFFFF" />
+            <Text style={styles.levelBadgeText}>{reputationLevel}</Text>
+          </View>
+        </View>
+        
+        {/* Main Content Row */}
         <View style={styles.headerBannerContent}>
           <View style={[styles.headerIconWrapper, { backgroundColor: color + '20' }]}>
             <Icon name={getReputationIcon(reputationLevel)} size={28} color={color} />
@@ -157,10 +166,6 @@ const BorrowerReputationCard = ({ aadhaarNumber, compact = false }) => {
             <Text style={styles.headerTitle}>Reputation Score</Text>
             <Text style={styles.headerSubtitle}>Borrower Reliability Index</Text>
           </View>
-        </View>
-        <View style={[styles.levelBadge, { backgroundColor: color }]}>
-          <Icon name={getReputationIcon(reputationLevel)} size={14} color="#FFFFFF" />
-          <Text style={styles.levelBadgeText}>{reputationLevel}</Text>
         </View>
       </View>
 
@@ -460,14 +465,16 @@ const styles = StyleSheet.create({
   headerBanner: {
     paddingVertical: m(16),
     paddingHorizontal: m(16),
+    position: 'relative',
+  },
+  badgeTopRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginBottom: m(12),
   },
   headerBannerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
     gap: m(12),
   },
   headerIconWrapper: {

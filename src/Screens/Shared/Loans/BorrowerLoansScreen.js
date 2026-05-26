@@ -296,7 +296,7 @@ export default function BorrowerLoansScreen({ route, navigation }) {
         {/* Summary Card */}
         <View style={styles.summaryCard}>
           <Text style={styles.summaryTitle}>Loan Summary</Text>
-          <View style={styles.summaryGrid}>
+          {/* <View style={styles.summaryGrid}>
             <View style={styles.summaryItem}>
               <Text style={styles.summaryNumber}>{loans.length}</Text>
               <Text style={styles.summaryLabel}>Total Loans</Text>
@@ -314,7 +314,7 @@ export default function BorrowerLoansScreen({ route, navigation }) {
               </Text>
               <Text style={styles.summaryLabel}>Closed</Text>
             </View>
-          </View>
+          </View> */}
           <View style={styles.amountSummary}>
             <View style={styles.amountRow}>
               <Text style={styles.amountLabel}>Total Given:</Text>
@@ -458,6 +458,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#111827',
     marginBottom: m(16),
+    paddingBottom: m(16),
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
   summaryGrid: {
     flexDirection: 'row',

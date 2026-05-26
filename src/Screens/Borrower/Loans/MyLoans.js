@@ -1,3 +1,4 @@
+//MyLoans
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -8,6 +9,7 @@ import {
   TextInput,
   RefreshControl,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
@@ -16,13 +18,18 @@ import moment from 'moment';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
 import Toast from 'react-native-toast-message';
-import { getBorrowerLoans, clearLoans } from '../../../Redux/Slices/borrowerLoanSlice';
+import {
+  getBorrowerLoans,
+  clearLoans,
+} from '../../../Redux/Slices/borrowerLoanSlice';
 
 export default function MyLoans() {
   // Navigation & Redux
   const navigation = useNavigation();
   const dispatch = useDispatch();
-  const { loans, summary, loading, error, } = useSelector(state => state.borrowerLoans);
+  const { loans, summary, loading, error } = useSelector(
+    state => state.borrowerLoans,
+  );
   const user = useSelector(state => state.auth.user);
 
   // State Management
@@ -53,7 +60,7 @@ export default function MyLoans() {
       if (user?._id) {
         fetchMyLoans();
       }
-    }, [user?._id])
+    }, [user?._id]),
   );
 
   useEffect(() => {
@@ -100,10 +107,13 @@ export default function MyLoans() {
 
     // Apply search query filter
     if (searchQuery.trim()) {
-      filtered = filtered.filter(loan =>
-        loan.lenderId?.userName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        loan.amount?.toString().includes(searchQuery) ||
-        loan.paymentStatus?.toLowerCase().includes(searchQuery.toLowerCase())
+      filtered = filtered.filter(
+        loan =>
+          loan.lenderId?.userName
+            ?.toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
+          loan.amount?.toString().includes(searchQuery) ||
+          loan.paymentStatus?.toLowerCase().includes(searchQuery.toLowerCase()),
       );
     }
 
@@ -127,12 +137,16 @@ export default function MyLoans() {
   const getStatusColor = (status, isOverdue) => {
     // Override if loan is overdue
     if (isOverdue) return '#DC2626';
-    
+
     switch (status?.toLowerCase()) {
-      case 'paid': return '#10B981';
-      case 'part paid': return '#F59E0B';
-      case 'pending': return '#6B7280';
-      default: return '#6B7280';
+      case 'paid':
+        return '#10B981';
+      case 'part paid':
+        return '#F59E0B';
+      case 'pending':
+        return '#6B7280';
+      default:
+        return '#6B7280';
     }
   };
 
@@ -140,19 +154,26 @@ export default function MyLoans() {
   const getStatusIcon = (status, isOverdue) => {
     // Override if loan is overdue
     if (isOverdue) return 'alert-triangle';
-    
+
     switch (status?.toLowerCase()) {
-      case 'paid': return 'check-circle';
-      case 'part paid': return 'clock';
-      case 'pending': return 'circle';
-      default: return 'circle';
+      case 'paid':
+        return 'check-circle';
+      case 'part paid':
+        return 'clock';
+      case 'pending':
+        return 'circle';
+      default:
+        return 'circle';
     }
   };
 
   // Get display status text
   const getDisplayStatus = (paymentStatus, isOverdue) => {
     if (isOverdue) return 'Overdue';
-    return paymentStatus?.charAt(0).toUpperCase() + paymentStatus?.slice(1) || 'Pending';
+    return (
+      paymentStatus?.charAt(0).toUpperCase() + paymentStatus?.slice(1) ||
+      'Pending'
+    );
   };
 
   // Render Functions
@@ -161,19 +182,30 @@ export default function MyLoans() {
     const displayStatus = getDisplayStatus(item.paymentStatus, isOverdue);
     const statusColor = getStatusColor(item.paymentStatus, isOverdue);
     const statusIcon = getStatusIcon(item.paymentStatus, isOverdue);
-    
+
     return (
       <TouchableOpacity
         style={[styles.loanCard, isOverdue && styles.overdueCard]}
-        onPress={() => navigation.navigate('BorrowerLoanDetails', { loan: item })}
+        onPress={() =>
+          navigation.navigate('BorrowerLoanDetails', { loan: item })
+        }
       >
         <View style={styles.loanHeader}>
           <View style={styles.loanInfo}>
-            <Text style={styles.loanAmount}>₹{item.amount?.toLocaleString('en-IN')}</Text>
-            <Text style={styles.loanLender} numberOfLines={1}>{item.lenderId?.userName || 'Unknown Lender'}</Text>
+            <Text style={styles.loanAmount}>
+              ₹{item.amount?.toLocaleString('en-IN')}
+            </Text>
+            <Text style={styles.loanLender} numberOfLines={1}>
+              {item.lenderId?.userName || 'Unknown Lender'}
+            </Text>
           </View>
-          <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
-            <Icon name={statusIcon} size={14} color={statusColor} />
+          <View
+            style={[
+              styles.statusBadge,
+              { backgroundColor: statusColor + '20' },
+            ]}
+          >
+            <Icon name={statusIcon} size={m(14)} color={statusColor} />
             <Text style={[styles.statusText, { color: statusColor }]}>
               {displayStatus}
             </Text>
@@ -183,10 +215,12 @@ export default function MyLoans() {
         {/* Overdue Warning Banner */}
         {isOverdue && (
           <View style={styles.overdueBanner}>
-            <Icon name="alert-circle" size={16} color="#DC2626" />
+            <Icon name="alert-circle" size={m(16)} color="#DC2626" />
             <Text style={styles.overdueBannerText}>
-              {item.overdueDetails?.overdueDays > 0 
-                ? `Overdue by ${item.overdueDetails.overdueDays} day${item.overdueDetails.overdueDays > 1 ? 's' : ''}`
+              {item.overdueDetails?.overdueDays > 0
+                ? `Overdue by ${item.overdueDetails.overdueDays} day${
+                    item.overdueDetails.overdueDays > 1 ? 's' : ''
+                  }`
                 : 'Payment Overdue'}
             </Text>
           </View>
@@ -194,38 +228,41 @@ export default function MyLoans() {
 
         <View style={styles.loanDetails}>
           <View style={styles.detailRow}>
-            <Icon name="phone" size={14} color="#6B7280" />
-            <Text style={styles.detailText}>{item.lenderId?.mobileNo || 'N/A'}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Icon name="calendar" size={14} color="#6B7280" />
-            <Text style={[styles.detailText, isOverdue && styles.overdueText]}>
-              Due: {item.loanEndDate ? moment(item.loanEndDate).format('DD MMM YYYY') : 'N/A'}
+            <Icon name="phone" size={m(14)} color="#6B7280" />
+            <Text style={styles.detailText}>
+              {item.lenderId?.mobileNo || 'N/A'}
             </Text>
           </View>
-          
-          {/* Show next due date for installment plans */}
-          {item.installmentPlan?.nextDueDate && (
-            <View style={styles.detailRow}>
-              <Icon name="clock" size={14} color="#6B7280" />
-              <Text style={styles.detailText}>
-                Next Installment: {moment(item.installmentPlan.nextDueDate).format('DD MMM YYYY')}
-              </Text>
-            </View>
-          )}
+          <View style={styles.detailRow}>
+            <Icon name="calendar" size={m(14)} color="#6B7280" />
+            <Text style={[styles.detailText, isOverdue && styles.overdueText]}>
+              Due:{' '}
+              {item.loanEndDate
+                ? moment(item.loanEndDate).format('DD MMM YYYY')
+                : 'N/A'}
+            </Text>
+          </View>
         </View>
 
         <View style={styles.loanProgress}>
           <View style={styles.progressInfo}>
-            <Text style={styles.progressLabel}>Paid: ₹{item.totalPaid?.toLocaleString('en-IN') || 0}</Text>
-            <Text style={styles.progressLabel}>Remaining: ₹{item.remainingAmount?.toLocaleString('en-IN') || item.amount}</Text>
+            <Text style={styles.progressLabel}>
+              Paid: ₹{item.totalPaid?.toLocaleString('en-IN') || 0}
+            </Text>
+            <Text style={styles.progressLabel}>
+              Remaining: ₹
+              {item.remainingAmount?.toLocaleString('en-IN') || item.amount}
+            </Text>
           </View>
           <View style={styles.progressBar}>
             <View
               style={[
                 styles.progressFill,
                 {
-                  width: item.amount > 0 ? `${((item.totalPaid || 0) / item.amount) * 100}%` : '0%',
+                  width:
+                    item.amount > 0
+                      ? `${((item.totalPaid || 0) / item.amount) * 100}%`
+                      : '0%',
                   backgroundColor: statusColor,
                 },
               ]}
@@ -236,10 +273,12 @@ export default function MyLoans() {
         <View style={styles.loanActions}>
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => navigation.navigate('BorrowerLoanDetails', { loan: item })}
+            onPress={() =>
+              navigation.navigate('BorrowerLoanDetails', { loan: item })
+            }
           >
             <Text style={styles.actionButtonText}>View Details</Text>
-            <Icon name="chevron-right" size={16} color="#3B82F6" />
+            <Icon name="chevron-right" size={m(16)} color="#3B82F6" />
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -248,35 +287,64 @@ export default function MyLoans() {
 
   const renderSummary = () => {
     // Calculate overdue count
-    const overdueCount = loans.filter(loan => loan.overdueDetails?.isOverdue === true).length;
-    
+    const overdueCount = loans.filter(
+      loan => loan.overdueDetails?.isOverdue === true,
+    ).length;
+
+    const summaryData = [
+      {
+        id: 'totalLoans',
+        value: summary.totalLoans,
+        label: 'Total Loans',
+        color: '#3B82F6',
+      },
+      {
+        id: 'activeLoans',
+        value: summary.activeLoans,
+        label: 'Active',
+        color: '#8B5CF6',
+      },
+      {
+        id: 'completedLoans',
+        value: summary.completedLoans,
+        label: 'Completed',
+        color: '#10B981',
+      },
+      {
+        id: 'overdueLoans',
+        value: overdueCount,
+        label: 'Overdue',
+        color: overdueCount > 0 ? '#DC2626' : '#6B7280',
+        highlight: overdueCount > 0,
+      },
+    ];
+
     return (
       <View style={styles.summaryCard}>
         <Text style={styles.summaryTitle}>Loan Summary</Text>
         <View style={styles.summaryGrid}>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryValue}>{summary.totalLoans}</Text>
-            <Text style={styles.summaryLabel}>Total Loans</Text>
-          </View>
-          <View style={styles.summaryDivider} />
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryValue}>{summary.activeLoans}</Text>
-            <Text style={styles.summaryLabel}>Active</Text>
-          </View>
-          <View style={styles.summaryDivider} />
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryValue}>{summary.completedLoans}</Text>
-            <Text style={styles.summaryLabel}>Completed</Text>
-          </View>
-          <View style={styles.summaryDivider} />
-          <View style={styles.summaryItem}>
-            <Text style={[styles.summaryValue, overdueCount > 0 && styles.overdueSummaryValue]}>
-              {overdueCount}
-            </Text>
-            <Text style={[styles.summaryLabel, overdueCount > 0 && styles.overdueSummaryLabel]}>
-              Overdue
-            </Text>
-          </View>
+          {summaryData.map((item, index) => (
+            <React.Fragment key={item.id}>
+              <View style={styles.summaryItem}>
+                <Text
+                  style={[
+                    styles.summaryValue,
+                    item.highlight && styles.summaryHighlightValue,
+                  ]}
+                >
+                  {item.value}
+                </Text>
+                <Text
+                  style={[
+                    styles.summaryLabel,
+                    item.highlight && styles.summaryHighlightLabel,
+                  ]}
+                >
+                  {item.label}
+                </Text>
+              </View>
+            </React.Fragment>
+          ))}
         </View>
       </View>
     );
@@ -284,24 +352,24 @@ export default function MyLoans() {
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <Icon name="document" size={64} color="#D1D5DB" />
+      <Icon name="document" size={m(64)} color="#D1D5DB" />
       <Text style={styles.emptyTitle}>No Loans Found</Text>
       <Text style={styles.emptySubtitle}>
         {searchQuery
           ? 'Try adjusting your search criteria'
           : activeTab === 'pending'
-            ? 'No pending loans at the moment'
-            : activeTab === 'paid'
-              ? 'No paid loans yet'
-              : activeTab === 'overdue'
-                ? 'No overdue loans. Great job!'
-                : 'You haven\'t taken any loans yet'}
+          ? 'No pending loans at the moment'
+          : activeTab === 'paid'
+          ? 'No paid loans yet'
+          : activeTab === 'overdue'
+          ? 'No overdue loans. Great job!'
+          : "You haven't taken any loans yet"}
       </Text>
     </View>
   );
 
   // Loading State
-  if (loading) {
+  if (false) {
     return (
       <View style={styles.container}>
         <Header title="My Loans" />
@@ -314,9 +382,23 @@ export default function MyLoans() {
   }
 
   // Calculate counts for tabs
-  const overdueCount = loans.filter(loan => loan.overdueDetails?.isOverdue === true).length;
+  const overdueCount = loans.filter(
+    loan => loan.overdueDetails?.isOverdue === true,
+  ).length;
   const paidCount = loans.filter(loan => loan.paymentStatus === 'paid').length;
-  const pendingCount = loans.filter(loan => loan.paymentStatus !== 'paid').length;
+  const pendingCount = loans.filter(
+    loan => loan.paymentStatus !== 'paid',
+  ).length;
+
+  // Tab data
+  const tabsData = [
+    { id: 'all', label: 'All', count: loans.length },
+    { id: 'paid', label: 'Paid', count: paidCount },
+    { id: 'pending', label: 'Pending', count: pendingCount },
+    ...(overdueCount > 0
+      ? [{ id: 'overdue', label: 'Overdue', count: overdueCount }]
+      : []),
+  ];
 
   return (
     <View style={styles.container}>
@@ -325,7 +407,12 @@ export default function MyLoans() {
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <View style={styles.searchInputContainer}>
-          <Icon name="search" size={20} color="#6B7280" style={styles.searchIcon} />
+          <Icon
+            name="search"
+            size={m(20)}
+            color="#6B7280"
+            style={styles.searchIcon}
+          />
           <TextInput
             style={styles.searchInput}
             placeholder="Search by lender, amount, or status"
@@ -335,48 +422,48 @@ export default function MyLoans() {
           />
           {searchQuery ? (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Icon name="x" size={20} color="#6B7280" />
+              <Icon name="x" size={m(20)} color="#6B7280" />
             </TouchableOpacity>
           ) : null}
         </View>
       </View>
 
-      {/* Tabs */}
+      {/* Responsive Tabs - Using ScrollView with m() for consistent responsiveness */}
       <View style={styles.tabsContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'all' && styles.activeTab]}
-          onPress={() => setActiveTab('all')}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabsContentContainer}
+          scrollEventThrottle={16}
         >
-          <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>
-            All ({loans.length})
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'paid' && styles.activeTab]}
-          onPress={() => setActiveTab('paid')}
-        >
-          <Text style={[styles.tabText, activeTab === 'paid' && styles.activeTabText]}>
-            Paid ({paidCount})
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'pending' && styles.activeTab]}
-          onPress={() => setActiveTab('pending')}
-        >
-          <Text style={[styles.tabText, activeTab === 'pending' && styles.activeTabText]}>
-            Pending ({pendingCount})
-          </Text>
-        </TouchableOpacity>
-        {overdueCount > 0 && (
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'overdue' && styles.activeTab, styles.overdueTab]}
-            onPress={() => setActiveTab('overdue')}
-          >
-            <Text style={[styles.tabText, activeTab === 'overdue' && styles.activeTabText, styles.overdueTabText]}>
-              Overdue ({overdueCount})
-            </Text>
-          </TouchableOpacity>
-        )}
+          {tabsData.map(tab => (
+            <TouchableOpacity
+              key={tab.id}
+              style={[
+                styles.tab,
+                activeTab === tab.id && styles.activeTab,
+                tab.id === 'overdue' &&
+                  activeTab === tab.id &&
+                  styles.overdueActiveTab,
+              ]}
+              onPress={() => setActiveTab(tab.id)}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === tab.id && styles.activeTabText,
+                  tab.id === 'overdue' &&
+                    activeTab === tab.id &&
+                    styles.overdueTabText,
+                ]}
+                numberOfLines={1}
+              >
+                {tab.label} ({tab.count})
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
 
       {/* Loans List */}
@@ -386,6 +473,7 @@ export default function MyLoans() {
         keyExtractor={item => item._id}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
+        scrollEnabled={true}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -412,10 +500,11 @@ const styles = StyleSheet.create({
     fontSize: m(16),
     color: '#6B7280',
   },
-  
+
   // Search
   searchContainer: {
-    padding: m(16),
+    paddingHorizontal: m(16),
+    paddingVertical: m(12),
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
@@ -426,7 +515,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
     borderRadius: m(12),
     paddingHorizontal: m(12),
-    paddingVertical: m(8),
+    paddingVertical: m(10),
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
@@ -435,54 +524,65 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontSize: m(16),
+    fontSize: m(14),
     color: '#111827',
     paddingVertical: m(4),
   },
-  
-  // Tabs
+
+  // Tabs - Responsive using m() like Summary Card
   tabsContainer: {
-    flexDirection: 'row',
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
-    flexWrap: 'wrap',
+    flexGrow: 0,
+    height: m(56),
+  },
+  tabsContentContainer: {
+    paddingHorizontal: m(8),
+    paddingVertical: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: m(56),
   },
   tab: {
-    flex: 1,
-    paddingVertical: m(12),
+    paddingHorizontal: m(13),
+    paddingVertical: 0,
+    marginHorizontal: m(4),
     alignItems: 'center',
-    borderBottomWidth: 2,
+    justifyContent: 'center',
+    borderBottomWidth: 3,
     borderBottomColor: 'transparent',
+    height: m(50),
   },
   activeTab: {
     borderBottomColor: '#3B82F6',
   },
+  overdueActiveTab: {
+    borderBottomColor: '#DC2626',
+  },
   tabText: {
-    fontSize: m(14),
+    fontSize: m(13),
     fontWeight: '600',
     color: '#6B7280',
   },
   activeTabText: {
     color: '#3B82F6',
   },
-  overdueTab: {
-    borderBottomColor: '#DC2626',
-  },
   overdueTabText: {
     color: '#DC2626',
   },
-  
+
   // List
   listContainer: {
-    padding: m(16),
+    paddingHorizontal: m(16),
+    paddingVertical: m(16),
     paddingBottom: m(100),
   },
-  
+
   // Loan Card
   loanCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: m(16),
+    borderRadius: m(12),
     padding: m(16),
     marginBottom: m(12),
     borderWidth: 1,
@@ -502,30 +602,31 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: m(12),
+    gap: m(8),
   },
   loanInfo: {
     flex: 1,
   },
   loanAmount: {
-    fontSize: m(20),
+    fontSize: m(18),
     fontWeight: '700',
     color: '#111827',
     marginBottom: m(4),
   },
   loanLender: {
-    fontSize: m(14),
+    fontSize: m(13),
     color: '#6B7280',
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: m(8),
-    paddingVertical: m(4),
-    borderRadius: m(12),
+    paddingVertical: m(6),
+    borderRadius: m(8),
     gap: m(4),
   },
   statusText: {
-    fontSize: m(12),
+    fontSize: m(11),
     fontWeight: '600',
   },
   overdueBanner: {
@@ -550,11 +651,11 @@ const styles = StyleSheet.create({
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: m(6),
-    gap: m(6),
+    marginBottom: m(8),
+    gap: m(8),
   },
   detailText: {
-    fontSize: m(14),
+    fontSize: m(13),
     color: '#6B7280',
   },
   overdueText: {
@@ -568,6 +669,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: m(8),
+    gap: m(8),
   },
   progressLabel: {
     fontSize: m(12),
@@ -599,12 +701,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#3B82F6',
   },
-  
-  // Summary Card
+
+  // Summary Card - Responsive (keeping as is, working well)
   summaryCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: m(16),
-    padding: m(20),
+    borderRadius: m(12),
+    paddingHorizontal: m(16),
+    paddingVertical: m(16),
     marginBottom: m(16),
     borderWidth: 1,
     borderColor: '#E5E7EB',
@@ -615,62 +718,69 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   summaryTitle: {
-    fontSize: m(18),
+    fontSize: m(16),
     fontWeight: '700',
     color: '#111827',
-    marginBottom: m(16),
+    marginBottom: m(10),
   },
   summaryGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: m(8),
   },
   summaryItem: {
     flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: m(8),
   },
   summaryValue: {
-    fontSize: m(18),
+    fontSize: m(14),
     fontWeight: '700',
     color: '#111827',
     marginBottom: m(4),
+    backgroundColor: '#FFE0B2',
+    height: m(30),
+    width: m(30),
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    lineHeight: m(22),
+    borderRadius:m(15)
   },
-  summaryLabel: {
-    fontSize: m(12),
-    color: '#6B7280',
-  },
-  summaryDivider: {
-    width: 1,
-    height: m(40),
-    backgroundColor: '#E5E7EB',
-    marginHorizontal: m(12),
-  },
-  overdueSummaryValue: {
+  summaryHighlightValue: {
     color: '#DC2626',
   },
-  overdueSummaryLabel: {
+  summaryLabel: {
+    fontSize: m(11),
+    color: '#6B7280',
+    textAlign: 'center',
+  },
+  summaryHighlightLabel: {
     color: '#DC2626',
     fontWeight: '600',
   },
-  
+
   // Empty State
   emptyState: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: m(32),
+    paddingVertical: m(64),
+    paddingHorizontal: m(16),
   },
   emptyTitle: {
-    fontSize: m(18),
+    fontSize: m(16),
     fontWeight: '600',
     color: '#111827',
     marginTop: m(16),
     marginBottom: m(8),
+    textAlign: 'center',
   },
   emptySubtitle: {
-    fontSize: m(14),
+    fontSize: m(13),
     color: '#6B7280',
     textAlign: 'center',
-    marginBottom: m(24),
+    lineHeight: m(20),
   },
 });
