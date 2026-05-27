@@ -5,15 +5,25 @@ import {PaperProvider} from 'react-native-paper';
 import {NavigationContainer} from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
 import {toastConfig} from './src/Utils/toastConfig';
-import {Provider, useSelector} from 'react-redux';
+import {Provider, useSelector, useDispatch} from 'react-redux';
 import store from './src/Redux/store/store';
 import NotificationService from './src/Services/NotificationService';
+import { syncService } from './src/Services/syncService';
 
 function AppContent() {
+  const dispatch = useDispatch();
   const navigationRef = useRef(null);
   const user = useSelector(state => state.auth?.user);
   const authToken = useSelector(state => state.auth?.token);
   const handlersInitialized = useRef(false);
+
+  // Monitor network state for automatic syncing
+  useEffect(() => {
+    const unsubscribe = syncService.startNetworkMonitoring(dispatch);
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [dispatch]);
 
   // Initialize notification handlers once when navigation is ready
   useEffect(() => {

@@ -1,4 +1,3 @@
-//MyLoans
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -390,14 +389,12 @@ export default function MyLoans() {
     loan => loan.paymentStatus !== 'paid',
   ).length;
 
-  // Tab data
+  // Tab data - ALWAYS SHOW ALL TABS (including Overdue even if count is 0)
   const tabsData = [
     { id: 'all', label: 'All', count: loans.length },
     { id: 'paid', label: 'Paid', count: paidCount },
     { id: 'pending', label: 'Pending', count: pendingCount },
-    ...(overdueCount > 0
-      ? [{ id: 'overdue', label: 'Overdue', count: overdueCount }]
-      : []),
+    { id: 'overdue', label: 'Overdue', count: overdueCount }, // Always show Overdue tab
   ];
 
   return (
@@ -428,7 +425,7 @@ export default function MyLoans() {
         </View>
       </View>
 
-      {/* Responsive Tabs - Using ScrollView with m() for consistent responsiveness */}
+      {/* Responsive Tabs */}
       <View style={styles.tabsContainer}>
         <ScrollView
           horizontal
@@ -456,6 +453,9 @@ export default function MyLoans() {
                   tab.id === 'overdue' &&
                     activeTab === tab.id &&
                     styles.overdueTabText,
+                  tab.id === 'overdue' &&
+                    overdueCount === 0 &&
+                    styles.zeroOverdueTabText,
                 ]}
                 numberOfLines={1}
               >
@@ -529,7 +529,7 @@ const styles = StyleSheet.create({
     paddingVertical: m(4),
   },
 
-  // Tabs - Responsive using m() like Summary Card
+  // Tabs
   tabsContainer: {
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
@@ -570,6 +570,9 @@ const styles = StyleSheet.create({
   },
   overdueTabText: {
     color: '#DC2626',
+  },
+  zeroOverdueTabText: {
+    color: '#9CA3AF', // Lighter color when count is 0
   },
 
   // List
@@ -702,7 +705,7 @@ const styles = StyleSheet.create({
     color: '#3B82F6',
   },
 
-  // Summary Card - Responsive (keeping as is, working well)
+  // Summary Card
   summaryCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: m(12),
@@ -746,7 +749,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     textAlignVertical: 'center',
     lineHeight: m(22),
-    borderRadius:m(15)
+    borderRadius: m(15),
   },
   summaryHighlightValue: {
     color: '#DC2626',

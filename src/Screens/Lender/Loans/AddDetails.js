@@ -26,6 +26,9 @@ import {
   clearFraudStatus,
   verifyLoanPayment,
 } from '../../../Redux/Slices/loanSlice';
+import { database } from '../../../database';
+import NetInfo from '@react-native-community/netinfo';
+import { syncService } from '../../../Services/syncService';
 import { getActivePlan } from '../../../Redux/Slices/planPurchaseSlice';
 import { openRazorpayCheckoutForLoanCreation } from '../../../Services/razorpayService';
 import Toast from 'react-native-toast-message';
@@ -325,10 +328,78 @@ export default function AddDetails({ route, navigation }) {
     return Object.keys(errors).length === 0;
   };
 
+  // Check network status
+  const checkNetworkStatus = async () => {
+    try {
+      const netInfoState = await NetInfo.fetch();
+      return !!netInfoState.isConnected;
+    } catch (error) {
+      console.error('Error checking network status:', error);
+      return false;
+    }
+  };
+
+  // Save loan to local WatermelonDB for offline storage
+  const saveLoanToLocalDB = async (loanData) => {
+    try {
+      await database.write(async () => {
+        await database.get('loans').create((loan) => {
+          loan.name = loanData.name;
+          loan.mobileNumber = loanData.mobileNumber;
+          loan.aadhaarNumber = loanData.aadharCardNo || loanData.aadhaarNumber;
+          loan.address = loanData.address;
+          loan.amount = loanData.amount;
+          loan.purpose = loanData.purpose;
+          loan.loanMode = loanData.loanMode;
+          loan.loanStartDate = loanData.loanGivenDate || loanData.loanStartDate;
+          loan.loanEndDate = loanData.loanEndDate;
+          loan.syncStatus = 'pending'; // Mark as needing sync
+          loan.proof = loanData.proof ? JSON.stringify(loanData.proof) : null;
+        });
+      });
+      return true;
+    } catch (error) {
+      console.error('Error saving loan to local DB:', error);
+      return false;
+    }
+  };
+
+  // Sync pending loans from local DB to backend
+  const syncPendingLoans = async () => {
+    try {
+      await syncService.syncPendingLoans(dispatch);
+    } catch (error) {
+      console.error('Error in syncPendingLoans:', error);
+    }
+  };
+
   // Check plan before loan creation
   const checkPlanBeforeLoanCreation = async () => {
     try {
-      const result = await dispatch(getActivePlan()).unwrap();
+      const isOnline = await checkNetworkStatus();
+      let result;
+
+      if (!isOnline) {
+        const subscriptions = await database.get('subscriptions').query().fetch();
+        const sub = subscriptions[0];
+        
+        if (sub) {
+          result = {
+            hasActivePlan: sub.hasActivePlan,
+            remainingDays: sub.remainingDays
+          };
+        } else {
+          // No cached plan found offline
+          Alert.alert(
+            'Plan Required',
+            'You are offline and no active plan was found on this device. Please connect to the internet to verify your plan.',
+            [{ text: 'OK', style: 'cancel' }]
+          );
+          return false;
+        }
+      } else {
+        result = await dispatch(getActivePlan()).unwrap();
+      }
 
       if (!result.hasActivePlan) {
         Alert.alert(
@@ -450,11 +521,67 @@ export default function AddDetails({ route, navigation }) {
         return;
       }
 
-      // Proceed with loan creation
-      await proceedWithLoanCreation(newData);
+      // Try to create loan via API if online
+      const isOnline = await checkNetworkStatus();
+      
+      if (isOnline) {
+        // Proceed with loan creation via API
+        await proceedWithLoanCreation(newData);
+      } else {
+        // Save to local DB for offline creation
+        const savedLocally = await saveLoanToLocalDB(newData);
+        if (savedLocally) {
+          Toast.show({
+            type: 'success',
+            position: 'top',
+            text1: 'Loan saved locally',
+            text2: 'Loan will be synced when back online.',
+          });
+          resetForm();
+          navigation.navigate('BottomNavigation', { screen: 'Borrowers' });
+        } else {
+          setErrorMessage('Failed to save loan locally. Please try again.');
+        }
+        setIsSubmitting(false);
+      }
     } catch (error) {
       console.error('Error in handleSubmit:', error);
       setIsSubmitting(false);
+      
+      // If API fails, try to save locally as fallback
+      if (!loanDetails) {
+        try {
+          const fallbackData = {
+            name: formData.name.trim(),
+            mobileNumber: formData.mobileNumber.trim(),
+            aadharCardNo: aadharNumber,
+            address: formData.address.trim(),
+            amount: parseFloat(formData.amount),
+            loanGivenDate: formData.loanStartDate instanceof Date ? formData.loanStartDate.toISOString() : formData.loanStartDate,
+            loanEndDate: formData.loanEndDate instanceof Date ? formData.loanEndDate.toISOString() : formData.loanEndDate,
+            purpose: formData.purpose.trim(),
+            loanMode: formData.loanMode || 'cash',
+            proof: proofFile,
+          };
+          
+          const savedLocally = await saveLoanToLocalDB(fallbackData);
+          if (savedLocally) {
+            Toast.show({
+              type: 'info',
+              position: 'top',
+              text1: 'Loan saved locally',
+              text2: 'Loan will be synced when back online.',
+            });
+            resetForm();
+            navigation.navigate('BottomNavigation', { screen: 'Borrowers' });
+          } else {
+            setErrorMessage('Failed to save loan. Please try again.');
+          }
+        } catch (localError) {
+          console.error('Error saving loan locally:', localError);
+          setErrorMessage('Failed to save loan. Please try again.');
+        }
+      }
     } finally {
       // Reset submitting flag after completion
       // Note: Don't reset immediately if we're navigating away

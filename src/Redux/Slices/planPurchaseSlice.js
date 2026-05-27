@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import instance from '../../Utils/AxiosInstance';
+import { database } from '../../database';
 
 const initialState = {
   // Active plan data
@@ -31,7 +32,7 @@ export const getActivePlan = createAsyncThunk(
     try {
       const response = await instance.get('plans/active');
       if (response.data.success) {
-        return {
+        const payloadData = {
           hasActivePlan: response.data.data.hasActivePlan,
           plan: response.data.data.plan,
           purchaseDate: response.data.data.purchaseDate,
@@ -39,6 +40,36 @@ export const getActivePlan = createAsyncThunk(
           remainingDays: response.data.data.remainingDays,
           isActive: response.data.data.isActive,
         };
+
+        // Cache to offline DB
+        try {
+          const subscriptions = await database.get('subscriptions').query().fetch();
+          await database.write(async () => {
+            if (subscriptions.length > 0) {
+              await subscriptions[0].update(sub => {
+                sub.hasActivePlan = payloadData.hasActivePlan || false;
+                sub.planId = payloadData.plan?._id || null;
+                sub.purchaseDate = payloadData.purchaseDate || null;
+                sub.expiryDate = payloadData.expiryDate || null;
+                sub.remainingDays = payloadData.remainingDays || 0;
+                sub.isActive = payloadData.isActive || false;
+              });
+            } else {
+              await database.get('subscriptions').create(sub => {
+                sub.hasActivePlan = payloadData.hasActivePlan || false;
+                sub.planId = payloadData.plan?._id || null;
+                sub.purchaseDate = payloadData.purchaseDate || null;
+                sub.expiryDate = payloadData.expiryDate || null;
+                sub.remainingDays = payloadData.remainingDays || 0;
+                sub.isActive = payloadData.isActive || false;
+              });
+            }
+          });
+        } catch (dbError) {
+          console.error('Failed to cache subscription to offline DB', dbError);
+        }
+
+        return payloadData;
       } else {
         return rejectWithValue(
           response.data.message || 'Failed to fetch active plan'
@@ -92,13 +123,43 @@ export const verifyPlanPayment = createAsyncThunk(
       const response = await instance.post('plans/purchase/verify', paymentData);
       
       if (response.data.success) {
-        return {
+        const payloadData = {
           plan: response.data.data.plan,
           purchaseDate: response.data.data.purchaseDate,
           expiryDate: response.data.data.expiryDate,
           remainingDays: response.data.data.remainingDays,
           isActive: response.data.data.isActive,
         };
+
+        // Cache to offline DB
+        try {
+          const subscriptions = await database.get('subscriptions').query().fetch();
+          await database.write(async () => {
+            if (subscriptions.length > 0) {
+              await subscriptions[0].update(sub => {
+                sub.hasActivePlan = true;
+                sub.planId = payloadData.plan?._id || null;
+                sub.purchaseDate = payloadData.purchaseDate || null;
+                sub.expiryDate = payloadData.expiryDate || null;
+                sub.remainingDays = payloadData.remainingDays || 0;
+                sub.isActive = payloadData.isActive || false;
+              });
+            } else {
+              await database.get('subscriptions').create(sub => {
+                sub.hasActivePlan = true;
+                sub.planId = payloadData.plan?._id || null;
+                sub.purchaseDate = payloadData.purchaseDate || null;
+                sub.expiryDate = payloadData.expiryDate || null;
+                sub.remainingDays = payloadData.remainingDays || 0;
+                sub.isActive = payloadData.isActive || false;
+              });
+            }
+          });
+        } catch (dbError) {
+          console.error('Failed to cache subscription to offline DB', dbError);
+        }
+
+        return payloadData;
       } else {
         console.error('Verification failed - response:', response.data);
         return rejectWithValue(

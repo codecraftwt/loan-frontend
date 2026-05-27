@@ -10,6 +10,9 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  PermissionsAndroid,
+  Alert,
+  Modal,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import LinearGradient from 'react-native-linear-gradient';
@@ -27,6 +30,30 @@ import {
 } from '../../../Redux/Slices/authslice';
 import useFetchUserFromStorage from '../../../Redux/hooks/useFetchUserFromStorage';
 
+const requestCameraPermission = async () => {
+  try {
+    if (Platform.OS === 'android') {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.CAMERA,
+        {
+          title: 'Camera Permission',
+          message: 'App needs access to your camera to take profile photos.',
+          buttonNeutral: 'Ask Me Later',
+          buttonNegative: 'Cancel',
+          buttonPositive: 'OK',
+        }
+      );
+
+      return granted === PermissionsAndroid.RESULTS.GRANTED;
+    }
+
+    return true;
+  } catch (err) {
+    console.warn(err);
+    return false;
+  }
+};
+
 const EditProfile = ({ navigation }) => {
   const dispatch = useDispatch();
   const profileData = useSelector(state => state.auth.user);
@@ -35,16 +62,32 @@ const EditProfile = ({ navigation }) => {
   const [isDeleteImagePromptVisible, setIsDeleteImagePromptVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [isImagePickerModalVisible, setIsImagePickerModalVisible] = useState(false);
+  
+  // Helper function to extract only the numeric part (remove +91)
+  const getDisplayPhoneNumber = (fullNumber) => {
+    if (!fullNumber) return '';
+    // Remove +91 prefix if present
+    return fullNumber.replace(/^\+91/, '');
+  };
+  
   const [editedData, setEditedData] = useState({
     userName: profileData?.userName || '',
     mobileNo: profileData?.mobileNo || '',
     email: profileData?.email || '',
     address: profileData?.address || '',
   });
+  
+  // For display in the input field (without +91)
+  const [displayMobileNo, setDisplayMobileNo] = useState(
+    getDisplayPhoneNumber(profileData?.mobileNo || '')
+  );
 
   // Refresh editedData when profileData changes
   useFocusEffect(
     useCallback(() => {
+      const newDisplayNumber = getDisplayPhoneNumber(profileData?.mobileNo || '');
+      setDisplayMobileNo(newDisplayNumber);
       setEditedData({
         userName: profileData?.userName || '',
         mobileNo: profileData?.mobileNo || '',
@@ -55,17 +98,87 @@ const EditProfile = ({ navigation }) => {
   );
 
   // Profile Image Functions
-  const handleProfileImage = action => {
-    const options =
-      action === 'camera'
-        ? { mediaType: 'photo', cameraType: 'front', quality: 1, saveToPhotos: true }
-        : { mediaType: 'photo', quality: 1 };
+  const handleProfileImageOption = (option) => {
+    setIsImagePickerModalVisible(false);
+    
+    switch(option) {
+      case 'camera':
+        launchCameraAction();
+        break;
+      case 'gallery':
+        launchGalleryAction();
+        break;
+      case 'remove':
+        if (profileData?.profileImage) {
+          setIsDeleteImagePromptVisible(true);
+        } else {
+          Toast.show({ 
+            type: 'info', 
+            text1: 'No Image', 
+            text2: 'You don\'t have a profile image to remove' 
+          });
+        }
+        break;
+      default:
+        break;
+    }
+  };
 
-    const launch = action === 'camera' ? launchCamera : launchImageLibrary;
-    launch(options, response => {
-      if (response.didCancel || response.errorCode)
-        return Toast.show({ type: 'error', text1: 'Cancelled or Error' });
+const launchCameraAction = async () => {
+  const hasPermission = await requestCameraPermission();
+
+  if (!hasPermission) {
+    Alert.alert(
+      'Permission Denied',
+      'Camera permission is required to take photos.'
+    );
+    return;
+  }
+
+  const options = {
+    mediaType: 'photo',
+    cameraType: 'front',
+    quality: 1,
+    saveToPhotos: true,
+  };
+
+  launchCamera(options, response => {
+    if (response.didCancel) {
+      return;
+    }
+
+    if (response.errorCode) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: response.errorMessage,
+      });
+      return;
+    }
+
+    if (response.assets && response.assets[0]) {
       handleImageUpload(response.assets[0]);
+    }
+  });
+};
+
+  const launchGalleryAction = () => {
+    const options = {
+      mediaType: 'photo',
+      quality: 1,
+    };
+    
+    launchImageLibrary(options, response => {
+      if (response.didCancel) {
+        return;
+      }
+      if (response.errorCode) {
+        Toast.show({ type: 'error', text1: 'Error', text2: response.errorMessage });
+        return;
+      }
+      if (response.assets && response.assets[0]) {
+        handleImageUpload(response.assets[0]);
+      }
     });
   };
 
@@ -74,17 +187,22 @@ const EditProfile = ({ navigation }) => {
       setLoading(true);
       const { uri, type, fileName } = asset;
       const formData = new FormData();
-      formData.append('profileImage', { uri, type, name: fileName || 'profile.jpg' });
+      formData.append('profileImage', { 
+        uri, 
+        type, 
+        name: fileName || 'profile.jpg' 
+      });
       await dispatch(updateUserProfile(formData)).unwrap();
-      setLoading(false);
-      Toast.show({ type: 'success', text1: 'Profile Updated Successfully' });
+      Toast.show({ type: 'success', text1: 'Profile Image Updated' });
     } catch (err) {
+      Toast.show({ type: 'error', text1: 'Image Update Failed' });
+    } finally {
       setLoading(false);
-      Toast.show({ type: 'error', text1: 'Profile Update Failed' });
     }
   };
 
   const handleDeleteProfileImage = () => setIsDeleteImagePromptVisible(true);
+  
   const handleConfirmDeleteImage = async () => {
     try {
       await dispatch(deleteProfileImage()).unwrap();
@@ -109,18 +227,94 @@ const EditProfile = ({ navigation }) => {
       return;
     }
 
+    // Only validate phone if it's not empty
+    const displayNumber = displayMobileNo;
+    if (displayNumber && displayNumber.length > 0) {
+      if (displayNumber.length !== 10) {
+        Toast.show({ 
+          type: 'error', 
+          text1: 'Invalid Phone Number', 
+          text2: 'Please enter a valid 10-digit mobile number' 
+        });
+        return;
+      }
+      
+      // Validate phone number starts with valid digit (6-9)
+      const firstDigit = displayNumber.charAt(0);
+      if (!['6', '7', '8', '9'].includes(firstDigit)) {
+        Toast.show({ 
+          type: 'error', 
+          text1: 'Invalid Phone Number', 
+          text2: 'Mobile number must start with 6, 7, 8, or 9' 
+        });
+        return;
+      }
+    }
+
     setSaving(true);
-    try {
-      // Update with trimmed name
-      const dataToSave = {
-        ...editedData,
-        userName: trimmedName,
-      };
-      await dispatch(updateUser(dataToSave)).unwrap();
-      Toast.show({ type: 'success', text1: 'Profile Updated' });
+    
+    // Prepare data to save - only include fields that have changed
+    const dataToSave = {};
+    
+    if (trimmedName !== profileData?.userName) {
+      dataToSave.userName = trimmedName;
+    }
+    
+    // Only include mobile if it was changed
+    const newMobileFull = editedData.mobileNo || '';
+    const oldMobileFull = profileData?.mobileNo || '';
+    if (newMobileFull !== oldMobileFull) {
+      dataToSave.mobileNo = newMobileFull;
+    }
+    
+    if (editedData.email !== profileData?.email) {
+      dataToSave.email = editedData.email;
+    }
+    
+    if (editedData.address !== profileData?.address) {
+      dataToSave.address = editedData.address;
+    }
+    
+    // If no changes, just go back
+    if (Object.keys(dataToSave).length === 0) {
+      Toast.show({ type: 'info', text1: 'No changes to save' });
+      setSaving(false);
       navigation.goBack();
+      return;
+    }
+
+    try {
+      const result = await dispatch(updateUser(dataToSave)).unwrap();
+      
+      // Show success message
+      Toast.show({ 
+        type: 'success', 
+        text1: 'Profile Updated', 
+        text2: 'Your changes have been saved successfully' 
+      });
+      
+      // Navigate back after a short delay to ensure toast is shown
+      setTimeout(() => {
+        navigation.goBack();
+      }, 500);
+      
     } catch (err) {
-      Toast.show({ type: 'error', text1: 'Update Failed' });
+      console.error('Update error details:', err);
+      let errorMessage = 'Update Failed';
+      
+      if (typeof err === 'string') {
+        errorMessage = err;
+      } else if (err?.message) {
+        errorMessage = err.message;
+      } else if (err?.data?.message) {
+        errorMessage = err.data.message;
+      }
+      
+      Toast.show({ 
+        type: 'error', 
+        text1: 'Update Failed', 
+        text2: errorMessage 
+      });
       setSaving(false);
     }
   };
@@ -129,11 +323,18 @@ const EditProfile = ({ navigation }) => {
     navigation.goBack();
   };
 
-  // Handle phone number input - only allow numbers
+  // Handle phone number input - only allow numbers and update both states
   const handlePhoneNumberChange = (text) => {
     // Remove all non-numeric characters
     const numericOnly = text.replace(/[^0-9]/g, '');
-    setEditedData({ ...editedData, mobileNo: numericOnly });
+    
+    // Limit to 10 digits for display
+    const limitedNumber = numericOnly.slice(0, 10);
+    setDisplayMobileNo(limitedNumber);
+    
+    // Store the full number with +91 prefix in editedData
+    const fullNumber = limitedNumber.length === 10 ? `+91${limitedNumber}` : '';
+    setEditedData({ ...editedData, mobileNo: fullNumber });
   };
 
   const renderField = (icon, label, value, editable = false, keyName, iconColor = '#3B82F6') => {
@@ -147,25 +348,107 @@ const EditProfile = ({ navigation }) => {
         <View style={styles.fieldContent}>
           <Text style={styles.fieldLabel}>{label}</Text>
           {editable ? (
-            <TextInput
-              style={styles.fieldInput}
-              value={editedData[keyName]}
-              onChangeText={isPhoneField 
-                ? handlePhoneNumberChange 
-                : (text => setEditedData({ ...editedData, [keyName]: text }))
-              }
-              placeholder={`Enter ${label.toLowerCase()}`}
-              placeholderTextColor="#9CA3AF"
-              keyboardType={isPhoneField ? 'phone-pad' : 'default'}
-              maxLength={isPhoneField ? 10 : undefined}
-            />
+            isPhoneField ? (
+              <View style={styles.phoneInputContainer}>
+                <View style={styles.countryCodeContainer}>
+                  <Text style={styles.countryCodeText}>+91</Text>
+                </View>
+                <TextInput
+                  style={styles.phoneInput}
+                  value={displayMobileNo}
+                  onChangeText={handlePhoneNumberChange}
+                  placeholder="Enter 10-digit mobile number"
+                  placeholderTextColor="#9CA3AF"
+                  keyboardType="phone-pad"
+                  maxLength={10}
+                />
+              </View>
+            ) : (
+              <TextInput
+                style={styles.fieldInput}
+                value={editedData[keyName]}
+                onChangeText={text => setEditedData({ ...editedData, [keyName]: text })}
+                placeholder={`Enter ${label.toLowerCase()}`}
+                placeholderTextColor="#9CA3AF"
+                keyboardType={keyName === 'email' ? 'email-address' : 'default'}
+                maxLength={keyName === 'email' ? 100 : 50}
+              />
+            )
           ) : (
-            <Text style={styles.fieldValue}>{value || 'Not provided'}</Text>
+            <Text style={styles.fieldValue}>
+              {isPhoneField ? getDisplayPhoneNumber(value) : (value || 'Not provided')}
+            </Text>
           )}
         </View>
       </View>
     );
   };
+
+  // Image Picker Modal Component
+  const renderImagePickerModal = () => (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={isImagePickerModalVisible}
+      onRequestClose={() => setIsImagePickerModalVisible(false)}
+    >
+      <TouchableOpacity 
+        style={styles.modalOverlay} 
+        activeOpacity={1} 
+        onPress={() => setIsImagePickerModalVisible(false)}
+      >
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Profile Image</Text>
+            <TouchableOpacity onPress={() => setIsImagePickerModalVisible(false)}>
+              <Icon name="x" size={24} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
+          
+          <TouchableOpacity 
+            style={styles.modalOption} 
+            onPress={() => handleProfileImageOption('camera')}
+          >
+            <View style={[styles.modalOptionIcon, { backgroundColor: '#3B82F6' }]}>
+              <Icon name="camera" size={22} color="#FFFFFF" />
+            </View>
+            <Text style={styles.modalOptionText}>Take Photo</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.modalOption} 
+            onPress={() => handleProfileImageOption('gallery')}
+          >
+            <View style={[styles.modalOptionIcon, { backgroundColor: '#10B981' }]}>
+              <Icon name="image" size={22} color="#FFFFFF" />
+            </View>
+            <Text style={styles.modalOptionText}>Choose from Gallery</Text>
+          </TouchableOpacity>
+          
+          {profileData?.profileImage && (
+            <TouchableOpacity 
+              style={[styles.modalOption, styles.modalOptionRemove]} 
+              onPress={() => handleProfileImageOption('remove')}
+            >
+              <View style={[styles.modalOptionIcon, { backgroundColor: '#EF4444' }]}>
+                <Icon name="trash-2" size={22} color="#FFFFFF" />
+              </View>
+              <Text style={[styles.modalOptionText, styles.modalOptionRemoveText]}>
+                Remove Photo
+              </Text>
+            </TouchableOpacity>
+          )}
+          
+          <TouchableOpacity 
+            style={styles.modalCancelButton} 
+            onPress={() => setIsImagePickerModalVisible(false)}
+          >
+            <Text style={styles.modalCancelText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
 
   return (
     <KeyboardAvoidingView
@@ -182,7 +465,11 @@ const EditProfile = ({ navigation }) => {
         {/* Profile Header Card */}
         <View style={styles.profileHeaderCard}>
           <View style={styles.profileImageSection}>
-            <View style={styles.imageContainer}>
+            <TouchableOpacity 
+              style={styles.imageContainer}
+              onPress={() => setIsImagePickerModalVisible(true)}
+              activeOpacity={0.9}
+            >
               {profileData?.profileImage ? (
                 <Image
                   source={{ uri: profileData.profileImage }}
@@ -195,32 +482,15 @@ const EditProfile = ({ navigation }) => {
               )}
 
               {/* Camera Icon Overlay - Always show in edit mode */}
-              <TouchableOpacity
-                style={styles.cameraBtn}
-                onPress={() => handleProfileImage('gallery')}
-                activeOpacity={0.8}
-              >
+              <View style={styles.cameraBtn}>
                 <LinearGradient
                   colors={['#3B82F6', '#2563EB']}
                   style={styles.cameraIconBg}
                 >
                   <Icon name="camera" size={18} color="#FFFFFF" />
                 </LinearGradient>
-              </TouchableOpacity>
-
-              {/* Delete Image - Only show when has image */}
-              {profileData?.profileImage && (
-                <TouchableOpacity
-                  style={styles.deleteImageBtn}
-                  onPress={handleDeleteProfileImage}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.deleteImageIconBg}>
-                    <Icon name="trash-2" size={16} color="#FFFFFF" />
-                  </View>
-                </TouchableOpacity>
-              )}
-            </View>
+              </View>
+            </TouchableOpacity>
 
             {loading && (
               <View style={styles.loadingOverlay}>
@@ -286,7 +556,10 @@ const EditProfile = ({ navigation }) => {
         </View>
       </ScrollView>
 
-      {/* Prompt Box */}
+      {/* Image Picker Modal */}
+      {renderImagePickerModal()}
+
+      {/* Prompt Box for Delete Confirmation */}
       <PromptBox
         visible={isDeleteImagePromptVisible}
         message="Are you sure you want to delete your profile image?"
@@ -372,27 +645,6 @@ const styles = StyleSheet.create({
   cameraIconBg: {
     width: '100%',
     height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  deleteImageBtn: {
-    position: 'absolute',
-    top: m(-4),
-    right: m(-4),
-    width: m(32),
-    height: m(32),
-    borderRadius: m(16),
-    overflow: 'hidden',
-    elevation: 3,
-    shadowColor: '#EF4444',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-  },
-  deleteImageIconBg: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#EF4444',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -491,6 +743,35 @@ const styles = StyleSheet.create({
     borderRadius: m(4),
     paddingLeft: m(8),
   },
+  // Phone input specific styles
+  phoneInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: 1.5,
+    borderBottomColor: '#3B82F6',
+    backgroundColor: '#FFFFFF',
+    borderRadius: m(4),
+    paddingLeft: m(8),
+  },
+  countryCodeContainer: {
+    paddingRight: m(8),
+    borderRightWidth: 1,
+    borderRightColor: '#E5E7EB',
+    marginRight: m(8),
+  },
+  countryCodeText: {
+    fontSize: m(16),
+    fontWeight: '600',
+    color: '#111827',
+  },
+  phoneInput: {
+    flex: 1,
+    fontSize: m(16),
+    fontWeight: '600',
+    color: '#111827',
+    paddingVertical: m(6),
+    paddingHorizontal: 0,
+  },
   // Edit Action Buttons
   editActionButtons: {
     marginTop: m(22),
@@ -552,5 +833,73 @@ const styles = StyleSheet.create({
     fontSize: m(16),
     fontWeight: '600',
   },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: m(20),
+    borderTopRightRadius: m(20),
+    padding: m(20),
+    paddingBottom: m(34),
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: m(20),
+    paddingBottom: m(12),
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  modalTitle: {
+    fontSize: m(18),
+    fontWeight: '700',
+    color: '#111827',
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: m(14),
+    paddingHorizontal: m(12),
+    borderRadius: m(12),
+    marginBottom: m(8),
+    backgroundColor: '#F9FAFB',
+  },
+  modalOptionRemove: {
+    backgroundColor: '#FEF2F2',
+  },
+  modalOptionIcon: {
+    width: m(44),
+    height: m(44),
+    borderRadius: m(22),
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: m(16),
+  },
+  modalOptionText: {
+    fontSize: m(16),
+    fontWeight: '600',
+    color: '#111827',
+  },
+  modalOptionRemoveText: {
+    color: '#EF4444',
+  },
+  modalCancelButton: {
+    marginTop: m(12),
+    paddingVertical: m(14),
+    alignItems: 'center',
+    borderRadius: m(12),
+    backgroundColor: '#F3F4F6',
+  },
+  modalCancelText: {
+    fontSize: m(16),
+    fontWeight: '600',
+    color: '#6B7280',
+  },
 });
+
 export default EditProfile;

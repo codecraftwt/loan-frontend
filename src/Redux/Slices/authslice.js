@@ -182,7 +182,7 @@ export const registerUser = createAsyncThunk(
 
 export const updateUser = createAsyncThunk(
   'user/update-user',
-  async (userData, {rejectWithValue}) => {
+  async (userData, { rejectWithValue }) => {
     try {
       const token = await AsyncStorage.getItem('token');
       if (!token) {
@@ -190,15 +190,17 @@ export const updateUser = createAsyncThunk(
       }
 
       const response = await instance.patch('user/update-profile', {
-        userData,
+        userData: userData
       });
+
       return response.data;
     } catch (error) {
+      console.error('Update error:', error.response?.data || error.message);
       return rejectWithValue(
-        error.response ? error.response.data : error.message,
+        error.response?.data || { message: error.message }
       );
     }
-  },
+  }
 );
 
 export const updateUserProfile = createAsyncThunk(

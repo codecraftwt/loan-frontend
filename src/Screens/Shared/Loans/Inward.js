@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -17,6 +17,8 @@ import {
   checkFraudStatus,
 } from '../../../Redux/Slices/loanSlice';
 import { getPendingPayments } from '../../../Redux/Slices/lenderPaymentSlice';
+import { database } from '../../../database';
+import { Q } from '@nozbe/watermelondb';
 import FraudStatusBadge from '../../../Components/FraudStatusBadge';
 import SubscriptionRestriction from '../../../Components/SubscriptionRestriction';
 import { useSubscription } from '../../../hooks/useSubscription';
@@ -61,6 +63,43 @@ export default function Inward({ navigation }) {
   
   // Fraud status state for borrowers
   const [borrowerFraudStatus, setBorrowerFraudStatus] = useState({});
+
+  const [localPendingLoans, setLocalPendingLoans] = useState([]);
+
+  const fetchLocalLoans = useCallback(async () => {
+    try {
+      const pendingLoans = await database.get('loans').query(
+        Q.where('sync_status', 'pending')
+      ).fetch();
+
+      const standardLoans = pendingLoans.map(loan => ({
+        _id: loan.id,
+        name: loan.name,
+        mobileNumber: loan.mobileNumber,
+        aadhaarNumber: loan.aadhaarNumber,
+        address: loan.address,
+        amount: loan.amount,
+        purpose: loan.purpose,
+        loanMode: loan.loanMode,
+        loanStartDate: loan.loanStartDate,
+        loanEndDate: loan.loanEndDate,
+        syncStatus: 'pending',
+        remainingAmount: loan.amount,
+        borrowerAcceptanceStatus: 'pending',
+        paymentStatus: 'pending',
+        isOffline: true,
+      }));
+
+      setLocalPendingLoans(standardLoans);
+    } catch (error) {
+      console.error('Error fetching local pending loans:', error);
+    }
+  }, []);
+
+  const displayLoans = useMemo(() => {
+    // Combine local pending loans and API loans
+    return [...localPendingLoans, ...(lenderLoans || [])];
+  }, [localPendingLoans, lenderLoans]);
 
   const formatDate = date => moment(date).format('DD MMM, YYYY');
 
@@ -185,6 +224,7 @@ export default function Inward({ navigation }) {
       filters.search = debouncedSearch;
     }
     await dispatch(getLoanByLender(filters));
+    await fetchLocalLoans();
   };
 
   useFocusEffect(
@@ -194,12 +234,13 @@ export default function Inward({ navigation }) {
         filters.search = debouncedSearch;
       }
       dispatch(getLoanByLender(filters));
+      fetchLocalLoans();
       
       // Fetch pending payments for lender
       if (isLender) {
         dispatch(getPendingPayments({ page: 1, limit: 100 }));
       }
-    }, [dispatch, debouncedSearch, isLender]),
+    }, [dispatch, debouncedSearch, isLender, fetchLocalLoans]),
   );
 
   // Effect to scroll to and highlight loan when highlightLoanId is provided
@@ -541,7 +582,7 @@ export default function Inward({ navigation }) {
           }
           showsVerticalScrollIndicator={false}
           scrollEnabled={isLender ? (planLoading || hasActivePlan) : true}>
-              {lenderLoans?.length === 0 ? (
+              {displayLoans?.length === 0 ? (
             <View style={styles.emptyState}>
               <Icon 
                 name="account-balance-wallet" 
@@ -556,7 +597,7 @@ export default function Inward({ navigation }) {
               </Text>
             </View>
           ) : (
-            groupLoansByBorrower(lenderLoans).map((borrowerGroup, groupIndex) => {
+            groupLoansByBorrower(displayLoans).map((borrowerGroup, groupIndex) => {
               const borrower = borrowerGroup.borrower;
               const loans = borrowerGroup.loans;
               
@@ -579,6 +620,7 @@ export default function Inward({ navigation }) {
               }).length;
               
               const hasOverdue = overdueCount > 0;
+              const hasOffline = loans.some(loan => loan.isOffline);
               
               // Get fraud status for this borrower
               const fraudData = borrower.aadhaarNumber ? borrowerFraudStatus[borrower.aadhaarNumber] : null;
@@ -594,7 +636,8 @@ export default function Inward({ navigation }) {
                     styles.borrowerCard,
                     hasOverdue && styles.overdueBorrowerCard,
                     hasFraudRisk && styles.fraudRiskBorrowerCard,
-                    borrowerPendingPayments && styles.pendingPaymentBorrowerCard
+                    borrowerPendingPayments && styles.pendingPaymentBorrowerCard,
+                    hasOffline && styles.offlineBorrowerCard
                   ]}
                   onPress={() => navigation.navigate('BorrowerLoansScreen', {
                     borrower: borrower,
