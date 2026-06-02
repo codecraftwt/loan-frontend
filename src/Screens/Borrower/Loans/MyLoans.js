@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,14 @@ import {
   TouchableOpacity,
   TextInput,
   RefreshControl,
-  ActivityIndicator,
   ScrollView,
+  Animated,
+  Easing,
+  SafeAreaView,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useDispatch, useSelector } from 'react-redux';
 import moment from 'moment';
 import { m } from 'walstar-rn-responsive';
@@ -36,6 +39,7 @@ export default function MyLoans() {
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [filters, setFilters] = useState({
     status: '',
     startDate: '',
@@ -44,6 +48,12 @@ export default function MyLoans() {
     maxAmount: '',
   });
 
+  // Animations 
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+  const spinAnim = useRef(new Animated.Value(0)).current;
+  const spinLoopRef = useRef(null); // Store the loop animation reference
+
   // Effects
   useEffect(() => {
     if (user?._id) {
@@ -51,14 +61,25 @@ export default function MyLoans() {
     }
     return () => {
       dispatch(clearLoans());
+      // Stop spin animation on unmount
+      if (spinLoopRef.current) {
+        spinLoopRef.current.stop();
+        spinLoopRef.current = null;
+      }
     };
   }, [user?._id]);
 
+  // Reset and reload when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       if (user?._id) {
+        // Reset loading to show spinner again
+        setIsInitialLoading(true);
         fetchMyLoans();
       }
+      return () => {
+        // Optional cleanup if needed
+      };
     }, [user?._id]),
   );
 
@@ -77,8 +98,50 @@ export default function MyLoans() {
     }
   }, [error]);
 
+  // Fade and slide animation on mount (only once)
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  // Control spin animation based on loading state
+  useEffect(() => {
+    if (isInitialLoading || loading) {
+      // Start spinning animation if not already spinning
+      if (!spinLoopRef.current) {
+        spinLoopRef.current = Animated.loop(
+          Animated.timing(spinAnim, {
+            toValue: 1,
+            duration: 1500,
+            easing: Easing.linear,
+            useNativeDriver: true,
+          })
+        );
+        spinLoopRef.current.start();
+      }
+    } else {
+      // Stop spinning animation and reset
+      if (spinLoopRef.current) {
+        spinLoopRef.current.stop();
+        spinLoopRef.current = null;
+        spinAnim.setValue(0); // Reset to original position
+      }
+    }
+  }, [isInitialLoading, loading]);
+
   // API Functions
-  const fetchMyLoans = (params = {}) => {
+  const fetchMyLoans = async (params = {}) => {
     if (!user?._id) {
       Toast.show({
         type: 'error',
@@ -86,22 +149,32 @@ export default function MyLoans() {
         text1: 'Error',
         text2: 'User information not available',
       });
+      setIsInitialLoading(false);
       return;
     }
-    dispatch(getBorrowerLoans({ borrowerId: user._id, ...params }));
+    
+    try {
+      setIsInitialLoading(true);
+      await dispatch(getBorrowerLoans({ borrowerId: user._id, ...params }));
+    } catch (err) {
+      console.error('Error fetching loans:', err);
+    } finally {
+      setIsInitialLoading(false);
+    }
   };
 
   // Utility Functions
   const filterLoans = () => {
-    let filtered = loans;
+    const loansArray = loans || [];
+    let filtered = loansArray;
 
     // Filter by tab first
     if (activeTab === 'pending') {
-      filtered = loans.filter(loan => loan.paymentStatus !== 'paid');
+      filtered = loansArray.filter(loan => loan.paymentStatus !== 'paid');
     } else if (activeTab === 'paid') {
-      filtered = loans.filter(loan => loan.paymentStatus === 'paid');
+      filtered = loansArray.filter(loan => loan.paymentStatus === 'paid');
     } else if (activeTab === 'overdue') {
-      filtered = loans.filter(loan => loan.overdueDetails?.isOverdue === true);
+      filtered = loansArray.filter(loan => loan.overdueDetails?.isOverdue === true);
     }
 
     // Apply search query filter
@@ -175,6 +248,12 @@ export default function MyLoans() {
     );
   };
 
+  // Spin animation interpolation
+  const spin = spinAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
   // Render Functions
   const renderLoanCard = ({ item }) => {
     const isOverdue = item.overdueDetails?.isOverdue === true;
@@ -183,110 +262,114 @@ export default function MyLoans() {
     const statusIcon = getStatusIcon(item.paymentStatus, isOverdue);
 
     return (
-      <TouchableOpacity
-        style={[styles.loanCard, isOverdue && styles.overdueCard]}
-        onPress={() =>
-          navigation.navigate('BorrowerLoanDetails', { loan: item })
-        }
-      >
-        <View style={styles.loanHeader}>
-          <View style={styles.loanInfo}>
-            <Text style={styles.loanAmount}>
-              ₹{item.amount?.toLocaleString('en-IN')}
-            </Text>
-            <Text style={styles.loanLender} numberOfLines={1}>
-              {item.lenderId?.userName || 'Unknown Lender'}
-            </Text>
-          </View>
-          <View
-            style={[
-              styles.statusBadge,
-              { backgroundColor: statusColor + '20' },
-            ]}
-          >
-            <Icon name={statusIcon} size={m(14)} color={statusColor} />
-            <Text style={[styles.statusText, { color: statusColor }]}>
-              {displayStatus}
-            </Text>
-          </View>
-        </View>
-
-        {/* Overdue Warning Banner */}
-        {isOverdue && (
-          <View style={styles.overdueBanner}>
-            <Icon name="alert-circle" size={m(16)} color="#DC2626" />
-            <Text style={styles.overdueBannerText}>
-              {item.overdueDetails?.overdueDays > 0
-                ? `Overdue by ${item.overdueDetails.overdueDays} day${
-                    item.overdueDetails.overdueDays > 1 ? 's' : ''
-                  }`
-                : 'Payment Overdue'}
-            </Text>
-          </View>
-        )}
-
-        <View style={styles.loanDetails}>
-          <View style={styles.detailRow}>
-            <Icon name="phone" size={m(14)} color="#6B7280" />
-            <Text style={styles.detailText}>
-              {item.lenderId?.mobileNo || 'N/A'}
-            </Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Icon name="calendar" size={m(14)} color="#6B7280" />
-            <Text style={[styles.detailText, isOverdue && styles.overdueText]}>
-              Due:{' '}
-              {item.loanEndDate
-                ? moment(item.loanEndDate).format('DD MMM YYYY')
-                : 'N/A'}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.loanProgress}>
-          <View style={styles.progressInfo}>
-            <Text style={styles.progressLabel}>
-              Paid: ₹{item.totalPaid?.toLocaleString('en-IN') || 0}
-            </Text>
-            <Text style={styles.progressLabel}>
-              Remaining: ₹
-              {item.remainingAmount?.toLocaleString('en-IN') || item.amount}
-            </Text>
-          </View>
-          <View style={styles.progressBar}>
+      <Animated.View
+        style={[
+          styles.loanCard,
+          isOverdue && styles.overdueCard,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+          },
+        ]}>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() =>
+            navigation.navigate('BorrowerLoanDetails', { loan: item })
+          }>
+          <View style={styles.loanHeader}>
+            <View style={styles.loanInfo}>
+              <Text style={styles.loanAmount}>
+                ₹{item.amount?.toLocaleString('en-IN')}
+              </Text>
+              <Text style={styles.loanLender} numberOfLines={1}>
+                {item.lenderId?.userName || 'Unknown Lender'}
+              </Text>
+            </View>
             <View
               style={[
-                styles.progressFill,
-                {
-                  width:
-                    item.amount > 0
-                      ? `${((item.totalPaid || 0) / item.amount) * 100}%`
-                      : '0%',
-                  backgroundColor: statusColor,
-                },
-              ]}
-            />
+                styles.statusBadge,
+                { backgroundColor: statusColor + '20' },
+              ]}>
+              <Icon name={statusIcon} size={m(14)} color={statusColor} />
+              <Text style={[styles.statusText, { color: statusColor }]}>
+                {displayStatus}
+              </Text>
+            </View>
           </View>
-        </View>
 
-        <View style={styles.loanActions}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() =>
-              navigation.navigate('BorrowerLoanDetails', { loan: item })
-            }
-          >
-            <Text style={styles.actionButtonText}>View Details</Text>
-            <Icon name="chevron-right" size={m(16)} color="#3B82F6" />
-          </TouchableOpacity>
-        </View>
-      </TouchableOpacity>
+          {/* Overdue Warning Banner */}
+          {isOverdue && (
+            <View style={styles.overdueBanner}>
+              <Icon name="alert-circle" size={m(16)} color="#DC2626" />
+              <Text style={styles.overdueBannerText}>
+                {item.overdueDetails?.overdueDays > 0
+                  ? `Overdue by ${item.overdueDetails.overdueDays} day${
+                      item.overdueDetails.overdueDays > 1 ? 's' : ''
+                    }`
+                  : 'Payment Overdue'}
+              </Text>
+            </View>
+          )}
+
+          <View style={styles.loanDetails}>
+            <View style={styles.detailRow}>
+              <Icon name="phone" size={m(14)} color="#6B7280" />
+              <Text style={styles.detailText}>
+                {item.lenderId?.mobileNo || 'N/A'}
+              </Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Icon name="calendar" size={m(14)} color="#6B7280" />
+              <Text style={[styles.detailText, isOverdue && styles.overdueText]}>
+                Due:{' '}
+                {item.loanEndDate
+                  ? moment(item.loanEndDate).format('DD MMM YYYY')
+                  : 'N/A'}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.loanProgress}>
+            <View style={styles.progressInfo}>
+              <Text style={styles.progressLabel}>
+                Paid: ₹{item.totalPaid?.toLocaleString('en-IN') || 0}
+              </Text>
+              <Text style={styles.progressLabel}>
+                Remaining: ₹
+                {item.remainingAmount?.toLocaleString('en-IN') || item.amount}
+              </Text>
+            </View>
+            <View style={styles.progressBar}>
+              <View
+                style={[
+                  styles.progressFill,
+                  {
+                    width:
+                      item.amount > 0
+                        ? `${((item.totalPaid || 0) / item.amount) * 100}%`
+                        : '0%',
+                    backgroundColor: statusColor,
+                  },
+                ]}
+              />
+            </View>
+          </View>
+
+          <View style={styles.loanActions}>
+            <View style={styles.actionButton}>
+              <Text style={styles.actionButtonText}>View Details</Text>
+              <Icon name="chevron-right" size={m(16)} color="#3B82F6" />
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
     );
   };
 
   const renderSummary = () => {
+    const loansArray = loans || [];
     // Calculate overdue count
-    const overdueCount = loans.filter(
+    const overdueCount = loansArray.filter(
       loan => loan.overdueDetails?.isOverdue === true,
     ).length;
 
@@ -319,73 +402,107 @@ export default function MyLoans() {
     ];
 
     return (
-      <View style={styles.summaryCard}>
+      <Animated.View
+        style={[
+          styles.summaryCard,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+          },
+        ]}>
         <Text style={styles.summaryTitle}>Loan Summary</Text>
         <View style={styles.summaryGrid}>
-          {summaryData.map((item, index) => (
+          {summaryData.map((item) => (
             <React.Fragment key={item.id}>
               <View style={styles.summaryItem}>
                 <Text
                   style={[
                     styles.summaryValue,
                     item.highlight && styles.summaryHighlightValue,
-                  ]}
-                >
+                  ]}>
                   {item.value}
                 </Text>
                 <Text
                   style={[
                     styles.summaryLabel,
                     item.highlight && styles.summaryHighlightLabel,
-                  ]}
-                >
+                  ]}>
                   {item.label}
                 </Text>
               </View>
             </React.Fragment>
           ))}
         </View>
+      </Animated.View>
+    );
+  };
+
+  const renderEmptyState = () => {
+    // Only show empty state when not loading and no loans exist
+    if (isInitialLoading || loading) return null;
+    
+    const hasNoLoans = !loans || loans.length === 0;
+    const hasLoansButNoSearchResults = loans && loans.length > 0 && filteredLoans.length === 0;
+    
+    if (!hasNoLoans && !hasLoansButNoSearchResults) return null;
+
+    let message = "";
+    let icon = "document-text-outline";
+    
+    if (searchQuery && hasLoansButNoSearchResults) {
+      message = `No loans found matching "${searchQuery}"`;
+      icon = "search-outline";
+    } else if (activeTab === 'pending') {
+      message = "No pending loans at the moment";
+    } else if (activeTab === 'paid') {
+      message = "No paid loans yet";
+    } else if (activeTab === 'overdue') {
+      message = "No overdue loans. Great job!";
+    } else {
+      message = "You haven't taken any loans yet";
+    }
+
+    return (
+      <Animated.View
+        style={[
+          styles.emptyState,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+          },
+        ]}>
+        <View style={styles.emptyIconContainer}>
+          <Ionicons name={icon} size={60} color="#D1D5DB" />
+        </View>
+        <Text style={styles.emptyTitle}>No Loans Found</Text>
+        <Text style={styles.emptySubtitle}>{message}</Text>
+      </Animated.View>
+    );
+  };
+
+  const renderLoadingState = () => {
+    if (!isInitialLoading && !loading) return null;
+    
+    return (
+      <View style={styles.loadingContainer}>
+        <Animated.View style={{ transform: [{ rotate: spin }] }}>
+          <Ionicons name="document-text" size={50} color="#FF9800" />
+        </Animated.View>
+        <Text style={styles.loadingTitle}>Fetching Your Loans</Text>
+        <Text style={styles.loadingSubtitle}>
+          Please wait while we load your loan details...
+        </Text>
       </View>
     );
   };
 
-  const renderEmptyState = () => (
-    <View style={styles.emptyState}>
-      <Icon name="document" size={m(64)} color="#D1D5DB" />
-      <Text style={styles.emptyTitle}>No Loans Found</Text>
-      <Text style={styles.emptySubtitle}>
-        {searchQuery
-          ? 'Try adjusting your search criteria'
-          : activeTab === 'pending'
-          ? 'No pending loans at the moment'
-          : activeTab === 'paid'
-          ? 'No paid loans yet'
-          : activeTab === 'overdue'
-          ? 'No overdue loans. Great job!'
-          : "You haven't taken any loans yet"}
-      </Text>
-    </View>
-  );
-
-  // Loading State
-  if (false) {
-    return (
-      <View style={styles.container}>
-        <Header title="My Loans" />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3B82F6" />
-          <Text style={styles.loadingText}>Loading your loans...</Text>
-        </View>
-      </View>
-    );
-  }
-
   // Calculate counts for tabs
-  const overdueCount = loans.filter(
+  const loansArray = loans || [];
+  const overdueCount = loansArray.filter(
     loan => loan.overdueDetails?.isOverdue === true,
   ).length;
-  const paidCount = loans.filter(loan => loan.paymentStatus === 'paid').length;
-  const pendingCount = loans.filter(
+  const paidCount = loansArray.filter(loan => loan.paymentStatus === 'paid').length;
+  const pendingCount = loansArray.filter(
     loan => loan.paymentStatus !== 'paid',
   ).length;
 
@@ -394,93 +511,117 @@ export default function MyLoans() {
     { id: 'all', label: 'All', count: loans.length },
     { id: 'paid', label: 'Paid', count: paidCount },
     { id: 'pending', label: 'Pending', count: pendingCount },
-    { id: 'overdue', label: 'Overdue', count: overdueCount }, // Always show Overdue tab
+    { id: 'overdue', label: 'Overdue', count: overdueCount },
   ];
 
+  const hasData = filteredLoans && filteredLoans.length > 0;
+
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <Header title="My Loans" />
 
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchInputContainer}>
-          <Icon
-            name="search"
-            size={m(20)}
-            color="#6B7280"
-            style={styles.searchIcon}
-          />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search by lender, amount, or status"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholderTextColor="#9CA3AF"
-          />
-          {searchQuery ? (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Icon name="x" size={m(20)} color="#6B7280" />
-            </TouchableOpacity>
-          ) : null}
-        </View>
-      </View>
+      {/* Search Bar - Hide during initial loading */}
+      {!isInitialLoading && (
+        <Animated.View
+          style={[
+            styles.searchContainer,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            },
+          ]}>
+          <View style={styles.searchInputContainer}>
+            <Icon
+              name="search"
+              size={m(20)}
+              color="#6B7280"
+              style={styles.searchIcon}
+            />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search by lender, amount, or status"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholderTextColor="#9CA3AF"
+            />
+            {searchQuery ? (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Icon name="x" size={m(20)} color="#6B7280" />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        </Animated.View>
+      )}
 
-      {/* Responsive Tabs */}
-      <View style={styles.tabsContainer}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tabsContentContainer}
-          scrollEventThrottle={16}
-        >
-          {tabsData.map(tab => (
-            <TouchableOpacity
-              key={tab.id}
-              style={[
-                styles.tab,
-                activeTab === tab.id && styles.activeTab,
-                tab.id === 'overdue' &&
-                  activeTab === tab.id &&
-                  styles.overdueActiveTab,
-              ]}
-              onPress={() => setActiveTab(tab.id)}
-              activeOpacity={0.7}
-            >
-              <Text
+      {/* Tabs - Hide during initial loading */}
+      {!isInitialLoading && (
+        <Animated.View
+          style={[
+            styles.tabsContainer,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            },
+          ]}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tabsContentContainer}
+            scrollEventThrottle={16}>
+            {tabsData.map(tab => (
+              <TouchableOpacity
+                key={tab.id}
                 style={[
-                  styles.tabText,
-                  activeTab === tab.id && styles.activeTabText,
+                  styles.tab,
+                  activeTab === tab.id && styles.activeTab,
                   tab.id === 'overdue' &&
                     activeTab === tab.id &&
-                    styles.overdueTabText,
-                  tab.id === 'overdue' &&
-                    overdueCount === 0 &&
-                    styles.zeroOverdueTabText,
+                    styles.overdueActiveTab,
                 ]}
-                numberOfLines={1}
-              >
-                {tab.label} ({tab.count})
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
+                onPress={() => setActiveTab(tab.id)}
+                activeOpacity={0.7}>
+                <Text
+                  style={[
+                    styles.tabText,
+                    activeTab === tab.id && styles.activeTabText,
+                    tab.id === 'overdue' &&
+                      activeTab === tab.id &&
+                      styles.overdueTabText,
+                    tab.id === 'overdue' &&
+                      overdueCount === 0 &&
+                      styles.zeroOverdueTabText,
+                  ]}
+                  numberOfLines={1}>
+                  {tab.label} ({tab.count})
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </Animated.View>
+      )}
 
-      {/* Loans List */}
-      <FlatList
-        data={filteredLoans}
-        renderItem={renderLoanCard}
-        keyExtractor={item => item._id}
-        contentContainerStyle={styles.listContainer}
-        showsVerticalScrollIndicator={false}
-        scrollEnabled={true}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        ListHeaderComponent={summary.totalLoans > 0 ? renderSummary : null}
-        ListEmptyComponent={renderEmptyState}
-      />
-    </View>
+      {/* Content Area */}
+      <View style={styles.contentContainer}>
+        {isInitialLoading || loading ? (
+          renderLoadingState()
+        ) : !hasData ? (
+          renderEmptyState()
+        ) : (
+          <FlatList
+            data={filteredLoans}
+            renderItem={renderLoanCard}
+            keyExtractor={item => item._id}
+            contentContainerStyle={styles.listContainer}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            ListHeaderComponent={summary.totalLoans > 0 ? renderSummary : null}
+            ListFooterComponent={<View style={{ height: m(20) }} />}
+          />
+        )}
+      </View>
+    </SafeAreaView>
   );
 }
 
@@ -490,15 +631,64 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F9FAFB',
   },
+  
+  // Content Container - This ensures proper flex behavior
+  contentContainer: {
+    flex: 1,
+  },
+  
+  // Loading State
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: m(80),
   },
-  loadingText: {
-    marginTop: m(16),
-    fontSize: m(16),
+  loadingTitle: {
+    marginTop: m(24),
+    fontSize: m(18),
+    fontWeight: '600',
+    color: '#111827',
+  },
+  loadingSubtitle: {
+    marginTop: m(8),
+    fontSize: m(14),
     color: '#6B7280',
+    textAlign: 'center',
+    paddingHorizontal: m(32),
+  },
+
+  // Empty State
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: m(80),
+    paddingHorizontal: m(16),
+  },
+  emptyIconContainer: {
+    width: m(100),
+    height: m(100),
+    borderRadius: m(50),
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: m(20),
+  },
+  emptyTitle: {
+    fontSize: m(18),
+    fontWeight: '600',
+    color: '#111827',
+    marginTop: m(16),
+    marginBottom: m(8),
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontSize: m(14),
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: m(20),
+    paddingHorizontal: m(32),
   },
 
   // Search
@@ -534,25 +724,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
-    flexGrow: 0,
-    height: m(56),
   },
   tabsContentContainer: {
     paddingHorizontal: m(8),
-    paddingVertical: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    height: m(56),
   },
   tab: {
     paddingHorizontal: m(13),
-    paddingVertical: 0,
+    paddingVertical: m(12),
     marginHorizontal: m(4),
     alignItems: 'center',
     justifyContent: 'center',
     borderBottomWidth: 3,
     borderBottomColor: 'transparent',
-    height: m(50),
   },
   activeTab: {
     borderBottomColor: '#3B82F6',
@@ -572,14 +757,14 @@ const styles = StyleSheet.create({
     color: '#DC2626',
   },
   zeroOverdueTabText: {
-    color: '#9CA3AF', // Lighter color when count is 0
+    color: '#9CA3AF',
   },
 
   // List
   listContainer: {
     paddingHorizontal: m(16),
-    paddingVertical: m(16),
-    paddingBottom: m(100),
+    paddingTop: m(16),
+    paddingBottom: m(20),
   },
 
   // Loan Card
@@ -762,28 +947,5 @@ const styles = StyleSheet.create({
   summaryHighlightLabel: {
     color: '#DC2626',
     fontWeight: '600',
-  },
-
-  // Empty State
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: m(64),
-    paddingHorizontal: m(16),
-  },
-  emptyTitle: {
-    fontSize: m(16),
-    fontWeight: '600',
-    color: '#111827',
-    marginTop: m(16),
-    marginBottom: m(8),
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    fontSize: m(13),
-    color: '#6B7280',
-    textAlign: 'center',
-    lineHeight: m(20),
   },
 });

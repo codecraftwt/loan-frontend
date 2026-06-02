@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -8,16 +8,21 @@ import {
   TextInput,
   Linking,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
 import Toast from 'react-native-toast-message';
+import { ratingAPI } from '../../../Services/ratingService';
 
 export default function RateAppScreen({ navigation }) {
   const [rating, setRating] = useState(0);
   const [feedback, setFeedback] = useState('');
+  const [selectedOptions, setSelectedOptions] = useState([]);
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   const ratingLabels = [
     { stars: 1, label: 'Poor', emoji: '😞' },
@@ -47,7 +52,7 @@ export default function RateAppScreen({ navigation }) {
     );
   };
 
-  const handleSubmitFeedback = () => {
+  const handleSubmitFeedback = async () => {
     if (rating === 0) {
       Toast.show({
         type: 'error',
@@ -57,14 +62,72 @@ export default function RateAppScreen({ navigation }) {
       return;
     }
 
-    // Simulate submission
-    setSubmitted(true);
-    Toast.show({
-      type: 'success',
-      text1: 'Thank you for your feedback!',
-      text2: 'Your review helps us improve the app',
-    });
+    setLoading(true);
+    try {
+      const payload = { rating, feedback, selectedOptions };
+      
+      const response = await ratingAPI.submitRating(payload);
+
+      if (response.success) {
+        setSubmitted(true);
+        Toast.show({
+          type: 'success',
+          text1: 'Thank you for your feedback!',
+          text2: 'Your review helps us improve the app',
+        });
+      } else {
+        throw new Error(response.message || 'Failed to submit rating');
+      }
+    } catch (error) {
+      console.error('Rating submission error:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Submission failed',
+        text2: error.message || 'Please try again later',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleTagToggle = (tag) => {
+    setSelectedOptions(prev => 
+      prev.includes(tag) 
+        ? prev.filter(t => t !== tag)
+        : [...prev, tag]
+    );
+  };
+
+  const fetchExistingRating = async () => {
+    try {
+      const response = await ratingAPI.getUserRating();
+      if (response.success) {
+        setRating(response.data.rating);
+        setFeedback(response.data.feedback || '');
+        setSelectedOptions(response.data.selectedOptions || []);
+        setSubmitted(true);
+      }
+    } catch (error) {
+      // No existing rating, continue with empty state
+    } finally {
+      setInitialLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchExistingRating();
+  }, []);
+
+  if (initialLoading) {
+    return (
+      <View style={styles.container}>
+        <Header title="Rate App" showBackButton />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#FF9800" />
+        </View>
+      </View>
+    );
+  }
 
   if (submitted) {
     return (
@@ -201,9 +264,16 @@ export default function RateAppScreen({ navigation }) {
               ].map((tag, index) => (
                 <TouchableOpacity
                   key={index}
-                  style={styles.tag}
-                  activeOpacity={0.7}>
-                  <Text style={styles.tagText}>{tag}</Text>
+                  style={[
+                    styles.tag,
+                    selectedOptions.includes(tag) && styles.selectedTag,
+                  ]}
+                  activeOpacity={0.7}
+                  onPress={() => handleTagToggle(tag)}>
+                  <Text style={[
+                    styles.tagText,
+                    selectedOptions.includes(tag) && styles.selectedTagText,
+                  ]}>{tag}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -218,18 +288,22 @@ export default function RateAppScreen({ navigation }) {
           ]}
           onPress={handleSubmitFeedback}
           activeOpacity={0.8}
-          disabled={rating === 0}>
-          <Icon
-            name="send"
-            size={20}
-            color={rating === 0 ? '#9CA3AF' : '#FFFFFF'}
-          />
+          disabled={rating === 0 || loading}>
+          {loading ? (
+            <ActivityIndicator size="small" color={rating === 0 ? '#9CA3AF' : '#FFFFFF'} />
+          ) : (
+            <Icon
+              name="send"
+              size={20}
+              color={rating === 0 ? '#9CA3AF' : '#FFFFFF'}
+            />
+          )}
           <Text
             style={[
               styles.submitButtonText,
               rating === 0 && styles.submitButtonTextDisabled,
             ]}>
-            Submit Feedback
+            {loading ? 'Submitting...' : 'Submit Feedback'}
           </Text>
         </TouchableOpacity>
 
@@ -406,6 +480,13 @@ const styles = StyleSheet.create({
     color: '#4B5563',
     fontWeight: '500',
   },
+  selectedTag: {
+    backgroundColor: '#3B82F6',
+    borderColor: '#3B82F6',
+  },
+  selectedTagText: {
+    color: '#FFFFFF',
+  },
   submitButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -455,6 +536,11 @@ const styles = StyleSheet.create({
     fontSize: m(12),
     color: '#3B82F6',
     marginTop: m(2),
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   storeLink: {
     padding: m(8),

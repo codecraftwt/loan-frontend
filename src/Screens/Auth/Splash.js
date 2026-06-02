@@ -109,8 +109,7 @@ export default function SplashScreen({navigation}) {
               },
             ],
           },
-        ]}>
-      </Animated.View>
+        ]} />
 
       {/* Tagline with Animation */}
       <Animated.View

@@ -3,6 +3,7 @@ import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import Login from '../Screens/Auth/Login';
 import SplashScreen from '../Screens/Auth/Splash';
 import Register from '../Screens/Auth/Register';
+import ConsentScreen from '../Screens/Borrower/Authentication/ConsentScreen';
 import ForgotPassword from '../Screens/Auth/ForgotPassword';
 import OTP from '../Screens/Auth/OTP';
 import CreatePass from '../Screens/Auth/CreatePass';
@@ -53,6 +54,7 @@ const Navigation = () => {
       <Stack.Screen name="SplashScreen" component={SplashScreen} />
       <Stack.Screen name="Login" component={Login} />
       <Stack.Screen name="Register" component={Register} />
+      <Stack.Screen name="ConsentScreen" component={ConsentScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
       <Stack.Screen name="OTP" component={OTP} />
       <Stack.Screen name="CreatePass" component={CreatePass} />

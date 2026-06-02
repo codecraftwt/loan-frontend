@@ -118,7 +118,6 @@ class SyncService {
     // Subscribe to network state changes
     const unsubscribe = NetInfo.addEventListener(state => {
       if (state.isConnected) {
-        console.log('Network connected, triggering sync...');
         this.syncPendingLoans(dispatch);
       }
     });

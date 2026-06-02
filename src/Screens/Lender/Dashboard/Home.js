@@ -1273,6 +1273,7 @@ const styles = StyleSheet.create({
     borderRadius: m(4),
     backgroundColor: '#ff6700',
     marginLeft: m(8),
+    marginBottom:m(11)
   },
   seeAllButton: {
     flexDirection: 'row',

@@ -943,9 +943,6 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 10,
   },
-  // progressContent: {
-  //   flex: 1,
-  // },
   progressHeader: {
     marginBottom: m(16),
   },
@@ -1045,6 +1042,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: m(8),
     paddingVertical: m(2),
     marginLeft: m(8),
+    marginBottom: m(12),
   },
   loanCountText: {
     fontSize: FontSizes.xs,
@@ -1103,9 +1101,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontFamily: FontFamily.primaryBold,
   },
-  // loanCardInfo: {
-  //   flex: 1,
-  // },
   loanLenderName: {
     fontSize: FontSizes.base,
     fontFamily: FontFamily.primarySemiBold,
@@ -1192,6 +1187,7 @@ const styles = StyleSheet.create({
     borderRadius: m(4),
     backgroundColor: '#ff6700',
     marginLeft: m(8),
+    marginBottom: m(10),
   },
   activityItem: {
     flexDirection: 'row',
@@ -1247,9 +1243,6 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 4,
   },
-  // activityText: {
-  //   flex: 1,
-  // },
   activityTitle: {
     fontSize: FontSizes.md,
     fontFamily: FontFamily.primarySemiBold,
