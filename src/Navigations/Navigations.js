@@ -4,6 +4,9 @@ import Login from '../Screens/Auth/Login';
 import SplashScreen from '../Screens/Auth/Splash';
 import Register from '../Screens/Auth/Register';
 import ConsentScreen from '../Screens/Borrower/Authentication/ConsentScreen';
+import EnterAadhaarScreen from '../Screens/Borrower/Authentication/EnterAadhaarScreen';
+import VerifyAadhaarOtpScreen from '../Screens/Borrower/Authentication/VerifyAadhaarOtpScreen';
+import AadhaarKycSuccessScreen from '../Screens/Borrower/Authentication/AadhaarKycSuccessScreen';
 import ForgotPassword from '../Screens/Auth/ForgotPassword';
 import OTP from '../Screens/Auth/OTP';
 import CreatePass from '../Screens/Auth/CreatePass';
@@ -55,6 +58,9 @@ const Navigation = () => {
       <Stack.Screen name="Login" component={Login} />
       <Stack.Screen name="Register" component={Register} />
       <Stack.Screen name="ConsentScreen" component={ConsentScreen} />
+      <Stack.Screen name="EnterAadhaarScreen" component={EnterAadhaarScreen} />
+      <Stack.Screen name="VerifyAadhaarOtpScreen" component={VerifyAadhaarOtpScreen} />
+      <Stack.Screen name="AadhaarKycSuccessScreen" component={AadhaarKycSuccessScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
       <Stack.Screen name="OTP" component={OTP} />
       <Stack.Screen name="CreatePass" component={CreatePass} />

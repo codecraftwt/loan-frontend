@@ -315,6 +315,14 @@ const handleNext = () => {
         text1: 'Account created successfully!',
       });
 
+      if (roleId === 2) {
+        navigation.navigate('ConsentScreen', {
+          source: 'register',
+          aadhaarNumber: aadharNumber,
+        });
+        return;
+      }
+
       navigation.navigate('Login');
     } catch (error) {
       const errorMessage =

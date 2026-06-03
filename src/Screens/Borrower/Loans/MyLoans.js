@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
   Easing,
   SafeAreaView,
 } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useDispatch, useSelector } from 'react-redux';
@@ -22,14 +22,13 @@ import Header from '../../../Components/Header';
 import Toast from 'react-native-toast-message';
 import {
   getBorrowerLoans,
-  clearLoans,
 } from '../../../Redux/Slices/borrowerLoanSlice';
 
 export default function MyLoans() {
   // Navigation & Redux
   const navigation = useNavigation();
   const dispatch = useDispatch();
-  const { loans, summary, loading, error } = useSelector(
+  const { borrowerId: cachedBorrowerId, loans, summary, loading, error } = useSelector(
     state => state.borrowerLoans,
   );
   const user = useSelector(state => state.auth.user);
@@ -54,38 +53,89 @@ export default function MyLoans() {
   const spinAnim = useRef(new Animated.Value(0)).current;
   const spinLoopRef = useRef(null); // Store the loop animation reference
 
+  // API Functions
+  const fetchMyLoans = useCallback(async (params = {}, options = {}) => {
+    const { showInitialLoader = true } = options;
+
+    if (!user?._id) {
+      Toast.show({
+        type: 'error',
+        position: 'top',
+        text1: 'Error',
+        text2: 'User information not available',
+      });
+      setIsInitialLoading(false);
+      return;
+    }
+
+    try {
+      if (showInitialLoader) {
+        setIsInitialLoading(true);
+      }
+      await dispatch(getBorrowerLoans({ borrowerId: user._id, ...params }));
+    } catch (err) {
+      console.error('Error fetching loans:', err);
+    } finally {
+      if (showInitialLoader) {
+        setIsInitialLoading(false);
+      }
+    }
+  }, [dispatch, user?._id]);
+
+  // Utility Functions
+  const filterLoans = useCallback(() => {
+    const loansArray = loans || [];
+    let filtered = loansArray;
+
+    // Filter by tab first
+    if (activeTab === 'pending') {
+      filtered = loansArray.filter(loan => loan.paymentStatus !== 'paid');
+    } else if (activeTab === 'paid') {
+      filtered = loansArray.filter(loan => loan.paymentStatus === 'paid');
+    } else if (activeTab === 'overdue') {
+      filtered = loansArray.filter(loan => loan.overdueDetails?.isOverdue === true);
+    }
+
+    // Apply search query filter
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(
+        loan =>
+          loan.lenderId?.userName
+            ?.toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
+          loan.amount?.toString().includes(searchQuery) ||
+          loan.paymentStatus?.toLowerCase().includes(searchQuery.toLowerCase()),
+      );
+    }
+
+    setFilteredLoans(filtered);
+  }, [activeTab, loans, searchQuery]);
+
   // Effects
   useEffect(() => {
-    if (user?._id) {
+    const shouldFetchLoans =
+      user?._id && (loans.length === 0 || cachedBorrowerId !== user._id);
+
+    if (shouldFetchLoans) {
       fetchMyLoans();
+    } else {
+      setIsInitialLoading(false);
     }
+  }, [cachedBorrowerId, fetchMyLoans, loans.length, user?._id]);
+
+  useEffect(() => {
     return () => {
-      dispatch(clearLoans());
       // Stop spin animation on unmount
       if (spinLoopRef.current) {
         spinLoopRef.current.stop();
         spinLoopRef.current = null;
       }
     };
-  }, [user?._id]);
-
-  // Reset and reload when screen comes into focus
-  useFocusEffect(
-    React.useCallback(() => {
-      if (user?._id) {
-        // Reset loading to show spinner again
-        setIsInitialLoading(true);
-        fetchMyLoans();
-      }
-      return () => {
-        // Optional cleanup if needed
-      };
-    }, [user?._id]),
-  );
+  }, []);
 
   useEffect(() => {
     filterLoans();
-  }, [searchQuery, loans, activeTab]);
+  }, [filterLoans]);
 
   useEffect(() => {
     if (error) {
@@ -113,7 +163,7 @@ export default function MyLoans() {
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [fadeAnim, slideAnim]);
 
   // Control spin animation based on loading state
   useEffect(() => {
@@ -138,59 +188,7 @@ export default function MyLoans() {
         spinAnim.setValue(0); // Reset to original position
       }
     }
-  }, [isInitialLoading, loading]);
-
-  // API Functions
-  const fetchMyLoans = async (params = {}) => {
-    if (!user?._id) {
-      Toast.show({
-        type: 'error',
-        position: 'top',
-        text1: 'Error',
-        text2: 'User information not available',
-      });
-      setIsInitialLoading(false);
-      return;
-    }
-    
-    try {
-      setIsInitialLoading(true);
-      await dispatch(getBorrowerLoans({ borrowerId: user._id, ...params }));
-    } catch (err) {
-      console.error('Error fetching loans:', err);
-    } finally {
-      setIsInitialLoading(false);
-    }
-  };
-
-  // Utility Functions
-  const filterLoans = () => {
-    const loansArray = loans || [];
-    let filtered = loansArray;
-
-    // Filter by tab first
-    if (activeTab === 'pending') {
-      filtered = loansArray.filter(loan => loan.paymentStatus !== 'paid');
-    } else if (activeTab === 'paid') {
-      filtered = loansArray.filter(loan => loan.paymentStatus === 'paid');
-    } else if (activeTab === 'overdue') {
-      filtered = loansArray.filter(loan => loan.overdueDetails?.isOverdue === true);
-    }
-
-    // Apply search query filter
-    if (searchQuery.trim()) {
-      filtered = filtered.filter(
-        loan =>
-          loan.lenderId?.userName
-            ?.toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-          loan.amount?.toString().includes(searchQuery) ||
-          loan.paymentStatus?.toLowerCase().includes(searchQuery.toLowerCase()),
-      );
-    }
-
-    setFilteredLoans(filtered);
-  };
+  }, [isInitialLoading, loading, spinAnim]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -201,7 +199,7 @@ export default function MyLoans() {
       endDate: filters.endDate || undefined,
       minAmount: filters.minAmount || undefined,
       maxAmount: filters.maxAmount || undefined,
-    });
+    }, { showInitialLoader: false });
     setRefreshing(false);
   };
 

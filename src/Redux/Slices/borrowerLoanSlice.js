@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import borrowerLoanAPI from '../../Services/borrowerLoanService';
 
 const initialState = {
+  borrowerId: null,
   loans: [],
   currentLoan: null,
   paymentHistory: [],
@@ -48,6 +49,7 @@ export const getBorrowerLoans = createAsyncThunk(
       }
       const response = await borrowerLoanAPI.getMyLoans(borrowerId, queryParams);
       return {
+        borrowerId,
         loans: response.data || [],
         summary: response.summary || initialState.summary,
         pagination: response.pagination || initialState.pagination,
@@ -67,6 +69,7 @@ export const getBorrowerLoansById = createAsyncThunk(
     try {
       const response = await borrowerLoanAPI.getBorrowerLoansById(borrowerId, params);
       return {
+        borrowerId,
         loans: response.data || [],
         summary: response.summary || initialState.summary,
         pagination: response.pagination || initialState.pagination,
@@ -216,6 +219,7 @@ const borrowerLoanSlice = createSlice({
   initialState,
   reducers: {
     clearLoans: (state) => {
+      state.borrowerId = null;
       state.loans = [];
       state.summary = initialState.summary;
       state.error = null;
@@ -251,6 +255,7 @@ const borrowerLoanSlice = createSlice({
       })
       .addCase(getBorrowerLoans.fulfilled, (state, action) => {
         state.loading = false;
+        state.borrowerId = action.payload.borrowerId;
         state.loans = action.payload.loans;
         state.summary = action.payload.summary;
         state.pagination = action.payload.pagination;
@@ -259,6 +264,7 @@ const borrowerLoanSlice = createSlice({
       .addCase(getBorrowerLoans.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+        state.borrowerId = null;
         state.loans = [];
         state.pagination = initialState.pagination;
       })
@@ -270,6 +276,7 @@ const borrowerLoanSlice = createSlice({
       })
       .addCase(getBorrowerLoansById.fulfilled, (state, action) => {
         state.loading = false;
+        state.borrowerId = action.payload.borrowerId;
         state.loans = action.payload.loans;
         state.summary = action.payload.summary;
         state.pagination = action.payload.pagination;
@@ -278,6 +285,7 @@ const borrowerLoanSlice = createSlice({
       .addCase(getBorrowerLoansById.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+        state.borrowerId = null;
         state.loans = [];
         state.pagination = initialState.pagination;
       })
