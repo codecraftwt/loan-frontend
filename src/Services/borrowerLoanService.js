@@ -3,7 +3,7 @@ import axios from 'axios';
 import { baseurl } from '../Utils/API';
 
 export const borrowerLoanAPI = {
-  // Get all loans for the current borrower (requires authentication)
+  // Get all loans for the current borrower
   getMyLoans: async (borrowerId, params = {}) => {
     try {
       const queryParams = new URLSearchParams();
@@ -21,21 +21,82 @@ export const borrowerLoanAPI = {
       if (params.maxAmount) queryParams.append('maxAmount', params.maxAmount.toString());
       if (params.search) queryParams.append('search', params.search.trim());
 
-      const queryString = queryParams.toString();
-      const url = `borrower/loans/my-loans?${queryString}`;
-
-      const response = await axiosInstance.get(url);
+      const response = await axiosInstance.get(`borrower/loans/my-loans?${queryParams.toString()}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching borrower loans:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        url: error.config?.url
-      });
       throw error;
+    }
+  },
+
+  // Get pending loan offers for borrower
+  getPendingLoanOffers: async (borrowerId) => {
+    try {
+      if (!borrowerId) {
+        throw new Error('Borrower ID is required');
+      }
+      
+      // Try the new endpoint first
+      try {
+        const response = await axiosInstance.get(`borrower/loans/pending/${borrowerId}`);
+        return response.data;
+      } catch (err) {
+        // If endpoint doesn't exist, filter from my-loans
+        if (err.response?.status === 404) {
+          const queryParams = new URLSearchParams();
+          queryParams.append('borrowerId', borrowerId);
+          queryParams.append('limit', '100');
+          
+          const response = await axiosInstance.get(`borrower/loans/my-loans?${queryParams.toString()}`);
+          const allLoans = response.data?.data || response.data?.loans || [];
+          const pendingLoans = allLoans.filter(
+            loan => loan.loanStatus?.toLowerCase() === 'pending' || 
+                    loan.borrowerAcceptanceStatus === 'pending'
+          );
+          return { data: pendingLoans };
+        }
+        throw err;
+      }
+    } catch (error) {
+      console.error('Error fetching pending loan offers:', error);
+      return { data: [] };
+    }
+  },
+
+  // Accept a loan using PIN
+  acceptLoan: async (loanId, pin) => {
+    try {
+      if (!loanId) {
+        throw new Error('Loan ID is required');
+      }
+      if (!pin || pin.length !== 4) {
+        throw new Error('Valid 4-digit PIN is required');
+      }
+      
+      const response = await axiosInstance.post(
+        `borrower/loans/accept/${loanId}`,
+        { pin: pin }
+      );
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error accepting loan:', error);
+      
+      // Extract detailed error message
+      let errorMessage = 'Failed to accept loan';
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      // Throw enhanced error
+      const enhancedError = new Error(errorMessage);
+      enhancedError.status = error.response?.status;
+      enhancedError.originalError = error;
+      throw enhancedError;
     }
   },
 
@@ -112,30 +173,16 @@ export const borrowerLoanAPI = {
   // Get payment history for a loan
   getPaymentHistory: async (loanId, borrowerId) => {
     try {
-      // Validate required parameters
-      if (!loanId) {
-        throw new Error('Loan ID is required');
-      }
-      if (!borrowerId) {
-        throw new Error('Borrower ID is required');
-      }
+      if (!loanId) throw new Error('Loan ID is required');
+      if (!borrowerId) throw new Error('Borrower ID is required');
       
-      // Build query string with borrowerId
-      const queryParams = new URLSearchParams();
-      queryParams.append('borrowerId', borrowerId);
+      const response = await axiosInstance.get(
+        `borrower/loans/payment-history/${loanId}?borrowerId=${borrowerId}`
+      );
       
-      const queryString = queryParams.toString();
-      const url = `borrower/loans/payment-history/${loanId}?${queryString}`;
-            
-      const response = await axiosInstance.get(url);
-      
-      // API returns: { message: "...", data: {...} }
-      // Return the data object directly for easier access
       if (response.data && response.data.data) {
         return response.data.data;
       }
-      
-      // Fallback to response.data if structure is different
       return response.data;
     } catch (error) {
       console.error('Error fetching payment history:', error);
@@ -229,20 +276,14 @@ export const borrowerLoanAPI = {
     try {
       const queryParams = new URLSearchParams();
       if (params.limit) queryParams.append('limit', params.limit.toString());
-
-      const queryString = queryParams.toString();
-      const url = `borrower/loans/recent-activities${queryString ? `?${queryString}` : ''}`;
-
-      const response = await axiosInstance.get(url);
+      
+      const response = await axiosInstance.get(
+        `borrower/loans/recent-activities${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
+      );
       return response.data;
     } catch (error) {
-      // Handle 404 gracefully - endpoint may not exist
       if (error.response?.status === 404) {
-        console.warn('Borrower recent activities endpoint not found (404), returning empty array');
-        return {
-          data: [],
-          count: 0,
-        };
+        return { data: [], count: 0 };
       }
       console.error('Error fetching borrower recent activities:', error);
       throw error;
@@ -250,40 +291,40 @@ export const borrowerLoanAPI = {
   },
 
   // Get loans for a specific borrower (for lenders) - No authentication required
-  getBorrowerLoansById: async (borrowerId, params = {}) => {
-    try {
-      const queryParams = new URLSearchParams();
+  // getBorrowerLoansById: async (borrowerId, params = {}) => {
+  //   try {
+  //     const queryParams = new URLSearchParams();
 
-      // Add borrower ID
-      queryParams.append('borrowerId', borrowerId);
+  //     // Add borrower ID
+  //     queryParams.append('borrowerId', borrowerId);
 
-      // Add optional query parameters
-      if (params.page) queryParams.append('page', params.page.toString());
-      if (params.limit) queryParams.append('limit', params.limit.toString());
-      if (params.startDate) queryParams.append('startDate', params.startDate);
-      if (params.endDate) queryParams.append('endDate', params.endDate);
-      if (params.status) queryParams.append('status', params.status);
-      if (params.minAmount) queryParams.append('minAmount', params.minAmount.toString());
-      if (params.maxAmount) queryParams.append('maxAmount', params.maxAmount.toString());
-      if (params.search) queryParams.append('search', params.search.trim());
+  //     // Add optional query parameters
+  //     if (params.page) queryParams.append('page', params.page.toString());
+  //     if (params.limit) queryParams.append('limit', params.limit.toString());
+  //     if (params.startDate) queryParams.append('startDate', params.startDate);
+  //     if (params.endDate) queryParams.append('endDate', params.endDate);
+  //     if (params.status) queryParams.append('status', params.status);
+  //     if (params.minAmount) queryParams.append('minAmount', params.minAmount.toString());
+  //     if (params.maxAmount) queryParams.append('maxAmount', params.maxAmount.toString());
+  //     if (params.search) queryParams.append('search', params.search.trim());
 
-      const queryString = queryParams.toString();
-      const url = `${baseurl}borrower/loans/my-loans${queryString ? `?${queryString}` : ''}`;
+  //     const queryString = queryParams.toString();
+  //     const url = `${baseurl}borrower/loans/my-loans${queryString ? `?${queryString}` : ''}`;
 
-      // Use plain axios without authentication for this endpoint
-      const response = await axios.get(url, {
-        timeout: 10000,
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
+  //     // Use plain axios without authentication for this endpoint
+  //     const response = await axios.get(url, {
+  //       timeout: 10000,
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //       }
+  //     });
 
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching borrower loans:', error);
-      throw error;
-    }
-  },
+  //     return response.data;
+  //   } catch (error) {
+  //     console.error('Error fetching borrower loans:', error);
+  //     throw error;
+  //   }
+  // },
 };
 
 export default borrowerLoanAPI;

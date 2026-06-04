@@ -403,6 +403,11 @@ class NotificationService {
         this.handlePendingLoanNotification(data);
         break;
 
+      case 'sendLoanOfferNotificationToBorrower':
+      case 'loan_offer':
+        this.handleLoanOfferNotification(data);
+        break;
+
       case 'subscription_reminder':
         this.handleSubscriptionReminderNotification(data);
         break;
@@ -488,6 +493,25 @@ class NotificationService {
     } else {
       // Fallback to Outward screen
       this.navigation.navigate('Outward', navigationParams);
+    }
+  }
+
+  // Handle loan offer notification sent to borrower when lender creates a loan
+  handleLoanOfferNotification(data) {
+    const navigationParams = {
+      notificationId: data.notificationId,
+      notificationType: data.type || 'sendLoanOfferNotificationToBorrower',
+      loanAmount: data.loanAmount || data.amount,
+      borrowerName: data.borrowerName,
+      lenderName: data.lenderName,
+      highlightPendingLoan: true,
+      openAcceptLoanModal: true,
+    };
+
+    if (data.loanId) {
+      this.navigateToLoanDetails(data.loanId, navigationParams);
+    } else {
+      this.navigation.navigate('LoanRequest', navigationParams);
     }
   }
 

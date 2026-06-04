@@ -18,10 +18,13 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import { useSelector, useDispatch } from 'react-redux';
 import { m } from 'walstar-rn-responsive';
+import Toast from 'react-native-toast-message';
 import Header from '../../../Components/Header';
 import { getBorrowerLoans, clearLoans } from '../../../Redux/Slices/borrowerLoanSlice';
 import { getBorrowerRecentActivities } from '../../../Redux/Slices/borrowerActivitiesSlice';
 import { FontFamily, FontSizes } from '../../../constants';
+import borrowerLoanAPI from '../../../Services/borrowerLoanService';
+import PinVerificationModal from '../../../Components/PinVerificationModal';
 
 const formatCurrency = value => {
   if (!value) return '0';
@@ -40,12 +43,17 @@ export default function BorrowerDashboard() {
 
   const [showAllActivities, setShowAllActivities] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [pendingLoanOffers, setPendingLoanOffers] = useState([]);
+  const [selectedLoan, setSelectedLoan] = useState(null);
+  const [pinModalVisible, setPinModalVisible] = useState(false);
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideUpAnim = useRef(new Animated.Value(50)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const notificationFadeAnim = useRef(new Animated.Value(0)).current;
+  const notificationSlideAnim = useRef(new Animated.Value(50)).current;
 
   // Pulse animation for cards
   useEffect(() => {
@@ -69,11 +77,78 @@ export default function BorrowerDashboard() {
     return () => pulse.stop();
   }, []);
 
+  // Animation for notification
+  useEffect(() => {
+    if (pendingLoanOffers.length > 0) {
+      Animated.parallel([
+        Animated.timing(notificationFadeAnim, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(notificationSlideAnim, {
+          toValue: 0,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [pendingLoanOffers.length]);
+
+  // Fetch pending loan offers
+  const fetchPendingLoanOffers = useCallback(async () => {
+    try {
+      const response = await borrowerLoanAPI.getPendingLoanOffers(user?._id);
+      setPendingLoanOffers(response.data || []);
+    } catch (error) {
+      console.error('Error fetching pending loan offers:', error);
+    }
+  }, [user?._id]);
+
+  // Handle PIN verification success
+  const handlePinVerifySuccess = async (pinCode) => {
+    if (!selectedLoan) {
+      throw new Error('No loan selected');
+    }
+
+    const response = await borrowerLoanAPI.acceptLoan(selectedLoan._id, pinCode);
+    
+    if (response && response.success) {
+      setPinModalVisible(false);
+      setSelectedLoan(null);
+      
+      Toast.show({
+        type: 'success',
+        position: 'top',
+        text1: 'Loan Accepted!',
+        text2: `You have successfully accepted the loan of ₹${formatCurrency(selectedLoan.amount)}`,
+      });
+      
+      // Refresh pending offers and loans
+      await fetchPendingLoanOffers();
+      if (user?._id) {
+        dispatch(getBorrowerLoans({ borrowerId: user._id }));
+      }
+      
+      return response;
+    } else {
+      throw new Error(response?.message || 'Failed to accept loan');
+    }
+  };
+
+  // Handle forgot PIN
+  const handleForgotPin = () => {
+    setPinModalVisible(false);
+    setSelectedLoan(null);
+    navigation.navigate('ForgotPin');
+  };
+
   useFocusEffect(
     React.useCallback(() => {
       if (user?._id) {
         dispatch(getBorrowerLoans({ borrowerId: user._id }));
         dispatch(getBorrowerRecentActivities({ limit: 5 }));
+        fetchPendingLoanOffers();
       }
 
       // Reset animations
@@ -105,7 +180,7 @@ export default function BorrowerDashboard() {
       return () => {
         dispatch(clearLoans());
       };
-    }, [dispatch, user?._id]),
+    }, [dispatch, user?._id, fetchPendingLoanOffers]),
   );
 
   const onRefresh = async () => {
@@ -114,6 +189,7 @@ export default function BorrowerDashboard() {
       await Promise.all([
         dispatch(getBorrowerLoans({ borrowerId: user._id })),
         dispatch(getBorrowerRecentActivities({ limit: 5 })),
+        fetchPendingLoanOffers(),
       ]);
     }
     setRefreshing(false);
@@ -346,6 +422,53 @@ export default function BorrowerDashboard() {
             </TouchableOpacity>
           </View>
         </Animated.View>
+
+        {/* Loan Offer Notification - Opens PIN Modal Directly */}
+        {pendingLoanOffers.length > 0 && (
+          <Animated.View
+            style={[
+              styles.loanOfferNotificationCard,
+              {
+                opacity: notificationFadeAnim,
+                transform: [{ translateY: notificationSlideAnim }],
+              },
+            ]}>
+            <TouchableOpacity
+              onPress={() => {
+                setSelectedLoan(pendingLoanOffers[0]);
+                setPinModalVisible(true);
+              }}
+              activeOpacity={0.8}>
+              <LinearGradient
+                colors={['#F59E0B', '#F97316']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.loanOfferNotificationGradient}>
+                <View style={styles.loanOfferNotificationContent}>
+                  <View style={styles.loanOfferNotificationIcon}>
+                    <Ionicons name="notifications" size={24} color="#FFFFFF" />
+                    <View style={styles.loanOfferBadge}>
+                      <Text style={styles.loanOfferBadgeText}>
+                        {pendingLoanOffers.length > 9 ? '9+' : pendingLoanOffers.length}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.loanOfferNotificationText}>
+                    <Text style={styles.loanOfferNotificationTitle}>
+                      New Loan Offer{pendingLoanOffers.length !== 1 ? 's' : ''}
+                    </Text>
+                    <Text style={styles.loanOfferNotificationSubtitle} numberOfLines={2}>
+                      {pendingLoanOffers.length === 1 
+                        ? `${pendingLoanOffers[0]?.lenderName || pendingLoanOffers[0]?.lenderId?.userName || 'A lender'} offered ₹${formatCurrency(pendingLoanOffers[0]?.amount)}. Enter PIN to accept`
+                        : `You have ${pendingLoanOffers.length} pending loan offers. Tap to review and accept`}
+                    </Text>
+                  </View>
+                  <Icon name="chevron-right" size={24} color="#FFFFFF" />
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+          </Animated.View>
+        )}
 
         {/* Quick Actions */}
         <View style={styles.actionsSection}>
@@ -624,6 +747,20 @@ export default function BorrowerDashboard() {
           )}
         </Animated.View>
       </ScrollView>
+
+      {/* PIN Verification Modal - Opens Directly on Dashboard */}
+      <PinVerificationModal
+        visible={pinModalVisible}
+        loanId={selectedLoan?._id}
+        lenderName={selectedLoan?.lenderName || selectedLoan?.lenderId?.userName || 'Lender'}
+        loanAmount={selectedLoan?.amount}
+        onVerifySuccess={handlePinVerifySuccess}
+        onForgotPin={handleForgotPin}
+        onClose={() => {
+          setPinModalVisible(false);
+          setSelectedLoan(null);
+        }}
+      />
     </View>
   );
 }
@@ -757,12 +894,72 @@ const styles = StyleSheet.create({
     borderColor: '#fff',
   },
 
+  // Loan Offer Notification Card
+  loanOfferNotificationCard: {
+    marginHorizontal: m(16),
+    marginBottom: m(16),
+    borderRadius: m(16),
+    overflow: 'hidden',
+    elevation: 4,
+    shadowColor: '#F59E0B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    marginVertical:14
+  },
+  loanOfferNotificationGradient: {
+    borderRadius: m(16),
+    padding: m(16),
+  },
+  loanOfferNotificationContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  loanOfferNotificationIcon: {
+    position: 'relative',
+    marginRight: m(12),
+  },
+  loanOfferBadge: {
+    position: 'absolute',
+    top: -m(6),
+    right: -m(6),
+    backgroundColor: '#EF4444',
+    borderRadius: m(10),
+    minWidth: m(20),
+    height: m(20),
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: m(4),
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  loanOfferBadgeText: {
+    color: '#FFFFFF',
+    fontSize: m(10),
+    fontWeight: '700',
+  },
+  loanOfferNotificationText: {
+    flex: 1,
+  },
+  loanOfferNotificationTitle: {
+    fontSize: m(16),
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: m(4),
+  },
+  loanOfferNotificationSubtitle: {
+    fontSize: m(12),
+    color: '#FFFFFF',
+    opacity: 0.9,
+  },
+
   // ============================================
   // QUICK ACTIONS SECTION STYLES
   // ============================================
   actionsSection: {
     paddingHorizontal: m(16),
-    marginTop: m(20),
+    marginTop: m(14),
     marginBottom: m(16),
   },
   sectionTitle: {

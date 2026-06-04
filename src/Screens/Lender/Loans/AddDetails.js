@@ -34,7 +34,6 @@ import { openRazorpayCheckoutForLoanCreation } from '../../../Services/razorpayS
 import Toast from 'react-native-toast-message';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
-import LoanOTPVerification from '../../../Components/LoanOTPVerification';
 import FraudStatusBadge from '../../../Components/FraudStatusBadge';
 import FraudWarningModal from '../../../Components/FraudWarningModal';
 import SubscriptionRestriction from '../../../Components/SubscriptionRestriction';
@@ -107,7 +106,6 @@ export default function AddDetails({ route, navigation }) {
   const [isStartDatePickerVisible, setStartDatePickerVisible] = useState(false);
   const [isEndDatePickerVisible, setEndDatePickerVisible] = useState(false);
   const [isFocused, setIsFocused] = useState({});
-  const [isOTPModalVisible, setIsOTPModalVisible] = useState(false);
   const [createdLoanData, setCreatedLoanData] = useState(null);
   const [showFraudWarning, setShowFraudWarning] = useState(false);
   const [pendingLoanData, setPendingLoanData] = useState(null);
@@ -624,15 +622,13 @@ export default function AddDetails({ route, navigation }) {
               setCreatedLoanData(loanData);
               await handleRazorpayPayment(loanData);
             } else {
-              setCreatedLoanData(loanData);
-              setIsOTPModalVisible(true);
               Toast.show({
                 type: 'success',
                 position: 'top',
                 text1: 'Loan created successfully',
-                text2:
-                  'OTP sent to borrower. Please verify to confirm the loan.',
+                text2: 'Notification sent to borrower for PIN verification.',
               });
+              navigation.navigate('BottomNavigation', { screen: 'Borrowers' });
             }
           } else {
             Toast.show({
@@ -785,11 +781,11 @@ export default function AddDetails({ route, navigation }) {
           type: 'success',
           position: 'top',
           text1: 'Payment Verified Successfully',
-          text2: 'Please verify OTP to confirm the loan.',
+          text2: 'Notification sent to borrower for PIN verification.',
         });
 
-        // Show OTP verification modal
-        setIsOTPModalVisible(true);
+        // Navigate to borrowers list after success
+        navigation.navigate('BottomNavigation', { screen: 'Borrowers' });
       } else {
         throw new Error(verifyResult.message || 'Payment verification failed');
       }
@@ -897,35 +893,6 @@ export default function AddDetails({ route, navigation }) {
     setFieldErrors(prev => ({ ...prev, [type]: '' }));
     if (type === 'loanStartDate') setStartDatePickerVisible(false);
     else setEndDatePickerVisible(false);
-  };
-
-  const handleOTPVerifySuccess = verifiedLoanData => {
-    setIsOTPModalVisible(false);
-    setCreatedLoanData(null);
-    Toast.show({
-      type: 'success',
-      position: 'top',
-      text1: 'Loan confirmed',
-      text2: 'Borrower has accepted the loan.',
-    });
-    navigation.navigate('BottomNavigation', { screen: 'Borrowers' });
-  };
-
-  const handleOTPSkip = () => {
-    setIsOTPModalVisible(false);
-    Toast.show({
-      type: 'info',
-      position: 'top',
-      text1: 'OTP Verification Skipped',
-      text2: 'Loan is pending. You can verify OTP later.',
-    });
-    navigation.navigate('BottomNavigation', { screen: 'Borrowers' });
-  };
-
-  const handleOTPClose = () => {
-    setIsOTPModalVisible(false);
-    // If user closes without verifying or skipping, still navigate
-    navigation.navigate('BottomNavigation', { screen: 'Borrowers' });
   };
 
   return (
@@ -1539,20 +1506,6 @@ export default function AddDetails({ route, navigation }) {
         minimumDate={new Date()}
         display="spinner"
       />
-
-      {/* OTP Verification Modal */}
-      {createdLoanData && (
-        <LoanOTPVerification
-          visible={isOTPModalVisible}
-          loanId={createdLoanData._id}
-          borrowerMobile={formData.mobileNumber}
-          onVerifySuccess={handleOTPVerifySuccess}
-          onSkip={handleOTPSkip}
-          onClose={handleOTPClose}
-          isOnlinePayment={createdLoanData.loanMode === 'online'}
-          paymentVerified={paymentVerified}
-        />
-      )}
 
       {/* Fraud Warning Modal */}
       <FraudWarningModal

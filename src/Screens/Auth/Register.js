@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -20,10 +20,13 @@ import Toast from 'react-native-toast-message';
 import { m } from 'walstar-rn-responsive';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import { FontFamily, FontSizes } from '../../constants';
+import bcrypt from 'react-native-bcrypt';
 
 export default function Register({ navigation }) {
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 3;
+  const totalSteps = 4;
+  const pinInputs = useRef([]);
+  const confirmPinInputs = useRef([]);
 
   // Step 1: Basic Info
   const [name, setName] = useState('');
@@ -40,7 +43,13 @@ export default function Register({ navigation }) {
   const [panCardNumber, setPanCardNumber] = useState('');
   const [roleId, setRoleId] = useState(2);
 
-  // Step 3: Profile Picture
+  // Step 3: Create PIN
+  const [pin, setPin] = useState(['', '', '', '']);
+  const [confirmPin, setConfirmPin] = useState(['', '', '', '']);
+  const [pinError, setPinError] = useState('');
+  const [showPin, setShowPin] = useState(false);
+
+  // Step 4: Profile Picture
   const [profileImage, setProfileImage] = useState(null);
 
   // Error states
@@ -53,7 +62,7 @@ export default function Register({ navigation }) {
   const [mobileError, setMobileError] = useState('');
   const [panCardError, setPanCardError] = useState('');
 
-  const[errors,setErrors]= useState({})
+  const [, setErrors] = useState({});
 
   const { isLoading } = useSelector(state => state.auth || {});
   const dispatch = useDispatch();
@@ -88,10 +97,7 @@ export default function Register({ navigation }) {
   };
 
   const handleEmailChange = text => {
-    // Convert the first letter to lowercase and keep the rest of the string intact
     const modifiedText = text.charAt(0).toLowerCase() + text.slice(1);
-
-    // Set the modified email in the state
     setEmail(modifiedText);
     setEmailError('');
   };
@@ -134,6 +140,69 @@ export default function Register({ navigation }) {
       setPanCardNumber(upperText);
       setPanCardError('');
     }
+  };
+
+  const handlePinChange = (text, index) => {
+    const newPin = [...pin];
+    newPin[index] = text;
+    setPin(newPin);
+    setPinError('');
+
+    if (text && index < 3) {
+      pinInputs.current[index + 1].focus();
+    }
+  };
+
+  const handleConfirmPinChange = (text, index) => {
+    const newConfirmPin = [...confirmPin];
+    newConfirmPin[index] = text;
+    setConfirmPin(newConfirmPin);
+    setPinError('');
+
+    if (text && index < 3) {
+      confirmPinInputs.current[index + 1].focus();
+    }
+  };
+
+  const handlePinKeyPress = (e, index) => {
+    if (e.nativeEvent.key === 'Backspace' && !pin[index] && index > 0) {
+      pinInputs.current[index - 1].focus();
+    }
+  };
+
+  const handleConfirmPinKeyPress = (e, index) => {
+    if (e.nativeEvent.key === 'Backspace' && !confirmPin[index] && index > 0) {
+      confirmPinInputs.current[index - 1].focus();
+    }
+  };
+
+  const validatePin = () => {
+    const pinString = pin.join('');
+    const confirmPinString = confirmPin.join('');
+
+    if (pinString.length !== 4) {
+      setPinError('PIN must be 4 digits');
+      return false;
+    }
+
+    if (pinString !== confirmPinString) {
+      setPinError('PINs do not match');
+      return false;
+    }
+
+    const isSequential = '1234,2345,3456,4567,5678,6789'.includes(pinString);
+    if (isSequential) {
+      setPinError('Please choose a more secure PIN (avoid sequential numbers)');
+      return false;
+    }
+
+    const isRepeated = /^(\d)\1{3}$/.test(pinString);
+    if (isRepeated) {
+      setPinError('Please choose a more secure PIN (avoid repeated digits)');
+      return false;
+    }
+
+    return true;
   };
 
   // Validation functions - only called on button click
@@ -216,19 +285,25 @@ const validateStep2 = () => {
   return valid;
 };
 
-const handleNext = () => {
-  if (currentStep === 1) {
-    const ok = validateStep1();
-    if (!ok) return;
-    setCurrentStep(2);
-  }
+  const handleNext = () => {
+    if (currentStep === 1) {
+      const ok = validateStep1();
+      if (!ok) return;
+      setCurrentStep(2);
+    }
 
-  if (currentStep === 2) {
-    const ok = validateStep2();
-    if (!ok) return;
-    setCurrentStep(3);
-  }
-};
+    if (currentStep === 2) {
+      const ok = validateStep2();
+      if (!ok) return;
+      setCurrentStep(3);
+    }
+
+    if (currentStep === 3) {
+      const ok = validatePin();
+      if (!ok) return;
+      setCurrentStep(4);
+    }
+  };
 
   const handleBack = () => {
     if (currentStep > 1) {
@@ -272,11 +347,11 @@ const handleNext = () => {
   };
 
   const handleRegister = async () => {
-    // Validate both steps before submitting
     const step1Valid = validateStep1();
     const step2Valid = validateStep2();
+    const pinValid = validatePin();
 
-    if (!step1Valid || !step2Valid) {
+    if (!step1Valid || !step2Valid || !pinValid) {
       Toast.show({
         type: 'error',
         position: 'top',
@@ -286,7 +361,11 @@ const handleNext = () => {
     }
 
     try {
+      const pinString = pin.join('');
+      const salt = bcrypt.genSaltSync(10);
+      const hashedPin = bcrypt.hashSync(pinString, salt);
       const formData = new FormData();
+
       formData.append('userName', name);
       formData.append('email', email);
       formData.append('address', address);
@@ -295,6 +374,9 @@ const handleNext = () => {
       formData.append('aadharCardNo', aadharNumber);
       formData.append('mobileNo', mobileNumber);
       formData.append('roleId', roleId.toString());
+      formData.append('pinHash', hashedPin);
+      formData.append('pinCreatedAt', new Date().toISOString());
+
       if (panCardNumber && panCardNumber.length === 10) {
         formData.append('panCardNumber', panCardNumber);
       }
@@ -316,14 +398,14 @@ const handleNext = () => {
       });
 
       if (roleId === 2) {
-        navigation.navigate('ConsentScreen', {
+        navigation.replace('ConsentScreen', {
           source: 'register',
           aadhaarNumber: aadharNumber,
         });
         return;
       }
 
-      navigation.navigate('Login');
+      navigation.replace('Login');
     } catch (error) {
       const errorMessage =
         (typeof error === 'string' ? error : null) ||
@@ -473,7 +555,7 @@ const handleNext = () => {
             style={styles.inputIcon}
           />
           <TextInput
-            style={[styles.input, { flex: 1 }]}
+            style={styles.input}
             placeholder="Confirm your password"
             secureTextEntry={!confirmPasswordVisible}
             placeholderTextColor="#999"
@@ -689,6 +771,103 @@ const handleNext = () => {
 
   const renderStep3 = () => (
     <>
+      <View style={styles.iconCircle}>
+        <Ionicons name="shield-checkmark-outline" size={m(50)} color="#ff6700" />
+      </View>
+
+      <Text style={styles.title}>Create Your Security PIN</Text>
+
+      <View style={styles.warningBox}>
+        <Ionicons name="information-circle-outline" size={m(24)} color="#ff7900" />
+        <Text style={styles.warningText}>
+          This PIN will be required whenever you accept a loan or perform important actions.
+        </Text>
+      </View>
+
+      <Text style={styles.inputLabel}>Enter 4-Digit PIN</Text>
+      <View style={styles.pinContainer}>
+        {[0, 1, 2, 3].map((index) => (
+          <TextInput
+            key={`pin-${index}`}
+            ref={(ref) => {
+              pinInputs.current[index] = ref;
+            }}
+            style={[styles.pinInput, pin[index] && styles.pinInputFilled]}
+            value={pin[index]}
+            onChangeText={(text) => handlePinChange(text, index)}
+            onKeyPress={(e) => handlePinKeyPress(e, index)}
+            keyboardType="number-pad"
+            maxLength={1}
+            secureTextEntry={!showPin}
+            textAlign="center"
+          />
+        ))}
+      </View>
+
+      <Text style={[styles.inputLabel, styles.confirmLabel]}>Confirm PIN</Text>
+      <View style={styles.pinContainer}>
+        {[0, 1, 2, 3].map((index) => (
+          <TextInput
+            key={`confirm-${index}`}
+            ref={(ref) => {
+              confirmPinInputs.current[index] = ref;
+            }}
+            style={[styles.pinInput, confirmPin[index] && styles.pinInputFilled]}
+            value={confirmPin[index]}
+            onChangeText={(text) => handleConfirmPinChange(text, index)}
+            onKeyPress={(e) => handleConfirmPinKeyPress(e, index)}
+            keyboardType="number-pad"
+            maxLength={1}
+            secureTextEntry={!showPin}
+            textAlign="center"
+          />
+        ))}
+      </View>
+
+      <TouchableOpacity
+        style={styles.showPinButton}
+        onPress={() => setShowPin(!showPin)}>
+        <Ionicons
+          name={showPin ? 'eye-off-outline' : 'eye-outline'}
+          size={20}
+          color="#ff7900"
+        />
+        <Text style={styles.showPinText}>
+          {showPin ? 'Hide PIN' : 'Show PIN'}
+        </Text>
+      </TouchableOpacity>
+
+      {pinError ? (
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle" size={18} color="#FF4444" />
+          <Text style={styles.pinErrorText}>{pinError}</Text>
+        </View>
+      ) : null}
+
+      <View style={styles.tipsContainer}>
+        <Text style={styles.tipsTitle}>PIN Security Tips:</Text>
+        <View style={styles.tipItem}>
+          <Ionicons name="checkmark-circle" size={16} color="#28a745" />
+          <Text style={styles.tipText}>Never share your PIN with anyone</Text>
+        </View>
+        <View style={styles.tipItem}>
+          <Ionicons name="checkmark-circle" size={16} color="#28a745" />
+          <Text style={styles.tipText}>Avoid using 1234, 0000, or birth year</Text>
+        </View>
+        <View style={styles.tipItem}>
+          <Ionicons name="checkmark-circle" size={16} color="#28a745" />
+          <Text style={styles.tipText}>Don't write it down or save in phone</Text>
+        </View>
+        <View style={styles.tipItem}>
+          <Ionicons name="checkmark-circle" size={16} color="#28a745" />
+          <Text style={styles.tipText}>We will never ask for your PIN</Text>
+        </View>
+      </View>
+    </>
+  );
+
+  const renderStep4 = () => (
+    <>
       <Text style={styles.stepTitle}>Profile Picture</Text>
       <Text style={styles.stepSubtitle}>Add a profile picture (Optional)</Text>
 
@@ -796,7 +975,7 @@ const handleNext = () => {
 
         {/* Progress Indicator */}
         <View style={styles.progressContainer}>
-          {[1, 2, 3].map(step => (
+          {[1, 2, 3, 4].map(step => (
             <View key={step} style={styles.progressStepContainer}>
               <View
                 style={[
@@ -826,6 +1005,7 @@ const handleNext = () => {
           {currentStep === 1 && renderStep1()}
           {currentStep === 2 && renderStep2()}
           {currentStep === 3 && renderStep3()}
+          {currentStep === 4 && renderStep4()}
 
           {/* Navigation Buttons */}
           <View style={styles.navigationButtons}>
@@ -882,7 +1062,7 @@ const handleNext = () => {
                   {isLoading ? (
                     <>
                       <Text style={styles.registerButtonText}>
-                        Creating Account
+                        Please wait...
                       </Text>
                       <Ionicons name="hourglass-outline" size={20} color="#FFFFFF" />
                     </>
@@ -1031,6 +1211,42 @@ const styles = StyleSheet.create({
     marginBottom: m(24),
     textAlign: 'center',
   },
+  iconCircle: {
+    width: m(90),
+    height: m(90),
+    borderRadius: m(45),
+    backgroundColor: '#FFF9F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    borderWidth: 2,
+    borderColor: '#FFEDD5',
+    marginBottom: m(16),
+  },
+  title: {
+    fontSize: FontSizes['2xl'],
+    fontFamily: FontFamily.secondaryBold,
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: m(16),
+  },
+  warningBox: {
+    flexDirection: 'row',
+    backgroundColor: '#FFF7ED',
+    borderRadius: m(12),
+    padding: m(12),
+    marginBottom: m(24),
+    borderWidth: 1,
+    borderColor: '#FFEDD5',
+    gap: m(8),
+  },
+  warningText: {
+    flex: 1,
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.primaryRegular,
+    color: '#7C2D12',
+    lineHeight: m(18),
+  },
   inputGroup: {
     marginBottom: m(20),
   },
@@ -1076,6 +1292,82 @@ const styles = StyleSheet.create({
     color: '#FF4444',
     marginTop: m(4),
     marginLeft: m(4),
+  },
+  confirmLabel: {
+    marginTop: m(20),
+  },
+  pinContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: m(12),
+  },
+  pinInput: {
+    flex: 1,
+    height: m(60),
+    backgroundColor: '#FFF9F0',
+    borderRadius: m(12),
+    borderWidth: 2,
+    borderColor: '#FFEDD5',
+    fontSize: FontSizes['2xl'],
+    fontFamily: FontFamily.primarySemiBold,
+    color: '#333',
+    textAlign: 'center',
+    padding: 0,
+  },
+  pinInputFilled: {
+    borderColor: '#28a745',
+    backgroundColor: '#F0FFF4',
+  },
+  showPinButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: m(8),
+    marginTop: m(16),
+    padding: m(8),
+  },
+  showPinText: {
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.primaryMedium,
+    color: '#ff7900',
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF2F2',
+    borderRadius: m(8),
+    padding: m(12),
+    marginTop: m(16),
+    gap: m(8),
+  },
+  pinErrorText: {
+    flex: 1,
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.primaryRegular,
+    color: '#FF4444',
+  },
+  tipsContainer: {
+    backgroundColor: '#F0FDF4',
+    borderRadius: m(12),
+    padding: m(16),
+    marginTop: m(24),
+  },
+  tipsTitle: {
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primarySemiBold,
+    color: '#166534',
+    marginBottom: m(12),
+  },
+  tipItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(8),
+    marginBottom: m(8),
+  },
+  tipText: {
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.primaryRegular,
+    color: '#14532D',
   },
   roleContainer: {
     flexDirection: 'row',
