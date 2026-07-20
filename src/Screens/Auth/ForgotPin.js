@@ -17,11 +17,9 @@ import Toast from 'react-native-toast-message';
 import { m } from 'walstar-rn-responsive';
 import { FontFamily, FontSizes } from '../../constants';
 import bcrypt from 'react-native-bcrypt';
-import { useDispatch } from 'react-redux';
+import instance from '../../Utils/AxiosInstance';
 
 export default function ForgotPin({ navigation }) {
-  const dispatch = useDispatch();
-
   const [step, setStep] = useState(1);
   const [mobileNumber, setMobileNumber] = useState('');
   const [otp, setOtp] = useState(['', '', '', '']);
@@ -120,8 +118,10 @@ export default function ForgotPin({ navigation }) {
       const salt = bcrypt.genSaltSync(10);
       const hashedPin = bcrypt.hashSync(pinString, salt);
 
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await instance.post('auth/reset-pin', {
+        pinHash: hashedPin,
+        pinCreatedAt: new Date().toISOString(),
+      });
 
       Toast.show({
         type: 'success',

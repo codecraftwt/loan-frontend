@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback, memo } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,11 +6,12 @@ import {
   ScrollView,
   TouchableOpacity,
   FlatList,
-  ActivityIndicator,
+  Image,
   RefreshControl,
   Animated,
   Easing,
   Platform,
+  Modal,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
@@ -18,13 +19,13 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import { useSelector, useDispatch } from 'react-redux';
 import { m } from 'walstar-rn-responsive';
-import Toast from 'react-native-toast-message';
 import Header from '../../../Components/Header';
 import { getBorrowerLoans, clearLoans } from '../../../Redux/Slices/borrowerLoanSlice';
-import { getBorrowerRecentActivities } from '../../../Redux/Slices/borrowerActivitiesSlice';
 import { FontFamily, FontSizes } from '../../../constants';
 import borrowerLoanAPI from '../../../Services/borrowerLoanService';
 import PinVerificationModal from '../../../Components/PinVerificationModal';
+import Toast from 'react-native-toast-message';
+import { baseurl } from '../../../Utils/API';
 
 const formatCurrency = value => {
   if (!value) return '0';
@@ -37,15 +38,14 @@ export default function BorrowerDashboard() {
   const dispatch = useDispatch();
   const user = useSelector(state => state.auth.user);
   const { loans, summary } = useSelector(state => state.borrowerLoans);
-  const { activities: recentActivities, loading: activitiesLoading } = useSelector(
-    state => state.borrowerActivities,
-  );
 
-  const [showAllActivities, setShowAllActivities] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [pendingLoanOffers, setPendingLoanOffers] = useState([]);
+  const [offersModalVisible, setOffersModalVisible] = useState(false);
   const [selectedLoan, setSelectedLoan] = useState(null);
   const [pinModalVisible, setPinModalVisible] = useState(false);
+  const [proofViewerVisible, setProofViewerVisible] = useState(false);
+  const [selectedProofUrl, setSelectedProofUrl] = useState(null);
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -75,7 +75,7 @@ export default function BorrowerDashboard() {
     );
     pulse.start();
     return () => pulse.stop();
-  }, []);
+  }, [pulseAnim]);
 
   // Animation for notification
   useEffect(() => {
@@ -93,61 +93,226 @@ export default function BorrowerDashboard() {
         }),
       ]).start();
     }
-  }, [pendingLoanOffers.length]);
+  }, [notificationFadeAnim, notificationSlideAnim, pendingLoanOffers.length]);
 
   // Fetch pending loan offers
   const fetchPendingLoanOffers = useCallback(async () => {
     try {
       const response = await borrowerLoanAPI.getPendingLoanOffers(user?._id);
-      setPendingLoanOffers(response.data || []);
+      const offers =
+        Array.isArray(response)
+          ? response
+          : Array.isArray(response?.data)
+            ? response.data
+            : Array.isArray(response?.data?.loans)
+              ? response.data.loans
+              : Array.isArray(response?.loans)
+                ? response.loans
+                : [];
+
+      setPendingLoanOffers(offers);
     } catch (error) {
       console.error('Error fetching pending loan offers:', error);
     }
   }, [user?._id]);
 
-  // Handle PIN verification success
-  const handlePinVerifySuccess = async (pinCode) => {
-    if (!selectedLoan) {
+  const handleReviewLoanOffers = () => {
+    setOffersModalVisible(true);
+  };
+
+  const getProofUrl = proof => {
+    if (!proof) return null;
+    if (proof.startsWith('http://') || proof.startsWith('https://')) {
+      return proof;
+    }
+
+    const apiRoot = baseurl.replace('/api', '').replace(/\/$/, '');
+    const proofPath = proof.startsWith('/') ? proof.substring(1) : proof;
+    return `${apiRoot}/${proofPath}`;
+  };
+
+  const handleViewOfferProof = loan => {
+    const proofUrl = getProofUrl(loan?.proof);
+    if (!proofUrl) {
+      Toast.show({
+        type: 'info',
+        position: 'top',
+        text1: 'No Proof Provided',
+        text2: 'The lender has not uploaded proof for this offer.',
+      });
+      return;
+    }
+
+    setSelectedProofUrl(proofUrl);
+    setProofViewerVisible(true);
+  };
+
+  const handleAcceptLoanOffer = loan => {
+    setSelectedLoan(loan);
+    setPinModalVisible(true);
+  };
+
+  const handlePinVerifySuccess = async pinCode => {
+    if (!selectedLoan?._id) {
       throw new Error('No loan selected');
     }
 
     const response = await borrowerLoanAPI.acceptLoan(selectedLoan._id, pinCode);
-    
-    if (response && response.success) {
+
+    if (response?.success) {
       setPinModalVisible(false);
       setSelectedLoan(null);
-      
+
       Toast.show({
         type: 'success',
         position: 'top',
-        text1: 'Loan Accepted!',
-        text2: `You have successfully accepted the loan of ₹${formatCurrency(selectedLoan.amount)}`,
+        text1: 'Loan Accepted',
+        text2: 'The lender offer has been accepted successfully.',
       });
-      
-      // Refresh pending offers and loans
+
       await fetchPendingLoanOffers();
       if (user?._id) {
         dispatch(getBorrowerLoans({ borrowerId: user._id }));
       }
-      
+
       return response;
-    } else {
-      throw new Error(response?.message || 'Failed to accept loan');
     }
+
+    throw new Error(response?.message || 'Failed to accept loan');
   };
 
-  // Handle forgot PIN
   const handleForgotPin = () => {
     setPinModalVisible(false);
     setSelectedLoan(null);
+    setOffersModalVisible(false);
     navigation.navigate('ForgotPin');
   };
+
+  const handleCloseProofViewer = () => {
+    setProofViewerVisible(false);
+    setSelectedProofUrl(null);
+  };
+
+  const handleCloseOfferModal = () => {
+    setOffersModalVisible(false);
+    setSelectedLoan(null);
+    setPinModalVisible(false);
+    setProofViewerVisible(false);
+    setSelectedProofUrl(null);
+  };
+
+  const getLoanDurationDays = loan => {
+    if (!loan?.loanStartDate || !loan?.loanEndDate) {
+      return 'N/A';
+    }
+
+    const start = new Date(loan.loanStartDate);
+    const end = new Date(loan.loanEndDate);
+    const diff = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+    return diff > 0 ? `${diff} days` : 'N/A';
+  };
+
+  const getLenderName = loan => (
+    loan?.lenderName || loan?.lenderId?.userName || 'Unknown Lender'
+  );
+
+  const getLenderContact = loan => (
+    loan?.lenderId?.mobileNo || loan?.mobileNumber || 'Contact unavailable'
+  );
+
+  const getLoanDueDate = loan => (
+    loan?.loanEndDate ? new Date(loan.loanEndDate).toLocaleDateString() : 'N/A'
+  );
+
+  const renderPendingOffer = ({ item }) => (
+    <View style={styles.offerCard}>
+      <View style={styles.offerCardAccent} />
+      <View style={styles.offerCardHeader}>
+        <View style={styles.offerLenderAvatar}>
+          <Text style={styles.offerLenderAvatarText}>
+            {getLenderName(item).charAt(0).toUpperCase()}
+          </Text>
+        </View>
+        <View style={styles.offerLenderInfo}>
+          <Text style={styles.offerLenderName} numberOfLines={1}>
+            {getLenderName(item)}
+          </Text>
+          <Text style={styles.offerLenderMeta} numberOfLines={1}>
+            {getLenderContact(item)}
+          </Text>
+        </View>
+        <View style={styles.offerStatusPill}>
+          <Icon name="clock" size={12} color="#C2410C" />
+          <Text style={styles.offerStatusText}>Pending</Text>
+        </View>
+      </View>
+
+      <LinearGradient
+        colors={['#ECFDF5', '#FFFFFF']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.offerAmountPanel}>
+        <View>
+          <Text style={styles.offerAmountLabel}>Offered Amount</Text>
+          <Text style={styles.offerAmountValue}>
+            Rs {formatCurrency(item.amount)}
+          </Text>
+          <Text style={styles.offerAmountHint}>Ready for borrower confirmation</Text>
+        </View>
+        <View style={styles.offerAmountIcon}>
+          <Icon name="trending-up" size={20} color="#C2410C" />
+        </View>
+      </LinearGradient>
+
+      <View style={styles.offerSummaryGrid}>
+        <View style={styles.offerSummaryItem}>
+          <Text style={styles.offerSummaryLabel}>Duration</Text>
+          <Text style={styles.offerSummaryValue}>{getLoanDurationDays(item)}</Text>
+        </View>
+        <View style={styles.offerSummaryItem}>
+          <Text style={styles.offerSummaryLabel}>Due Date</Text>
+          <Text style={styles.offerSummaryValue}>{getLoanDueDate(item)}</Text>
+        </View>
+      </View>
+
+      <View style={styles.offerDetailsGrid}>
+        <View style={styles.offerDetailItem}>
+          <Icon name="file-text" size={14} color="#C2410C" />
+          <Text style={styles.offerDetailText} numberOfLines={1}>
+            {item.purpose || 'No purpose added'}
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={styles.offerDetailItem}
+          onPress={() => handleViewOfferProof(item)}
+          activeOpacity={0.8}>
+          <Icon name={item.proof ? 'image' : 'file-x'} size={14} color="#C2410C" />
+          <Text style={styles.offerDetailText} numberOfLines={1}>
+            {item.proof ? 'View lender proof' : 'No proof uploaded'}
+          </Text>
+          {item.proof && <Icon name="eye" size={14} color="#C2410C" />}
+        </TouchableOpacity>
+      </View>
+
+      <TouchableOpacity
+        onPress={() => handleAcceptLoanOffer(item)}
+        activeOpacity={0.85}>
+        <LinearGradient
+          colors={['#F97316', '#EA580C']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.offerAcceptButton}>
+          <Text style={styles.offerAcceptButtonText}>Accept with PIN</Text>
+          <Icon name="lock" size={15} color="#FFFFFF" />
+        </LinearGradient>
+      </TouchableOpacity>
+    </View>
+  );
 
   useFocusEffect(
     React.useCallback(() => {
       if (user?._id) {
         dispatch(getBorrowerLoans({ borrowerId: user._id }));
-        dispatch(getBorrowerRecentActivities({ limit: 5 }));
         fetchPendingLoanOffers();
       }
 
@@ -180,7 +345,14 @@ export default function BorrowerDashboard() {
       return () => {
         dispatch(clearLoans());
       };
-    }, [dispatch, user?._id, fetchPendingLoanOffers]),
+    }, [
+      dispatch,
+      fadeAnim,
+      scaleAnim,
+      slideUpAnim,
+      user?._id,
+      fetchPendingLoanOffers,
+    ]),
   );
 
   const onRefresh = async () => {
@@ -188,7 +360,6 @@ export default function BorrowerDashboard() {
     if (user?._id) {
       await Promise.all([
         dispatch(getBorrowerLoans({ borrowerId: user._id })),
-        dispatch(getBorrowerRecentActivities({ limit: 5 })),
         fetchPendingLoanOffers(),
       ]);
     }
@@ -225,62 +396,26 @@ export default function BorrowerDashboard() {
       description: 'View insights',
       lightColor: '#E1BEE7',
     },
+  
     {
-      id: 4,
-      title: 'Settings',
-      icon: 'settings',
-      screen: 'Settings',
+      id: 5,
+      title: 'Activity',
+      icon: 'activity',
+      screen: 'BorrowerRecentActivity',
       gradient: ['#FF9800', '#F57C00'],
-      description: 'App settings',
+      description: 'Recent updates',
       lightColor: '#FFE0B2',
     },
+    // {
+    //   id: 5,
+    //   title: 'Settings',
+    //   icon: 'settings',
+    //   screen: 'Settings',
+    //   gradient: ['#FF9800', '#F57C00'],
+    //   description: 'App settings',
+    //   lightColor: '#FFE0B2',
+    // },
   ];
-
-  // Helper function to get activity icon and color
-  const getActivityProperties = (activity) => {
-    const activityType = activity.type || '';
-    let icon = 'clock';
-    let color = '#34495e';
-    let gradient = ['#2c3e50', '#34495e'];
-
-    switch (activityType) {
-      case 'payment_made':
-        icon = 'dollar-sign';
-        color = '#4CAF50';
-        gradient = ['#4CAF50', '#66BB6A'];
-        break;
-      case 'loan_paid':
-        icon = 'check-circle';
-        color = '#10B981';
-        gradient = ['#10B981', '#34D399'];
-        break;
-      case 'loan_accepted':
-        icon = 'check-circle';
-        color = '#2196F3';
-        gradient = ['#2196F3', '#42A5F5'];
-        break;
-      case 'loan_rejected':
-        icon = 'x-circle';
-        color = '#EF4444';
-        gradient = ['#EF4444', '#F87171'];
-        break;
-      case 'loan_received':
-        icon = 'arrow-down';
-        color = '#FF9800';
-        gradient = ['#FF9800', '#FFA726'];
-        break;
-      case 'loan_overdue':
-        icon = 'alert-circle';
-        color = '#F44336';
-        gradient = ['#F44336', '#EF5350'];
-        break;
-      default:
-        icon = 'activity';
-        color = '#666';
-        gradient = ['#9E9E9E', '#BDBDBD'];
-    }
-    return { icon, color, gradient };
-  };
 
   const totalActiveLoans = summary.activeLoans || 0;
   const totalLoanAmount = summary.totalAmountBorrowed || 0;
@@ -423,7 +558,7 @@ export default function BorrowerDashboard() {
           </View>
         </Animated.View>
 
-        {/* Loan Offer Notification - Opens PIN Modal Directly */}
+        {/* Loan Offer Notification - Opens Review Modal */}
         {pendingLoanOffers.length > 0 && (
           <Animated.View
             style={[
@@ -434,10 +569,7 @@ export default function BorrowerDashboard() {
               },
             ]}>
             <TouchableOpacity
-              onPress={() => {
-                setSelectedLoan(pendingLoanOffers[0]);
-                setPinModalVisible(true);
-              }}
+              onPress={handleReviewLoanOffers}
               activeOpacity={0.8}>
               <LinearGradient
                 colors={['#F59E0B', '#F97316']}
@@ -459,8 +591,8 @@ export default function BorrowerDashboard() {
                     </Text>
                     <Text style={styles.loanOfferNotificationSubtitle} numberOfLines={2}>
                       {pendingLoanOffers.length === 1 
-                        ? `${pendingLoanOffers[0]?.lenderName || pendingLoanOffers[0]?.lenderId?.userName || 'A lender'} offered ₹${formatCurrency(pendingLoanOffers[0]?.amount)}. Enter PIN to accept`
-                        : `You have ${pendingLoanOffers.length} pending loan offers. Tap to review and accept`}
+                        ? `${pendingLoanOffers[0]?.lenderName || pendingLoanOffers[0]?.lenderId?.userName || 'A lender'} offered Rs ${formatCurrency(pendingLoanOffers[0]?.amount)}. Tap to review details`
+                        : `You have ${pendingLoanOffers.length} pending loan offers. Tap to review details`}
                     </Text>
                   </View>
                   <Icon name="chevron-right" size={24} color="#FFFFFF" />
@@ -480,7 +612,9 @@ export default function BorrowerDashboard() {
                 style={styles.actionItem}
                 activeOpacity={0.7}
                 onPress={() => {
-                  if (action.screen === 'BorrowerLoanHistoryScreen' && user?._id) {
+                  if (action.screen === 'PendingLoanOffers') {
+                    handleReviewLoanOffers();
+                  } else if (action.screen === 'BorrowerLoanHistoryScreen' && user?._id) {
                     navigation.navigate(action.screen, { borrowerId: user._id });
                   } else {
                     navigation.navigate(action.screen);
@@ -655,104 +789,92 @@ export default function BorrowerDashboard() {
             />
           </View>
         )}
-
-        {/* Recent Activities */}
-        <Animated.View
-          style={[
-            styles.activitySection,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideUpAnim }],
-            },
-          ]}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionTitleContainer}>
-              <Text style={styles.sectionTitle}>Recent Activity</Text>
-              <View style={styles.activityIndicator} />
-            </View>
-            {recentActivities.length > 3 && (
-              <TouchableOpacity
-                style={styles.seeAllButton}
-                onPress={() => setShowAllActivities(!showAllActivities)}>
-                <Text style={styles.seeAllText}>
-                  {showAllActivities ? 'Show Less' : 'See All'}
-                </Text>
-                <Icon
-                  name={showAllActivities ? 'chevron-up' : 'chevron-right'}
-                  size={16}
-                  color="#ff6700"
-                />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {activitiesLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color="#ff6700" />
-              <Text style={styles.loadingText}>Loading activities...</Text>
-            </View>
-          ) : recentActivities.length > 0 ? (
-            <FlatList
-              data={
-                showAllActivities
-                  ? recentActivities
-                  : recentActivities.slice(0, 3)
-              }
-              keyExtractor={(activity, index) => {
-                if (activity._id) {
-                  return `${activity._id}-${index}`;
-                }
-                if (activity.loanId) {
-                  return `${activity.loanId}-${index}`;
-                }
-                return `activity-${index}-${activity.type || 'unknown'}`;
-              }}
-              scrollEnabled={false}
-              renderItem={({ item, index }) => {
-                const activityProps = getActivityProperties(item);
-                const isLast =
-                  index ===
-                  ((showAllActivities
-                    ? recentActivities.length
-                    : Math.min(recentActivities.length, 3)) - 1);
-
-                const handleActivityPress = () => {
-                  if (item.loanId) {
-                    const loan = loans.find(l => l._id === item.loanId);
-                    if (loan) {
-                      navigation.navigate('BorrowerLoanDetails', { loan });
-                    } else {
-                      navigation.navigate('MyLoans');
-                    }
-                  } else {
-                    navigation.navigate('MyLoans');
-                  }
-                };
-
-                return (
-                  <BorrowerActivityItem
-                    activity={item}
-                    activityProps={activityProps}
-                    isLast={isLast}
-                    onPress={handleActivityPress}
-                  />
-                );
-              }}
-            />
-          ) : (
-            <View style={styles.emptyContainer}>
-              <Icon name="inbox" size={40} color="#E5E7EB" />
-              <Text style={styles.emptyText}>No recent activities</Text>
-            </View>
-          )}
-        </Animated.View>
       </ScrollView>
 
-      {/* PIN Verification Modal - Opens Directly on Dashboard */}
+      <Modal
+        visible={offersModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={handleCloseOfferModal}>
+        <View style={styles.offersModalOverlay}>
+          <View style={styles.offersModalContainer}>
+            <View style={styles.offersModalHandle} />
+            <LinearGradient
+              colors={['#FFF7ED', '#FFFFFF']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.offersModalHeader}>
+              <View style={styles.offersHeaderIcon}>
+                <Icon name="gift" size={22} color="#EA580C" />
+              </View>
+              <View style={styles.offersModalTitleWrap}>
+                <Text style={styles.offersModalTitle}>Pending Loan Offers</Text>
+                <Text style={styles.offersModalSubtitle}>
+                  Review proof, summary, and accept in one place
+                </Text>
+              </View>
+              <View style={styles.offersCountBadge}>
+                <Text style={styles.offersCountText}>{pendingLoanOffers.length}</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.offersModalClose}
+                onPress={handleCloseOfferModal}>
+                <Icon name="x" size={20} color="#111827" />
+              </TouchableOpacity>
+            </LinearGradient>
+
+            <FlatList
+              data={pendingLoanOffers}
+              keyExtractor={(item, index) => item._id || `offer-${index}`}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.offersListContent}
+              ListEmptyComponent={
+                <View style={styles.offersEmptyState}>
+                  <View style={styles.offersEmptyIcon}>
+                    <Icon name="gift" size={28} color="#EA580C" />
+                  </View>
+                  <Text style={styles.offersEmptyTitle}>No Pending Offers</Text>
+                  <Text style={styles.offersEmptyText}>
+                    New loan offers from lenders will appear here.
+                  </Text>
+                </View>
+              }
+              renderItem={renderPendingOffer}
+            />
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={proofViewerVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCloseProofViewer}>
+        <View style={styles.proofViewerOverlay}>
+          <View style={styles.proofViewerHeader}>
+            <Text style={styles.proofViewerHeaderText}>Lender Proof</Text>
+            <TouchableOpacity
+              style={styles.proofViewerCloseButton}
+              onPress={handleCloseProofViewer}>
+              <Icon name="x" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+          <ScrollView contentContainerStyle={styles.proofViewerScrollContent}>
+            {selectedProofUrl && (
+              <Image
+                source={{ uri: selectedProofUrl }}
+                style={styles.proofViewerImage}
+                resizeMode="contain"
+              />
+            )}
+          </ScrollView>
+        </View>
+      </Modal>
+
       <PinVerificationModal
         visible={pinModalVisible}
         loanId={selectedLoan?._id}
-        lenderName={selectedLoan?.lenderName || selectedLoan?.lenderId?.userName || 'Lender'}
+        lenderName={getLenderName(selectedLoan)}
         loanAmount={selectedLoan?.amount}
         onVerifySuccess={handlePinVerifySuccess}
         onForgotPin={handleForgotPin}
@@ -761,68 +883,10 @@ export default function BorrowerDashboard() {
           setSelectedLoan(null);
         }}
       />
+
     </View>
   );
 }
-
-const BorrowerActivityItem = memo(
-  ({ activity, activityProps, isLast, onPress }) => {
-    return (
-      <TouchableOpacity activeOpacity={0.7} onPress={onPress}>
-        <View style={styles.activityItem}>
-          {/* Timeline */}
-          <View style={styles.timeline}>
-            <View
-              style={[
-                styles.timelineDot,
-                { backgroundColor: activityProps.color },
-              ]}
-            />
-            {!isLast && <View style={styles.timelineLine} />}
-          </View>
-
-          {/* Activity Content */}
-          <View style={styles.activityContent}>
-            <View style={styles.activityHeader}>
-              <LinearGradient
-                colors={activityProps.gradient}
-                style={styles.activityIcon}>
-                <Icon name={activityProps.icon} size={16} color="#fff" />
-              </LinearGradient>
-              <View style={styles.welcomeText}>
-                <Text style={styles.activityTitle}>
-                  {activity.shortMessage || activity.type}
-                </Text>
-                <Text style={styles.activityDescription} numberOfLines={2}>
-                  {activity.message || ''}
-                </Text>
-              </View>
-              {activity.amount && (
-                <View style={styles.activityAmountContainer}>
-                  <Text
-                    style={[
-                      styles.activityAmount,
-                      { color: activityProps.color },
-                    ]}>
-                    ₹{activity.amount.toLocaleString('en-IN')}
-                  </Text>
-                </View>
-              )}
-            </View>
-            <View style={styles.activityFooter}>
-              <View style={styles.timeContainer}>
-                <Icon name="clock" size={12} color="#7f8c8d" />
-                <Text style={styles.activityTime}>
-                  {activity.relativeTime || 'Recently'}
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
-  },
-);
 
 const styles = StyleSheet.create({
   container: {
@@ -952,6 +1016,318 @@ const styles = StyleSheet.create({
     fontSize: m(12),
     color: '#FFFFFF',
     opacity: 0.9,
+  },
+  offersModalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(17, 24, 39, 0.45)',
+  },
+  offersModalContainer: {
+    maxHeight: '82%',
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: m(26),
+    borderTopRightRadius: m(26),
+    paddingHorizontal: m(16),
+    paddingTop: m(10),
+    paddingBottom: m(20),
+  },
+  offersModalHandle: {
+    alignSelf: 'center',
+    width: m(42),
+    height: m(4),
+    borderRadius: m(999),
+    backgroundColor: '#D1D5DB',
+    marginBottom: m(14),
+  },
+  offersModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: m(14),
+    gap: m(10),
+    borderRadius: m(18),
+    padding: m(12),
+    borderWidth: 1,
+    borderColor: '#FFEDD5',
+  },
+  offersHeaderIcon: {
+    width: m(42),
+    height: m(42),
+    borderRadius: m(14),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF7ED',
+  },
+  offersModalTitleWrap: {
+    flex: 1,
+  },
+  offersModalTitle: {
+    fontSize: m(18),
+    fontFamily: FontFamily.secondaryBold,
+    color: '#111827',
+  },
+  offersModalSubtitle: {
+    marginTop: m(3),
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#6B7280',
+  },
+  offersCountBadge: {
+    minWidth: m(34),
+    height: m(34),
+    borderRadius: m(17),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF7ED',
+    borderWidth: 1,
+    borderColor: '#FED7AA',
+  },
+  offersCountText: {
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryBold,
+    color: '#C2410C',
+  },
+  offersModalClose: {
+    width: m(34),
+    height: m(34),
+    borderRadius: m(17),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  offersListContent: {
+    paddingBottom: m(8),
+  },
+  offersEmptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: m(34),
+    paddingHorizontal: m(18),
+  },
+  offersEmptyIcon: {
+    width: m(58),
+    height: m(58),
+    borderRadius: m(18),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF7ED',
+    marginBottom: m(12),
+  },
+  offersEmptyTitle: {
+    fontSize: m(16),
+    fontFamily: FontFamily.primaryBold,
+    color: '#111827',
+    marginBottom: m(5),
+  },
+  offersEmptyText: {
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: m(18),
+  },
+  offerCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: m(18),
+    padding: m(14),
+    marginBottom: m(12),
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    overflow: 'hidden',
+  },
+  offerCardAccent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: m(4),
+    backgroundColor: '#F97316',
+  },
+  offerCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: m(10),
+  },
+  offerLenderAvatar: {
+    width: m(44),
+    height: m(44),
+    borderRadius: m(14),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF7ED',
+    marginRight: m(12),
+  },
+  offerLenderAvatarText: {
+    fontSize: m(15),
+    fontFamily: FontFamily.primaryBold,
+    color: '#C2410C',
+  },
+  offerLenderInfo: {
+    flex: 1,
+  },
+  offerLenderName: {
+    fontSize: m(15),
+    fontFamily: FontFamily.primarySemiBold,
+    color: '#111827',
+  },
+  offerLenderMeta: {
+    marginTop: m(3),
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#6B7280',
+  },
+  offerStatusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(4),
+    paddingHorizontal: m(8),
+    paddingVertical: m(5),
+    borderRadius: m(999),
+    backgroundColor: '#FFF7ED',
+    borderWidth: 1,
+    borderColor: '#FED7AA',
+  },
+  offerStatusText: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primarySemiBold,
+    color: '#C2410C',
+  },
+  offerAmountPanel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: m(16),
+    padding: m(14),
+    marginBottom: m(12),
+    borderWidth: 1,
+    borderColor: '#FFEDD5',
+  },
+  offerAmountLabel: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primarySemiBold,
+    color: '#C2410C',
+    marginBottom: m(4),
+  },
+  offerAmountValue: {
+    fontSize: m(24),
+    fontFamily: FontFamily.primaryBold,
+    color: '#111827',
+  },
+  offerAmountHint: {
+    marginTop: m(3),
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#9A3412',
+  },
+  offerAmountIcon: {
+    width: m(42),
+    height: m(42),
+    borderRadius: m(14),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFEDD5',
+  },
+  offerSummaryGrid: {
+    flexDirection: 'row',
+    gap: m(8),
+    marginBottom: m(10),
+  },
+  offerSummaryItem: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+    borderRadius: m(12),
+    padding: m(10),
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  offerSummaryLabel: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#6B7280',
+    marginBottom: m(3),
+  },
+  offerSummaryValue: {
+    fontSize: m(13),
+    fontFamily: FontFamily.primarySemiBold,
+    color: '#111827',
+  },
+  offerDetailsGrid: {
+    gap: m(7),
+    marginBottom: m(12),
+  },
+  offerDetailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: m(12),
+    paddingHorizontal: m(10),
+    paddingVertical: m(10),
+    gap: m(8),
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  offerDetailText: {
+    flex: 1,
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#4B5563',
+  },
+  offerAcceptButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: m(14),
+    paddingVertical: m(13),
+    gap: m(6),
+    elevation: 2,
+    shadowColor: '#EA580C',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.24,
+    shadowRadius: 8,
+  },
+  offerAcceptButtonText: {
+    fontSize: m(14),
+    fontFamily: FontFamily.primarySemiBold,
+    color: '#FFFFFF',
+  },
+  proofViewerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+  },
+  proofViewerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: m(16),
+    paddingTop: m(40),
+    paddingBottom: m(14),
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  proofViewerHeaderText: {
+    fontSize: m(18),
+    fontFamily: FontFamily.secondaryBold,
+    color: '#FFFFFF',
+  },
+  proofViewerCloseButton: {
+    padding: m(8),
+  },
+  proofViewerScrollContent: {
+    flexGrow: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: m(18),
+  },
+  proofViewerImage: {
+    width: '100%',
+    height: m(520),
+    borderRadius: m(8),
   },
 
   // ============================================
@@ -1507,3 +1883,4 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.primaryRegular,
   },
 });
+

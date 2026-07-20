@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -31,22 +31,12 @@ export default function BorrowerLoanDetails() {
   const [paymentHistory, setPaymentHistory] = useState([]);
   const [installmentDetails, setInstallmentDetails] = useState(null);
   const [hasPendingPayment, setHasPendingPayment] = useState(false);
+  const [showAllPayments, setShowAllPayments] = useState(false);
   const [proofViewerVisible, setProofViewerVisible] = useState(false);
   const [selectedProofUrl, setSelectedProofUrl] = useState(null);
 
-  // Effects
-  useEffect(() => {
-    fetchPaymentHistory();
-  }, []);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      fetchPaymentHistory();
-    }, [loan._id])
-  );
-
   // API Functions
-  const fetchPaymentHistory = async () => {
+  const fetchPaymentHistory = useCallback(async () => {
     try {
       if (!loan?._id) {
         throw new Error('Loan ID is required');
@@ -98,7 +88,7 @@ export default function BorrowerLoanDetails() {
           loanSummary.remainingAmount ?? 
           loanSummary.currentRemainingAmount ?? 
           loanSummary.remaining ?? 
-          (typeof loanDetails.amount === 'number' ? loanDetails.amount : parseFloat(loanDetails.amount) || 0) - totalPaidValue;
+          (typeof loan.amount === 'number' ? loan.amount : parseFloat(loan.amount) || 0) - totalPaidValue;
         
         setLoanDetails(prev => ({
           ...prev,
@@ -134,7 +124,18 @@ export default function BorrowerLoanDetails() {
         text2: errorMessage,
       });
     }
-  };
+  }, [loan, user?._id]);
+
+  // Effects
+  useEffect(() => {
+    fetchPaymentHistory();
+  }, [fetchPaymentHistory]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchPaymentHistory();
+    }, [fetchPaymentHistory])
+  );
 
   // Utility Functions
   const getStatusColor = (status) => {
@@ -225,7 +226,7 @@ export default function BorrowerLoanDetails() {
     navigation.navigate('MakePayment', { loan: loanDetails });
   };
 
-  const handleViewPaymentHistory = () => {
+  const handleOpenPaymentHistoryScreen = () => {
     navigation.navigate('PaymentHistory', { loan: loanDetails, paymentHistory });
   };
 
@@ -458,20 +459,56 @@ export default function BorrowerLoanDetails() {
           </View>
         )}
 
-        {/* Recent Payments */}
-        {paymentHistory.length > 0 && (
-          <View style={styles.infoCard}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>Recent Payments</Text>
-              <TouchableOpacity onPress={handleViewPaymentHistory}>
-                <Text style={styles.viewAllText}>View All</Text>
-              </TouchableOpacity>
+        {/* Payment History */}
+        <View style={styles.infoCard}>
+          <View style={styles.cardHeader}>
+            <View>
+              <Text style={styles.cardTitle}>Payment History</Text>
+              <Text style={styles.cardSubtitle}>
+                {paymentHistory.length} payment{paymentHistory.length !== 1 ? 's' : ''}
+              </Text>
             </View>
-            {paymentHistory.slice(0, 3).map((payment) => (
-              <PaymentHistoryItem key={payment._id} item={payment} />
-            ))}
+            {paymentHistory.length > 3 && (
+              <View style={styles.historyHeaderActions}>
+                <TouchableOpacity
+                  style={styles.inlineHistoryButton}
+                  onPress={() => setShowAllPayments(prev => !prev)}
+                  activeOpacity={0.7}>
+                  <Text style={styles.viewAllText}>
+                    {showAllPayments ? 'Less' : 'All'}
+                  </Text>
+                  <Icon
+                    name={showAllPayments ? 'chevron-up' : 'chevron-down'}
+                    size={16}
+                    color="#3B82F6"
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.openHistoryButton}
+                  onPress={handleOpenPaymentHistoryScreen}
+                  activeOpacity={0.7}>
+                  <Icon name="external-link" size={15} color="#3B82F6" />
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
-        )}
+
+          {paymentHistory.length > 0 ? (
+            paymentHistory
+              .slice(0, showAllPayments ? paymentHistory.length : 3)
+              .map((payment) => (
+                <PaymentHistoryItem key={payment._id} item={payment} />
+              ))
+          ) : (
+            <View style={styles.emptyPaymentsState}>
+              <Ionicons name="receipt-outline" size={34} color="#9CA3AF" />
+              <Text style={styles.emptyPaymentsTitle}>No payments yet</Text>
+              <Text style={styles.emptyPaymentsText}>
+                Your submitted payments will appear here.
+              </Text>
+            </View>
+          )}
+        </View>
 
         {/* Action Buttons */}
         <View style={styles.actionsContainer}>
@@ -511,14 +548,7 @@ export default function BorrowerLoanDetails() {
               </Text>
             </View>
           )}
-
-          <TouchableOpacity
-            style={[styles.actionButton, styles.secondaryButton]}
-            onPress={handleViewPaymentHistory}
-          >
-            <Icon name="clock" size={20} color="#3B82F6" />
-            <Text style={styles.secondaryButtonText}>Payment History</Text>
-          </TouchableOpacity>
+          
         </View>
 
         {/* Footer */}
@@ -704,6 +734,34 @@ const styles = StyleSheet.create({
     color: '#111827',
     marginBottom: m(16),
   },
+  cardSubtitle: {
+    marginTop: m(-10),
+    marginBottom: m(12),
+    fontSize: m(12),
+    color: '#6B7280',
+  },
+  historyHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(8),
+  },
+  inlineHistoryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(4),
+    paddingHorizontal: m(10),
+    paddingVertical: m(6),
+    borderRadius: m(8),
+    backgroundColor: '#EFF6FF',
+  },
+  openHistoryButton: {
+    width: m(34),
+    height: m(34),
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: m(8),
+    backgroundColor: '#EFF6FF',
+  },
   viewAllText: {
     fontSize: m(14),
     color: '#3B82F6',
@@ -825,6 +883,28 @@ const styles = StyleSheet.create({
   confirmedDate: {
     fontSize: m(12),
     color: '#10B981',
+  },
+  emptyPaymentsState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: m(12),
+    paddingVertical: m(24),
+    paddingHorizontal: m(16),
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  emptyPaymentsTitle: {
+    marginTop: m(10),
+    fontSize: m(15),
+    fontWeight: '700',
+    color: '#111827',
+  },
+  emptyPaymentsText: {
+    marginTop: m(4),
+    fontSize: m(12),
+    color: '#6B7280',
+    textAlign: 'center',
   },
   
   // Installment Details

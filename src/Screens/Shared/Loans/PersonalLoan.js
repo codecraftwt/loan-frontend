@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -18,8 +18,10 @@ import { useNavigation } from '@react-navigation/native';
 import Header from '../../../Components/Header';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { lenderLoanAPI } from '../../../Services/lenderLoanService';
+import borrowerLoanAPI from '../../../Services/borrowerLoanService';
 import Toast from 'react-native-toast-message';
 import { baseurl } from '../../../Utils/API';
+import PinVerificationModal from '../../../Components/PinVerificationModal';
 
 
 const DetailCard = ({ icon, label, value }) => (
@@ -35,7 +37,7 @@ const DetailCard = ({ icon, label, value }) => (
 );
 
 export default function PersonalLoan({ route }) {
-  const { loanDetails } = route.params;
+  const { loanDetails, fromPendingOffer = false } = route.params;
   const user = useSelector(state => state.auth.user);
   const navigation = useNavigation();
 
@@ -45,18 +47,16 @@ export default function PersonalLoan({ route }) {
   const [showAllInstallments, setShowAllInstallments] = useState(false);
   const [proofViewerVisible, setProofViewerVisible] = useState(false);
   const [selectedProofUrl, setSelectedProofUrl] = useState(null);
+  const [acceptPinModalVisible, setAcceptPinModalVisible] = useState(false);
 
   // Check if user is a lender
   const isLender = user?.roleId === 1;
+  const canAcceptPendingOffer =
+    user?.roleId === 2 &&
+    loanDetails?.borrowerAcceptanceStatus?.toLowerCase() === 'pending' &&
+    fromPendingOffer;
 
-  // Fetch installment history for lenders
-  useEffect(() => {
-    if (isLender && loanDetails?._id) {
-      fetchInstallmentHistory();
-    }
-  }, [isLender, loanDetails?._id]);
-
-  const fetchInstallmentHistory = async () => {
+  const fetchInstallmentHistory = useCallback(async () => {
     try {
       setLoadingInstallments(true);
       const response = await lenderLoanAPI.getInstallmentHistory(loanDetails._id);
@@ -77,7 +77,14 @@ export default function PersonalLoan({ route }) {
     } finally {
       setLoadingInstallments(false);
     }
-  };
+  }, [loanDetails._id]);
+
+  // Fetch installment history for lenders
+  useEffect(() => {
+    if (isLender && loanDetails?._id) {
+      fetchInstallmentHistory();
+    }
+  }, [fetchInstallmentHistory, isLender, loanDetails?._id]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -247,9 +254,9 @@ export default function PersonalLoan({ route }) {
           )}
 
           {installment.status === 'overdue' && (
-            <View style={styles.overdueBadge}>
+            <View style={styles.installmentOverdueBadge}>
               <Icon name="alert-circle" size={14} color="#EF4444" />
-              <Text style={styles.overdueBadgeText}>
+              <Text style={styles.installmentOverdueBadgeText}>
                 {installment.overdueDays} day(s) overdue
               </Text>
             </View>
@@ -295,6 +302,29 @@ export default function PersonalLoan({ route }) {
       return user.userName;
     }
     return 'Unknown';
+  };
+
+  const handleAcceptWithPin = async (pinCode) => {
+    const response = await borrowerLoanAPI.acceptLoan(loanDetails._id, pinCode);
+
+    if (response?.success) {
+      setAcceptPinModalVisible(false);
+      Toast.show({
+        type: 'success',
+        position: 'top',
+        text1: 'Loan Accepted',
+        text2: 'The lender offer has been accepted successfully',
+      });
+      navigation.goBack();
+      return response;
+    }
+
+    throw new Error(response?.message || 'Failed to accept loan');
+  };
+
+  const handleForgotPin = () => {
+    setAcceptPinModalVisible(false);
+    navigation.navigate('ForgotPin');
   };
 
   // Calculate loan amounts
@@ -435,7 +465,8 @@ export default function PersonalLoan({ route }) {
         }
       >
         {/* Profile Card */}
-        <View style={styles.profileCard}>
+        {!fromPendingOffer && (
+          <View style={styles.profileCard}>
           <View style={styles.profileHeader}>
             {loanDetails.profileImage ? (
               <Image
@@ -511,10 +542,11 @@ export default function PersonalLoan({ route }) {
               <Text style={styles.statusLabel}>Borrower Decision</Text>
             </View>
           </View>
-        </View>
+          </View>
+        )}
 
         {/* Payment Summary Card */}
-        {loanAmount > 0 && (
+        {!fromPendingOffer && loanAmount > 0 && (
           <View style={styles.paymentSummaryCard}>
             <Text style={styles.paymentSummaryTitle}>Payment Summary</Text>
             
@@ -577,42 +609,58 @@ export default function PersonalLoan({ route }) {
         )}
 
         {/* Loan Details Grid */}
-        <View style={styles.detailsSection}>
-          <Text style={styles.sectionTitle}>Loan Information</Text>
-          <View style={styles.detailsGrid}>
-            {loanInfo.map((item, index) => (
-              <DetailCard
-                key={index}
-                icon={item.icon}
-                label={item.label}
-                value={item.value}
-              />
-            ))}
+        {!fromPendingOffer && (
+          <View style={styles.detailsSection}>
+            <Text style={styles.sectionTitle}>Loan Information</Text>
+            <View style={styles.detailsGrid}>
+              {loanInfo.map((item, index) => (
+                <DetailCard
+                  key={index}
+                  icon={item.icon}
+                  label={item.label}
+                  value={item.value}
+                />
+              ))}
+            </View>
           </View>
-        </View>
+        )}
 
-        {/* Loan Proof Section - Only show if proof exists */}
-        {loanDetails.proof && (
+        {/* Loan Proof Section */}
+        {(loanDetails.proof || fromPendingOffer) && (
           <View style={styles.proofSection}>
-            <Text style={styles.sectionTitle}>Loan Proof</Text>
-            <TouchableOpacity
-              style={styles.proofCard}
-              onPress={handleViewProof}
-              activeOpacity={0.8}>
-              <View style={styles.proofIconContainer}>
-                <Icon name="file-image" size={24} color="#3B82F6" />
+            <Text style={styles.sectionTitle}>Lender Proof</Text>
+            {loanDetails.proof ? (
+              <TouchableOpacity
+                style={styles.proofCard}
+                onPress={handleViewProof}
+                activeOpacity={0.8}>
+                <View style={styles.proofIconContainer}>
+                  <Icon name="file-image" size={24} color="#3B82F6" />
+                </View>
+                <View style={styles.proofTextContainer}>
+                  <Text style={styles.proofTitle}>Proof Provided</Text>
+                  <Text style={styles.proofSubtext}>Tap to view lender proof</Text>
+                </View>
+                <Icon name="chevron-right" size={20} color="#6B7280" />
+              </TouchableOpacity>
+            ) : (
+              <View style={[styles.proofCard, styles.noProofCard]}>
+                <View style={[styles.proofIconContainer, styles.noProofIconContainer]}>
+                  <Icon name="file-x" size={24} color="#9CA3AF" />
+                </View>
+                <View style={styles.proofTextContainer}>
+                  <Text style={styles.proofTitle}>No Proof Provided</Text>
+                  <Text style={styles.proofSubtext}>
+                    The lender has not uploaded proof for this offer.
+                  </Text>
+                </View>
               </View>
-              <View style={styles.proofTextContainer}>
-                <Text style={styles.proofTitle}>Loan Proof Available</Text>
-                <Text style={styles.proofSubtext}>Tap to view proof document</Text>
-              </View>
-              <Icon name="chevron-right" size={20} color="#6B7280" />
-            </TouchableOpacity>
+            )}
           </View>
         )}
 
         {/* Show message if loan is rejected */}
-        {loanDetails.borrowerAcceptanceStatus?.toLowerCase() === 'rejected' && (
+        {!fromPendingOffer && loanDetails.borrowerAcceptanceStatus?.toLowerCase() === 'rejected' && (
           <View style={styles.rejectionMessage}>
             <Icon name="alert-circle" size={24} color="#EF4444" />
             <View style={styles.rejectionTextContainer}>
@@ -625,7 +673,7 @@ export default function PersonalLoan({ route }) {
         )}
 
         {/* Agreement Button - Hide if loan is rejected */}
-        {loanDetails.borrowerAcceptanceStatus?.toLowerCase() !== 'rejected' && (
+        {!fromPendingOffer && loanDetails.borrowerAcceptanceStatus?.toLowerCase() !== 'rejected' && (
           <TouchableOpacity
             style={styles.agreementButton}
             onPress={() => navigation.navigate('AgreementScreen', { agreement: loanDetails.agreement })}>
@@ -642,8 +690,31 @@ export default function PersonalLoan({ route }) {
           </TouchableOpacity>
         )}
 
+        {canAcceptPendingOffer && (
+          <View style={styles.pendingOfferActionCard}>
+            <View style={styles.pendingOfferActionHeader}>
+              <View style={styles.pendingOfferActionIcon}>
+                <Icon name="check-circle" size={22} color="#059669" />
+              </View>
+              <View style={styles.pendingOfferActionText}>
+                <Text style={styles.pendingOfferActionTitle}>Accept loan offer</Text>
+                <Text style={styles.pendingOfferActionSubtitle}>
+                  Review the details and proof, then confirm with your PIN.
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.acceptOfferButton}
+              onPress={() => setAcceptPinModalVisible(true)}
+              activeOpacity={0.85}>
+              <Text style={styles.acceptOfferButtonText}>Accept with PIN</Text>
+              <Icon name="lock" size={16} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Installment History Section - Only for Lenders */}
-        {isLender && installmentHistory && (
+        {!fromPendingOffer && isLender && installmentHistory && (
           <View style={styles.installmentSection}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionHeaderLeft}>
@@ -801,7 +872,8 @@ export default function PersonalLoan({ route }) {
         </View>
 
         {/* Footer Info */}
-        <View style={styles.footer}>
+        {!fromPendingOffer && (
+          <View style={styles.footer}>
           <View style={styles.footerItem}>
             <Icon name="clock" size={14} color="#9CA3AF" />
             <Text style={styles.footerText}>
@@ -816,7 +888,8 @@ export default function PersonalLoan({ route }) {
               </Text>
             </View>
           )}
-        </View>
+          </View>
+        )}
       </ScrollView>
 
       {/* Loan Proof Image Viewer */}
@@ -865,8 +938,19 @@ export default function PersonalLoan({ route }) {
               />
             )}
           </ScrollView>
-        </View>
+          </View>
+        )}
       </Modal>
+
+      <PinVerificationModal
+        visible={acceptPinModalVisible}
+        loanId={loanDetails?._id}
+        lenderName={getLenderName()}
+        loanAmount={loanDetails?.amount}
+        onVerifySuccess={handleAcceptWithPin}
+        onForgotPin={handleForgotPin}
+        onClose={() => setAcceptPinModalVisible(false)}
+      />
     </View>
   );
 }
@@ -1071,6 +1155,56 @@ const styles = StyleSheet.create({
   agreementSubtitle: {
     fontSize: m(14),
     color: '#6B7280',
+  },
+  pendingOfferActionCard: {
+    backgroundColor: '#F0FDF4',
+    borderRadius: m(14),
+    padding: m(16),
+    marginBottom: m(16),
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  pendingOfferActionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: m(14),
+  },
+  pendingOfferActionIcon: {
+    width: m(42),
+    height: m(42),
+    borderRadius: m(21),
+    backgroundColor: '#DCFCE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: m(12),
+  },
+  pendingOfferActionText: {
+    flex: 1,
+  },
+  pendingOfferActionTitle: {
+    fontSize: m(16),
+    fontWeight: '700',
+    color: '#14532D',
+    marginBottom: m(3),
+  },
+  pendingOfferActionSubtitle: {
+    fontSize: m(13),
+    lineHeight: m(18),
+    color: '#166534',
+  },
+  acceptOfferButton: {
+    height: m(46),
+    borderRadius: m(10),
+    backgroundColor: '#059669',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: m(8),
+  },
+  acceptOfferButtonText: {
+    fontSize: m(15),
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 
   // Summary Card
@@ -1432,7 +1566,7 @@ const styles = StyleSheet.create({
     color: '#F59E0B',
     fontWeight: '500',
   },
-  overdueBadge: {
+  installmentOverdueBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FEE2E2',
@@ -1441,7 +1575,7 @@ const styles = StyleSheet.create({
     gap: m(6),
     marginTop: m(4),
   },
-  overdueBadgeText: {
+  installmentOverdueBadgeText: {
     fontSize: m(12),
     color: '#EF4444',
     fontWeight: '500',
@@ -1506,6 +1640,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
   },
+  noProofCard: {
+    backgroundColor: '#F9FAFB',
+    borderColor: '#E5E7EB',
+  },
   proofIconContainer: {
     width: m(48),
     height: m(48),
@@ -1514,6 +1652,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: m(12),
+  },
+  noProofIconContainer: {
+    backgroundColor: '#F3F4F6',
   },
   proofTextContainer: {
     flex: 1,

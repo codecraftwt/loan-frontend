@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -24,6 +24,9 @@ import {
   getBorrowerLoans,
 } from '../../../Redux/Slices/borrowerLoanSlice';
 
+const LOANS_PER_PAGE = 5;
+const FETCH_LOANS_LIMIT = 1000;
+
 export default function MyLoans() {
   // Navigation & Redux
   const navigation = useNavigation();
@@ -38,6 +41,7 @@ export default function MyLoans() {
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [filters, setFilters] = useState({
     status: '',
@@ -72,7 +76,13 @@ export default function MyLoans() {
       if (showInitialLoader) {
         setIsInitialLoading(true);
       }
-      await dispatch(getBorrowerLoans({ borrowerId: user._id, ...params }));
+      await dispatch(
+        getBorrowerLoans({
+          borrowerId: user._id,
+          limit: FETCH_LOANS_LIMIT,
+          ...params,
+        }),
+      );
     } catch (err) {
       console.error('Error fetching loans:', err);
     } finally {
@@ -136,6 +146,10 @@ export default function MyLoans() {
   useEffect(() => {
     filterLoans();
   }, [filterLoans]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, searchQuery]);
 
   useEffect(() => {
     if (error) {
@@ -246,6 +260,27 @@ export default function MyLoans() {
     );
   };
 
+  // Get initials for the lender avatar
+  const getInitials = name => {
+    if (!name || !name.trim()) return '?';
+    const parts = name.trim().split(' ').filter(Boolean);
+    if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  };
+
+  // Days remaining until due date (only meaningful when not overdue / not paid)
+  const getDaysRemainingLabel = (loanEndDate, paymentStatus, isOverdue) => {
+    if (!loanEndDate || isOverdue || paymentStatus?.toLowerCase() === 'paid') {
+      return null;
+    }
+    const daysLeft = moment(loanEndDate).startOf('day').diff(moment().startOf('day'), 'days');
+    if (daysLeft < 0) return null; // handled by overdue banner instead
+    if (daysLeft === 0) return 'Due today';
+    if (daysLeft === 1) return 'Due tomorrow';
+    if (daysLeft <= 7) return `Due in ${daysLeft} days`;
+    return null;
+  };
+
   // Spin animation interpolation
   const spin = spinAnim.interpolate({
     inputRange: [0, 1],
@@ -258,6 +293,10 @@ export default function MyLoans() {
     const displayStatus = getDisplayStatus(item.paymentStatus, isOverdue);
     const statusColor = getStatusColor(item.paymentStatus, isOverdue);
     const statusIcon = getStatusIcon(item.paymentStatus, isOverdue);
+    const dueSoonLabel = getDaysRemainingLabel(item.loanEndDate, item.paymentStatus, isOverdue);
+    const paidAmount = item.totalPaid || 0;
+    const remainingAmount = item.remainingAmount ?? item.amount ?? 0;
+    const paidPercent = item.amount > 0 ? Math.min(100, Math.round((paidAmount / item.amount) * 100)) : 0;
 
     return (
       <Animated.View
@@ -270,32 +309,67 @@ export default function MyLoans() {
           },
         ]}>
         <TouchableOpacity
-          activeOpacity={0.7}
+          activeOpacity={0.78}
           onPress={() =>
             navigation.navigate('BorrowerLoanDetails', { loan: item })
           }>
           <View style={styles.loanHeader}>
-            <View style={styles.loanInfo}>
-              <Text style={styles.loanAmount}>
-                ₹{item.amount?.toLocaleString('en-IN')}
-              </Text>
-              <Text style={styles.loanLender} numberOfLines={1}>
-                {item.lenderId?.userName || 'Unknown Lender'}
-              </Text>
+            <View style={styles.loanHeaderLeft}>
+              <View
+                style={[
+                  styles.avatarCircle,
+                  { backgroundColor: statusColor + '18' },
+                ]}>
+                <Text style={[styles.avatarText, { color: statusColor }]}>
+                  {getInitials(item.lenderId?.userName)}
+                </Text>
+              </View>
+              <View style={styles.loanInfo}>
+                <Text style={styles.loanLender} numberOfLines={1}>
+                  {item.lenderId?.userName || 'Unknown Lender'}
+                </Text>
+                <View style={styles.loanContactRow}>
+                  <Icon name="phone" size={m(12)} color="#9CA3AF" />
+                  <Text style={styles.loanContactText} numberOfLines={1}>
+                    {item.lenderId?.mobileNo || 'N/A'}
+                  </Text>
+                </View>
+              </View>
             </View>
             <View
               style={[
                 styles.statusBadge,
                 { backgroundColor: statusColor + '20' },
               ]}>
-              <Icon name={statusIcon} size={m(14)} color={statusColor} />
+              <Icon name={statusIcon} size={m(13)} color={statusColor} />
               <Text style={[styles.statusText, { color: statusColor }]}>
                 {displayStatus}
               </Text>
             </View>
           </View>
 
-          {/* Overdue Warning Banner */}
+          <View style={styles.amountPanel}>
+            <View style={styles.amountBlockPrimary}>
+              <Text style={styles.amountLabel}>Loan Amount</Text>
+              <Text style={styles.loanAmount}>
+                Rs {item.amount?.toLocaleString('en-IN') || 0}
+              </Text>
+            </View>
+            <View style={styles.amountDivider} />
+            <View style={styles.amountBlock}>
+              <Text style={styles.amountLabel}>Paid</Text>
+              <Text style={styles.paidAmountText}>
+                Rs {paidAmount.toLocaleString('en-IN')}
+              </Text>
+            </View>
+            <View style={styles.amountBlock}>
+              <Text style={styles.amountLabel}>Remaining</Text>
+              <Text style={styles.remainingAmountText}>
+                Rs {remainingAmount.toLocaleString('en-IN')}
+              </Text>
+            </View>
+          </View>
+
           {isOverdue && (
             <View style={styles.overdueBanner}>
               <Icon name="alert-circle" size={m(16)} color="#DC2626" />
@@ -309,49 +383,43 @@ export default function MyLoans() {
             </View>
           )}
 
-          <View style={styles.loanDetails}>
-            <View style={styles.detailRow}>
-              <Icon name="phone" size={m(14)} color="#6B7280" />
-              <Text style={styles.detailText}>
-                {item.lenderId?.mobileNo || 'N/A'}
-              </Text>
+          {!isOverdue && dueSoonLabel && (
+            <View style={styles.dueSoonBanner}>
+              <Icon name="clock" size={m(14)} color="#B45309" />
+              <Text style={styles.dueSoonBannerText}>{dueSoonLabel}</Text>
             </View>
-            <View style={styles.detailRow}>
+          )}
+
+          <View style={styles.loanDetails}>
+            <View style={styles.detailPill}>
               <Icon name="calendar" size={m(14)} color="#6B7280" />
               <Text style={[styles.detailText, isOverdue && styles.overdueText]}>
-                Due:{' '}
-                {item.loanEndDate
-                  ? moment(item.loanEndDate).format('DD MMM YYYY')
-                  : 'N/A'}
+                Due: {item.loanEndDate ? moment(item.loanEndDate).format('DD MMM YYYY') : 'N/A'}
               </Text>
+            </View>
+            <View style={styles.detailPill}>
+              <Icon name="trending-up" size={m(14)} color="#6B7280" />
+              <Text style={styles.detailText}>{paidPercent}% paid</Text>
             </View>
           </View>
 
-          <View style={styles.loanProgress}>
+          {/* <View style={styles.loanProgress}>
             <View style={styles.progressInfo}>
-              <Text style={styles.progressLabel}>
-                Paid: ₹{item.totalPaid?.toLocaleString('en-IN') || 0}
-              </Text>
-              <Text style={styles.progressLabel}>
-                Remaining: ₹
-                {item.remainingAmount?.toLocaleString('en-IN') || item.amount}
-              </Text>
+              <Text style={styles.progressLabel}>Repayment progress</Text>
+              <Text style={styles.progressPercentLabel}>{paidPercent}%</Text>
             </View>
             <View style={styles.progressBar}>
               <View
                 style={[
                   styles.progressFill,
                   {
-                    width:
-                      item.amount > 0
-                        ? `${((item.totalPaid || 0) / item.amount) * 100}%`
-                        : '0%',
+                    width: `${paidPercent}%`,
                     backgroundColor: statusColor,
                   },
                 ]}
               />
             </View>
-          </View>
+          </View> */}
 
           <View style={styles.loanActions}>
             <View style={styles.actionButton}>
@@ -363,7 +431,6 @@ export default function MyLoans() {
       </Animated.View>
     );
   };
-
   const renderSummary = () => {
     const loansArray = loans || [];
     // Calculate overdue count
@@ -410,25 +477,25 @@ export default function MyLoans() {
         ]}>
         <Text style={styles.summaryTitle}>Loan Summary</Text>
         <View style={styles.summaryGrid}>
-          {summaryData.map((item) => (
-            <React.Fragment key={item.id}>
-              <View style={styles.summaryItem}>
-                <Text
-                  style={[
-                    styles.summaryValue,
-                    item.highlight && styles.summaryHighlightValue,
-                  ]}>
+          {summaryData.map(item => (
+            <View key={item.id} style={styles.summaryItem}>
+              <View
+                style={[
+                  styles.summaryValueBubble,
+                  { backgroundColor: item.color + '18' },
+                ]}>
+                <Text style={[styles.summaryValue, { color: item.color }]}>
                   {item.value}
                 </Text>
-                <Text
-                  style={[
-                    styles.summaryLabel,
-                    item.highlight && styles.summaryHighlightLabel,
-                  ]}>
-                  {item.label}
-                </Text>
               </View>
-            </React.Fragment>
+              <Text
+                style={[
+                  styles.summaryLabel,
+                  item.highlight && styles.summaryHighlightLabel,
+                ]}>
+                {item.label}
+              </Text>
+            </View>
           ))}
         </View>
       </Animated.View>
@@ -513,6 +580,117 @@ export default function MyLoans() {
   ];
 
   const hasData = filteredLoans && filteredLoans.length > 0;
+  const totalPages = Math.ceil(filteredLoans.length / LOANS_PER_PAGE);
+  const safeCurrentPage = Math.min(currentPage, totalPages || 1);
+  const startIndex = (safeCurrentPage - 1) * LOANS_PER_PAGE;
+  const endIndex = startIndex + LOANS_PER_PAGE;
+  const paginatedLoans = useMemo(
+    () => filteredLoans.slice(startIndex, endIndex),
+    [endIndex, filteredLoans, startIndex],
+  );
+  const currentPageLoanCount = paginatedLoans.length;
+
+  // Sliding window of at most 3 page numbers centered on the current page
+  const pageWindow = useMemo(() => {
+    const maxVisible = 3;
+    if (totalPages <= maxVisible) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    let start = safeCurrentPage - 1;
+    let end = safeCurrentPage + 1;
+    if (start < 1) {
+      start = 1;
+      end = maxVisible;
+    }
+    if (end > totalPages) {
+      end = totalPages;
+      start = totalPages - maxVisible + 1;
+    }
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+  }, [totalPages, safeCurrentPage]);
+
+  const handlePageChange = page => {
+    if (page < 1 || page > totalPages || page === safeCurrentPage) return;
+    setCurrentPage(page);
+  };
+
+  // Compact pager rendered top-right, above the list
+  const renderPagination = () => {
+    if (!hasData) return null;
+
+    const isFirstPage = safeCurrentPage === 1;
+    const isLastPage = safeCurrentPage === totalPages;
+
+    return (
+      <View style={styles.topBarRow}>
+        <Text style={styles.topBarSummaryText}>
+          Showing {currentPageLoanCount} loan{currentPageLoanCount !== 1 ? 's' : ''}
+        </Text>
+
+        {totalPages > 1 && (
+          <View style={styles.compactPagination}>
+            <TouchableOpacity
+              style={[styles.compactNavButton, isFirstPage && styles.compactNavButtonDisabled]}
+              onPress={() => handlePageChange(safeCurrentPage - 1)}
+              disabled={isFirstPage}
+              activeOpacity={0.7}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Icon
+                name="chevron-left"
+                size={m(15)}
+                color={isFirstPage ? '#D1D5DB' : '#FF8A00'}
+              />
+            </TouchableOpacity>
+
+            {pageWindow[0] > 1 && <Text style={styles.compactDots}>···</Text>}
+
+            {pageWindow.map(page => (
+              <TouchableOpacity
+                key={page}
+                style={[
+                  styles.compactPageButton,
+                  page === safeCurrentPage && styles.compactPageButtonActive,
+                ]}
+                onPress={() => handlePageChange(page)}
+                activeOpacity={0.7}>
+                <Text
+                  style={[
+                    styles.compactPageText,
+                    page === safeCurrentPage && styles.compactPageTextActive,
+                  ]}>
+                  {page}
+                </Text>
+              </TouchableOpacity>
+            ))}
+
+            {pageWindow[pageWindow.length - 1] < totalPages && (
+              <Text style={styles.compactDots}>···</Text>
+            )}
+
+            <TouchableOpacity
+              style={[styles.compactNavButton, isLastPage && styles.compactNavButtonDisabled]}
+              onPress={() => handlePageChange(safeCurrentPage + 1)}
+              disabled={isLastPage}
+              activeOpacity={0.7}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Icon
+                name="chevron-right"
+                size={m(15)}
+                color={isLastPage ? '#D1D5DB' : '#FF8A00'}
+              />
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  const renderListHeader = () => (
+    <>
+      {summary.totalLoans > 0 ? renderSummary() : null}
+      {renderPagination()}
+    </>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -606,7 +784,7 @@ export default function MyLoans() {
           renderEmptyState()
         ) : (
           <FlatList
-            data={filteredLoans}
+            data={paginatedLoans}
             renderItem={renderLoanCard}
             keyExtractor={item => item._id}
             contentContainerStyle={styles.listContainer}
@@ -614,8 +792,7 @@ export default function MyLoans() {
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
-            ListHeaderComponent={summary.totalLoans > 0 ? renderSummary : null}
-            ListFooterComponent={<View style={{ height: m(20) }} />}
+            ListHeaderComponent={renderListHeader}
           />
         )}
       </View>
@@ -761,23 +938,85 @@ const styles = StyleSheet.create({
   // List
   listContainer: {
     paddingHorizontal: m(16),
-    paddingTop: m(16),
-    paddingBottom: m(20),
+    paddingTop: m(14),
+    paddingBottom: m(120),
+  },
+
+  // Top bar: loan count (left) + compact pagination (right)
+  topBarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: m(12),
+    paddingHorizontal: m(10),
+    paddingVertical: m(8),
+    borderRadius: m(12),
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#EEF0F3',
+  },
+  topBarSummaryText: {
+    fontSize: m(12),
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  compactPagination: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(3),
+  },
+  compactNavButton: {
+    width: m(26),
+    height: m(26),
+    borderRadius: m(7),
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  compactNavButtonDisabled: {
+    borderColor: '#F3F4F6',
+  },
+  compactPageButton: {
+    minWidth: m(26),
+    height: m(26),
+    paddingHorizontal: m(4),
+    borderRadius: m(7),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  compactPageButtonActive: {
+    backgroundColor: '#FF8A00',
+  },
+  compactPageText: {
+    fontSize: m(12),
+    fontWeight: '600',
+    color: '#374151',
+  },
+  compactPageTextActive: {
+    color: '#FFFFFF',
+  },
+  compactDots: {
+    fontSize: m(12),
+    color: '#9CA3AF',
+    fontWeight: '600',
+    marginHorizontal: m(1),
   },
 
   // Loan Card
   loanCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: m(12),
+    borderRadius: m(18),
     padding: m(16),
-    marginBottom: m(12),
+    marginBottom: m(14),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+    borderColor: '#EEF0F3',
+    elevation: 3,
+    shadowColor: '#111827',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
   },
   overdueCard: {
     borderLeftWidth: 4,
@@ -790,18 +1029,47 @@ const styles = StyleSheet.create({
     marginBottom: m(12),
     gap: m(8),
   },
+  loanHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: m(10),
+  },
+  avatarCircle: {
+    width: m(44),
+    height: m(44),
+    borderRadius: m(14),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    fontSize: m(15),
+    fontWeight: '700',
+  },
   loanInfo: {
     flex: 1,
   },
   loanAmount: {
-    fontSize: m(18),
+    fontSize: m(17),
     fontWeight: '700',
     color: '#111827',
-    marginBottom: m(4),
+    marginTop: m(2),
   },
   loanLender: {
-    fontSize: m(13),
-    color: '#6B7280',
+    fontSize: m(14),
+    fontWeight: '700',
+    color: '#111827',
+  },
+  loanContactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: m(4),
+    gap: m(5),
+  },
+  loanContactText: {
+    flex: 1,
+    fontSize: m(12),
+    color: '#9CA3AF',
   },
   statusBadge: {
     flexDirection: 'row',
@@ -831,14 +1099,39 @@ const styles = StyleSheet.create({
     color: '#DC2626',
     flex: 1,
   },
-  loanDetails: {
-    marginBottom: m(12),
-  },
-  detailRow: {
+  dueSoonBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: m(8),
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: m(12),
+    paddingVertical: m(8),
+    borderRadius: m(8),
+    marginBottom: m(12),
     gap: m(8),
+  },
+  dueSoonBannerText: {
+    fontSize: m(12),
+    fontWeight: '600',
+    color: '#B45309',
+    flex: 1,
+  },
+  loanDetails: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: m(8),
+    marginBottom: m(12),
+  },
+  detailPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#EEF2F7',
+    borderRadius: m(999),
+    paddingHorizontal: m(10),
+    paddingVertical: m(7),
+    gap: m(6),
   },
   detailText: {
     fontSize: m(13),
@@ -854,6 +1147,7 @@ const styles = StyleSheet.create({
   progressInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: m(8),
     gap: m(8),
   },
@@ -861,20 +1155,25 @@ const styles = StyleSheet.create({
     fontSize: m(12),
     color: '#6B7280',
   },
+  progressPercentLabel: {
+    fontSize: m(12),
+    fontWeight: '700',
+    color: '#111827',
+  },
   progressBar: {
-    height: m(6),
+    height: m(8),
     backgroundColor: '#E5E7EB',
-    borderRadius: m(3),
+    borderRadius: m(999),
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    borderRadius: m(3),
+    borderRadius: m(999),
   },
   loanActions: {
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
-    paddingTop: m(12),
+    paddingTop: m(10),
   },
   actionButton: {
     flexDirection: 'row',
@@ -887,55 +1186,89 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#3B82F6',
   },
+  amountPanel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: m(14),
+    padding: m(12),
+    marginBottom: m(12),
+    borderWidth: 1,
+    borderColor: '#EEF2F7',
+  },
+  amountBlockPrimary: {
+    flex: 1.25,
+  },
+  amountBlock: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  amountDivider: {
+    width: 1,
+    height: m(34),
+    backgroundColor: '#E5E7EB',
+    marginHorizontal: m(10),
+  },
+  amountLabel: {
+    fontSize: m(11),
+    fontWeight: '600',
+    color: '#6B7280',
+    marginBottom: m(4),
+  },
+  paidAmountText: {
+    fontSize: m(13),
+    fontWeight: '800',
+    color: '#10B981',
+  },
+  remainingAmountText: {
+    fontSize: m(13),
+    fontWeight: '800',
+    color: '#EF4444',
+  },
 
   // Summary Card
   summaryCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: m(12),
+    borderRadius: m(16),
     paddingHorizontal: m(16),
     paddingVertical: m(16),
     marginBottom: m(16),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#EEF0F3',
     elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowColor: '#111827',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
   },
   summaryTitle: {
     fontSize: m(16),
     fontWeight: '700',
     color: '#111827',
-    marginBottom: m(10),
+    marginBottom: m(12),
   },
   summaryGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: m(8),
   },
   summaryItem: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: m(8),
+  },
+  summaryValueBubble: {
+    width: m(40),
+    height: m(40),
+    borderRadius: m(20),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: m(6),
   },
   summaryValue: {
-    fontSize: m(14),
+    fontSize: m(15),
     fontWeight: '700',
-    color: '#111827',
-    marginBottom: m(4),
-    backgroundColor: '#FFE0B2',
-    height: m(30),
-    width: m(30),
-    textAlign: 'center',
-    textAlignVertical: 'center',
-    lineHeight: m(22),
-    borderRadius: m(15),
-  },
-  summaryHighlightValue: {
-    color: '#DC2626',
   },
   summaryLabel: {
     fontSize: m(11),
