@@ -36,6 +36,7 @@ import AnalyticsScreen from '../Screens/Lender/Analytics/AnalyticsScreen';
 import BorrowerAnalyticsScreen from '../Screens/Borrower/Analytics/BorrowerAnalyticsScreen';
 import ContactsScreen from '../Screens/Shared/Contacts/ContactsScreen';
 import BorrowerRecentActivity from '../Screens/Borrower/Dashboard/BorrowerRecentActivity';
+import LenderRecentActivity from '../Screens/Lender/Dashboard/LenderRecentActivity';
 // Admin screens
 import PlansList from '../Screens/Admin/Plans/PlansList';
 import CreateEditPlan from '../Screens/Admin/Plans/CreateEditPlan';
@@ -100,6 +101,7 @@ const Navigation = () => {
       <Stack.Screen name="AnalyticsScreen" component={AnalyticsScreen} />
       <Stack.Screen name="BorrowerAnalyticsScreen" component={BorrowerAnalyticsScreen} />
       <Stack.Screen name="BorrowerRecentActivity" component={BorrowerRecentActivity} />
+      <Stack.Screen name="LenderRecentActivity" component={LenderRecentActivity} />
       <Stack.Screen name="ContactsScreen" component={ContactsScreen} />
       
       {/* Lender Payment Screens */}

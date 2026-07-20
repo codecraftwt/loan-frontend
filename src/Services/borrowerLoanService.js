@@ -1,6 +1,4 @@
 import axiosInstance from '../Utils/AxiosInstance';
-import axios from 'axios';
-import { baseurl } from '../Utils/API';
 
 export const borrowerLoanAPI = {
   // Get all loans for the current borrower
@@ -290,41 +288,35 @@ export const borrowerLoanAPI = {
     }
   },
 
-  // Get loans for a specific borrower (for lenders) - No authentication required
-  // getBorrowerLoansById: async (borrowerId, params = {}) => {
-  //   try {
-  //     const queryParams = new URLSearchParams();
+  // Get loans for a specific borrower (used by lender borrower-history screen)
+  getBorrowerLoansById: async (borrowerId, params = {}) => {
+    try {
+      if (!borrowerId) {
+        throw new Error('Borrower ID is required');
+      }
 
-  //     // Add borrower ID
-  //     queryParams.append('borrowerId', borrowerId);
+      const queryParams = new URLSearchParams();
+      queryParams.append('borrowerId', borrowerId);
 
-  //     // Add optional query parameters
-  //     if (params.page) queryParams.append('page', params.page.toString());
-  //     if (params.limit) queryParams.append('limit', params.limit.toString());
-  //     if (params.startDate) queryParams.append('startDate', params.startDate);
-  //     if (params.endDate) queryParams.append('endDate', params.endDate);
-  //     if (params.status) queryParams.append('status', params.status);
-  //     if (params.minAmount) queryParams.append('minAmount', params.minAmount.toString());
-  //     if (params.maxAmount) queryParams.append('maxAmount', params.maxAmount.toString());
-  //     if (params.search) queryParams.append('search', params.search.trim());
+      if (params.page) queryParams.append('page', params.page.toString());
+      if (params.limit) queryParams.append('limit', params.limit.toString());
+      if (params.startDate) queryParams.append('startDate', params.startDate);
+      if (params.endDate) queryParams.append('endDate', params.endDate);
+      if (params.status) queryParams.append('status', params.status);
+      if (params.minAmount) queryParams.append('minAmount', params.minAmount.toString());
+      if (params.maxAmount) queryParams.append('maxAmount', params.maxAmount.toString());
+      if (params.search) queryParams.append('search', params.search.trim());
 
-  //     const queryString = queryParams.toString();
-  //     const url = `${baseurl}borrower/loans/my-loans${queryString ? `?${queryString}` : ''}`;
+      const response = await axiosInstance.get(
+        `borrower/loans/my-loans?${queryParams.toString()}`
+      );
 
-  //     // Use plain axios without authentication for this endpoint
-  //     const response = await axios.get(url, {
-  //       timeout: 10000,
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //       }
-  //     });
-
-  //     return response.data;
-  //   } catch (error) {
-  //     console.error('Error fetching borrower loans:', error);
-  //     throw error;
-  //   }
-  // },
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching borrower loans by ID:', error);
+      throw error;
+    }
+  },
 };
 
 export default borrowerLoanAPI;

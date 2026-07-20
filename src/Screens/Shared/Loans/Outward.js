@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -26,6 +26,8 @@ import { useSubscription } from '../../../hooks/useSubscription';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
 
+const BORROWERS_PER_PAGE = 5;
+
 const Outward = ({ navigation, route }) => {
   const scrollViewRef = React.useRef(null);
   const dispatch = useDispatch();
@@ -43,6 +45,7 @@ const Outward = ({ navigation, route }) => {
   const [highlightedBorrowerId, setHighlightedBorrowerId] = useState(null);
   const [pendingHighlightParams, setPendingHighlightParams] = useState(null);
   const [borrowerRiskAssessment, setBorrowerRiskAssessment] = useState({});
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Handle navigation from notification
   useEffect(() => {
@@ -149,6 +152,7 @@ const Outward = ({ navigation, route }) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery);
+      setCurrentPage(1);
     }, 500); // 500ms delay
 
     return () => clearTimeout(timer);
@@ -275,6 +279,42 @@ const Outward = ({ navigation, route }) => {
       count: totalPendingCount,
       amount: totalPendingAmount,
     };
+  };
+
+  const totalPages = Math.ceil((borrowers?.length || 0) / BORROWERS_PER_PAGE);
+  const safeCurrentPage = Math.min(currentPage, totalPages || 1);
+  const pageStartIndex = (safeCurrentPage - 1) * BORROWERS_PER_PAGE;
+  const paginatedBorrowers = useMemo(
+    () => (borrowers || []).slice(pageStartIndex, pageStartIndex + BORROWERS_PER_PAGE),
+    [borrowers, pageStartIndex],
+  );
+
+  const pageWindow = useMemo(() => {
+    const maxVisible = 3;
+    if (totalPages <= maxVisible) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    let start = safeCurrentPage - 1;
+    let end = safeCurrentPage + 1;
+
+    if (start < 1) {
+      start = 1;
+      end = maxVisible;
+    }
+
+    if (end > totalPages) {
+      end = totalPages;
+      start = totalPages - maxVisible + 1;
+    }
+
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+  }, [safeCurrentPage, totalPages]);
+
+  const handlePageChange = page => {
+    if (page < 1 || page > totalPages || page === safeCurrentPage) return;
+    setCurrentPage(page);
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
   };
 
   const onRefresh = useCallback(async () => {
@@ -498,7 +538,63 @@ const Outward = ({ navigation, route }) => {
               )}
             </View>
           ) : (
-            borrowers?.map((borrower, index) => {
+            <>
+            <View style={styles.paginationBar}>
+              <Text style={styles.paginationSummary}>
+                Showing {paginatedBorrowers.length} of {borrowers.length}
+              </Text>
+              {totalPages > 1 && (
+                <View style={styles.paginationControls}>
+                  <TouchableOpacity
+                    style={[
+                      styles.paginationNavButton,
+                      safeCurrentPage === 1 && styles.paginationButtonDisabled,
+                    ]}
+                    onPress={() => handlePageChange(safeCurrentPage - 1)}
+                    disabled={safeCurrentPage === 1}>
+                    <Icon
+                      name="chevron-left"
+                      size={18}
+                      color={safeCurrentPage === 1 ? '#D1D5DB' : '#ff6700'}
+                    />
+                  </TouchableOpacity>
+
+                  {pageWindow.map(page => (
+                    <TouchableOpacity
+                      key={page}
+                      style={[
+                        styles.paginationPageButton,
+                        page === safeCurrentPage && styles.paginationPageButtonActive,
+                      ]}
+                      onPress={() => handlePageChange(page)}>
+                      <Text
+                        style={[
+                          styles.paginationPageText,
+                          page === safeCurrentPage && styles.paginationPageTextActive,
+                        ]}>
+                        {page}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+
+                  <TouchableOpacity
+                    style={[
+                      styles.paginationNavButton,
+                      safeCurrentPage === totalPages && styles.paginationButtonDisabled,
+                    ]}
+                    onPress={() => handlePageChange(safeCurrentPage + 1)}
+                    disabled={safeCurrentPage === totalPages}>
+                    <Icon
+                      name="chevron-right"
+                      size={18}
+                      color={safeCurrentPage === totalPages ? '#D1D5DB' : '#ff6700'}
+                    />
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+
+            {paginatedBorrowers.map((borrower, index) => {
               const isHighlighted = highlightedBorrowerId === borrower._id;
               const aadhaarNumber = borrower.aadharCardNo || borrower.aadhaarCardNo || borrower.aadhaarNumber;
               const riskData = aadhaarNumber ? borrowerRiskAssessment[aadhaarNumber] : null;
@@ -670,7 +766,8 @@ const Outward = ({ navigation, route }) => {
                   </View>
                 </TouchableOpacity>
               );
-            })
+            })}
+            </>
           )}
         </ScrollView>
       )}
@@ -691,7 +788,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     position: 'relative',
-    flex: 1,
     backgroundColor: '#F9FAFB',
   },
   // Search Section
@@ -812,6 +908,62 @@ const styles = StyleSheet.create({
   emptyActionText: {
     fontSize: m(16),
     fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  paginationBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    borderRadius: m(14),
+    borderWidth: 1,
+    borderColor: '#EEF0F3',
+    paddingHorizontal: m(12),
+    paddingVertical: m(10),
+    marginBottom: m(12),
+  },
+  paginationSummary: {
+    fontSize: m(12),
+    fontWeight: '700',
+    color: '#6B7280',
+  },
+  paginationControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(5),
+  },
+  paginationNavButton: {
+    width: m(28),
+    height: m(28),
+    borderRadius: m(8),
+    borderWidth: 1,
+    borderColor: '#FED7AA',
+    backgroundColor: '#FFF7ED',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  paginationButtonDisabled: {
+    borderColor: '#F3F4F6',
+    backgroundColor: '#FFFFFF',
+  },
+  paginationPageButton: {
+    minWidth: m(28),
+    height: m(28),
+    paddingHorizontal: m(7),
+    borderRadius: m(8),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F9FAFB',
+  },
+  paginationPageButtonActive: {
+    backgroundColor: '#ff6700',
+  },
+  paginationPageText: {
+    fontSize: m(12),
+    fontWeight: '700',
+    color: '#374151',
+  },
+  paginationPageTextActive: {
     color: '#FFFFFF',
   },
 

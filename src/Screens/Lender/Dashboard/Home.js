@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
+import React, { useState, useRef, useEffect, memo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -85,7 +85,7 @@ export default function Home() {
     return () => {
       pulse.stop();
     };
-  }, []);
+  }, [pulseAnim]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -155,7 +155,7 @@ export default function Home() {
       return () => {
         backHandler.remove();
       };
-    }, [dispatch, user, fadeAnim, slideUpAnim, scaleAnim]),
+    }, [dispatch, fadeAnim, slideUpAnim, scaleAnim]),
   );
 
   const onRefresh = async () => {
@@ -462,13 +462,14 @@ export default function Home() {
                 lightColor: '#C0ECCC'
               },
               {
-                icon: 'settings',
-                text: 'Settings',
-                screen: 'Settings',
+                icon: 'activity',
+                text: 'Activity',
+                screen: 'LenderRecentActivity',
                 gradient: ['#a09240ff', '#a3964aff'],
-                description: 'App settings',
+                description: 'Recent updates',
                 lightColor: '#ffec7f'
               },
+             
             ].map((action, index) => (
               <TouchableOpacity
                 key={action.text}
@@ -654,7 +655,7 @@ export default function Home() {
         </Animated.View>
 
         {/* Recent Activity */}
-        <Animated.View
+        {/* <Animated.View
           style={[
             styles.activitySection,
             {
@@ -714,7 +715,7 @@ export default function Home() {
               );
             }}
           />
-        </Animated.View>
+        </Animated.View> */}
       </ScrollView>
     </View>
   );
