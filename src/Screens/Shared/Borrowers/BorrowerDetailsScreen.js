@@ -127,13 +127,13 @@ export default function BorrowerDetailsScreen({ route, navigation }) {
           </View>
 
           {/* Loan History Button */}
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={styles.loanHistoryButton}
             onPress={handleViewLoanHistory}>
             <Icon name="history" size={20} color="#FFFFFF" />
             <Text style={styles.loanHistoryButtonText}>View Loan History</Text>
             <Icon name="chevron-right" size={20} color="#FFFFFF" />
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
 
         {/* Details Card */}

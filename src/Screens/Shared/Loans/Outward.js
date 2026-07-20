@@ -338,6 +338,16 @@ const Outward = ({ navigation, route }) => {
     navigation.navigate('BorrowerDetailsScreen', { borrowerDetails: selectedBorrower });
   };
 
+  const handleViewLoanHistory = () => {
+    if (!selectedBorrower?._id) return;
+
+    setBorrowerActionModalVisible(false);
+    navigation.navigate('BorrowerLoanHistoryScreen', {
+      borrowerId: selectedBorrower._id,
+      borrowerDetails: selectedBorrower,
+    });
+  };
+
   const handleAddLoan = () => {
     setBorrowerActionModalVisible(false);
     
@@ -409,7 +419,7 @@ const Outward = ({ navigation, route }) => {
             <Icon name="search" size={22} color="#ff6700" style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search by name or mobile"
+              placeholder="Search by name or mobile number"
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholderTextColor="#9CA3AF"
@@ -450,10 +460,10 @@ const Outward = ({ navigation, route }) => {
           <View style={styles.actionModalContent}>
             <View style={styles.modalHandle} />
             <View style={styles.actionModalHeader}>
-              <View>
+              <View style={styles.actionModalTitleBlock}>
                 <Text style={styles.actionModalTitle}>Choose Action</Text>
                 <Text style={styles.actionModalSubtitle}>
-                  {selectedBorrower?.userName || 'Borrower'}
+                  Select what you want to do next
                 </Text>
               </View>
               <TouchableOpacity
@@ -462,7 +472,21 @@ const Outward = ({ navigation, route }) => {
                 <Icon name="close" size={22} color="#6B7280" />
               </TouchableOpacity>
             </View>
+
             <View style={styles.actionButtonsContainer}>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.historyButton]}
+                onPress={handleViewLoanHistory}
+                activeOpacity={0.8}>
+                <View style={[styles.actionIconContainer, { backgroundColor: '#FFF7ED' }]}>
+                  <Icon name="history" size={24} color="#ff6700" />
+                </View>
+                <View style={styles.actionButtonContent}>
+                  <Text style={styles.actionButtonText}>Loan History</Text>
+                  <Text style={styles.actionButtonSubtext}>View this borrower's loans directly</Text>
+                </View>
+                <Icon name="chevron-right" size={20} color="#9CA3AF" />
+              </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.actionButton, styles.detailsButton]}
                 onPress={handleSeeDetails}
@@ -471,7 +495,7 @@ const Outward = ({ navigation, route }) => {
                   <Icon name="info" size={24} color="#3B82F6" />
                 </View>
                 <View style={styles.actionButtonContent}>
-                  <Text style={styles.actionButtonText}>View Details</Text>
+                  <Text style={styles.actionButtonText}>Borrower Profile</Text>
                   <Text style={styles.actionButtonSubtext}>See full borrower information</Text>
                 </View>
                 <Icon name="chevron-right" size={20} color="#9CA3AF" />
@@ -489,6 +513,9 @@ const Outward = ({ navigation, route }) => {
                 </View>
                 <Icon name="chevron-right" size={20} color="#9CA3AF" />
               </TouchableOpacity>
+            </View>
+            <View style={styles.actionModalFooter}>
+              <View style={styles.actionModalFooterHandle} />
             </View>
           </View>
         </TouchableOpacity>
@@ -750,10 +777,10 @@ const Outward = ({ navigation, route }) => {
 
                     {/* Card Footer */}
                     <View style={styles.cardFooter}>
-                      {/* <View style={styles.footerBadge}>
-                        <Icon name="person" size={14} color="#ff6700" />
-                        <Text style={styles.footerText}>Borrower</Text>
-                      </View> */}
+                      <View style={styles.footerBadge}>
+                        <Icon name="touch-app" size={14} color="#ff6700" />
+                        <Text style={styles.footerText}>History, profile, or loan</Text>
+                      </View>
                       {borrowerPendingPayments && (
                         <View style={styles.pendingPaymentBadge}>
                           <Icon name="schedule" size={14} color="#F59E0B" />
@@ -1226,58 +1253,143 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#92400E',
   },
+  footerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF7ED',
+    borderRadius: m(10),
+    paddingHorizontal: m(10),
+    paddingVertical: m(7),
+    gap: m(5),
+  },
+  footerText: {
+    fontSize: m(12),
+    fontWeight: '700',
+    color: '#C2410C',
+  },
   // Action Modal Styles
   actionModalContent: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: m(28),
-    borderTopRightRadius: m(28),
-    padding: m(24),
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    alignSelf: 'stretch',
+    marginBottom: 0,
+    backgroundColor: '#FFFBF7',
+    borderTopLeftRadius: m(26),
+    borderTopRightRadius: m(26),
+    padding: m(18),
     paddingTop: m(12),
-    maxHeight: '50%',
+    paddingBottom: 0,
+    maxHeight: '68%',
   },
   modalHandle: {
-    width: m(40),
+    width: m(44),
     height: m(4),
-    backgroundColor: '#D1D5DB',
+    backgroundColor: '#FED7AA',
     borderRadius: m(2),
     alignSelf: 'center',
-    marginBottom: m(16),
+    marginBottom: m(14),
   },
   actionModalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: m(24),
-    paddingBottom: m(16),
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    alignItems: 'center',
+    marginBottom: m(12),
+  },
+  actionModalTitleBlock: {
+    flex: 1,
+    paddingRight: m(12),
   },
   actionModalTitle: {
-    fontSize: m(22),
-    fontWeight: '700',
+    fontSize: m(20),
+    fontWeight: '800',
     color: '#111827',
-    marginBottom: m(4),
+    marginBottom: m(3),
   },
   actionModalSubtitle: {
-    fontSize: m(14),
+    fontSize: m(13),
     color: '#6B7280',
     fontWeight: '500',
   },
   closeButton: {
-    padding: m(4),
+    width: m(36),
+    height: m(36),
+    borderRadius: m(18),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  selectedBorrowerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: m(16),
+    padding: m(12),
+    borderWidth: 1,
+    borderColor: '#FED7AA',
+    marginBottom: m(14),
+  },
+  selectedBorrowerAvatar: {
+    width: m(46),
+    height: m(46),
+    borderRadius: m(14),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF7ED',
+    marginRight: m(12),
+  },
+  selectedBorrowerAvatarText: {
+    fontSize: m(18),
+    fontWeight: '800',
+    color: '#C2410C',
+  },
+  selectedBorrowerInfo: {
+    flex: 1,
+  },
+  selectedBorrowerName: {
+    fontSize: m(15),
+    fontWeight: '800',
+    color: '#111827',
+    marginBottom: m(3),
+  },
+  selectedBorrowerMeta: {
+    fontSize: m(12),
+    fontWeight: '500',
+    color: '#6B7280',
   },
   actionButtonsContainer: {
-    gap: m(12),
+    gap: m(10),
+  },
+  actionModalFooter: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFBF7',
+    paddingTop: m(12),
+    paddingBottom: m(10),
+  },
+  actionModalFooterHandle: {
+    width: m(76),
+    height: m(4),
+    borderRadius: m(999),
+    backgroundColor: '#D1D5DB',
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: m(18),
-    borderRadius: m(16),
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1.5,
+    padding: m(14),
+    borderRadius: m(15),
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
     borderColor: '#E5E7EB',
-    gap: m(14),
+    gap: m(12),
+  },
+  historyButton: {
+    borderColor: '#FED7AA',
+    backgroundColor: '#FFF7ED',
   },
   detailsButton: {
     borderColor: '#DBEAFE',
@@ -1288,9 +1400,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#ECFDF5',
   },
   actionIconContainer: {
-    width: m(48),
-    height: m(48),
-    borderRadius: m(14),
+    width: m(44),
+    height: m(44),
+    borderRadius: m(13),
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1298,15 +1410,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   actionButtonText: {
-    fontSize: m(17),
-    fontWeight: '600',
+    fontSize: m(15),
+    fontWeight: '800',
     color: '#111827',
     marginBottom: m(2),
   },
   actionButtonSubtext: {
-    fontSize: m(13),
+    fontSize: m(12),
     color: '#6B7280',
-    fontWeight: '400',
+    fontWeight: '500',
   },
   disabledButton: {
     opacity: 0.5,
