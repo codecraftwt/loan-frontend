@@ -161,6 +161,7 @@ const LoanCard = ({ loan, onPress }) => {
 export default function BorrowerLoansScreen({ route, navigation }) {
   const { borrower, loans } = route.params || {};
   const [refreshing, setRefreshing] = useState(false);
+  const [showReputation, setShowReputation] = useState(false);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -251,12 +252,39 @@ export default function BorrowerLoansScreen({ route, navigation }) {
         </View>
 
         {/* Reputation Score Card */}
-        {(borrower.aadhaarNumber || borrower.aadharCardNo) && 
+        {(borrower.aadhaarNumber || borrower.aadharCardNo) &&
          (borrower.aadhaarNumber || borrower.aadharCardNo).length === 12 && (
-          <BorrowerReputationCard 
-            aadhaarNumber={borrower.aadhaarNumber || borrower.aadharCardNo}
-            compact={false}
-          />
+          <View style={styles.reputationContainer}>
+            <TouchableOpacity
+              style={styles.reputationToggle}
+              onPress={() => setShowReputation(!showReputation)}
+              activeOpacity={0.8}>
+              <View style={styles.reputationToggleLeft}>
+                <View style={styles.reputationIconWrap}>
+                  <Icon name="verified" size={16} color="#3B82F6" />
+                </View>
+                <View>
+                  <Text style={styles.reputationToggleTitle}>Reputation Score</Text>
+                  <Text style={styles.reputationToggleSubtitle}>
+                    Tap to {showReputation ? 'hide' : 'view'} details
+                  </Text>
+                </View>
+              </View>
+              <Icon
+                name={showReputation ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
+                size={22}
+                color="#6B7280"
+              />
+            </TouchableOpacity>
+            {showReputation && (
+              <View style={styles.reputationCardWrapper}>
+                <BorrowerReputationCard
+                  aadhaarNumber={borrower.aadhaarNumber || borrower.aadharCardNo}
+                  compact={false}
+                />
+              </View>
+            )}
+          </View>
         )}
 
         {/* Summary Card */}
@@ -405,6 +433,54 @@ const styles = StyleSheet.create({
   metaText: {
     fontSize: m(14),
     color: '#6B7280',
+  },
+  reputationContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: m(16),
+    marginBottom: m(16),
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    overflow: 'hidden',
+  },
+  reputationToggle: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: m(14),
+  },
+  reputationToggleLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(10),
+    flex: 1,
+  },
+  reputationIconWrap: {
+    width: m(34),
+    height: m(34),
+    borderRadius: m(10),
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  reputationToggleTitle: {
+    fontSize: m(14.5),
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: m(1),
+  },
+  reputationToggleSubtitle: {
+    fontSize: m(11.5),
+    color: '#9CA3AF',
+    fontWeight: '500',
+  },
+  reputationCardWrapper: {
+    paddingHorizontal: m(12),
+    paddingBottom: m(12),
   },
   summaryCard: {
     backgroundColor: '#FFFFFF',
