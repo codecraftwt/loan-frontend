@@ -147,48 +147,47 @@ const BorrowerReputationCard = ({ aadhaarNumber, compact = false }) => {
   // Full view
   return (
     <View style={[styles.container, { borderColor: color + '30' }]}>
-      {/* Header Banner */}
-      <View style={[styles.headerBanner, { backgroundColor: color + '10' }]}>
-        {/* Top Row - Badge at top right */}
-        <View style={styles.badgeTopRow}>
+      {/* Hero - score ring + title + level, tinted by reputation color */}
+      <View style={[styles.hero, { backgroundColor: color + '12' }]}>
+        <View style={styles.heroTop}>
+          <View style={styles.heroTitleSection}>
+            <Text style={styles.heroTitle}>Reputation Score</Text>
+            <Text style={styles.heroSubtitle}>Borrower Reliability Index</Text>
+          </View>
           <View style={[styles.levelBadge, { backgroundColor: color }]}>
-            <Icon name={getReputationIcon(reputationLevel)} size={14} color="#FFFFFF" />
+            <Icon name={getReputationIcon(reputationLevel)} size={13} color="#FFFFFF" />
             <Text style={styles.levelBadgeText}>{reputationLevel}</Text>
           </View>
         </View>
-        
-        {/* Main Content Row */}
-        <View style={styles.headerBannerContent}>
-          <View style={[styles.headerIconWrapper, { backgroundColor: color + '20' }]}>
-            <Icon name={getReputationIcon(reputationLevel)} size={28} color={color} />
-          </View>
-          <View style={styles.headerTitleSection}>
-            <Text style={styles.headerTitle}>Reputation Score</Text>
-            <Text style={styles.headerSubtitle}>Borrower Reliability Index</Text>
-          </View>
-        </View>
-      </View>
 
-      {/* Score Display Card */}
-      <View style={styles.scoreCard}>
-        <View style={[styles.scoreRing, { borderColor: color }]}>
-          <View style={[styles.scoreInnerRing, { borderColor: color + '30' }]}>
-            <Text style={[styles.scoreNumber, { color }]}>
-              {reputationScore.toFixed(0)}
-            </Text>
-            <Text style={styles.scoreOutOf}>out of 100</Text>
+        <View style={styles.heroScoreRow}>
+          <View style={[styles.scoreRing, { borderColor: color }]}>
+            <View style={[styles.scoreInnerRing, { borderColor: color + '30' }]}>
+              <Text style={[styles.scoreNumber, { color }]}>
+                {reputationScore.toFixed(0)}
+              </Text>
+              <Text style={styles.scoreOutOf}>/ 100</Text>
+            </View>
           </View>
-        </View>
-        <View style={styles.scoreInfo}>
-          <View style={styles.scoreInfoRow}>
-            <Icon name="trending-up" size={16} color={color} />
-            <Text style={[styles.scoreInfoText, { color }]}>
-              {reputationLevel} Standing
+          <View style={styles.scoreInfo}>
+            <View style={styles.scoreInfoRow}>
+              <Icon name="trending-up" size={15} color={color} />
+              <Text style={[styles.scoreInfoText, { color }]}>
+                {reputationLevel} Standing
+              </Text>
+            </View>
+            <Text style={styles.scoreDescription}>
+              Based on payment history and loan performance
             </Text>
+            <View style={styles.scoreBarTrack}>
+              <View
+                style={[
+                  styles.scoreBarFill,
+                  { width: `${Math.min(Math.max(reputationScore, 0), 100)}%`, backgroundColor: color }
+                ]}
+              />
+            </View>
           </View>
-          <Text style={styles.scoreDescription}>
-            Based on payment history and loan performance
-          </Text>
         </View>
       </View>
 
@@ -461,39 +460,30 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  // HEADER BANNER STYLES
-  headerBanner: {
+  // HERO STYLES (score ring + title + level, tinted by reputation color)
+  hero: {
     paddingVertical: m(16),
     paddingHorizontal: m(16),
-    position: 'relative',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
-  badgeTopRow: {
+  heroTop: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginBottom: m(12),
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: m(16),
   },
-  headerBannerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(12),
-  },
-  headerIconWrapper: {
-    width: m(52),
-    height: m(52),
-    borderRadius: m(14),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitleSection: {
+  heroTitleSection: {
     flex: 1,
+    marginRight: m(10),
   },
-  headerTitle: {
-    fontSize: m(18),
+  heroTitle: {
+    fontSize: m(17),
     fontWeight: '700',
     color: '#111827',
     marginBottom: m(2),
   },
-  headerSubtitle: {
+  heroSubtitle: {
     fontSize: m(12),
     color: '#6B7280',
     fontWeight: '500',
@@ -501,55 +491,47 @@ const styles = StyleSheet.create({
   levelBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: m(12),
-    paddingVertical: m(6),
+    paddingHorizontal: m(11),
+    paddingVertical: m(5),
     borderRadius: m(20),
     gap: m(4),
   },
   levelBadgeText: {
     color: '#FFFFFF',
-    fontSize: m(11),
+    fontSize: m(10.5),
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-
-  // SCORE CARD STYLES (Main Score Display)
-  scoreCard: {
+  heroScoreRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: m(20),
-    paddingHorizontal: m(16),
-    backgroundColor: '#FAFAFA',
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: '#F3F4F6',
-    gap: m(20),
+    gap: m(18),
   },
   scoreRing: {
-    width: m(100),
-    height: m(100),
-    borderRadius: m(50),
+    width: m(88),
+    height: m(88),
+    borderRadius: m(44),
     borderWidth: 5,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
   },
   scoreInnerRing: {
-    width: m(82),
-    height: m(82),
-    borderRadius: m(41),
+    width: m(72),
+    height: m(72),
+    borderRadius: m(36),
     borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
   },
   scoreNumber: {
-    fontSize: m(32),
+    fontSize: m(28),
     fontWeight: '800',
   },
   scoreOutOf: {
-    fontSize: m(11),
+    fontSize: m(10.5),
     color: '#9CA3AF',
     fontWeight: '600',
     marginTop: m(-2),
@@ -570,7 +552,18 @@ const styles = StyleSheet.create({
   scoreDescription: {
     fontSize: m(12),
     color: '#6B7280',
-    lineHeight: m(18),
+    lineHeight: m(17),
+    marginBottom: m(10),
+  },
+  scoreBarTrack: {
+    height: m(6),
+    borderRadius: m(3),
+    backgroundColor: 'rgba(0, 0, 0, 0.06)',
+    overflow: 'hidden',
+  },
+  scoreBarFill: {
+    height: '100%',
+    borderRadius: m(3),
   },
 
   // METRICS SECTION STYLES (Loan Stats Grid)
@@ -601,6 +594,8 @@ const styles = StyleSheet.create({
     paddingVertical: m(14),
     paddingHorizontal: m(8),
     borderRadius: m(14),
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.04)',
   },
   metricCardIcon: {
     width: m(36),

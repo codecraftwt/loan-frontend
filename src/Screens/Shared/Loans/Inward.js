@@ -646,42 +646,36 @@ export default function Inward({ navigation }) {
                   activeOpacity={0.8}>
                   {borrowerPendingPayments && borrowerPendingPayments.count > 0 && (
                     <View style={styles.pendingPaymentBanner}>
-                      <View style={styles.bannerIconContainer}>
-                        <Icon name="notifications" size={18} color="#FFFFFF" />
-                      </View>
-                      <Text style={styles.pendingPaymentBannerText}>
-                        {borrowerPendingPayments.count} PENDING PAYMENT{borrowerPendingPayments.count > 1 ? 'S' : ''} - {formatCurrency(borrowerPendingPayments.amount)}
+                      <Icon name="notifications" size={14} color="#FFFFFF" />
+                      <Text style={styles.pendingPaymentBannerText} numberOfLines={1}>
+                        {borrowerPendingPayments.count} PENDING - {formatCurrency(borrowerPendingPayments.amount)}
                       </Text>
                     </View>
                   )}
-                  
+
                   {hasOverdue && !borrowerPendingPayments && (
                     <View style={styles.overdueBanner}>
-                      <View style={styles.bannerIconContainer}>
-                        <Icon name="error" size={18} color="#FFFFFF" />
-                      </View>
+                      <Icon name="error" size={14} color="#FFFFFF" />
                       <Text style={styles.overdueBannerText}>
                         {overdueCount} OVERDUE LOAN{overdueCount > 1 ? 'S' : ''}
                       </Text>
                     </View>
                   )}
-                  
+
                   {hasFraudRisk && !hasOverdue && !borrowerPendingPayments && (
                     <View style={[
                       styles.fraudBanner,
-                      { backgroundColor: fraudData.riskLevel === 'critical' ? '#DC2626' : 
-                                       fraudData.riskLevel === 'high' ? '#EA580C' : 
+                      { backgroundColor: fraudData.riskLevel === 'critical' ? '#DC2626' :
+                                       fraudData.riskLevel === 'high' ? '#EA580C' :
                                        fraudData.riskLevel === 'medium' ? '#D97706' : '#059669' }
                     ]}>
-                      <View style={styles.bannerIconContainer}>
-                        <Icon name="shield-alert" size={18} color="#FFFFFF" />
-                      </View>
+                      <Icon name="shield-alert" size={14} color="#FFFFFF" />
                       <Text style={styles.fraudBannerText}>
                         {fraudData.riskLevel?.toUpperCase()} FRAUD RISK
                       </Text>
                     </View>
                   )}
-                  
+
                   <View style={styles.borrowerCardHeader}>
                     <View style={styles.borrowerInfo}>
                       {borrower.profileImage ? (
@@ -697,18 +691,18 @@ export default function Inward({ navigation }) {
                         </View>
                       )}
                       <View style={styles.borrowerDetails}>
-                          <Text style={styles.borrowerName} numberOfLines={1}>
-                            {borrower.name || 'Unknown Borrower'}
-                          </Text>
+                        <Text style={styles.borrowerName} numberOfLines={1}>
+                          {borrower.name || 'Unknown Borrower'}
+                        </Text>
                         <View style={styles.borrowerMeta}>
                           <View style={styles.metaItem}>
-                            <Icon name="phone" size={14} color="#6B7280" />
+                            <Icon name="phone" size={12} color="#6B7280" />
                             <Text style={styles.metaText} numberOfLines={1}>
                               {borrower.mobileNumber || 'N/A'}
                             </Text>
                           </View>
                           <View style={styles.metaItem}>
-                            <Icon name="badge" size={14} color="#6B7280" />
+                            <Icon name="badge" size={12} color="#6B7280" />
                             <Text style={styles.metaText} numberOfLines={1}>
                               {borrower.aadhaarNumber || 'N/A'}
                             </Text>
@@ -716,91 +710,81 @@ export default function Inward({ navigation }) {
                         </View>
                         {hasFraudRisk && (
                           <View style={styles.fraudBadgeContainer}>
-                            <FraudStatusBadge 
-                              fraudScore={fraudData.fraudScore} 
-                              riskLevel={fraudData.riskLevel} 
+                            <FraudStatusBadge
+                              fraudScore={fraudData.fraudScore}
+                              riskLevel={fraudData.riskLevel}
                             />
                           </View>
                         )}
                       </View>
                     </View>
-                    <Icon name="chevron-right" size={24} color="#9CA3AF" />
+                    <Icon name="chevron-right" size={20} color="#9CA3AF" />
                   </View>
-
-                  <View style={styles.divider} />
 
                   <View style={styles.borrowerSummary}>
                     <View style={styles.summaryRow}>
                       <View style={styles.summaryItem}>
                         <View style={[styles.summaryIconContainer, { backgroundColor: '#EFF6FF' }]}>
-                          <Icon name="description" size={18} color="#3B82F6" />
+                          <Icon name="description" size={13} color="#3B82F6" />
                         </View>
                         <Text style={styles.summaryValue} numberOfLines={1}>{loans.length}</Text>
-                        <Text style={styles.summaryLabel}>Total Loans</Text>
+                        <Text style={styles.summaryLabel}>Loans</Text>
                       </View>
                       <View style={styles.summaryDivider} />
                       <View style={styles.summaryItem}>
                         <View style={[styles.summaryIconContainer, { backgroundColor: '#ECFDF5' }]}>
-                          <Icon name="account-balance-wallet" size={18} color="#10B981" />
+                          <Icon name="account-balance-wallet" size={13} color="#10B981" />
                         </View>
                         <Text style={[styles.summaryValue, { color: '#10B981' }]} numberOfLines={1}>
                           {formatCurrency(totalLoanAmount)}
                         </Text>
-                        <Text style={styles.summaryLabel}>Total Given</Text>
+                        <Text style={styles.summaryLabel}>Given</Text>
                       </View>
                       <View style={styles.summaryDivider} />
                       <View style={styles.summaryItem}>
                         <View style={[styles.summaryIconContainer, { backgroundColor: hasOverdue ? '#FEE2E2' : '#FFF7ED' }]}>
-                          <Icon name="pending" size={18} color={hasOverdue ? '#EF4444' : '#F59E0B'} />
+                          <Icon name="pending" size={13} color={hasOverdue ? '#EF4444' : '#F59E0B'} />
                         </View>
                         <Text style={[styles.summaryValue, { color: hasOverdue ? '#EF4444' : '#F59E0B' }]} numberOfLines={1}>
                           {formatCurrency(totalRemaining)}
                         </Text>
-                        <Text style={styles.summaryLabel}>Remaining</Text>
+                        <Text style={styles.summaryLabel}>Due</Text>
                       </View>
                     </View>
-                    
+
                     {hasOverdue && (
                       <View style={styles.overdueWarning}>
-                        <View style={styles.warningIconContainer}>
-                          <Icon name="error" size={18} color="#EF4444" />
-                        </View>
-                        <Text style={styles.overdueWarningText}>
-                          {overdueCount} loan{overdueCount > 1 ? 's' : ''} overdue - Action required
+                        <Icon name="error" size={14} color="#EF4444" />
+                        <Text style={styles.overdueWarningText} numberOfLines={1}>
+                          {overdueCount} loan{overdueCount > 1 ? 's' : ''} overdue - action required
                         </Text>
                       </View>
                     )}
-                    
+
                     {hasFraudRisk && !hasOverdue && (
                       <View style={[
                         styles.fraudWarning,
-                        { backgroundColor: fraudData.riskLevel === 'critical' ? '#FEE2E2' : 
-                                         fraudData.riskLevel === 'high' ? '#FED7AA' : 
+                        { backgroundColor: fraudData.riskLevel === 'critical' ? '#FEE2E2' :
+                                         fraudData.riskLevel === 'high' ? '#FED7AA' :
                                          fraudData.riskLevel === 'medium' ? '#FEF3C7' : '#D1FAE5',
-                          borderColor: fraudData.riskLevel === 'critical' ? '#DC2626' : 
-                                      fraudData.riskLevel === 'high' ? '#EA580C' : 
+                          borderColor: fraudData.riskLevel === 'critical' ? '#DC2626' :
+                                      fraudData.riskLevel === 'high' ? '#EA580C' :
                                       fraudData.riskLevel === 'medium' ? '#D97706' : '#059669' }
                       ]}>
-                        <View style={[styles.warningIconContainer, { 
-                          backgroundColor: fraudData.riskLevel === 'critical' ? '#DC2626' + '20' : 
-                                          fraudData.riskLevel === 'high' ? '#EA580C' + '20' : 
-                                          fraudData.riskLevel === 'medium' ? '#D97706' + '20' : '#059669' + '20' 
-                        }]}>
-                        <Icon 
-                          name="shield-alert" 
-                            size={18} 
-                          color={fraudData.riskLevel === 'critical' ? '#DC2626' : 
-                                fraudData.riskLevel === 'high' ? '#EA580C' : 
-                                fraudData.riskLevel === 'medium' ? '#D97706' : '#059669'} 
+                        <Icon
+                          name="shield-alert"
+                          size={14}
+                          color={fraudData.riskLevel === 'critical' ? '#DC2626' :
+                                fraudData.riskLevel === 'high' ? '#EA580C' :
+                                fraudData.riskLevel === 'medium' ? '#D97706' : '#059669'}
                         />
-                        </View>
                         <Text style={[
                           styles.fraudWarningText,
-                          { color: fraudData.riskLevel === 'critical' ? '#DC2626' : 
-                                  fraudData.riskLevel === 'high' ? '#EA580C' : 
+                          { color: fraudData.riskLevel === 'critical' ? '#DC2626' :
+                                  fraudData.riskLevel === 'high' ? '#EA580C' :
                                   fraudData.riskLevel === 'medium' ? '#D97706' : '#059669' }
-                        ]}>
-                          {fraudData.details?.pendingLoansCount || 0} pending loans • {fraudData.details?.overdueLoansCount || 0} overdue loans
+                        ]} numberOfLines={1}>
+                          {fraudData.details?.pendingLoansCount || 0} pending • {fraudData.details?.overdueLoansCount || 0} overdue
                         </Text>
                       </View>
                     )}
@@ -808,15 +792,15 @@ export default function Inward({ navigation }) {
 
                   <View style={styles.borrowerCardFooter}>
                     <View style={styles.footerItem}>
-                      <Icon name="account-balance-wallet" size={14} color="#6B7280" />
+                      <Icon name="account-balance-wallet" size={13} color="#9CA3AF" />
                       <Text style={styles.footerText}>
                         {loans.length} loan{loans.length > 1 ? 's' : ''} • Tap to view all
                       </Text>
                     </View>
                     {borrowerPendingPayments && borrowerPendingPayments.count > 0 && (
                       <View style={styles.pendingPaymentBadge}>
-                        <Icon name="clock" size={14} color="#F59E0B" />
-                        <Text style={styles.pendingPaymentBadgeText}>
+                        <Icon name="schedule" size={12} color="#F59E0B" />
+                        <Text style={styles.pendingPaymentBadgeText} numberOfLines={1}>
                           {borrowerPendingPayments.count} pending • {formatCurrency(borrowerPendingPayments.amount)}
                         </Text>
                       </View>
@@ -1086,69 +1070,61 @@ const styles = StyleSheet.create({
   // Borrower Card (Grouped)
   borrowerCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: m(20),
-    padding: m(20),
-    marginBottom: m(16),
+    borderRadius: m(16),
+    padding: m(14),
+    marginBottom: m(12),
     borderWidth: 1,
     borderColor: '#E5E7EB',
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
     overflow: 'hidden',
   },
   overdueBorrowerCard: {
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: '#FCA5A5',
     backgroundColor: '#FFF5F5',
   },
   fraudRiskBorrowerCard: {
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: '#FED7AA',
     backgroundColor: '#FFFBEB',
-  },
-  bannerIconContainer: {
-    width: m(28),
-    height: m(28),
-    borderRadius: m(14),
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   fraudBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: m(10),
-    paddingHorizontal: m(14),
-    marginHorizontal: m(-20),
-    marginTop: m(-20),
-    marginBottom: m(16),
-    gap: m(10),
+    paddingVertical: m(6),
+    paddingHorizontal: m(12),
+    marginHorizontal: m(-14),
+    marginTop: m(-14),
+    marginBottom: m(12),
+    gap: m(6),
   },
   fraudBannerText: {
     color: '#FFFFFF',
-    fontSize: m(13),
+    fontSize: m(11.5),
     fontWeight: '700',
-    letterSpacing: 0.5,
-    flex: 1,
+    letterSpacing: 0.4,
   },
   fraudBadgeContainer: {
-    marginTop: m(8),
+    marginTop: m(6),
     alignSelf: 'flex-start',
   },
   fraudWarning: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: m(12),
-    padding: m(12),
-    marginTop: m(12),
-    borderWidth: 1.5,
-    gap: m(10),
+    borderRadius: m(10),
+    paddingVertical: m(8),
+    paddingHorizontal: m(10),
+    marginTop: m(8),
+    borderWidth: 1,
+    gap: m(8),
   },
   fraudWarningText: {
-    fontSize: m(13),
+    fontSize: m(11.5),
     fontWeight: '600',
     flex: 1,
   },
@@ -1157,25 +1133,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#EF4444',
-    paddingVertical: m(10),
-    paddingHorizontal: m(14),
-    marginHorizontal: m(-20),
-    marginTop: m(-20),
-    marginBottom: m(16),
-    gap: m(10),
+    paddingVertical: m(6),
+    paddingHorizontal: m(12),
+    marginHorizontal: m(-14),
+    marginTop: m(-14),
+    marginBottom: m(12),
+    gap: m(6),
   },
   overdueBannerText: {
     color: '#FFFFFF',
-    fontSize: m(13),
+    fontSize: m(11.5),
     fontWeight: '700',
-    letterSpacing: 0.5,
-    flex: 1,
+    letterSpacing: 0.4,
   },
   borrowerCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: m(16),
+    marginBottom: m(10),
   },
   borrowerInfo: {
     flexDirection: 'row',
@@ -1183,26 +1158,26 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   borrowerAvatar: {
-    width: m(64),
-    height: m(64),
-    borderRadius: m(32),
-    marginRight: m(16),
-    borderWidth: 3,
+    width: m(48),
+    height: m(48),
+    borderRadius: m(24),
+    marginRight: m(12),
+    borderWidth: 2,
     borderColor: '#E5E7EB',
   },
   borrowerAvatarPlaceholder: {
-    width: m(64),
-    height: m(64),
-    borderRadius: m(32),
+    width: m(48),
+    height: m(48),
+    borderRadius: m(24),
     backgroundColor: '#3B82F6',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: m(16),
-    borderWidth: 3,
+    marginRight: m(12),
+    borderWidth: 2,
     borderColor: '#DBEAFE',
   },
   borrowerAvatarText: {
-    fontSize: m(24),
+    fontSize: m(18),
     fontWeight: '700',
     color: '#FFFFFF',
   },
@@ -1210,32 +1185,30 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   borrowerName: {
-    fontSize: m(18),
+    fontSize: m(15.5),
     fontWeight: '700',
     color: '#111827',
-    marginBottom: m(8),
+    marginBottom: m(4),
   },
   borrowerMeta: {
-    gap: m(8),
-    marginBottom: m(8),
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: m(10),
   },
   metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(8),
+    gap: m(4),
   },
   metaText: {
-    fontSize: m(13),
+    fontSize: m(12),
     color: '#6B7280',
-    flex: 1,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#F3F4F6',
-    marginBottom: m(16),
   },
   borrowerSummary: {
-    marginBottom: m(12),
+    backgroundColor: '#F9FAFB',
+    borderRadius: m(10),
+    paddingVertical: m(8),
+    paddingHorizontal: m(6),
   },
   summaryRow: {
     flexDirection: 'row',
@@ -1245,48 +1218,48 @@ const styles = StyleSheet.create({
   summaryItem: {
     flex: 1,
     alignItems: 'center',
-    gap: m(6),
+    gap: m(4),
   },
   summaryIconContainer: {
-    width: m(44),
-    height: m(44),
-    borderRadius: m(14),
+    width: m(28),
+    height: m(28),
+    borderRadius: m(9),
     justifyContent: 'center',
     alignItems: 'center',
   },
   summaryValue: {
-    fontSize: m(16),
+    fontSize: m(13),
     fontWeight: '700',
     color: '#111827',
     textAlign: 'center',
   },
   summaryLabel: {
-    fontSize: m(11),
+    fontSize: m(9.5),
     color: '#9CA3AF',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
     fontWeight: '600',
     textAlign: 'center',
   },
   summaryDivider: {
     width: 1,
-    height: m(70),
+    alignSelf: 'stretch',
     backgroundColor: '#E5E7EB',
-    marginTop: m(4),
   },
   overdueWarning: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FEE2E2',
-    borderRadius: m(12),
-    padding: m(12),
-    marginTop: m(12),
+    borderRadius: m(10),
+    paddingVertical: m(8),
+    paddingHorizontal: m(10),
+    marginTop: m(8),
     borderWidth: 1,
     borderColor: '#FCA5A5',
-    gap: m(10),
+    gap: m(8),
   },
   overdueWarningText: {
-    fontSize: m(13),
+    fontSize: m(11.5),
     color: '#DC2626',
     fontWeight: '600',
     flex: 1,
@@ -1295,22 +1268,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: m(16),
+    marginTop: m(10),
+    paddingTop: m(10),
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
   },
   footerItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(8),
+    gap: m(6),
   },
   footerText: {
-    fontSize: m(13),
-    color: '#6B7280',
+    fontSize: m(11.5),
+    color: '#9CA3AF',
     fontWeight: '500',
   },
   pendingPaymentBorrowerCard: {
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: '#FDE68A',
     backgroundColor: '#FFFBF5',
   },
@@ -1319,34 +1293,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#F59E0B',
-    paddingVertical: m(8),
+    paddingVertical: m(6),
     paddingHorizontal: m(12),
-    marginHorizontal: m(-20),
-    marginTop: m(-20),
-    marginBottom: m(16),
+    marginHorizontal: m(-14),
+    marginTop: m(-14),
+    marginBottom: m(12),
     gap: m(6),
-    borderTopLeftRadius: m(17),
-    borderTopRightRadius: m(17),
   },
   pendingPaymentBannerText: {
     color: '#FFFFFF',
-    fontSize: m(12),
+    fontSize: m(11),
     fontWeight: '700',
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
   },
   pendingPaymentBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFF7ED',
     borderRadius: m(8),
-    paddingHorizontal: m(10),
-    paddingVertical: m(6),
-    gap: m(6),
+    paddingHorizontal: m(8),
+    paddingVertical: m(4),
+    gap: m(4),
     borderWidth: 1,
     borderColor: '#FDE68A',
   },
   pendingPaymentBadgeText: {
-    fontSize: m(11),
+    fontSize: m(10.5),
     fontWeight: '600',
     color: '#92400E',
   },

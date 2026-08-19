@@ -555,17 +555,10 @@ const Outward = ({ navigation, route }) => {
                     {/* Status Banners */}
                     {borrowerPendingPayments && (
                       <View style={styles.pendingPaymentBanner}>
-                        <View style={styles.bannerIconContainer}>
-                          <Icon name="notifications" size={18} color="#FFFFFF" />
-                        </View>
-                        <View style={styles.bannerContent}>
-                          <Text style={styles.pendingPaymentBannerText}>
-                            {borrowerPendingPayments.count} Pending Payment{borrowerPendingPayments.count !== 1 ? 's' : ''}
-                          </Text>
-                          <Text style={styles.pendingPaymentBannerAmount}>
-                            {formatCurrency(borrowerPendingPayments.amount)}
-                          </Text>
-                        </View>
+                        <Icon name="notifications" size={14} color="#FFFFFF" />
+                        <Text style={styles.pendingPaymentBannerText} numberOfLines={1}>
+                          {borrowerPendingPayments.count} Pending • {formatCurrency(borrowerPendingPayments.amount)}
+                        </Text>
                       </View>
                     )}
                     {hasRisk && !borrowerPendingPayments && riskBadge && (
@@ -573,9 +566,7 @@ const Outward = ({ navigation, route }) => {
                         styles.fraudBanner,
                         { backgroundColor: riskBadge.color || '#EA580C' }
                       ]}>
-                        <View style={styles.bannerIconContainer}>
-                          <Icon name="warning" size={18} color="#FFFFFF" />
-                        </View>
+                        <Icon name="warning" size={14} color="#FFFFFF" />
                         <Text style={styles.fraudBannerText}>
                           {riskBadge.label?.toUpperCase() || riskLevel?.toUpperCase()} RISK DETECTED
                         </Text>
@@ -598,70 +589,46 @@ const Outward = ({ navigation, route }) => {
                           </View>
                         )}
                         <View style={styles.userDetails}>
-                          <View style={styles.userNameRow}>
-                            <Text style={styles.userName} numberOfLines={1}>
-                              {borrower.userName}
-                            </Text>
-                          </View>
+                          <Text style={styles.userName} numberOfLines={1}>
+                            {borrower.userName}
+                          </Text>
                           <View style={styles.userMeta}>
-                            <Icon name="mail" size={14} color="#6B7280" />
+                            <Icon name="mail" size={12} color="#6B7280" />
                             <Text style={styles.userEmail} numberOfLines={1}>
                               {borrower.email || 'No email provided'}
                             </Text>
                           </View>
                         </View>
                       </View>
-                      <View style={styles.chevronContainer}>
-                        <View style={styles.chevronCircle}>
-                          <Icon name="chevron-right" size={20} color="#ff6700" />
-                        </View>
+                      <View style={styles.chevronCircle}>
+                        <Icon name="chevron-right" size={16} color="#ff6700" />
                       </View>
                     </View>
 
                     {/* Borrower Details */}
                     <View style={styles.borrowerDetails}>
                       <View style={styles.detailsGrid}>
-                        {/* Phone */}
                         <View style={styles.detailItem}>
-                          <View style={[styles.iconContainer, { backgroundColor: '#DBEAFE' }]}>
-                            <Icon name="phone" size={18} color="#2563EB" />
-                          </View>
-                          <View style={styles.detailContent}>
-                            <Text style={styles.detailLabel}>Phone</Text>
-                            <Text style={styles.detailValue} numberOfLines={1}>
-                              {borrower.mobileNo || 'Not provided'}
-                            </Text>
-                          </View>
+                          <Icon name="phone" size={13} color="#2563EB" />
+                          <Text style={styles.detailValue} numberOfLines={1}>
+                            {borrower.mobileNo || 'Not provided'}
+                          </Text>
                         </View>
-
-                        {/* Aadhar */}
                         <View style={styles.detailItem}>
-                          <View style={[styles.iconContainer, { backgroundColor: '#D1FAE5' }]}>
-                            <Icon name="badge" size={18} color="#059669" />
-                          </View>
-                          <View style={styles.detailContent}>
-                            <Text style={styles.detailLabel}>Aadhar</Text>
-                            <Text style={styles.detailValue} numberOfLines={1}>
-                              {borrower.aadharCardNo}
-                            </Text>
-                          </View>
+                          <Icon name="badge" size={13} color="#059669" />
+                          <Text style={styles.detailValue} numberOfLines={1}>
+                            {borrower.aadharCardNo || 'N/A'}
+                          </Text>
                         </View>
-
-                        {/* Address */}
-                        {borrower.address && (
-                          <View style={styles.detailItem}>
-                            <View style={[styles.iconContainer, { backgroundColor: '#FEF3C7' }]}>
-                              <Icon name="home" size={18} color="#D97706" />
-                            </View>
-                            <View style={styles.detailContent}>
-                              <Text style={styles.detailLabel}>Address</Text>
-                              <Text style={styles.detailValue} numberOfLines={2}>
-                                {borrower.address}
-                              </Text>
-                            </View>
-                          </View>
-                        )}
                       </View>
+                      {borrower.address && (
+                        <View style={styles.addressItem}>
+                          <Icon name="home" size={13} color="#D97706" />
+                          <Text style={styles.addressText} numberOfLines={1}>
+                            {borrower.address}
+                          </Text>
+                        </View>
+                      )}
                     </View>
 
                     {/* Reputation Score Card */}
@@ -669,12 +636,9 @@ const Outward = ({ navigation, route }) => {
                       <View style={styles.reputationSection}>
                         <View style={styles.reputationHeaderRow}>
                           <View style={styles.reputationPill}>
-                            <Icon name="leaderboard" size={14} color="#1D4ED8" />
+                            <Icon name="leaderboard" size={12} color="#1D4ED8" />
                             <Text style={styles.reputationPillText}>Reputation</Text>
                           </View>
-                          <Text style={styles.reputationHintText}>
-                            Based on loan history & repayments
-                          </Text>
                         </View>
                         <View style={styles.reputationContainer}>
                           <BorrowerReputationCard
@@ -688,12 +652,12 @@ const Outward = ({ navigation, route }) => {
                     {/* Card Footer */}
                     <View style={styles.cardFooter}>
                       <View style={styles.footerBadge}>
-                        <Icon name="touch-app" size={14} color="#ff6700" />
+                        <Icon name="touch-app" size={12} color="#ff6700" />
                         <Text style={styles.footerText}>History, profile, or loan</Text>
                       </View>
                       {borrowerPendingPayments && (
                         <View style={styles.pendingPaymentBadge}>
-                          <Icon name="schedule" size={14} color="#F59E0B" />
+                          <Icon name="schedule" size={12} color="#F59E0B" />
                           <Text style={styles.pendingPaymentBadgeText}>
                             {borrowerPendingPayments.count} pending
                           </Text>
@@ -851,35 +815,36 @@ const styles = StyleSheet.create({
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: m(16),
+    alignItems: 'center',
+    marginBottom: m(10),
   },
   userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+    marginRight: m(8),
   },
   userAvatar: {
-    width: m(64),
-    height: m(64),
-    borderRadius: m(32),
-    marginRight: m(16),
-    borderWidth: 3,
+    width: m(46),
+    height: m(46),
+    borderRadius: m(23),
+    marginRight: m(12),
+    borderWidth: 2,
     borderColor: '#F0F0F0',
   },
   avatarPlaceholder: {
-    width: m(64),
-    height: m(64),
-    borderRadius: m(32),
+    width: m(46),
+    height: m(46),
+    borderRadius: m(23),
     backgroundColor: '#ff6700',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: m(16),
-    borderWidth: 3,
+    marginRight: m(12),
+    borderWidth: 2,
     borderColor: '#FFE5D0',
   },
   avatarText: {
-    fontSize: m(26),
+    fontSize: m(18),
     fontWeight: '700',
     color: '#FFFFFF',
   },
@@ -887,119 +852,101 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   userName: {
-    fontSize: m(19),
+    fontSize: m(15.5),
     fontWeight: '700',
     color: '#111827',
-    marginBottom: m(6),
+    marginBottom: m(3),
   },
   userMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(6),
+    gap: m(5),
   },
   userEmail: {
-    fontSize: m(14),
+    fontSize: m(12),
     color: '#6B7280',
     flex: 1,
   },
-  chevronContainer: {
-    marginLeft: m(8),
-  },
   chevronCircle: {
-    width: m(36),
-    height: m(36),
-    borderRadius: m(18),
+    width: m(28),
+    height: m(28),
+    borderRadius: m(14),
     backgroundColor: '#FFF5EB',
     justifyContent: 'center',
     alignItems: 'center',
   },
   borrowerDetails: {
-    marginBottom: m(16),
-    marginLeft: m(8),
+    backgroundColor: '#F9FAFB',
+    borderRadius: m(10),
+    paddingVertical: m(8),
+    paddingHorizontal: m(10),
+    marginBottom: m(10),
+    gap: m(6),
   },
   detailsGrid: {
-    gap: m(12),
+    flexDirection: 'row',
+    gap: m(16),
   },
   detailItem: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  iconContainer: {
-    width: m(44),
-    height: m(44),
-    borderRadius: m(12),
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: m(12),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  detailContent: {
-    flex: 1,
-  },
-  detailLabel: {
-    fontSize: m(11),
-    fontWeight: '600',
-    color: '#64748B',
-    marginBottom: m(2),
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+    gap: m(6),
+    flexShrink: 1,
   },
   detailValue: {
-    fontSize: m(14),
+    fontSize: m(12.5),
     fontWeight: '600',
     color: '#1E293B',
-    lineHeight: m(20),
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+  },
+  addressItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(6),
+  },
+  addressText: {
+    fontSize: m(12),
+    fontWeight: '500',
+    color: '#6B7280',
+    flex: 1,
   },
   // Borrower Card Styles
   borrowerCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: m(24),
-    padding: m(20),
-    marginBottom: m(16),
-    borderWidth: 1.5,
+    borderRadius: m(16),
+    padding: m(14),
+    marginBottom: m(12),
+    borderWidth: 1,
     borderColor: '#E5E7EB',
     elevation: 3,
     shadowColor: '#111827',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
   },
   reputationSection: {
-    marginTop: m(8),
+    marginTop: m(4),
     marginBottom: m(4),
   },
   reputationHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: m(8),
+    marginBottom: m(6),
   },
   reputationPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: m(10),
-    paddingVertical: m(4),
-    borderRadius: m(20),
+    paddingHorizontal: m(8),
+    paddingVertical: m(3),
+    borderRadius: m(16),
     backgroundColor: '#EEF2FF',
-    gap: m(6),
+    gap: m(4),
   },
   reputationPillText: {
-    fontSize: m(11),
+    fontSize: m(9.5),
     fontWeight: '700',
     color: '#1D4ED8',
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  reputationHintText: {
-    fontSize: m(11),
-    color: '#9CA3AF',
-    fontWeight: '500',
+    letterSpacing: 0.6,
   },
   reputationContainer: {
     marginTop: m(2),
@@ -1008,101 +955,75 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderTopColor: '#F3F4F6',
   },
-    highlightedBorrowerCard: {
-    borderWidth: 3,
+  highlightedBorrowerCard: {
+    borderWidth: 2,
     borderColor: '#b80266',
     backgroundColor: '#FFF5F5',
     shadowColor: '#b80266',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 6,
   },
   fraudRiskBorrowerCard: {
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: '#FED7AA',
     backgroundColor: '#FFFBEB',
   },
   fraudBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: m(12),
-    paddingHorizontal: m(16),
-    marginHorizontal: m(-20),
-    marginTop: m(-20),
-    marginBottom: m(20),
-    gap: m(10),
-    borderTopLeftRadius: m(24),
-    borderTopRightRadius: m(24),
-  },
-  bannerIconContainer: {
-    width: m(32),
-    height: m(32),
-    borderRadius: m(16),
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
-    alignItems: 'center',
-  },
-  bannerContent: {
-    flex: 1,
+    paddingVertical: m(6),
+    paddingHorizontal: m(12),
+    marginHorizontal: m(-14),
+    marginTop: m(-14),
+    marginBottom: m(12),
+    gap: m(6),
   },
   fraudBannerText: {
     color: '#FFFFFF',
-    fontSize: m(13),
+    fontSize: m(11.5),
     fontWeight: '700',
-    letterSpacing: 0.8,
-  },
-  userNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: m(8),
+    letterSpacing: 0.5,
   },
   pendingPaymentBorrowerCard: {
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: '#FDE68A',
     backgroundColor: '#FFFBF5',
   },
   pendingPaymentBanner: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#F59E0B',
-    paddingVertical: m(12),
-    paddingHorizontal: m(16),
-    marginHorizontal: m(-20),
-    marginTop: m(-20),
-    marginBottom: m(20),
-    gap: m(10),
-    borderTopLeftRadius: m(24),
-    borderTopRightRadius: m(24),
+    paddingVertical: m(6),
+    paddingHorizontal: m(12),
+    marginHorizontal: m(-14),
+    marginTop: m(-14),
+    marginBottom: m(12),
+    gap: m(6),
   },
   pendingPaymentBannerText: {
     color: '#FFFFFF',
-    fontSize: m(13),
+    fontSize: m(11.5),
     fontWeight: '700',
-    letterSpacing: 0.5,
-    marginBottom: m(2),
-  },
-  pendingPaymentBannerAmount: {
-    color: '#FFFFFF',
-    fontSize: m(15),
-    fontWeight: '800',
+    letterSpacing: 0.4,
   },
   pendingPaymentBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFF7ED',
-    borderRadius: m(10),
-    paddingHorizontal: m(12),
-    paddingVertical: m(8),
-    gap: m(6),
+    borderRadius: m(8),
+    paddingHorizontal: m(8),
+    paddingVertical: m(4),
+    gap: m(4),
     borderWidth: 1,
     borderColor: '#FDE68A',
   },
   pendingPaymentBadgeText: {
-    fontSize: m(12),
+    fontSize: m(10.5),
     fontWeight: '600',
     color: '#92400E',
   },
@@ -1110,13 +1031,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFF7ED',
-    borderRadius: m(10),
-    paddingHorizontal: m(10),
-    paddingVertical: m(7),
-    gap: m(5),
+    borderRadius: m(8),
+    paddingHorizontal: m(8),
+    paddingVertical: m(5),
+    gap: m(4),
   },
   footerText: {
-    fontSize: m(12),
+    fontSize: m(10.5),
     fontWeight: '700',
     color: '#C2410C',
   },

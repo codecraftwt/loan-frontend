@@ -101,23 +101,29 @@ const LoanHistoryCard = ({ loan, onPress }) => {
     }).start();
   };
 
+  const paymentPercent =
+    loan.amount > 0 ? ((loan.totalPaid || 0) / loan.amount) * 100 : 0;
+
   return (
     <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
       <TouchableOpacity
-        style={[
-          styles.loanCard,
-          isOverdue && styles.overdueCard,
-          { borderLeftColor: getStatusColor(effectiveStatus) },
-        ]}
+        style={[styles.loanCard, isOverdue && styles.overdueCard]}
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         activeOpacity={0.9}
       >
+        <View
+          style={[
+            styles.statusAccent,
+            { backgroundColor: getStatusColor(effectiveStatus) },
+          ]}
+        />
+
         {/* Overdue Banner */}
         {isOverdue && (
           <View style={styles.overdueBanner}>
-            <Icon name="error" size={16} color="#FFFFFF" />
+            <Icon name="error" size={12} color="#FFFFFF" />
             <Text style={styles.overdueBannerText}>OVERDUE</Text>
             <Text style={styles.overdueDays}>
               {moment(loan.loanEndDate).fromNow()}
@@ -127,33 +133,22 @@ const LoanHistoryCard = ({ loan, onPress }) => {
 
         <View style={styles.loanCardHeader}>
           <View style={styles.loanInfo}>
-            <View style={styles.amountContainer}>
-              <Icon
-                name="account-balance-wallet"
-                size={20}
-                color={ORANGE_THEME.primary}
-              />
-              <Text style={styles.loanAmount}>
-                ₹{loan.amount?.toLocaleString() || '0'}
-              </Text>
-            </View>
-            <Text style={styles.loanPurpose}>
+            <Text style={styles.loanAmount}>
+              ₹{loan.amount?.toLocaleString() || '0'}
+            </Text>
+            <Text style={styles.loanPurpose} numberOfLines={1}>
               {loan.purpose || 'Loan Amount'}
             </Text>
           </View>
           <View
             style={[
               styles.statusBadge,
-              {
-                backgroundColor: getStatusColor(effectiveStatus) + '15',
-                borderLeftWidth: 4,
-                borderLeftColor: getStatusColor(effectiveStatus),
-              },
+              { backgroundColor: getStatusColor(effectiveStatus) + '15' },
             ]}
           >
             <Icon
               name={getStatusIcon(effectiveStatus)}
-              size={18}
+              size={12}
               color={getStatusColor(effectiveStatus)}
             />
             <Text
@@ -168,99 +163,82 @@ const LoanHistoryCard = ({ loan, onPress }) => {
           </View>
         </View>
 
+        <View style={styles.progressRow}>
+          <View style={styles.progressBar}>
+            <View
+              style={[
+                styles.progressFill,
+                {
+                  width: `${paymentPercent}%`,
+                  backgroundColor: getStatusColor(effectiveStatus),
+                },
+              ]}
+            />
+          </View>
+          <Text style={styles.progressPercentText}>
+            {paymentPercent.toFixed(0)}%
+          </Text>
+        </View>
+        <View style={styles.progressLabels}>
+          <Text style={[styles.progressLabel, { color: ORANGE_THEME.success }]}>
+            Paid ₹{loan.totalPaid?.toLocaleString('en-IN') || '0'}
+          </Text>
+          <Text
+            style={[
+              styles.progressLabel,
+              { color: isOverdue ? ORANGE_THEME.error : ORANGE_THEME.warning },
+            ]}
+          >
+            Due ₹{loan.remainingAmount?.toLocaleString('en-IN') || loan.amount}
+          </Text>
+        </View>
+
         <View style={styles.loanDetails}>
-          <View style={styles.progressContainer}>
-            <View style={styles.progressBar}>
-              <View
-                style={[
-                  styles.progressFill,
-                  {
-                    width: `${((loan.totalPaid || 0) / loan.amount) * 100}%`,
-                    backgroundColor: getStatusColor(effectiveStatus),
-                  },
-                ]}
-              />
-            </View>
-            <View style={styles.progressLabels}>
-              <Text
-                style={[styles.progressLabel, { color: ORANGE_THEME.success }]}
-              >
-                Paid: ₹{loan.totalPaid?.toLocaleString('en-IN') || '0'}
-              </Text>
-              <Text
-                style={[
-                  styles.progressLabel,
-                  {
-                    color: isOverdue
-                      ? ORANGE_THEME.error
-                      : ORANGE_THEME.warning,
-                  },
-                ]}
-              >
-                Remaining: ₹
-                {loan.remainingAmount?.toLocaleString('en-IN') || loan.amount}
-              </Text>
-            </View>
+          <View style={styles.detailItem}>
+            <Icon
+              name="event"
+              size={12}
+              color={isOverdue ? ORANGE_THEME.error : ORANGE_THEME.textLight}
+            />
+            <Text
+              style={[
+                styles.detailValue,
+                { color: isOverdue ? ORANGE_THEME.error : ORANGE_THEME.text },
+              ]}
+              numberOfLines={1}
+            >
+              {moment(loan.loanEndDate).format('DD MMM YYYY')}
+            </Text>
           </View>
 
-          <View style={styles.detailRow}>
+          {loan.lenderId && (
             <View style={styles.detailItem}>
-              <View style={styles.detailIconContainer}>
-                <Icon
-                  name="event"
-                  size={16}
-                  color={isOverdue ? ORANGE_THEME.error : ORANGE_THEME.text}
-                />
-              </View>
-              <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>Due Date</Text>
-                <Text
-                  style={[
-                    styles.detailValue,
-                    {
-                      color: isOverdue ? ORANGE_THEME.error : ORANGE_THEME.text,
-                    },
-                  ]}
-                >
-                  {moment(loan.loanEndDate).format('DD MMM YYYY')}
-                </Text>
-              </View>
-            </View>
-
-            {loan.lenderId && (
-              <View style={styles.detailItem}>
-                <View style={styles.detailIconContainer}>
-                  <Icon name="person" size={16} color={ORANGE_THEME.info} />
-                </View>
-                <View style={styles.detailContent}>
-                  <Text style={styles.detailLabel}>Lender</Text>
-                  <Text style={styles.detailValue} numberOfLines={1}>
-                    {loan.lenderId.userName || 'N/A'}
-                  </Text>
-                </View>
-              </View>
-            )}
-          </View>
-
-          <View style={styles.loanFooter}>
-            <View style={styles.dateContainer}>
-              <Icon
-                name="access-time"
-                size={14}
-                color={ORANGE_THEME.textLight}
-              />
-              <Text style={styles.loanDate}>
-                {moment(loan.createdAt).format('DD MMM YYYY')}
+              <Icon name="person" size={12} color={ORANGE_THEME.info} />
+              <Text style={styles.detailValue} numberOfLines={1}>
+                {loan.lenderId.userName || 'N/A'}
               </Text>
             </View>
-            <View style={styles.viewButton}>
-              <Text style={styles.viewButtonText}>View Details</Text>
-              <Icon
-                name="arrow-forward"
-                size={16}
-                color={ORANGE_THEME.primary}
-              />
-            </View>
+          )}
+        </View>
+
+        <View style={styles.loanFooter}>
+          <View style={styles.dateContainer}>
+            <Icon
+              name="access-time"
+              size={11}
+              color={ORANGE_THEME.textLight}
+            />
+            <Text style={styles.loanDate}>
+              {moment(loan.createdAt).format('DD MMM YYYY')}
+            </Text>
+          </View>
+          <View style={styles.viewButton}>
+            <Text style={styles.viewButtonText}>View Details</Text>
+            <Icon
+              name="arrow-forward"
+              size={13}
+              color={ORANGE_THEME.primary}
+            />
           </View>
         </View>
       </TouchableOpacity>
@@ -1420,48 +1398,53 @@ const styles = StyleSheet.create({
   // Loan Card
   loanCard: {
     backgroundColor: ORANGE_THEME.card,
-    borderRadius: m(18),
-    padding: m(20),
-    marginHorizontal: m(16),
-    marginBottom: m(14),
+    borderRadius: m(14),
+    padding: m(12),
+    paddingLeft: m(15),
+    marginHorizontal: m(14),
+    marginBottom: m(10),
     borderWidth: 1,
     borderColor: ORANGE_THEME.border,
-    borderLeftWidth: 6,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
-    paddingBottom: m(10),
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+    overflow: 'hidden',
   },
   overdueCard: {
     backgroundColor: '#FFF5F5',
     borderColor: ORANGE_THEME.error + '40',
-    borderLeftColor: ORANGE_THEME.error,
+  },
+  statusAccent: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: m(4),
   },
   overdueBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: ORANGE_THEME.error,
-    paddingVertical: m(8),
-    paddingHorizontal: m(16),
-    marginHorizontal: m(-20),
-    marginTop: m(-20),
-    marginBottom: m(16),
-    borderTopLeftRadius: m(18),
-    borderTopRightRadius: m(18),
-    gap: m(8),
+    paddingVertical: m(4),
+    paddingHorizontal: m(10),
+    marginLeft: m(-15),
+    marginRight: m(-12),
+    marginTop: m(-12),
+    marginBottom: m(10),
+    gap: m(5),
   },
   overdueBannerText: {
     color: '#FFFFFF',
-    fontSize: m(12),
+    fontSize: m(10.5),
     fontWeight: '700',
     letterSpacing: 0.5,
   },
   overdueDays: {
     color: '#FFFFFF',
-    fontSize: m(11),
+    fontSize: m(10),
     fontWeight: '500',
     marginLeft: 'auto',
   },
@@ -1469,129 +1452,116 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: m(16),
+    marginBottom: m(8),
   },
   loanInfo: {
     flex: 1,
-  },
-  amountContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(10),
-    marginBottom: m(2),
+    marginRight: m(8),
   },
   loanAmount: {
-    fontSize: m(22.4),
+    fontSize: m(18),
     fontWeight: '800',
     color: ORANGE_THEME.text,
+    marginBottom: m(2),
+    letterSpacing: -0.3,
   },
   loanPurpose: {
-    fontSize: m(14),
+    fontSize: m(12),
     color: ORANGE_THEME.textLight,
     fontWeight: '500',
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: m(12),
-    paddingVertical: m(8),
-    borderRadius: m(12),
-    gap: m(6),
-    borderWidth: 1,
-    borderColor: ORANGE_THEME.border,
+    paddingHorizontal: m(8),
+    paddingVertical: m(4),
+    borderRadius: m(14),
+    gap: m(3),
   },
   statusText: {
-    fontSize: m(12),
+    fontSize: m(10.5),
     fontWeight: '700',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   loanDetails: {
-    gap: m(16),
+    flexDirection: 'row',
+    backgroundColor: ORANGE_THEME.primaryLight,
+    borderRadius: m(9),
+    paddingVertical: m(7),
+    paddingHorizontal: m(9),
+    gap: m(14),
+    marginTop: m(8),
   },
-  progressContainer: {
-    gap: m(8),
+  progressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(6),
   },
   progressBar: {
-    height: m(6),
+    flex: 1,
+    height: m(4),
     backgroundColor: ORANGE_THEME.primaryLight,
-    borderRadius: m(3),
+    borderRadius: m(2),
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    borderRadius: m(3),
+    borderRadius: m(2),
+  },
+  progressPercentText: {
+    fontSize: m(10.5),
+    color: ORANGE_THEME.text,
+    fontWeight: '700',
+    width: m(28),
+    textAlign: 'right',
   },
   progressLabels: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginTop: m(3),
   },
   progressLabel: {
-    fontSize: m(12),
+    fontSize: m(10.5),
     fontWeight: '600',
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: m(12),
   },
   detailItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
-    gap: m(10),
-  },
-  detailIconContainer: {
-    width: m(36),
-    height: m(36),
-    borderRadius: m(10),
-    backgroundColor: ORANGE_THEME.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  detailContent: {
-    flex: 1,
-  },
-  detailLabel: {
-    fontSize: m(11),
-    color: ORANGE_THEME.textLight,
-    marginBottom: m(2),
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    fontWeight: '600',
+    gap: m(5),
+    flexShrink: 1,
   },
   detailValue: {
-    fontSize: m(14),
-    fontWeight: '700',
+    fontSize: m(12),
+    fontWeight: '600',
     color: ORANGE_THEME.text,
   },
   loanFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: m(5),
+    marginTop: m(8),
+    paddingTop: m(8),
     borderTopWidth: 1,
     borderTopColor: ORANGE_THEME.border,
   },
   dateContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(6),
+    gap: m(4),
   },
   loanDate: {
-    fontSize: m(12),
+    fontSize: m(11),
     color: ORANGE_THEME.textLight,
     fontWeight: '500',
   },
   viewButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(4),
-    paddingHorizontal: m(12),
-    paddingVertical: m(6),
+    gap: m(3),
   },
   viewButtonText: {
-    fontSize: m(13),
+    fontSize: m(12),
     color: ORANGE_THEME.primary,
     fontWeight: '600',
   },
