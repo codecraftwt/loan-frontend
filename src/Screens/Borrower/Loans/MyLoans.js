@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,10 @@ import {
   TouchableOpacity,
   TextInput,
   RefreshControl,
-  ScrollView,
   Animated,
   Easing,
   SafeAreaView,
+  Modal,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
@@ -24,7 +24,6 @@ import {
   getBorrowerLoans,
 } from '../../../Redux/Slices/borrowerLoanSlice';
 
-const LOANS_PER_PAGE = 5;
 const FETCH_LOANS_LIMIT = 1000;
 
 export default function MyLoans() {
@@ -41,19 +40,11 @@ export default function MyLoans() {
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
-  const [currentPage, setCurrentPage] = useState(1);
+  const [showFilterModal, setShowFilterModal] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
-  const [filters, setFilters] = useState({
-    status: '',
-    startDate: '',
-    endDate: '',
-    minAmount: '',
-    maxAmount: '',
-  });
-
   // Animations 
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const slideAnim = useRef(new Animated.Value(0)).current;
   const spinAnim = useRef(new Animated.Value(0)).current;
   const spinLoopRef = useRef(null); // Store the loop animation reference
 
@@ -148,10 +139,6 @@ export default function MyLoans() {
   }, [filterLoans]);
 
   useEffect(() => {
-    setCurrentPage(1);
-  }, [activeTab, searchQuery]);
-
-  useEffect(() => {
     if (error) {
       Toast.show({
         type: 'error',
@@ -161,23 +148,6 @@ export default function MyLoans() {
       });
     }
   }, [error]);
-
-  // Fade and slide animation on mount (only once)
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 600,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [fadeAnim, slideAnim]);
 
   // Control spin animation based on loading state
   useEffect(() => {
@@ -208,11 +178,7 @@ export default function MyLoans() {
     setRefreshing(true);
     await fetchMyLoans({
       search: searchQuery || undefined,
-      status: filters.status || undefined,
-      startDate: filters.startDate || undefined,
-      endDate: filters.endDate || undefined,
-      minAmount: filters.minAmount || undefined,
-      maxAmount: filters.maxAmount || undefined,
+      status: getStatusParamForTab(activeTab),
     }, { showInitialLoader: false });
     setRefreshing(false);
   };
@@ -580,115 +546,25 @@ export default function MyLoans() {
   ];
 
   const hasData = filteredLoans && filteredLoans.length > 0;
-  const totalPages = Math.ceil(filteredLoans.length / LOANS_PER_PAGE);
-  const safeCurrentPage = Math.min(currentPage, totalPages || 1);
-  const startIndex = (safeCurrentPage - 1) * LOANS_PER_PAGE;
-  const endIndex = startIndex + LOANS_PER_PAGE;
-  const paginatedLoans = useMemo(
-    () => filteredLoans.slice(startIndex, endIndex),
-    [endIndex, filteredLoans, startIndex],
-  );
-  const currentPageLoanCount = paginatedLoans.length;
+  const activeFilterLabel = tabsData.find(tab => tab.id === activeTab)?.label || 'All';
 
-  // Sliding window of at most 3 page numbers centered on the current page
-  const pageWindow = useMemo(() => {
-    const maxVisible = 3;
-    if (totalPages <= maxVisible) {
-      return Array.from({ length: totalPages }, (_, i) => i + 1);
-    }
-    let start = safeCurrentPage - 1;
-    let end = safeCurrentPage + 1;
-    if (start < 1) {
-      start = 1;
-      end = maxVisible;
-    }
-    if (end > totalPages) {
-      end = totalPages;
-      start = totalPages - maxVisible + 1;
-    }
-    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
-  }, [totalPages, safeCurrentPage]);
-
-  const handlePageChange = page => {
-    if (page < 1 || page > totalPages || page === safeCurrentPage) return;
-    setCurrentPage(page);
+  const getStatusParamForTab = tabId => {
+    if (tabId === 'all') return undefined;
+    return tabId;
   };
 
-  // Compact pager rendered top-right, above the list
-  const renderPagination = () => {
-    if (!hasData) return null;
-
-    const isFirstPage = safeCurrentPage === 1;
-    const isLastPage = safeCurrentPage === totalPages;
-
-    return (
-      <View style={styles.topBarRow}>
-        <Text style={styles.topBarSummaryText}>
-          Showing {currentPageLoanCount} loan{currentPageLoanCount !== 1 ? 's' : ''}
-        </Text>
-
-        {totalPages > 1 && (
-          <View style={styles.compactPagination}>
-            <TouchableOpacity
-              style={[styles.compactNavButton, isFirstPage && styles.compactNavButtonDisabled]}
-              onPress={() => handlePageChange(safeCurrentPage - 1)}
-              disabled={isFirstPage}
-              activeOpacity={0.7}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Icon
-                name="chevron-left"
-                size={m(15)}
-                color={isFirstPage ? '#D1D5DB' : '#FF8A00'}
-              />
-            </TouchableOpacity>
-
-            {pageWindow[0] > 1 && <Text style={styles.compactDots}>···</Text>}
-
-            {pageWindow.map(page => (
-              <TouchableOpacity
-                key={page}
-                style={[
-                  styles.compactPageButton,
-                  page === safeCurrentPage && styles.compactPageButtonActive,
-                ]}
-                onPress={() => handlePageChange(page)}
-                activeOpacity={0.7}>
-                <Text
-                  style={[
-                    styles.compactPageText,
-                    page === safeCurrentPage && styles.compactPageTextActive,
-                  ]}>
-                  {page}
-                </Text>
-              </TouchableOpacity>
-            ))}
-
-            {pageWindow[pageWindow.length - 1] < totalPages && (
-              <Text style={styles.compactDots}>···</Text>
-            )}
-
-            <TouchableOpacity
-              style={[styles.compactNavButton, isLastPage && styles.compactNavButtonDisabled]}
-              onPress={() => handlePageChange(safeCurrentPage + 1)}
-              disabled={isLastPage}
-              activeOpacity={0.7}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Icon
-                name="chevron-right"
-                size={m(15)}
-                color={isLastPage ? '#D1D5DB' : '#FF8A00'}
-              />
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
-    );
+  const handleFilterSelect = async tabId => {
+    setActiveTab(tabId);
+    setShowFilterModal(false);
+    await fetchMyLoans({
+      search: searchQuery || undefined,
+      status: getStatusParamForTab(tabId),
+    }, { showInitialLoader: false });
   };
 
   const renderListHeader = () => (
     <>
       {summary.totalLoans > 0 ? renderSummary() : null}
-      {renderPagination()}
     </>
   );
 
@@ -706,75 +582,100 @@ export default function MyLoans() {
               transform: [{ translateY: slideAnim }],
             },
           ]}>
-          <View style={styles.searchInputContainer}>
-            <Icon
-              name="search"
-              size={m(20)}
-              color="#6B7280"
-              style={styles.searchIcon}
-            />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search by lender, amount, or status"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholderTextColor="#9CA3AF"
-            />
-            {searchQuery ? (
-              <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <Icon name="x" size={m(20)} color="#6B7280" />
-              </TouchableOpacity>
-            ) : null}
+          <View style={styles.searchRow}>
+            <View style={styles.searchInputContainer}>
+              <Icon
+                name="search"
+                size={m(20)}
+                color="#6B7280"
+                style={styles.searchIcon}
+              />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search by lender, amount, or status"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholderTextColor="#9CA3AF"
+              />
+              {searchQuery ? (
+                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                  <Icon name="x" size={m(20)} color="#6B7280" />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.filterIconButton,
+                showFilterModal && styles.filterIconButtonActive,
+                activeTab !== 'all' && styles.filterIconButtonSelected,
+              ]}
+              onPress={() => setShowFilterModal(true)}
+              activeOpacity={0.75}>
+              <Icon
+                name="sliders"
+                size={m(19)}
+                color={activeTab !== 'all' || showFilterModal ? '#FFFFFF' : '#FF8A00'}
+              />
+            </TouchableOpacity>
           </View>
+
+          {activeTab !== 'all' && (
+            <TouchableOpacity
+              style={styles.activeFilterPill}
+              onPress={() => handleFilterSelect('all')}
+              activeOpacity={0.75}>
+              <Text style={styles.activeFilterText}>{activeFilterLabel}</Text>
+              <Icon name="x" size={m(14)} color="#FF8A00" />
+            </TouchableOpacity>
+          )}
         </Animated.View>
       )}
 
-      {/* Tabs - Hide during initial loading */}
-      {!isInitialLoading && (
-        <Animated.View
-          style={[
-            styles.tabsContainer,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            },
-          ]}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.tabsContentContainer}
-            scrollEventThrottle={16}>
+      <Modal
+        visible={showFilterModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowFilterModal(false)}>
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowFilterModal(false)}>
+          <TouchableOpacity
+            style={styles.filterModal}
+            activeOpacity={1}
+            onPress={() => {}}>
+            <View style={styles.filterModalHeader}>
+              <Text style={styles.filterModalTitle}>Filter Loans</Text>
+              <TouchableOpacity
+                onPress={() => setShowFilterModal(false)}
+                activeOpacity={0.75}>
+                <Text style={styles.filterModalCloseText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+
             {tabsData.map(tab => (
               <TouchableOpacity
                 key={tab.id}
                 style={[
-                  styles.tab,
-                  activeTab === tab.id && styles.activeTab,
-                  tab.id === 'overdue' &&
-                    activeTab === tab.id &&
-                    styles.overdueActiveTab,
+                  styles.filterModalOption,
+                  activeTab === tab.id && styles.filterModalOptionActive,
                 ]}
-                onPress={() => setActiveTab(tab.id)}
-                activeOpacity={0.7}>
+                onPress={() => handleFilterSelect(tab.id)}
+                activeOpacity={0.75}>
                 <Text
                   style={[
-                    styles.tabText,
-                    activeTab === tab.id && styles.activeTabText,
-                    tab.id === 'overdue' &&
-                      activeTab === tab.id &&
-                      styles.overdueTabText,
-                    tab.id === 'overdue' &&
-                      overdueCount === 0 &&
-                      styles.zeroOverdueTabText,
-                  ]}
-                  numberOfLines={1}>
-                  {tab.label} ({tab.count})
+                    styles.filterModalOptionText,
+                    activeTab === tab.id && styles.filterModalOptionTextActive,
+                  ]}>
+                  {tab.label}
                 </Text>
+                <Text style={styles.filterModalCount}>{tab.count}</Text>
               </TouchableOpacity>
             ))}
-          </ScrollView>
-        </Animated.View>
-      )}
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Content Area */}
       <View style={styles.contentContainer}>
@@ -784,7 +685,7 @@ export default function MyLoans() {
           renderEmptyState()
         ) : (
           <FlatList
-            data={paginatedLoans}
+            data={filteredLoans}
             renderItem={renderLoanCard}
             keyExtractor={item => item._id}
             contentContainerStyle={styles.listContainer}
@@ -874,7 +775,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(10),
+  },
   searchInputContainer: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F9FAFB',
@@ -893,115 +800,105 @@ const styles = StyleSheet.create({
     color: '#111827',
     paddingVertical: m(4),
   },
-
-  // Tabs
-  tabsContainer: {
+  filterIconButton: {
+    width: m(46),
+    height: m(46),
+    borderRadius: m(12),
+    borderWidth: 1,
+    borderColor: '#FFB15C',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF7ED',
+  },
+  filterIconButtonActive: {
+    backgroundColor: '#FF8A00',
+    borderColor: '#FF8A00',
+  },
+  filterIconButtonSelected: {
+    backgroundColor: '#FF8A00',
+    borderColor: '#FF8A00',
+  },
+  activeFilterPill: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(6),
+    marginTop: m(10),
+    paddingHorizontal: m(10),
+    paddingVertical: m(6),
+    borderRadius: m(999),
+    borderWidth: 1,
+    borderColor: '#FED7AA',
+    backgroundColor: '#FFF7ED',
+  },
+  activeFilterText: {
+    fontSize: m(12),
+    fontWeight: '700',
+    color: '#FF8A00',
+  },
+  modalOverlay: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: m(24),
+    backgroundColor: 'rgba(17, 24, 39, 0.35)',
+  },
+  filterModal: {
+    width: '100%',
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderRadius: m(12),
+    padding: m(16),
   },
-  tabsContentContainer: {
-    paddingHorizontal: m(8),
+  filterModalHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    marginBottom: m(8),
   },
-  tab: {
-    paddingHorizontal: m(13),
-    paddingVertical: m(12),
-    marginHorizontal: m(4),
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderBottomWidth: 3,
-    borderBottomColor: 'transparent',
+  filterModalTitle: {
+    fontSize: m(16),
+    fontWeight: '700',
+    color: '#111827',
   },
-  activeTab: {
-    borderBottomColor: '#3B82F6',
-  },
-  overdueActiveTab: {
-    borderBottomColor: '#DC2626',
-  },
-  tabText: {
+  filterModalCloseText: {
     fontSize: m(13),
     fontWeight: '600',
     color: '#6B7280',
   },
-  activeTabText: {
-    color: '#3B82F6',
+  filterModalOption: {
+    minHeight: m(44),
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: m(10),
+    paddingVertical: m(8),
+    borderRadius: m(8),
+    marginTop: m(6),
   },
-  overdueTabText: {
-    color: '#DC2626',
+  filterModalOptionActive: {
+    backgroundColor: '#FFF7ED',
   },
-  zeroOverdueTabText: {
-    color: '#9CA3AF',
+  filterModalOptionText: {
+    fontSize: m(14),
+    fontWeight: '600',
+    color: '#374151',
+  },
+  filterModalOptionTextActive: {
+    color: '#FF8A00',
+  },
+  filterModalCount: {
+    minWidth: m(30),
+    textAlign: 'right',
+    fontSize: m(13),
+    fontWeight: '700',
+    color: '#6B7280',
   },
 
   // List
   listContainer: {
     paddingHorizontal: m(16),
     paddingTop: m(14),
-    paddingBottom: m(120),
-  },
-
-  // Top bar: loan count (left) + compact pagination (right)
-  topBarRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: m(12),
-    paddingHorizontal: m(10),
-    paddingVertical: m(8),
-    borderRadius: m(12),
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#EEF0F3',
-  },
-  topBarSummaryText: {
-    fontSize: m(12),
-    fontWeight: '600',
-    color: '#6B7280',
-  },
-  compactPagination: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(3),
-  },
-  compactNavButton: {
-    width: m(26),
-    height: m(26),
-    borderRadius: m(7),
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-  },
-  compactNavButtonDisabled: {
-    borderColor: '#F3F4F6',
-  },
-  compactPageButton: {
-    minWidth: m(26),
-    height: m(26),
-    paddingHorizontal: m(4),
-    borderRadius: m(7),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  compactPageButtonActive: {
-    backgroundColor: '#FF8A00',
-  },
-  compactPageText: {
-    fontSize: m(12),
-    fontWeight: '600',
-    color: '#374151',
-  },
-  compactPageTextActive: {
-    color: '#FFFFFF',
-  },
-  compactDots: {
-    fontSize: m(12),
-    color: '#9CA3AF',
-    fontWeight: '600',
-    marginHorizontal: m(1),
+    paddingBottom: m(170),
   },
 
   // Loan Card
