@@ -48,6 +48,7 @@ export default function EnterAadhaarScreen({ navigation, route }) {
         type: 'success',
         position: 'top',
         text1: response?.message || 'OTP sent successfully.',
+        text2: response?.mockOtp ? `Test OTP: ${response.mockOtp}` : undefined,
       });
 
       navigation.navigate('VerifyAadhaarOtpScreen', {

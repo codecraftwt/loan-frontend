@@ -90,6 +90,7 @@ export default function VerifyAadhaarOtpScreen({ navigation, route }) {
         type: 'success',
         position: 'top',
         text1: response?.message || 'OTP resent successfully.',
+        text2: response?.mockOtp ? `Test OTP: ${response.mockOtp}` : undefined,
       });
 
       navigation.setParams({

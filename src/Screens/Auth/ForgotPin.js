@@ -14,14 +14,24 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import Toast from 'react-native-toast-message';
+import { useSelector } from 'react-redux';
 import { m } from 'walstar-rn-responsive';
 import { FontFamily, FontSizes } from '../../constants';
 import bcrypt from 'react-native-bcrypt';
 import instance from '../../Utils/AxiosInstance';
 
+const maskEmail = email => {
+  if (!email || !email.includes('@')) return email || '';
+  const [name, domain] = email.split('@');
+  const visible = name.slice(0, 2);
+  return `${visible}${'*'.repeat(Math.max(name.length - 2, 3))}@${domain}`;
+};
+
 export default function ForgotPin({ navigation }) {
+  const user = useSelector(state => state.auth.user);
+  const userEmail = user?.email || '';
+
   const [step, setStep] = useState(1);
-  const [mobileNumber, setMobileNumber] = useState('');
   const [otp, setOtp] = useState(['', '', '', '']);
   const [newPin, setNewPin] = useState(['', '', '', '']);
   const [confirmPin, setConfirmPin] = useState(['', '', '', '']);
@@ -34,27 +44,27 @@ export default function ForgotPin({ navigation }) {
   const pinRefs = useRef([]);
   const confirmPinRefs = useRef([]);
 
-  // Step 1: Request OTP
+  // Step 1: Request OTP via email
   const handleRequestOTP = async () => {
-    if (mobileNumber.length !== 10) {
-      setError('Please enter a valid 10-digit mobile number.');
+    if (!userEmail) {
+      setError('No email address found on your account. Please contact support.');
       return;
     }
     setError('');
     setIsSubmitting(true);
 
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await instance.post('auth/forgot-pin/request-otp');
 
       Toast.show({
         type: 'success',
         position: 'top',
         text1: 'OTP Sent successfully',
+        text2: `Check ${maskEmail(userEmail)}`,
       });
       setStep(2);
     } catch (err) {
-      setError(err?.message || 'Failed to send OTP. Please try again.');
+      setError(err?.response?.data?.message || 'Failed to send OTP. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -71,8 +81,7 @@ export default function ForgotPin({ navigation }) {
     setIsSubmitting(true);
 
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await instance.post('auth/forgot-pin/verify-otp', { otp: otpCode });
 
       Toast.show({
         type: 'success',
@@ -81,7 +90,7 @@ export default function ForgotPin({ navigation }) {
       });
       setStep(3);
     } catch (err) {
-      setError(err?.message || 'Invalid OTP. Please try again.');
+      setError(err?.response?.data?.message || 'Invalid OTP. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -121,6 +130,7 @@ export default function ForgotPin({ navigation }) {
       await instance.post('auth/reset-pin', {
         pinHash: hashedPin,
         pinCreatedAt: new Date().toISOString(),
+        otp: otp.join(''),
       });
 
       Toast.show({
@@ -131,7 +141,7 @@ export default function ForgotPin({ navigation }) {
       });
       navigation.goBack();
     } catch (err) {
-      setError(err?.message || 'Failed to reset PIN. Please try again.');
+      setError(err?.response?.data?.message || 'Failed to reset PIN. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -169,30 +179,20 @@ export default function ForgotPin({ navigation }) {
     <>
       <Text style={styles.headerText}>Forgot PIN</Text>
       <Text style={styles.instructionText}>
-        Enter your registered mobile number to receive a one-time password
-        (OTP).
+        We'll send a one-time password (OTP) to your registered email
+        address.
       </Text>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Mobile Number</Text>
-        <View style={[styles.inputContainer, !!error && styles.inputError]}>
+        <Text style={styles.inputLabel}>Email Address</Text>
+        <View style={styles.inputContainer}>
           <Ionicons
-            name="call-outline"
+            name="mail-outline"
             size={20}
-            color={error ? '#FF4444' : '#ff7900'}
+            color="#ff7900"
             style={styles.inputIcon}
           />
-          <TextInput
-            style={styles.input}
-            placeholder="Enter 10-digit mobile number"
-            keyboardType="phone-pad"
-            maxLength={10}
-            value={mobileNumber}
-            onChangeText={val => {
-              setMobileNumber(val.replace(/[^0-9]/g, ''));
-              setError('');
-            }}
-          />
+          <Text style={styles.input}>{maskEmail(userEmail) || 'No email on file'}</Text>
         </View>
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
       </View>
@@ -200,11 +200,10 @@ export default function ForgotPin({ navigation }) {
       <TouchableOpacity
         style={[
           styles.continueButtonContainer,
-          (isSubmitting || mobileNumber.length !== 10) &&
-            styles.continueButtonDisabled,
+          (isSubmitting || !userEmail) && styles.continueButtonDisabled,
         ]}
         onPress={handleRequestOTP}
-        disabled={isSubmitting || mobileNumber.length !== 10}
+        disabled={isSubmitting || !userEmail}
       >
         <LinearGradient
           colors={['#ff6700', '#ff7900', '#ff8500']}
@@ -229,7 +228,7 @@ export default function ForgotPin({ navigation }) {
     <>
       <Text style={styles.headerText}>Verify OTP</Text>
       <Text style={styles.instructionText}>
-        Enter the 4-digit OTP sent to {mobileNumber}
+        Enter the 4-digit OTP sent to {maskEmail(userEmail)}
       </Text>
 
       <View style={styles.digitContainer}>
