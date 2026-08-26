@@ -22,14 +22,24 @@ const SYSTEM_FONTS = {
 const getSystemFont = () => Platform.select(SYSTEM_FONTS) || SYSTEM_FONTS.android;
 
 // Primary Font - Poppins (Most used)
-// Note: Poppins-Medium maps to Poppins-Regular as fallback (not available in assets)
 // Note: Poppins-Light maps to Poppins-Regular as fallback (not available in assets)
 export const POPPINS = {
   regular: 'Poppins-Regular',      // Body text, descriptions, placeholders
-  medium: 'Poppins-Regular',       // Medium emphasis text (fallback to Regular - add Poppins-Medium.ttf for true medium weight)
+  medium: 'Poppins-Medium',        // Medium emphasis text
   semiBold: 'Poppins-SemiBold',    // Labels, section titles, buttons
   bold: 'Poppins-Bold',            // Headlines, prices, important text
+  extraBold: 'Poppins-ExtraBold',  // Stat numbers, hero display figures
   light: 'Poppins-Regular',        // Light emphasis text (fallback to Regular - add Poppins-Light.ttf for true light weight)
+};
+
+// Body/UI Font - Inter (paired with Poppins for headings)
+// Note: Inter18pt-Medium (non-italic) is not available in assets;
+// microLabel/medium-weight UI text falls back to Inter18pt-SemiBold.
+export const INTER = {
+  regular: 'Inter18pt-Regular',    // Body text, descriptions
+  medium: 'Inter18pt-SemiBold',    // Medium-emphasis UI text (fallback, see note above)
+  semiBold: 'Inter18pt-SemiBold',  // Buttons, amounts, badges
+  bold: 'Inter18pt-Bold',          // Strong emphasis UI text
 };
 
 // Secondary Font - Montserrat
@@ -66,9 +76,18 @@ const fonts = {
     medium: POPPINS.medium,
     semiBold: POPPINS.semiBold,
     bold: POPPINS.bold,
+    extraBold: POPPINS.extraBold,
     light: POPPINS.light,
   },
-  
+
+  // Body/UI font family (Inter)
+  body: {
+    regular: INTER.regular,
+    medium: INTER.medium,
+    semiBold: INTER.semiBold,
+    bold: INTER.bold,
+  },
+
   // Secondary font family (Montserrat)
   secondary: {
     regular: MONTSERRAT.regular,
@@ -103,8 +122,15 @@ export const FontFamily = {
   primaryMedium: POPPINS.medium,
   primarySemiBold: POPPINS.semiBold,
   primaryBold: POPPINS.bold,
+  primaryExtraBold: POPPINS.extraBold,
   primaryLight: POPPINS.light,
-  
+
+  // Inter
+  bodyRegular: INTER.regular,
+  bodyMedium: INTER.medium,
+  bodySemiBold: INTER.semiBold,
+  bodyBold: INTER.bold,
+
   // Montserrat
   secondaryRegular: MONTSERRAT.regular,
   secondarySemiBold: MONTSERRAT.semiBold,

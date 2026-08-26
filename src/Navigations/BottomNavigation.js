@@ -5,6 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import { m } from 'walstar-rn-responsive';
+import { colors } from '../constants';
 // import Fonts from '../constants/fonts';
 
 // Lender screens
@@ -45,11 +46,11 @@ export default function BottomNavigation() {
 
   const renderIcon = (name, color, size, focused) => {
     return (
-      <View style={[styles.iconWrapper, focused && styles.iconWrapperActive]}>
+      <View style={styles.iconWrapper}>
         <Feather
           name={name}
           size={focused ? size + 2 : size}
-          color={focused ? '#ffffff' : color}
+          color={focused ? colors.navy : color}
         />
       </View>
     );
@@ -64,7 +65,7 @@ export default function BottomNavigation() {
           screenOptions={{
             headerShown: false,
             tabBarHideOnKeyboard: true,
-            tabBarActiveTintColor: '#ff6700',
+            tabBarActiveTintColor: colors.navy,
             tabBarInactiveTintColor: '#666666',
             tabBarLabelStyle: {
               fontSize: m(11),
@@ -80,7 +81,7 @@ export default function BottomNavigation() {
                 ? insets.bottom - 12
                 : insets.bottom,
               height: m(68),
-              backgroundColor: '#e5dad1',
+              backgroundColor: colors.white,
               borderTopWidth: 0,
               paddingTop: m(5),
               paddingBottom: insets.bottom > 0 ? m(5) : 0,
@@ -144,7 +145,7 @@ export default function BottomNavigation() {
           screenOptions={{
             headerShown: false,
             tabBarHideOnKeyboard: true,
-            tabBarActiveTintColor: '#ff6700',
+            tabBarActiveTintColor: colors.navy,
             tabBarInactiveTintColor: '#666666',
             tabBarLabelStyle: {
               fontSize: m(11),
@@ -160,7 +161,7 @@ export default function BottomNavigation() {
                 ? insets.bottom - 12
                 : insets.bottom,
               height: m(69),
-              backgroundColor: '#e5dad1',
+              backgroundColor: colors.white,
               borderTopWidth: 0,
               paddingTop: m(6),
               paddingBottom: insets.bottom > 0 ? m(5) : 0,
@@ -214,7 +215,7 @@ export default function BottomNavigation() {
         screenOptions={{
           headerShown: false,
           tabBarHideOnKeyboard: true,
-          tabBarActiveTintColor: '#ff6700',
+          tabBarActiveTintColor: colors.navy,
           tabBarInactiveTintColor: '#666666',
           tabBarLabelStyle: {
             fontSize: m(11),
@@ -230,7 +231,7 @@ export default function BottomNavigation() {
           ? insets.bottom - 12
           : insets.bottom,
             height: m(70),
-            backgroundColor: '#e5dad1',
+            backgroundColor: colors.white,
             borderTopWidth: 0,
             paddingTop: m(10),
             paddingBottom: insets.bottom > 0 ? m(5) : 0,
@@ -280,8 +281,5 @@ const styles = StyleSheet.create({
     borderRadius: m(17),
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  iconWrapperActive: {
-    backgroundColor: '#ff6700',
   },
 });

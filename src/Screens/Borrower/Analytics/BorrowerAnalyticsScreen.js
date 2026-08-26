@@ -16,7 +16,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import Header from '../../../Components/Header';
 import { getBorrowerStatistics } from '../../../Redux/Slices/borrowerLoanSlice';
 import DonutChart from '../../../Components/DonutChart';
-import { FontFamily, FontSizes } from '../../../constants';
+import { FontFamily, FontSizes, colors } from '../../../constants';
 
 const formatCurrency = value => {
   if (!value) return '0';
@@ -36,7 +36,7 @@ const AnalyticsRow = ({ label, amount, percentage, color, icon, isLast }) => {
         <LinearGradient
           colors={[color, color + 'CC']}
           style={styles.analyticsRowIcon}>
-          <Icon name={icon} size={16} color="#fff" />
+          <Icon name={icon} size={16} color={colors.white} />
         </LinearGradient>
         <View style={styles.analyticsRowInfo}>
           <Text style={styles.analyticsRowLabel}>{label}</Text>
@@ -172,31 +172,31 @@ export default function BorrowerAnalyticsScreen() {
 
     // Add Paid (green) - what has been repaid
     if (paidAmount > 0) {
-      data.push({ 
-        label: 'Paid', 
-        value: paidPercentage, 
-        color: '#10B981',
-        amount: paidAmount 
+      data.push({
+        label: 'Paid',
+        value: paidPercentage,
+        color: colors.success,
+        amount: paidAmount
       });
     }
 
     // Add Remaining (blue) - what's left to pay
     if (remainingAmount > 0) {
-      data.push({ 
-        label: 'Remaining', 
-        value: remainingPercentage, 
-        color: '#3B82F6',
-        amount: remainingAmount 
+      data.push({
+        label: 'Remaining',
+        value: remainingPercentage,
+        color: colors.info,
+        amount: remainingAmount
       });
     }
 
     // Fallback: If fully paid or no data
     if (data.length === 0 && totalAmount > 0) {
-      data.push({ 
-        label: 'Fully Paid', 
-        value: 100, 
-        color: '#10B981',
-        amount: totalAmount 
+      data.push({
+        label: 'Fully Paid',
+        value: 100,
+        color: colors.success,
+        amount: totalAmount
       });
     }
 
@@ -221,15 +221,15 @@ export default function BorrowerAnalyticsScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#FF9800']}
-            tintColor="#FF9800"
+            colors={[colors.ink]}
+            tintColor={colors.ink}
           />
         }>
 
         {isLoading || statisticsLoading ? (
           <View style={styles.loadingContainer}>
             <Animated.View style={{ transform: [{ rotate: spin }] }}>
-              <Ionicons name="analytics" size={50} color="#FF9800" />
+              <Ionicons name="analytics" size={50} color={colors.ink} />
             </Animated.View>
             <Text style={styles.loadingText}>Loading analytics...</Text>
             <Text style={styles.loadingSubtext}>Please wait while we fetch your data</Text>
@@ -237,7 +237,7 @@ export default function BorrowerAnalyticsScreen() {
         ) : !hasData ? (
           <View style={styles.emptyContainer}>
             <View style={styles.emptyIconContainer}>
-              <Ionicons name="pie-chart-outline" size={60} color="#D1D5DB" />
+              <Ionicons name="pie-chart-outline" size={60} color={colors.textMuted} />
             </View>
             <Text style={styles.emptyTitle}>No Loan Data Yet</Text>
             <Text style={styles.emptySubtext}>
@@ -246,79 +246,85 @@ export default function BorrowerAnalyticsScreen() {
           </View>
         ) : (
           <>
-            {/* Combined Summary Card */}
+            {/* Hero Tiles - Total Borrowed / Amount Paid */}
             <Animated.View
               style={[
-                styles.summaryCard,
+                styles.heroTilesRow,
                 {
                   opacity: fadeAnim,
                   transform: [{ translateY: slideAnim }],
                 },
               ]}>
-              <LinearGradient
-                colors={['#667eea', '#764ba2']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.summaryGradient}>
-                <View style={styles.summaryPattern} />
-                
-                {/* Main Amount */}
-                <View style={styles.summaryHeader}>
-                  <View style={styles.summaryIconContainer}>
-                    <Ionicons name="wallet" size={24} color="#fff" />
-                  </View>
-                  <View style={styles.summaryTitleContainer}>
-                    <Text style={styles.summaryLabel}>Total Borrowed</Text>
-                    <Text style={styles.summaryValue}>
-                      ₹{formatCurrency(borrowerStatistics.totalLoanAmount)}
-                    </Text>
-                  </View>
+              <View style={[styles.heroTile, { backgroundColor: colors.sky }]}>
+                <View style={styles.heroTileIcon}>
+                  <Icon name="briefcase" size={18} color={colors.ink} />
                 </View>
-
-                {/* Stats Row - Simplified Loan Counts */}
-                <View style={styles.integratedStats}>
-                  <View style={styles.integratedStatItem}>
-                    <View style={[styles.integratedStatIcon, { backgroundColor: 'rgba(139, 92, 246, 0.3)' }]}>
-                      <Icon name="file-text" size={16} color="#A78BFA" />
-                    </View>
-                    <Text style={styles.integratedStatValue}>
-                      {borrowerStatistics.counts?.totalLoans || 0}
-                    </Text>
-                    <Text style={styles.integratedStatLabel}>Total</Text>
-                  </View>
-                  <View style={styles.integratedStatDivider} />
-                  <View style={styles.integratedStatItem}>
-                    <View style={[styles.integratedStatIcon, { backgroundColor: 'rgba(16, 185, 129, 0.3)' }]}>
-                      <Icon name="check-circle" size={16} color="#10B981" />
-                    </View>
-                    <Text style={styles.integratedStatValue}>
-                      {borrowerStatistics.counts?.paidLoans || 0}
-                    </Text>
-                    <Text style={styles.integratedStatLabel}>Completed</Text>
-                  </View>
-                  <View style={styles.integratedStatDivider} />
-                  <View style={styles.integratedStatItem}>
-                    <View style={[styles.integratedStatIcon, { backgroundColor: 'rgba(59, 130, 246, 0.3)' }]}>
-                      <Icon name="activity" size={16} color="#60A5FA" />
-                    </View>
-                    <Text style={styles.integratedStatValue}>
-                      {borrowerStatistics.counts?.activeLoans || 0}
-                    </Text>
-                    <Text style={styles.integratedStatLabel}>Active</Text>
-                  </View>
-                  <View style={styles.integratedStatDivider} />
-                  <View style={styles.integratedStatItem}>
-                    <View style={[styles.integratedStatIcon, { backgroundColor: 'rgba(239, 68, 68, 0.3)' }]}>
-                      <Icon name="alert-circle" size={16} color="#F87171" />
-                    </View>
-                    <Text style={styles.integratedStatValue}>
-                      {borrowerStatistics.counts?.overdueLoans || 0}
-                    </Text>
-                    <Text style={styles.integratedStatLabel}>Overdue</Text>
-                  </View>
+                <Text style={styles.heroTileLabel}>Total Borrowed</Text>
+                <Text style={styles.heroTileValue}>
+                  ₹{formatCurrency(borrowerStatistics.totalLoanAmount)}
+                </Text>
+              </View>
+              <View style={[styles.heroTile, { backgroundColor: colors.mint }]}>
+                <View style={styles.heroTileIcon}>
+                  <Icon name="file-text" size={18} color={colors.ink} />
                 </View>
-              </LinearGradient>
+                <Text style={styles.heroTileLabel}>Amount Paid</Text>
+                <Text style={styles.heroTileValue}>
+                  ₹{formatCurrency(borrowerStatistics.totalPaidAmount)}
+                </Text>
+              </View>
             </Animated.View>
+
+            {/* Loan Counts Row */}
+            <Animated.View
+              style={[
+                styles.statsRowCard,
+                {
+                  opacity: fadeAnim,
+                  transform: [{ translateY: slideAnim }],
+                },
+              ]}>
+              <View style={styles.statsRow}>
+                <View style={styles.statsRowItem}>
+                  <View style={[styles.statsRowIcon, { backgroundColor: colors.skySoft }]}>
+                    <Icon name="file-text" size={16} color={colors.info} />
+                  </View>
+                  <Text style={styles.statsRowValue}>
+                    {borrowerStatistics.counts?.totalLoans || 0}
+                  </Text>
+                  <Text style={styles.statsRowLabel}>Total</Text>
+                </View>
+                <View style={styles.statsRowItem}>
+                  <View style={[styles.statsRowIcon, { backgroundColor: colors.mintSoft }]}>
+                    <Icon name="check-circle" size={16} color={colors.success} />
+                  </View>
+                  <Text style={styles.statsRowValue}>
+                    {borrowerStatistics.counts?.paidLoans || 0}
+                  </Text>
+                  <Text style={styles.statsRowLabel}>Completed</Text>
+                </View>
+                <View style={styles.statsRowItem}>
+                  <View style={[styles.statsRowIcon, { backgroundColor: colors.butterSoft }]}>
+                    <Icon name="activity" size={16} color={colors.butterDark} />
+                  </View>
+                  <Text style={styles.statsRowValue}>
+                    {borrowerStatistics.counts?.activeLoans || 0}
+                  </Text>
+                  <Text style={styles.statsRowLabel}>Active</Text>
+                </View>
+                <View style={styles.statsRowItem}>
+                  <View style={[styles.statsRowIcon, { backgroundColor: colors.error + '1A' }]}>
+                    <Icon name="alert-circle" size={16} color={colors.error} />
+                  </View>
+                  <Text style={styles.statsRowValue}>
+                    {borrowerStatistics.counts?.overdueLoans || 0}
+                  </Text>
+                  <Text style={styles.statsRowLabel}>Overdue</Text>
+                </View>
+              </View>
+            </Animated.View>
+
+            <Text style={styles.sectionTitle}>Loan Distribution</Text>
 
             {/* Chart Section */}
             <Animated.View
@@ -332,11 +338,11 @@ export default function BorrowerAnalyticsScreen() {
               <View style={styles.chartHeader}>
                 <View style={styles.chartTitleContainer}>
                   <View style={styles.chartIconContainer}>
-                    <Ionicons name="pie-chart" size={20} color="#FF9800" />
+                    <Ionicons name="pie-chart" size={20} color={colors.butterDark} />
                   </View>
                   <View>
-                    <Text style={styles.chartTitle}>Loan Distribution</Text>
-                    <Text style={styles.chartSubtitle}>Visual breakdown of your loans</Text>
+                    <Text style={styles.chartTitle}>Visual breakdown</Text>
+                    <Text style={styles.chartSubtitle}>Of your total borrowed amount</Text>
                   </View>
                 </View>
               </View>
@@ -384,7 +390,7 @@ export default function BorrowerAnalyticsScreen() {
               <View style={styles.breakdownHeader}>
                 <View style={styles.breakdownTitleContainer}>
                   <View style={styles.breakdownIconContainer}>
-                    <Icon name="trending-up" size={18} color="#10B981" />
+                    <Icon name="trending-up" size={18} color={colors.success} />
                   </View>
                   <Text style={styles.breakdownTitle}>Payment Progress</Text>
                 </View>
@@ -401,13 +407,13 @@ export default function BorrowerAnalyticsScreen() {
                 label="Amount Paid"
                 value={borrowerStatistics.totalPaidAmount}
                 maxValue={borrowerStatistics.totalLoanAmount}
-                color="#10B981"
+                color={colors.success}
               />
               <ProgressBar
                 label="Amount Remaining"
                 value={borrowerStatistics.totalRemainingAmount}
                 maxValue={borrowerStatistics.totalLoanAmount}
-                color="#3B82F6"
+                color={colors.info}
               />
             </Animated.View>
 
@@ -423,7 +429,7 @@ export default function BorrowerAnalyticsScreen() {
               <View style={styles.detailsHeader}>
                 <View style={styles.detailsTitleContainer}>
                   <View style={styles.detailsIconContainer}>
-                    <Icon name="list" size={18} color="#8B5CF6" />
+                    <Icon name="list" size={18} color={colors.ink} />
                   </View>
                   <Text style={styles.detailsTitle}>Detailed Breakdown</Text>
                 </View>
@@ -433,14 +439,14 @@ export default function BorrowerAnalyticsScreen() {
                 label="Total Borrowed"
                 amount={borrowerStatistics.totalLoanAmount}
                 percentage={100}
-                color="#8B5CF6"
+                color={colors.info}
                 icon="credit-card"
               />
               <AnalyticsRow
                 label="Amount Paid"
                 amount={borrowerStatistics.totalPaidAmount}
                 percentage={borrowerStatistics.percentages?.paidPercentage || 0}
-                color="#10B981"
+                color={colors.success}
                 icon="check"
               />
               <AnalyticsRow
@@ -451,7 +457,7 @@ export default function BorrowerAnalyticsScreen() {
                     ? (borrowerStatistics.totalRemainingAmount / borrowerStatistics.totalLoanAmount) * 100
                     : 0
                 }
-                color="#3B82F6"
+                color={colors.goldDark}
                 icon="clock"
                 isLast
               />
@@ -467,12 +473,12 @@ export default function BorrowerAnalyticsScreen() {
                 },
               ]}>
               <LinearGradient
-                colors={['#FEF3C7', '#FDE68A']}
+                colors={[colors.butterSoft, colors.butter]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.tipsGradient}>
                 <View style={styles.tipsIconContainer}>
-                  <Ionicons name="bulb" size={24} color="#D97706" />
+                  <Ionicons name="bulb" size={24} color={colors.ink} />
                 </View>
                 <View style={styles.tipsContent}>
                   <Text style={styles.tipsTitle}>Pro Tip</Text>
@@ -492,7 +498,7 @@ export default function BorrowerAnalyticsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.offWhite,
   },
   content: {
     padding: m(16),
@@ -508,20 +514,20 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: FontSizes.lg,
     fontFamily: FontFamily.secondaryBold,
-    color: '#374151',
+    color: colors.ink,
     marginTop: m(20),
   },
   loadingSubtext: {
     fontSize: FontSizes.sm,
     fontFamily: FontFamily.primaryRegular,
-    color: '#9CA3AF',
+    color: colors.textMuted,
     marginTop: m(8),
   },
   emptyContainer: {
     paddingVertical: m(60),
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: m(24),
     marginTop: m(20),
   },
@@ -529,7 +535,7 @@ const styles = StyleSheet.create({
     width: m(100),
     height: m(100),
     borderRadius: m(50),
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.borderLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: m(20),
@@ -537,115 +543,106 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: FontSizes.xl,
     fontFamily: FontFamily.secondaryBold,
-    color: '#374151',
+    color: colors.ink,
     marginBottom: m(10),
   },
   emptySubtext: {
     fontSize: FontSizes.base,
     fontFamily: FontFamily.primaryRegular,
-    color: '#9CA3AF',
+    color: colors.textMuted,
     textAlign: 'center',
     paddingHorizontal: m(40),
     lineHeight: m(22),
   },
 
-  // COMBINED SUMMARY CARD
-  summaryCard: {
-    borderRadius: m(24),
-    overflow: 'hidden',
-    marginBottom: m(20),
-    shadowColor: '#667eea',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
+  // SECTION TITLE
+  sectionTitle: {
+    fontSize: FontSizes.lg,
+    fontFamily: FontFamily.primarySemiBold,
+    color: colors.ink,
+    marginBottom: m(14),
   },
-  summaryGradient: {
-    padding: m(20),
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  summaryPattern: {
-    position: 'absolute',
-    top: -30,
-    right: -30,
-    width: m(100),
-    height: m(100),
-    borderRadius: m(50),
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  summaryHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: m(20),
-  },
-  summaryIconContainer: {
-    width: m(50),
-    height: m(50),
-    borderRadius: m(14),
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: m(14),
-  },
-  summaryTitleContainer: {
-    flex: 1,
-  },
-  summaryLabel: {
-    fontSize: FontSizes.sm,
-    fontFamily: FontFamily.primaryRegular,
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginBottom: m(2),
-  },
-  summaryValue: {
-    fontSize: m(26),
-    fontFamily: FontFamily.secondaryBold,
-    color: '#FFFFFF',
-  },
-  // Integrated Stats in Summary Card
-  integratedStats: {
+
+  // HERO TILES - Total Borrowed / Amount Paid
+  heroTilesRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: m(16),
+    marginBottom: m(16),
+  },
+  heroTile: {
+    width: '48%',
+    borderRadius: m(18),
     padding: m(14),
   },
-  integratedStatItem: {
+  heroTileIcon: {
+    width: m(32),
+    height: m(32),
+    borderRadius: m(16),
+    backgroundColor: colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: m(10),
+  },
+  heroTileLabel: {
+    fontSize: m(11),
+    fontFamily: FontFamily.bodyMedium,
+    color: colors.inkSoft,
+    marginBottom: m(4),
+  },
+  heroTileValue: {
+    fontSize: m(17),
+    fontFamily: FontFamily.primaryExtraBold,
+    color: colors.ink,
+  },
+
+  // LOAN COUNTS ROW
+  statsRowCard: {
+    backgroundColor: colors.surface,
+    borderRadius: m(20),
+    padding: m(16),
+    marginBottom: m(20),
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  statsRowItem: {
     flex: 1,
     alignItems: 'center',
   },
-  integratedStatIcon: {
-    width: m(32),
-    height: m(32),
-    borderRadius: m(10),
+  statsRowIcon: {
+    width: m(36),
+    height: m(36),
+    borderRadius: m(12),
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: m(6),
+    marginBottom: m(8),
   },
-  integratedStatValue: {
+  statsRowValue: {
     fontSize: FontSizes.lg,
     fontFamily: FontFamily.primaryBold,
-    color: '#FFFFFF',
+    color: colors.ink,
   },
-  integratedStatLabel: {
+  statsRowLabel: {
     fontSize: FontSizes.xs,
     fontFamily: FontFamily.primaryRegular,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.textSecondary,
     marginTop: m(2),
-  },
-  integratedStatDivider: {
-    width: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    marginVertical: m(8),
+    textTransform: 'uppercase',
   },
 
   // CHART CARD
   chartCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: m(24),
     padding: m(20),
     marginBottom: m(20),
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
@@ -662,7 +659,7 @@ const styles = StyleSheet.create({
     width: m(40),
     height: m(40),
     borderRadius: m(12),
-    backgroundColor: '#FFF7ED',
+    backgroundColor: colors.butterSoft,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: m(14),
@@ -670,12 +667,12 @@ const styles = StyleSheet.create({
   chartTitle: {
     fontSize: FontSizes.lg,
     fontFamily: FontFamily.secondaryBold,
-    color: '#111827',
+    color: colors.ink,
   },
   chartSubtitle: {
     fontSize: FontSizes.sm,
     fontFamily: FontFamily.primaryRegular,
-    color: '#9CA3AF',
+    color: colors.textMuted,
     marginTop: m(2),
   },
   chartContainer: {
@@ -690,7 +687,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.offWhite,
     paddingHorizontal: m(16),
     paddingVertical: m(14),
     borderRadius: m(12),
@@ -712,7 +709,7 @@ const styles = StyleSheet.create({
   legendLabel: {
     fontSize: FontSizes.base,
     fontFamily: FontFamily.primaryMedium,
-    color: '#374151',
+    color: colors.ink,
   },
   legendAmount: {
     fontSize: FontSizes.base,
@@ -721,17 +718,17 @@ const styles = StyleSheet.create({
   legendPercentage: {
     fontSize: FontSizes.xs,
     fontFamily: FontFamily.primaryRegular,
-    color: '#9CA3AF',
+    color: colors.textMuted,
     marginTop: m(2),
   },
 
   // BREAKDOWN CARD
   breakdownCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: m(24),
     padding: m(20),
     marginBottom: m(20),
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
@@ -751,7 +748,7 @@ const styles = StyleSheet.create({
     width: m(40),
     height: m(40),
     borderRadius: m(12),
-    backgroundColor: '#ECFDF5',
+    backgroundColor: colors.mintSoft,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: m(14),
@@ -759,10 +756,10 @@ const styles = StyleSheet.create({
   breakdownTitle: {
     fontSize: FontSizes.lg,
     fontFamily: FontFamily.secondaryBold,
-    color: '#111827',
+    color: colors.ink,
   },
   breakdownBadge: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: colors.mintSoft,
     paddingHorizontal: m(12),
     paddingVertical: m(6),
     borderRadius: m(20),
@@ -770,7 +767,7 @@ const styles = StyleSheet.create({
   breakdownBadgeText: {
     fontSize: FontSizes.sm,
     fontFamily: FontFamily.primaryBold,
-    color: '#059669',
+    color: colors.mintText,
   },
   progressBarItem: {
     marginBottom: m(18),
@@ -794,7 +791,7 @@ const styles = StyleSheet.create({
   progressBarLabel: {
     fontSize: FontSizes.base,
     fontFamily: FontFamily.primaryMedium,
-    color: '#374151',
+    color: colors.ink,
   },
   progressBarValue: {
     fontSize: FontSizes.base,
@@ -802,7 +799,7 @@ const styles = StyleSheet.create({
   },
   progressBarTrack: {
     height: m(10),
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.borderLight,
     borderRadius: m(5),
     overflow: 'hidden',
   },
@@ -813,11 +810,11 @@ const styles = StyleSheet.create({
 
   // DETAILS CARD
   detailsCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: m(24),
     padding: m(20),
     marginBottom: m(20),
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
@@ -834,7 +831,7 @@ const styles = StyleSheet.create({
     width: m(40),
     height: m(40),
     borderRadius: m(12),
-    backgroundColor: '#EDE9FE',
+    backgroundColor: colors.skySoft,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: m(14),
@@ -842,7 +839,7 @@ const styles = StyleSheet.create({
   detailsTitle: {
     fontSize: FontSizes.lg,
     fontFamily: FontFamily.secondaryBold,
-    color: '#111827',
+    color: colors.ink,
   },
   analyticsRow: {
     flexDirection: 'row',
@@ -850,7 +847,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: m(14),
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.borderLight,
   },
   analyticsRowLast: {
     borderBottomWidth: 0,
@@ -874,13 +871,13 @@ const styles = StyleSheet.create({
   analyticsRowLabel: {
     fontSize: FontSizes.base,
     fontFamily: FontFamily.primarySemiBold,
-    color: '#374151',
+    color: colors.ink,
     marginBottom: m(2),
   },
   analyticsRowPercentage: {
     fontSize: FontSizes.xs,
     fontFamily: FontFamily.primaryRegular,
-    color: '#9CA3AF',
+    color: colors.textMuted,
   },
   analyticsRowRight: {
     alignItems: 'flex-end',
@@ -905,7 +902,7 @@ const styles = StyleSheet.create({
     width: m(44),
     height: m(44),
     borderRadius: m(22),
-    backgroundColor: 'rgba(217, 119, 6, 0.15)',
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: m(14),
@@ -916,13 +913,13 @@ const styles = StyleSheet.create({
   tipsTitle: {
     fontSize: FontSizes.base,
     fontFamily: FontFamily.secondaryBold,
-    color: '#92400E',
+    color: colors.ink,
     marginBottom: m(4),
   },
   tipsText: {
     fontSize: FontSizes.sm,
     fontFamily: FontFamily.primaryRegular,
-    color: '#B45309',
+    color: colors.inkSoft,
     lineHeight: m(20),
   },
 });

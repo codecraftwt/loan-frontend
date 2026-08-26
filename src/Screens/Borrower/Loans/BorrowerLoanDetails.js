@@ -18,6 +18,7 @@ import borrowerLoanAPI from '../../../Services/borrowerLoanService';
 import Toast from 'react-native-toast-message';
 import { useSelector } from 'react-redux';
 import { baseurl } from '../../../Utils/API';
+import { colors, FontFamily } from '../../../constants';
 
 export default function BorrowerLoanDetails() {
   // Navigation & Route
@@ -141,12 +142,12 @@ export default function BorrowerLoanDetails() {
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case 'paid':
-      case 'confirmed': return '#10B981';
-      case 'part paid': return '#F59E0B';
-      case 'pending': return '#6B7280';
-      case 'rejected': return '#EF4444';
-      case 'overdue': return '#DC2626';
-      default: return '#6B7280';
+      case 'confirmed': return colors.success;
+      case 'part paid': return colors.goldDark;
+      case 'pending': return colors.textSecondary;
+      case 'rejected': return colors.error;
+      case 'overdue': return colors.error;
+      default: return colors.textSecondary;
     }
   };
 
@@ -234,7 +235,7 @@ export default function BorrowerLoanDetails() {
   const DetailItem = ({ icon, label, value, isStatus = false }) => (
     <View style={styles.detailItem}>
       <View style={styles.detailIconContainer}>
-        <Icon name={icon} size={20} color="#3B82F6" />
+        <Icon name={icon} size={20} color={colors.ink} />
       </View>
       <View style={styles.lenderDetails}>
         <Text style={styles.detailLabel}>{label}</Text>
@@ -312,14 +313,14 @@ export default function BorrowerLoanDetails() {
             <View style={styles.amountDivider} />
             <View style={styles.amountItem}>
               <Text style={styles.amountLabel}>Paid</Text>
-              <Text style={[styles.amountValue, { color: '#10B981' }]}>
+              <Text style={[styles.amountValue, { color: colors.success }]}>
                 {formatCurrency(loanDetails.totalPaid)}
               </Text>
             </View>
             <View style={styles.amountDivider} />
             <View style={styles.amountItem}>
               <Text style={styles.amountLabel}>Remaining</Text>
-              <Text style={[styles.amountValue, { color: '#EF4444' }]}>
+              <Text style={[styles.amountValue, { color: colors.error }]}>
                 {formatCurrency(loanDetails.remainingAmount)}
               </Text>
             </View>
@@ -408,13 +409,13 @@ export default function BorrowerLoanDetails() {
               onPress={handleViewProof}
               activeOpacity={0.8}>
               <View style={styles.proofIconContainer}>
-                <Icon name="file-image" size={24} color="#3B82F6" />
+                <Icon name="file-image" size={24} color={colors.ink} />
               </View>
               <View style={styles.lenderDetails}>
                 <Text style={styles.proofTitle}>Loan Proof Available</Text>
                 <Text style={styles.proofSubtext}>Tap to view proof document</Text>
               </View>
-              <Icon name="chevron-right" size={20} color="#6B7280" />
+              <Icon name="chevron-right" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
         )}
@@ -425,7 +426,7 @@ export default function BorrowerLoanDetails() {
             <Text style={styles.cardTitle}>Installment Details</Text>
             <View style={styles.installmentContainer}>
               <View style={styles.installmentRow}>
-                <Icon name="check-circle" size={20} color="#10B981" />
+                <Icon name="check-circle" size={20} color={colors.success} />
                 <View style={styles.installmentContent}>
                   <Text style={styles.installmentLabel}>Installments Paid</Text>
                   <Text style={styles.installmentValue}>
@@ -435,7 +436,7 @@ export default function BorrowerLoanDetails() {
               </View>
               {installmentDetails.nextDueDate && (
                 <View style={styles.installmentRow}>
-                  <Icon name="calendar" size={20} color="#3B82F6" />
+                  <Icon name="calendar" size={20} color={colors.ink} />
                   <View style={styles.installmentContent}>
                     <Text style={styles.installmentLabel}>Next Due Date</Text>
                     <Text style={styles.installmentValue}>
@@ -446,7 +447,7 @@ export default function BorrowerLoanDetails() {
               )}
               {installmentDetails.frequency && (
                 <View style={styles.installmentRow}>
-                  <Icon name="repeat" size={20} color="#6B7280" />
+                  <Icon name="repeat" size={20} color={colors.textSecondary} />
                   <View style={styles.installmentContent}>
                     <Text style={styles.installmentLabel}>Frequency</Text>
                     <Text style={styles.installmentValue}>
@@ -480,14 +481,14 @@ export default function BorrowerLoanDetails() {
                   <Icon
                     name={showAllPayments ? 'chevron-up' : 'chevron-down'}
                     size={16}
-                    color="#3B82F6"
+                    color={colors.ink}
                   />
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.openHistoryButton}
                   onPress={handleOpenPaymentHistoryScreen}
                   activeOpacity={0.7}>
-                  <Icon name="external-link" size={15} color="#3B82F6" />
+                  <Icon name="external-link" size={15} color={colors.ink} />
                 </TouchableOpacity>
               </View>
             )}
@@ -501,7 +502,7 @@ export default function BorrowerLoanDetails() {
               ))
           ) : (
             <View style={styles.emptyPaymentsState}>
-              <Ionicons name="receipt-outline" size={34} color="#9CA3AF" />
+              <Ionicons name="receipt-outline" size={34} color={colors.textMuted} />
               <Text style={styles.emptyPaymentsTitle}>No payments yet</Text>
               <Text style={styles.emptyPaymentsText}>
                 Your submitted payments will appear here.
@@ -522,7 +523,7 @@ export default function BorrowerLoanDetails() {
               onPress={handleMakePayment}
               disabled={hasPendingPayment || isLoanExpired()}
             >
-              <Ionicons name="cash-outline" size={20} color="#FFFFFF" />
+              <Ionicons name="cash-outline" size={20} color={colors.ink} />
               <Text style={styles.primaryButtonText}>
                 {isLoanExpired() 
                   ? 'Loan Expired' 
@@ -534,7 +535,7 @@ export default function BorrowerLoanDetails() {
           )}
           {hasPendingPayment && (
             <View style={styles.pendingPaymentBanner}>
-              <Icon name="clock" size={16} color="#92400E" />
+              <Icon name="clock" size={16} color={colors.goldDarker} />
               <Text style={styles.pendingPaymentBannerText}>
                 You have a pending payment. Please wait for lender confirmation.
               </Text>
@@ -542,7 +543,7 @@ export default function BorrowerLoanDetails() {
           )}
           {isLoanExpired() && !hasPendingPayment && (
             <View style={styles.expiredLoanBanner}>
-              <Icon name="alert-circle" size={16} color="#DC2626" />
+              <Icon name="alert-circle" size={16} color={colors.error} />
               <Text style={styles.expiredLoanBannerText}>
                 The loan end date has passed. Please contact your lender to extend the loan before making a payment.
               </Text>
@@ -615,7 +616,7 @@ const styles = StyleSheet.create({
   // Container
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.offWhite,
   },
   scrollView: {
     flex: 1,
@@ -624,17 +625,17 @@ const styles = StyleSheet.create({
     padding: m(16),
     paddingBottom: m(100),
   },
-  
+
   // Overview Card
   overviewCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(16),
+    backgroundColor: colors.surface,
+    borderRadius: m(20),
     padding: m(20),
     marginBottom: m(16),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.borderLight,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -647,8 +648,8 @@ const styles = StyleSheet.create({
   },
   overviewTitle: {
     fontSize: m(18),
-    fontWeight: '700',
-    color: '#111827',
+    fontFamily: FontFamily.primarySemiBold,
+    color: colors.ink,
   },
   statusBadge: {
     flexDirection: 'row',
@@ -660,7 +661,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: m(12),
-    fontWeight: '600',
+    fontFamily: FontFamily.bodySemiBold,
   },
   amountOverview: {
     flexDirection: 'row',
@@ -674,18 +675,18 @@ const styles = StyleSheet.create({
   },
   amountLabel: {
     fontSize: m(12),
-    color: '#6B7280',
+    color: colors.textSecondary,
     marginBottom: m(4),
   },
   amountValue: {
     fontSize: m(16),
-    fontWeight: '700',
-    color: '#111827',
+    fontFamily: FontFamily.primaryExtraBold,
+    color: colors.ink,
   },
   amountDivider: {
     width: 1,
     height: m(40),
-    backgroundColor: '#E5E7EB',
+    backgroundColor: colors.border,
     marginHorizontal: m(12),
   },
   progressContainer: {
@@ -694,7 +695,7 @@ const styles = StyleSheet.create({
   progressBar: {
     width: '100%',
     height: m(8),
-    backgroundColor: '#E5E7EB',
+    backgroundColor: colors.borderLight,
     borderRadius: m(4),
     marginBottom: m(8),
     overflow: 'hidden',
@@ -705,19 +706,19 @@ const styles = StyleSheet.create({
   },
   progressText: {
     fontSize: m(12),
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
-  
+
   // Info Card
   infoCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(16),
+    backgroundColor: colors.surface,
+    borderRadius: m(20),
     padding: m(20),
     marginBottom: m(16),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.borderLight,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -730,15 +731,15 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: m(18),
-    fontWeight: '700',
-    color: '#111827',
+    fontFamily: FontFamily.primarySemiBold,
+    color: colors.ink,
     marginBottom: m(16),
   },
   cardSubtitle: {
     marginTop: m(-10),
     marginBottom: m(12),
     fontSize: m(12),
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
   historyHeaderActions: {
     flexDirection: 'row',
@@ -752,7 +753,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: m(10),
     paddingVertical: m(6),
     borderRadius: m(8),
-    backgroundColor: '#EFF6FF',
+    backgroundColor: colors.skySoft,
   },
   openHistoryButton: {
     width: m(34),
@@ -760,14 +761,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: m(8),
-    backgroundColor: '#EFF6FF',
+    backgroundColor: colors.skySoft,
   },
   viewAllText: {
     fontSize: m(14),
-    color: '#3B82F6',
-    fontWeight: '600',
+    color: colors.ink,
+    fontFamily: FontFamily.bodySemiBold,
   },
-  
+
   // Lender Info
   lenderInfo: {
     flexDirection: 'row',
@@ -777,30 +778,30 @@ const styles = StyleSheet.create({
     width: m(50),
     height: m(50),
     borderRadius: m(25),
-    backgroundColor: '#3B82F6',
+    backgroundColor: colors.ink,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: m(16),
   },
   avatarText: {
     fontSize: m(20),
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontFamily: FontFamily.bodySemiBold,
+    color: colors.white,
   },
   lenderDetails: {
     flex: 1,
   },
   lenderName: {
     fontSize: m(16),
-    fontWeight: '600',
-    color: '#111827',
+    fontFamily: FontFamily.bodySemiBold,
+    color: colors.ink,
     marginBottom: m(4),
   },
   lenderContact: {
     fontSize: m(14),
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
-  
+
   // Details Grid
   detailsGrid: {
     gap: m(9),
@@ -808,7 +809,7 @@ const styles = StyleSheet.create({
   detailItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.offWhite,
     borderRadius: m(12),
     padding: m(10.2),
   },
@@ -816,7 +817,7 @@ const styles = StyleSheet.create({
     width: m(40),
     height: m(40),
     borderRadius: m(10),
-    backgroundColor: '#EFF6FF',
+    backgroundColor: colors.skySoft,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: m(12),
@@ -826,18 +827,18 @@ const styles = StyleSheet.create({
   // },
   detailLabel: {
     fontSize: m(12),
-    color: '#6B7280',
+    color: colors.textSecondary,
     marginBottom: m(2),
   },
   detailValue: {
     fontSize: m(14),
-    fontWeight: '500',
-    color: '#374151',
+    fontFamily: FontFamily.bodyMedium,
+    color: colors.textPrimary,
   },
   
   // Payment History Item
   paymentHistoryItem: {
-    backgroundColor: '#f2f7fcff',
+    backgroundColor: colors.skySoft,
     borderRadius: m(12),
     padding: m(12),
     marginBottom: m(8),
@@ -853,13 +854,13 @@ const styles = StyleSheet.create({
   // },
   paymentAmountText: {
     fontSize: m(16),
-    fontWeight: '700',
-    color: '#111827',
+    fontFamily: FontFamily.primaryBold,
+    color: colors.ink,
     marginBottom: m(2),
   },
   paymentMode: {
     fontSize: m(12),
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
   paymentStatusBadge: {
     flexDirection: 'row',
@@ -871,42 +872,42 @@ const styles = StyleSheet.create({
   },
   paymentStatusText: {
     fontSize: m(10),
-    fontWeight: '600',
+    fontFamily: FontFamily.bodySemiBold,
   },
   paymentDetails: {
     gap: m(2),
   },
   paymentDate: {
     fontSize: m(12),
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
   confirmedDate: {
     fontSize: m(12),
-    color: '#10B981',
+    color: colors.success,
   },
   emptyPaymentsState: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.offWhite,
     borderRadius: m(12),
     paddingVertical: m(24),
     paddingHorizontal: m(16),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.borderLight,
   },
   emptyPaymentsTitle: {
     marginTop: m(10),
     fontSize: m(15),
-    fontWeight: '700',
-    color: '#111827',
+    fontFamily: FontFamily.primarySemiBold,
+    color: colors.ink,
   },
   emptyPaymentsText: {
     marginTop: m(4),
     fontSize: m(12),
-    color: '#6B7280',
+    color: colors.textSecondary,
     textAlign: 'center',
   },
-  
+
   // Installment Details
   installmentContainer: {
     gap: m(16),
@@ -921,13 +922,13 @@ const styles = StyleSheet.create({
   },
   installmentLabel: {
     fontSize: m(12),
-    color: '#6B7280',
+    color: colors.textSecondary,
     marginBottom: m(4),
   },
   installmentValue: {
     fontSize: m(16),
-    fontWeight: '600',
-    color: '#111827',
+    fontFamily: FontFamily.bodySemiBold,
+    color: colors.ink,
   },
   
   // Actions
@@ -940,69 +941,69 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: m(16),
-    borderRadius: m(12),
+    borderRadius: m(16),
     gap: m(8),
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
   primaryButton: {
-    backgroundColor: '#10B981',
+    backgroundColor: colors.butter,
   },
   secondaryButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.borderLight,
   },
   primaryButtonText: {
     fontSize: m(16),
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontFamily: FontFamily.bodySemiBold,
+    color: colors.ink,
   },
   secondaryButtonText: {
     fontSize: m(16),
-    fontWeight: '600',
-    color: '#3B82F6',
+    fontFamily: FontFamily.bodySemiBold,
+    color: colors.ink,
   },
   disabledButton: {
-    backgroundColor: '#9CA3AF',
+    backgroundColor: colors.textMuted,
     opacity: 0.6,
   },
   pendingPaymentBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF7ED',
+    backgroundColor: colors.butterSoft,
     borderRadius: m(12),
     padding: m(12),
     gap: m(8),
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: colors.butter,
   },
   pendingPaymentBannerText: {
     fontSize: m(14),
-    color: '#92400E',
-    fontWeight: '500',
+    color: colors.goldDarker,
+    fontFamily: FontFamily.bodyMedium,
     flex: 1,
   },
   expiredLoanBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEE2E2',
+    backgroundColor: colors.error + '15',
     borderRadius: m(12),
     padding: m(12),
     gap: m(8),
     borderWidth: 1,
-    borderColor: '#FCA5A5',
+    borderColor: colors.error + '40',
   },
   expiredLoanBannerText: {
     fontSize: m(14),
-    color: '#DC2626',
-    fontWeight: '500',
+    color: colors.error,
+    fontFamily: FontFamily.bodyMedium,
     flex: 1,
   },
-  
+
   // Footer
   footer: {
     alignItems: 'center',
@@ -1010,24 +1011,24 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: m(12),
-    color: '#9CA3AF',
+    color: colors.textMuted,
   },
-  
+
   // Loan Proof Styles
   proofCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.offWhite,
     borderRadius: m(12),
     padding: m(16),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.borderLight,
   },
   proofIconContainer: {
     width: m(48),
     height: m(48),
     borderRadius: m(12),
-    backgroundColor: '#EFF6FF',
+    backgroundColor: colors.skySoft,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: m(12),
@@ -1037,15 +1038,15 @@ const styles = StyleSheet.create({
   // },
   proofTitle: {
     fontSize: m(16),
-    fontWeight: '600',
-    color: '#111827',
+    fontFamily: FontFamily.bodySemiBold,
+    color: colors.ink,
     marginBottom: m(4),
   },
   proofSubtext: {
     fontSize: m(14),
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
-  
+
   // Proof Viewer Modal Styles
   proofViewerOverlay: {
     flex: 1,
@@ -1062,8 +1063,8 @@ const styles = StyleSheet.create({
   },
   proofViewerHeaderText: {
     fontSize: m(18),
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontFamily: FontFamily.bodySemiBold,
+    color: colors.white,
   },
   proofViewerCloseButton: {
     padding: m(8),

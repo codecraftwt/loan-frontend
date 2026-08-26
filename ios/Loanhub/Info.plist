@@ -40,7 +40,7 @@
 	<key>NSCameraUsageDescription</key>
 	<string>Camera access is required to take a photo for your profile picture</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string></string>
+	<string/>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Photo library access is needed to choose an existing photo for your profile</string>
 	<key>RCTNewArchEnabled</key>
@@ -66,6 +66,22 @@
 		<string>FontAwesome6_Brands.ttf</string>
 		<string>FontAwesome6_Regular.ttf</string>
 		<string>FontAwesome6_Solid.ttf</string>
+		<string>Inter18pt-Bold.ttf</string>
+		<string>Inter18pt-MediumItalic.ttf</string>
+		<string>Inter18pt-Regular.ttf</string>
+		<string>Inter18pt-SemiBold.ttf</string>
+		<string>Inter24pt-ExtraBold.ttf</string>
+		<string>Montserrat-Bold.ttf</string>
+		<string>Montserrat-Regular.ttf</string>
+		<string>Montserrat-SemiBold.ttf</string>
+		<string>Poppins-Bold.ttf</string>
+		<string>Poppins-ExtraBold.ttf</string>
+		<string>Poppins-Medium.ttf</string>
+		<string>Poppins-Regular.ttf</string>
+		<string>Poppins-SemiBold.ttf</string>
+		<string>Rubik-Bold.ttf</string>
+		<string>Rubik-Regular.ttf</string>
+		<string>Rubik-SemiBold.ttf</string>
 	</array>
 	<key>UIBackgroundModes</key>
 	<array>

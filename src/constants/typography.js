@@ -3,7 +3,7 @@
 
 import { StyleSheet, Platform } from 'react-native';
 import { m } from 'walstar-rn-responsive';
-import { FontFamily, POPPINS, MONTSERRAT, RUBIK } from './fonts';
+import { FontFamily, POPPINS, MONTSERRAT, RUBIK, INTER } from './fonts';
 
 /**
  * Typography Scale
@@ -380,6 +380,87 @@ export const LineHeights = lineHeights;
  * Use with spread operator: { ...TextStyles.body }
  */
 export const TextStyles = typography;
+
+/**
+ * Type Scale — Poppins (headings/display) + Inter (body/UI)
+ *
+ * Use with spread operator: { ...typeScale.screenTitle }
+ * See docs/typography spec for the full rationale behind each role.
+ */
+export const typeScale = StyleSheet.create({
+  // Screen title, e.g. "Dashboard", "My Loans", "Analytics"
+  screenTitle: {
+    fontFamily: POPPINS.bold,
+    fontSize: m(20),
+    lineHeight: m(26),
+  },
+
+  // Greeting / hero heading, e.g. "Hello, Test Borrower11"
+  heroHeading: {
+    fontFamily: POPPINS.bold,
+    fontSize: m(18),
+    lineHeight: m(24),
+  },
+
+  // Big numbers / stats, e.g. "₹19,956", "08", "15", "29"
+  statNumber: {
+    fontFamily: POPPINS.extraBold,
+    fontSize: m(26),
+    lineHeight: m(30),
+    letterSpacing: -0.5,
+  },
+
+  // Card title, e.g. "Loan Summary", "Loan Distribution"
+  cardTitle: {
+    fontFamily: POPPINS.semiBold,
+    fontSize: m(15),
+    lineHeight: m(20),
+  },
+
+  // Section header, e.g. "Quick Actions", "Loan Overview"
+  sectionHeader: {
+    fontFamily: POPPINS.semiBold,
+    fontSize: m(16),
+    lineHeight: m(22),
+  },
+
+  // Body text / description, e.g. "Track your loans easily"
+  body: {
+    fontFamily: INTER.regular,
+    fontSize: m(13),
+    lineHeight: m(18),
+  },
+
+  // Labels / micro-copy, e.g. "TOTAL", "ACTIVE"
+  microLabel: {
+    fontFamily: INTER.medium,
+    fontSize: m(10),
+    lineHeight: m(14),
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+
+  // Button text, e.g. "View Details", "Create Loan Request", tab labels
+  buttonText: {
+    fontFamily: INTER.semiBold,
+    fontSize: m(14),
+    lineHeight: m(18),
+  },
+
+  // Amount values, e.g. "Rs 1,500", "Paid", "Remaining"
+  amountValue: {
+    fontFamily: INTER.semiBold,
+    fontSize: m(14),
+    lineHeight: m(18),
+  },
+
+  // Badge / chip text, e.g. "Pending", "Completed"
+  badgeText: {
+    fontFamily: INTER.semiBold,
+    fontSize: m(11),
+    lineHeight: m(14),
+  },
+});
 
 export default typography;
 

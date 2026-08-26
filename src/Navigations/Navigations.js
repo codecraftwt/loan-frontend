@@ -51,6 +51,7 @@ import MyLoans from '../Screens/Borrower/Loans/MyLoans';
 import BorrowerLoanDetails from '../Screens/Borrower/Loans/BorrowerLoanDetails';
 import MakePayment from '../Screens/Borrower/Loans/MakePayment';
 import PaymentHistory from '../Screens/Borrower/Loans/PaymentHistory';
+import PendingLoanOffersScreen from '../Screens/Borrower/Loans/PendingLoanOffersScreen';
 // Lender Payment Screens
 import PendingPayments from '../Screens/Lender/Payments/PendingPayments';
 
@@ -120,6 +121,7 @@ const Navigation = () => {
       <Stack.Screen name="BorrowerLoanDetails" component={BorrowerLoanDetails} />
       <Stack.Screen name="MakePayment" component={MakePayment} />
       <Stack.Screen name="PaymentHistory" component={PaymentHistory} />
+      <Stack.Screen name="PendingLoanOffers" component={PendingLoanOffersScreen} />
 
       {/* Other Borrower screens */}
       <Stack.Screen name="BorrowerLoanHistoryScreen" component={BorrowerLoanHistoryScreen} />

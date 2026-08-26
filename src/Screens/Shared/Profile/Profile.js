@@ -7,17 +7,23 @@ import {
   ActivityIndicator,
   Image,
   Alert,
+  StatusBar,
+  Platform,
 } from 'react-native';
 import { useState } from 'react';
 import Icon from 'react-native-vector-icons/Feather';
+import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
 import PromptBox from '../../PromptBox/Prompt';
 import { logout, removeUserDeviceToken } from '../../../Redux/Slices/authslice';
 import useFetchUserFromStorage from '../../../Redux/hooks/useFetchUserFromStorage';
 import { m } from 'walstar-rn-responsive';
-import Header from '../../../Components/Header';
+import { colors, FontFamily } from '../../../constants';
 
+const statusBarOffset = Platform.OS === 'android' ? (StatusBar.currentHeight || m(24)) : m(44);
+const HEADER_HEIGHT = statusBarOffset + m(16) + m(28) + m(20) + m(76) + m(50);
+const HEADER_OVERLAP = m(40);
 
 export default function Profile() {
   // Navigation & Redux
@@ -66,116 +72,110 @@ export default function Profile() {
       icon: 'user',
       label: 'Personal Details',
       onPress: navigateToProfileDetails,
-      color: '#3B82F6',
+      iconColor: '#573888',
+      iconBg: colors.navyTint,
     },
     {
-      icon: 'settings',
-      label: 'Settings',
-      onPress: () => navigation.navigate('Settings'),
-      color: '#10B981',
+      icon: 'lock',
+      label: 'Change Password',
+      onPress: () => navigation.navigate('ChangePassword'),
+      iconColor: '#F68350',
+      iconBg: colors.goldTint,
     },
     {
-      icon: 'help-circle',
-      label: 'Help & Support',
-      onPress: () => navigation.navigate('HelpAndSupportScreen'),
-      color: '#8B5CF6',
+      icon: 'shield',
+      label: 'Privacy Policy',
+      onPress: () => navigation.navigate('PrivacyPolicy'),
+      iconColor: '#8B6FC9',
+      iconBg: '#E0D9F0',
     },
   ];
 
   return (
     <>
       <View style={styles.container}>
-        <Header title="Profile" />
+        <StatusBar
+          barStyle="light-content"
+          backgroundColor="transparent"
+          translucent
+        />
+
+        <LinearGradient
+          colors={[colors.navyDark, colors.navy]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.headerGradient}>
+          <Text style={styles.headerTitle}>Profile</Text>
+
+          {imageError || !user?.profileImage ? (
+            <View style={styles.headerAvatar}>
+              <Text style={styles.headerAvatarText}>
+                {user?.userName?.charAt(0)?.toUpperCase() || 'U'}
+              </Text>
+            </View>
+          ) : (
+            <Image
+              source={{ uri: user?.profileImage }}
+              style={styles.headerAvatarImage}
+              onError={handleImageError}
+            />
+          )}
+        </LinearGradient>
 
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}>
 
-          {/* Profile Card */}
-          <View style={styles.profileCard}>
-            <View style={styles.profileHeader}>
-              {imageError || !user?.profileImage ? (
-                <View style={styles.profileAvatar}>
-                  <Text style={styles.avatarText}>
-                    {user?.userName?.charAt(0)?.toUpperCase() || 'U'}
-                  </Text>
+          {/* Profile Info Card */}
+          <View style={styles.infoCard}>
+            {user ? (
+              <>
+                <Text style={styles.profileName} numberOfLines={2}>
+                  {user?.userName}
+                </Text>
+                <Text style={styles.profilePhone}>
+                  {user?.mobileNo}
+                </Text>
+                <View style={styles.verifiedBadge}>
+                  <Text style={styles.verifiedBadgeText}>Verified Borrower</Text>
                 </View>
-              ) : (
-                <Image
-                  source={{ uri: user?.profileImage }}
-                  style={styles.profileImage}
-                  onError={handleImageError}
-                />
-              )}
-
-              <View style={styles.profileInfo}>
-                {user ? (
-                  <>
-                    <Text style={styles.profileName} numberOfLines={2}>
-                      {user?.userName}
-                    </Text>
-                    <Text style={styles.profileEmail} numberOfLines={2}>
-                      {user?.email}
-                    </Text>
-                  </>
-                ) : (
-                  <ActivityIndicator size="small" color="#3B82F6" />
-                )}
-              </View>
-            </View>
+              </>
+            ) : (
+              <ActivityIndicator size="small" color={colors.navy} />
+            )}
           </View>
 
           {/* Menu Section */}
           <View style={styles.menuSection}>
-            <Text style={styles.sectionTitle}>Account</Text>
+            <Text style={styles.sectionTitle}>General</Text>
 
             <View style={styles.menuGrid}>
               {menuItems.map((item, index) => (
                 <TouchableOpacity
                   key={index}
-                  style={styles.menuItem}
+                  style={[
+                    styles.menuItem,
+                    index === menuItems.length - 1 && styles.menuItemLast,
+                  ]}
                   onPress={item.onPress}
                   activeOpacity={0.7}>
-                  <View style={[styles.menuIconContainer, { backgroundColor: `${item.color}15` }]}>
-                    <Icon name={item.icon} size={22} color={item.color} />
+                  <View style={[styles.menuIconContainer, { backgroundColor: item.iconBg }]}>
+                    <Icon name={item.icon} size={20} color={item.iconColor} />
                   </View>
                   <Text style={styles.menuLabel}>{item.label}</Text>
-                  <Icon name="chevron-right" size={18} color="#9CA3AF" />
+                  <Icon name="chevron-right" size={18} color={colors.textMuted} />
                 </TouchableOpacity>
               ))}
-            </View>
-          </View>
-
-          {/* App Info */}
-          <View style={styles.appInfoCard}>
-            <View style={styles.appInfoHeader}>
-              <Icon name="info" size={20} color="#6B7280" />
-              <Text style={styles.appInfoTitle}>App Information</Text>
-            </View>
-
-            <View style={styles.appInfoRow}>
-              <Text style={styles.appInfoLabel}>Version</Text>
-              <Text style={styles.appInfoValue}>1.0.0</Text>
-            </View>
-
-            <View style={styles.appInfoRow}>
-              <Text style={styles.appInfoLabel}>Build Number</Text>
-              <Text style={styles.appInfoValue}>1001</Text>
-            </View>
-
-            <View style={styles.appInfoRow}>
-              <Text style={styles.appInfoLabel}>Last Updated</Text>
-              <Text style={styles.appInfoValue}>Dec 2024</Text>
             </View>
           </View>
 
           {/* Logout Button */}
           <TouchableOpacity
             style={styles.logoutButton}
-            onPress={handleLogout}>
-            <Icon name="log-out" size={20} color="#EF4444" />
-            <Text style={styles.logoutButtonText}>Logout</Text>
+            onPress={handleLogout}
+            activeOpacity={0.85}>
+            <Text style={styles.logoutButtonText}>LOG OUT</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -193,166 +193,162 @@ export default function Profile() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.background,
   },
+
+  // Header
+  headerGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: HEADER_HEIGHT,
+    paddingTop: statusBarOffset + m(16),
+    borderBottomLeftRadius: m(28),
+    borderBottomRightRadius: m(28),
+    alignItems: 'center',
+  },
+  headerTitle: {
+    color: '#FFFFFF',
+    fontSize: m(20),
+    lineHeight: m(26),
+    fontFamily: FontFamily.primaryBold,
+    marginBottom: m(20),
+  },
+  headerAvatar: {
+    width: m(76),
+    height: m(76),
+    borderRadius: m(38),
+    backgroundColor: colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerAvatarText: {
+    fontSize: m(28),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.navy,
+  },
+  headerAvatarImage: {
+    width: m(76),
+    height: m(76),
+    borderRadius: m(38),
+    borderWidth: 3,
+    borderColor: colors.white,
+  },
+
   scrollView: {
     flex: 1,
+    zIndex: 1,
   },
   scrollContent: {
-    padding: m(16),
+    paddingHorizontal: m(16),
+    paddingTop: HEADER_HEIGHT - HEADER_OVERLAP,
     paddingBottom: m(140),
   },
 
-  // Profile Card
-  profileCard: {
-    backgroundColor: '#F9FAFB',
+  // Profile Info Card
+  infoCard: {
+    backgroundColor: colors.white,
     borderRadius: m(20),
-    padding: m(20),
-     paddingBottom: m(0),
-    marginBottom: m(20),
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    paddingVertical: m(20),
+    paddingHorizontal: m(20),
+    marginBottom: m(24),
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+  },
+  profileName: {
+    fontSize: m(19),
+    lineHeight: m(24),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.textPrimary,
+    marginBottom: m(4),
+  },
+  profilePhone: {
+    fontSize: m(13),
+    lineHeight: m(18),
+    fontFamily: FontFamily.bodyRegular,
+    color: colors.goldDark,
+    marginBottom: m(12),
+  },
+  verifiedBadge: {
+    backgroundColor: colors.navyTint,
+    borderRadius: m(20),
+    paddingVertical: m(6),
+    paddingHorizontal: m(16),
+  },
+  verifiedBadgeText: {
+    fontSize: m(11),
+    lineHeight: m(14),
+    fontFamily: FontFamily.bodySemiBold,
+    color: colors.navy,
+  },
+
+  // Menu Section
+  menuSection: {
+    marginBottom: m(24),
+  },
+  sectionTitle: {
+    fontSize: m(16),
+    lineHeight: m(22),
+    fontFamily: FontFamily.primarySemiBold,
+    color: colors.textPrimary,
+    marginBottom: m(12),
+    paddingHorizontal: m(4),
+  },
+  menuGrid: {
+    backgroundColor: colors.white,
+    borderRadius: m(16),
+    overflow: 'hidden',
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
   },
-  profileHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: m(20),
-  },
-  profileAvatar: {
-    width: m(70),
-    height: m(70),
-    borderRadius: m(35),
-    backgroundColor: 'black',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: m(16),
-  },
-  avatarText: {
-    fontSize: m(28),
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  profileImage: {
-    width: m(70),
-    height: m(70),
-    borderRadius: m(35),
-    marginRight: m(16),
-    borderWidth: 3,
-    borderColor: '#E5E7EB',
-  },
-  profileInfo: {
-    flex: 1,
-  },
-  profileName: {
-    fontSize: m(22),
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: m(2),
-  },
-  profileEmail: {
-    fontSize: m(14),
-    color: '#6B7280',
-  },
-  // Menu Section
-  menuSection: {
-    marginBottom: m(20),
-  },
-  sectionTitle: {
-    fontSize: m(18),
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: m(16),
-    paddingHorizontal: m(4),
-  },
-  menuGrid: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(16),
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    overflow: 'hidden',
-  },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: m(16),
+    paddingVertical: m(14),
     paddingHorizontal: m(16),
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.borderLight,
+  },
+  menuItemLast: {
+    borderBottomWidth: 0,
   },
   menuIconContainer: {
     width: m(40),
     height: m(40),
-    borderRadius: m(10),
+    borderRadius: m(12),
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: m(12),
+    marginRight: m(14),
   },
   menuLabel: {
     flex: 1,
-    fontSize: m(16),
-    fontWeight: '500',
-    color: '#374151',
-  },
-
-  // App Info
-  appInfoCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(16),
-    padding: m(16),
-    marginBottom: m(20),
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  appInfoHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: m(16),
-    paddingBottom: m(12),
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-    gap: m(8),
-  },
-  appInfoTitle: {
-    fontSize: m(16),
-    fontWeight: '600',
-    color: '#111827',
-  },
-  appInfoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: m(8),
-  },
-  appInfoLabel: {
     fontSize: m(14),
-    color: '#6B7280',
-  },
-  appInfoValue: {
-    fontSize: m(14),
-    fontWeight: '500',
-    color: '#374151',
+    lineHeight: m(18),
+    fontFamily: FontFamily.bodySemiBold,
+    color: colors.textPrimary,
   },
 
   // Logout Button
   logoutButton: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: m(8),
-    backgroundColor: '#FEF2F2',
-    borderRadius: m(12),
-    padding: m(16),
-    borderWidth: 1,
-    borderColor: '#FEE2E2',
+    backgroundColor: '#E85D75',
+    borderRadius: m(28),
+    paddingVertical: m(16),
   },
   logoutButtonText: {
-    fontSize: m(16),
-    fontWeight: '600',
-    color: '#EF4444',
+    fontSize: m(14),
+    lineHeight: m(18),
+    fontFamily: FontFamily.bodySemiBold,
+    color: '#FFFFFF',
+    letterSpacing: m(1),
   },
 });

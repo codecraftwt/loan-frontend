@@ -13,7 +13,7 @@ import Feather from 'react-native-vector-icons/Feather';
 import Icon from 'react-native-vector-icons/Feather';
 import { m } from 'walstar-rn-responsive';
 import { logo } from '../Assets';
-import { FontFamily } from '../constants';
+import { FontFamily, colors } from '../constants';
 
 const Header = ({
   title,
@@ -51,8 +51,7 @@ const Header = ({
 
       {/* Gradient Status Bar */}
       <LinearGradient
-        // colors={['#ff6700', '#ff7900', '#ff8500', '#ff9100']}
-        colors={['#ff6700', '#ff8800ff', '#ff9100ff', '#ffa200ff']}
+        colors={[colors.navyDark, colors.navy]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={styles.gradientStatusBar}>
@@ -61,7 +60,7 @@ const Header = ({
 
       {/* Main Header */}
       <LinearGradient
-        colors={['#ff6700', '#ff8800ff', '#ff9100ff', '#ffa200ff']}
+        colors={[colors.navyDark, colors.navy]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.headerBar}>
@@ -161,7 +160,8 @@ const styles = StyleSheet.create({
   headerText: {
     color: '#ffffff',
     fontSize: m(20),
-    fontFamily: FontFamily.secondaryBold,
+    lineHeight: m(26),
+    fontFamily: FontFamily.primaryBold,
     letterSpacing: m(1.2),
     textAlign: 'center',
     textShadowColor: 'rgba(255, 255, 255, 0.3)',

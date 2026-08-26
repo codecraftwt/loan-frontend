@@ -16,13 +16,13 @@ import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useDispatch, useSelector } from 'react-redux';
-import moment from 'moment';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
 import Toast from 'react-native-toast-message';
 import {
   getBorrowerLoans,
 } from '../../../Redux/Slices/borrowerLoanSlice';
+import { colors, FontFamily } from '../../../constants';
 
 const FETCH_LOANS_LIMIT = 1000;
 
@@ -183,70 +183,6 @@ export default function MyLoans() {
     setRefreshing(false);
   };
 
-  // Updated status color function to handle overdue
-  const getStatusColor = (status, isOverdue) => {
-    // Override if loan is overdue
-    if (isOverdue) return '#DC2626';
-
-    switch (status?.toLowerCase()) {
-      case 'paid':
-        return '#10B981';
-      case 'part paid':
-        return '#F59E0B';
-      case 'pending':
-        return '#6B7280';
-      default:
-        return '#6B7280';
-    }
-  };
-
-  // Updated status icon function to handle overdue
-  const getStatusIcon = (status, isOverdue) => {
-    // Override if loan is overdue
-    if (isOverdue) return 'alert-triangle';
-
-    switch (status?.toLowerCase()) {
-      case 'paid':
-        return 'check-circle';
-      case 'part paid':
-        return 'clock';
-      case 'pending':
-        return 'circle';
-      default:
-        return 'circle';
-    }
-  };
-
-  // Get display status text
-  const getDisplayStatus = (paymentStatus, isOverdue) => {
-    if (isOverdue) return 'Overdue';
-    return (
-      paymentStatus?.charAt(0).toUpperCase() + paymentStatus?.slice(1) ||
-      'Pending'
-    );
-  };
-
-  // Get initials for the lender avatar
-  const getInitials = name => {
-    if (!name || !name.trim()) return '?';
-    const parts = name.trim().split(' ').filter(Boolean);
-    if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
-    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
-  };
-
-  // Days remaining until due date (only meaningful when not overdue / not paid)
-  const getDaysRemainingLabel = (loanEndDate, paymentStatus, isOverdue) => {
-    if (!loanEndDate || isOverdue || paymentStatus?.toLowerCase() === 'paid') {
-      return null;
-    }
-    const daysLeft = moment(loanEndDate).startOf('day').diff(moment().startOf('day'), 'days');
-    if (daysLeft < 0) return null; // handled by overdue banner instead
-    if (daysLeft === 0) return 'Due today';
-    if (daysLeft === 1) return 'Due tomorrow';
-    if (daysLeft <= 7) return `Due in ${daysLeft} days`;
-    return null;
-  };
-
   // Spin animation interpolation
   const spin = spinAnim.interpolate({
     inputRange: [0, 1],
@@ -254,20 +190,16 @@ export default function MyLoans() {
   });
 
   // Render Functions
-  const renderLoanCard = ({ item }) => {
+  const renderLoanCard = ({ item, index }) => {
     const isOverdue = item.overdueDetails?.isOverdue === true;
-    const displayStatus = getDisplayStatus(item.paymentStatus, isOverdue);
-    const statusColor = getStatusColor(item.paymentStatus, isOverdue);
-    const statusIcon = getStatusIcon(item.paymentStatus, isOverdue);
-    const dueSoonLabel = getDaysRemainingLabel(item.loanEndDate, item.paymentStatus, isOverdue);
-    const paidAmount = item.totalPaid || 0;
-    const remainingAmount = item.remainingAmount ?? item.amount ?? 0;
-    const paidPercent = item.amount > 0 ? Math.min(100, Math.round((paidAmount / item.amount) * 100)) : 0;
+    const cardTint = index % 2 === 0 ? colors.sky : colors.mint;
+    const loanLabel = `Loan ${String(index + 1).padStart(2, '0')}`;
 
     return (
       <Animated.View
         style={[
           styles.loanCard,
+          { backgroundColor: cardTint },
           isOverdue && styles.overdueCard,
           {
             opacity: fadeAnim,
@@ -275,123 +207,27 @@ export default function MyLoans() {
           },
         ]}>
         <TouchableOpacity
-          activeOpacity={0.78}
+          activeOpacity={0.85}
           onPress={() =>
             navigation.navigate('BorrowerLoanDetails', { loan: item })
           }>
-          <View style={styles.loanHeader}>
-            <View style={styles.loanHeaderLeft}>
-              <View
-                style={[
-                  styles.avatarCircle,
-                  { backgroundColor: statusColor + '18' },
-                ]}>
-                <Text style={[styles.avatarText, { color: statusColor }]}>
-                  {getInitials(item.lenderId?.userName)}
-                </Text>
-              </View>
-              <View style={styles.loanInfo}>
-                <Text style={styles.loanLender} numberOfLines={1}>
-                  {item.lenderId?.userName || 'Unknown Lender'}
-                </Text>
-                <View style={styles.loanContactRow}>
-                  <Icon name="phone" size={m(12)} color="#9CA3AF" />
-                  <Text style={styles.loanContactText} numberOfLines={1}>
-                    {item.lenderId?.mobileNo || 'N/A'}
-                  </Text>
-                </View>
-              </View>
+          <View style={styles.loanCardTopRow}>
+            <View style={styles.loanCardLabelRow}>
+              <Text style={styles.loanCardLabel}>{loanLabel}</Text>
+              {isOverdue && <View style={styles.overdueDot} />}
             </View>
-            <View
-              style={[
-                styles.statusBadge,
-                { backgroundColor: statusColor + '20' },
-              ]}>
-              <Icon name={statusIcon} size={m(13)} color={statusColor} />
-              <Text style={[styles.statusText, { color: statusColor }]}>
-                {displayStatus}
-              </Text>
+            <View style={styles.detailsPill}>
+              <Text style={styles.detailsPillText}>Details</Text>
             </View>
           </View>
 
-          <View style={styles.amountPanel}>
-            <View style={styles.amountBlockPrimary}>
-              <Text style={styles.amountLabel}>Loan Amount</Text>
-              <Text style={styles.loanAmount}>
-                Rs {item.amount?.toLocaleString('en-IN') || 0}
-              </Text>
-            </View>
-            <View style={styles.amountDivider} />
-            <View style={styles.amountBlock}>
-              <Text style={styles.amountLabel}>Paid</Text>
-              <Text style={styles.paidAmountText}>
-                Rs {paidAmount.toLocaleString('en-IN')}
-              </Text>
-            </View>
-            <View style={styles.amountBlock}>
-              <Text style={styles.amountLabel}>Remaining</Text>
-              <Text style={styles.remainingAmountText}>
-                Rs {remainingAmount.toLocaleString('en-IN')}
-              </Text>
-            </View>
-          </View>
-
-          {isOverdue && (
-            <View style={styles.overdueBanner}>
-              <Icon name="alert-circle" size={m(16)} color="#DC2626" />
-              <Text style={styles.overdueBannerText}>
-                {item.overdueDetails?.overdueDays > 0
-                  ? `Overdue by ${item.overdueDetails.overdueDays} day${
-                      item.overdueDetails.overdueDays > 1 ? 's' : ''
-                    }`
-                  : 'Payment Overdue'}
-              </Text>
-            </View>
-          )}
-
-          {!isOverdue && dueSoonLabel && (
-            <View style={styles.dueSoonBanner}>
-              <Icon name="clock" size={m(14)} color="#B45309" />
-              <Text style={styles.dueSoonBannerText}>{dueSoonLabel}</Text>
-            </View>
-          )}
-
-          <View style={styles.loanDetails}>
-            <View style={styles.detailPill}>
-              <Icon name="calendar" size={m(14)} color="#6B7280" />
-              <Text style={[styles.detailText, isOverdue && styles.overdueText]}>
-                Due: {item.loanEndDate ? moment(item.loanEndDate).format('DD MMM YYYY') : 'N/A'}
-              </Text>
-            </View>
-            <View style={styles.detailPill}>
-              <Icon name="trending-up" size={m(14)} color="#6B7280" />
-              <Text style={styles.detailText}>{paidPercent}% paid</Text>
-            </View>
-          </View>
-
-          {/* <View style={styles.loanProgress}>
-            <View style={styles.progressInfo}>
-              <Text style={styles.progressLabel}>Repayment progress</Text>
-              <Text style={styles.progressPercentLabel}>{paidPercent}%</Text>
-            </View>
-            <View style={styles.progressBar}>
-              <View
-                style={[
-                  styles.progressFill,
-                  {
-                    width: `${paidPercent}%`,
-                    backgroundColor: statusColor,
-                  },
-                ]}
-              />
-            </View>
-          </View> */}
-
-          <View style={styles.loanActions}>
-            <View style={styles.actionButton}>
-              <Text style={styles.actionButtonText}>View Details</Text>
-              <Icon name="chevron-right" size={m(16)} color="#3B82F6" />
-            </View>
+          <View>
+            <Text style={styles.loanLender} numberOfLines={1}>
+              {item.lenderId?.userName || 'Unknown Lender'}
+            </Text>
+            <Text style={styles.loanAmount}>
+              Rs {item.amount?.toLocaleString('en-IN') || 0}
+            </Text>
           </View>
         </TouchableOpacity>
       </Animated.View>
@@ -409,25 +245,25 @@ export default function MyLoans() {
         id: 'totalLoans',
         value: summary.totalLoans,
         label: 'Total Loans',
-        color: '#3B82F6',
+        color: colors.navy,
       },
       {
         id: 'activeLoans',
         value: summary.activeLoans,
         label: 'Active',
-        color: '#8B5CF6',
+        color: colors.goldDark,
       },
       {
         id: 'completedLoans',
         value: summary.completedLoans,
         label: 'Completed',
-        color: '#10B981',
+        color: colors.success,
       },
       {
         id: 'overdueLoans',
         value: overdueCount,
         label: 'Overdue',
-        color: overdueCount > 0 ? '#DC2626' : '#6B7280',
+        color: overdueCount > 0 ? colors.error : colors.textSecondary,
         highlight: overdueCount > 0,
       },
     ];
@@ -448,7 +284,7 @@ export default function MyLoans() {
               <View
                 style={[
                   styles.summaryValueBubble,
-                  { backgroundColor: item.color + '18' },
+                  { backgroundColor: item.color + '2A' },
                 ]}>
                 <Text style={[styles.summaryValue, { color: item.color }]}>
                   {item.value}
@@ -503,7 +339,7 @@ export default function MyLoans() {
           },
         ]}>
         <View style={styles.emptyIconContainer}>
-          <Ionicons name={icon} size={60} color="#D1D5DB" />
+          <Ionicons name={icon} size={60} color={colors.textMuted} />
         </View>
         <Text style={styles.emptyTitle}>No Loans Found</Text>
         <Text style={styles.emptySubtitle}>{message}</Text>
@@ -517,7 +353,7 @@ export default function MyLoans() {
     return (
       <View style={styles.loadingContainer}>
         <Animated.View style={{ transform: [{ rotate: spin }] }}>
-          <Ionicons name="document-text" size={50} color="#FF9800" />
+          <Ionicons name="document-text" size={50} color={colors.gold} />
         </Animated.View>
         <Text style={styles.loadingTitle}>Fetching Your Loans</Text>
         <Text style={styles.loadingSubtitle}>
@@ -568,6 +404,14 @@ export default function MyLoans() {
     </>
   );
 
+  const renderCardConnector = () => (
+    <View style={styles.cardConnector} pointerEvents="none">
+      <View style={styles.cardConnectorCircle}>
+        <Icon name="target" size={m(18)} color={colors.white} />
+      </View>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <Header title="My Loans" />
@@ -587,7 +431,7 @@ export default function MyLoans() {
               <Icon
                 name="search"
                 size={m(20)}
-                color="#6B7280"
+                color={colors.textSecondary}
                 style={styles.searchIcon}
               />
               <TextInput
@@ -595,11 +439,11 @@ export default function MyLoans() {
                 placeholder="Search by lender, amount, or status"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.textMuted}
               />
               {searchQuery ? (
                 <TouchableOpacity onPress={() => setSearchQuery('')}>
-                  <Icon name="x" size={m(20)} color="#6B7280" />
+                  <Icon name="x" size={m(20)} color={colors.textSecondary} />
                 </TouchableOpacity>
               ) : null}
             </View>
@@ -615,7 +459,7 @@ export default function MyLoans() {
               <Icon
                 name="sliders"
                 size={m(19)}
-                color={activeTab !== 'all' || showFilterModal ? '#FFFFFF' : '#FF8A00'}
+                color={activeTab !== 'all' || showFilterModal ? colors.white : colors.gold}
               />
             </TouchableOpacity>
           </View>
@@ -626,7 +470,7 @@ export default function MyLoans() {
               onPress={() => handleFilterSelect('all')}
               activeOpacity={0.75}>
               <Text style={styles.activeFilterText}>{activeFilterLabel}</Text>
-              <Icon name="x" size={m(14)} color="#FF8A00" />
+              <Icon name="x" size={m(14)} color={colors.gold} />
             </TouchableOpacity>
           )}
         </Animated.View>
@@ -694,6 +538,7 @@ export default function MyLoans() {
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
             ListHeaderComponent={renderListHeader}
+            ItemSeparatorComponent={renderCardConnector}
           />
         )}
       </View>
@@ -705,7 +550,7 @@ const styles = StyleSheet.create({
   // Container
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.navyFaint,
   },
   
   // Content Container - This ensures proper flex behavior
@@ -724,12 +569,12 @@ const styles = StyleSheet.create({
     marginTop: m(24),
     fontSize: m(18),
     fontWeight: '600',
-    color: '#111827',
+    color: colors.textPrimary,
   },
   loadingSubtitle: {
     marginTop: m(8),
     fontSize: m(14),
-    color: '#6B7280',
+    color: colors.textSecondary,
     textAlign: 'center',
     paddingHorizontal: m(32),
   },
@@ -746,22 +591,22 @@ const styles = StyleSheet.create({
     width: m(100),
     height: m(100),
     borderRadius: m(50),
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.borderLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: m(20),
   },
   emptyTitle: {
     fontSize: m(18),
-    fontWeight: '600',
-    color: '#111827',
+    fontFamily: FontFamily.primarySemiBold,
+    color: colors.textPrimary,
     marginTop: m(16),
     marginBottom: m(8),
     textAlign: 'center',
   },
   emptySubtitle: {
     fontSize: m(14),
-    color: '#6B7280',
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: m(20),
     paddingHorizontal: m(32),
@@ -771,9 +616,9 @@ const styles = StyleSheet.create({
   searchContainer: {
     paddingHorizontal: m(16),
     paddingVertical: m(12),
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: colors.border,
   },
   searchRow: {
     flexDirection: 'row',
@@ -784,12 +629,12 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.background,
     borderRadius: m(12),
     paddingHorizontal: m(12),
     paddingVertical: m(10),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
   },
   searchIcon: {
     marginRight: m(8),
@@ -797,7 +642,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: m(14),
-    color: '#111827',
+    color: colors.textPrimary,
     paddingVertical: m(4),
   },
   filterIconButton: {
@@ -805,18 +650,18 @@ const styles = StyleSheet.create({
     height: m(46),
     borderRadius: m(12),
     borderWidth: 1,
-    borderColor: '#FFB15C',
+    borderColor: colors.goldLight,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFF7ED',
+    backgroundColor: colors.goldTint,
   },
   filterIconButtonActive: {
-    backgroundColor: '#FF8A00',
-    borderColor: '#FF8A00',
+    backgroundColor: colors.gold,
+    borderColor: colors.gold,
   },
   filterIconButtonSelected: {
-    backgroundColor: '#FF8A00',
-    borderColor: '#FF8A00',
+    backgroundColor: colors.gold,
+    borderColor: colors.gold,
   },
   activeFilterPill: {
     alignSelf: 'flex-start',
@@ -828,13 +673,13 @@ const styles = StyleSheet.create({
     paddingVertical: m(6),
     borderRadius: m(999),
     borderWidth: 1,
-    borderColor: '#FED7AA',
-    backgroundColor: '#FFF7ED',
+    borderColor: colors.goldLight,
+    backgroundColor: colors.goldTint,
   },
   activeFilterText: {
     fontSize: m(12),
     fontWeight: '700',
-    color: '#FF8A00',
+    color: colors.gold,
   },
   modalOverlay: {
     flex: 1,
@@ -845,7 +690,7 @@ const styles = StyleSheet.create({
   },
   filterModal: {
     width: '100%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: m(12),
     padding: m(16),
   },
@@ -858,12 +703,12 @@ const styles = StyleSheet.create({
   filterModalTitle: {
     fontSize: m(16),
     fontWeight: '700',
-    color: '#111827',
+    color: colors.textPrimary,
   },
   filterModalCloseText: {
     fontSize: m(13),
     fontWeight: '600',
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
   filterModalOption: {
     minHeight: m(44),
@@ -876,22 +721,22 @@ const styles = StyleSheet.create({
     marginTop: m(6),
   },
   filterModalOptionActive: {
-    backgroundColor: '#FFF7ED',
+    backgroundColor: colors.goldTint,
   },
   filterModalOptionText: {
     fontSize: m(14),
     fontWeight: '600',
-    color: '#374151',
+    color: colors.navy,
   },
   filterModalOptionTextActive: {
-    color: '#FF8A00',
+    color: colors.gold,
   },
   filterModalCount: {
     minWidth: m(30),
     textAlign: 'right',
     fontSize: m(13),
     fontWeight: '700',
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
 
   // List
@@ -903,245 +748,99 @@ const styles = StyleSheet.create({
 
   // Loan Card
   loanCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(18),
-    padding: m(16),
-    marginBottom: m(14),
-    borderWidth: 1,
-    borderColor: '#EEF0F3',
-    elevation: 3,
-    shadowColor: '#111827',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
+    borderRadius: m(20),
+    padding: m(14),
   },
   overdueCard: {
     borderLeftWidth: 4,
-    borderLeftColor: '#DC2626',
+    borderLeftColor: colors.error,
   },
-  loanHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: m(12),
-    gap: m(8),
-  },
-  loanHeaderLeft: {
-    flexDirection: 'row',
+  cardConnector: {
     alignItems: 'center',
-    flex: 1,
-    gap: m(10),
+    zIndex: 10,
   },
-  avatarCircle: {
-    width: m(44),
-    height: m(44),
-    borderRadius: m(14),
+  cardConnectorCircle: {
+    width: m(38),
+    height: m(38),
+    borderRadius: m(19),
+    backgroundColor: colors.ink,
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: -m(17),
+    marginBottom: -m(17),
+    borderWidth: 3,
+    borderColor: colors.offWhite,
+    elevation: 8,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
   },
-  avatarText: {
-    fontSize: m(15),
-    fontWeight: '700',
+  loanCardTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: m(10),
   },
-  loanInfo: {
-    flex: 1,
-  },
-  loanAmount: {
-    fontSize: m(17),
-    fontWeight: '700',
-    color: '#111827',
-    marginTop: m(2),
-  },
-  loanLender: {
-    fontSize: m(14),
-    fontWeight: '700',
-    color: '#111827',
-  },
-  loanContactRow: {
+  loanCardLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: m(4),
-    gap: m(5),
-  },
-  loanContactText: {
-    flex: 1,
-    fontSize: m(12),
-    color: '#9CA3AF',
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: m(8),
-    paddingVertical: m(6),
-    borderRadius: m(8),
-    gap: m(4),
-  },
-  statusText: {
-    fontSize: m(11),
-    fontWeight: '600',
-  },
-  overdueBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FEE2E2',
-    paddingHorizontal: m(12),
-    paddingVertical: m(8),
-    borderRadius: m(8),
-    marginBottom: m(12),
-    gap: m(8),
-  },
-  overdueBannerText: {
-    fontSize: m(12),
-    fontWeight: '600',
-    color: '#DC2626',
-    flex: 1,
-  },
-  dueSoonBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FEF3C7',
-    paddingHorizontal: m(12),
-    paddingVertical: m(8),
-    borderRadius: m(8),
-    marginBottom: m(12),
-    gap: m(8),
-  },
-  dueSoonBannerText: {
-    fontSize: m(12),
-    fontWeight: '600',
-    color: '#B45309',
-    flex: 1,
-  },
-  loanDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: m(8),
-    marginBottom: m(12),
-  },
-  detailPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#EEF2F7',
-    borderRadius: m(999),
-    paddingHorizontal: m(10),
-    paddingVertical: m(7),
     gap: m(6),
   },
-  detailText: {
+  loanCardLabel: {
     fontSize: m(13),
-    color: '#6B7280',
+    fontFamily: FontFamily.bodySemiBold,
+    color: colors.inkSoft,
   },
-  overdueText: {
-    color: '#DC2626',
-    fontWeight: '600',
+  overdueDot: {
+    width: m(7),
+    height: m(7),
+    borderRadius: m(4),
+    backgroundColor: colors.error,
   },
-  loanProgress: {
-    marginBottom: m(12),
+  detailsPill: {
+    backgroundColor: colors.ink,
+    paddingHorizontal: m(12),
+    paddingVertical: m(6),
+    borderRadius: m(18),
   },
-  progressInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: m(8),
-    gap: m(8),
-  },
-  progressLabel: {
+  detailsPillText: {
     fontSize: m(12),
-    color: '#6B7280',
+    fontFamily: FontFamily.bodySemiBold,
+    color: colors.white,
   },
-  progressPercentLabel: {
+  loanLender: {
     fontSize: m(12),
-    fontWeight: '700',
-    color: '#111827',
+    fontFamily: FontFamily.bodyRegular,
+    color: colors.inkSoft,
+    marginBottom: m(3),
   },
-  progressBar: {
-    height: m(8),
-    backgroundColor: '#E5E7EB',
-    borderRadius: m(999),
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: m(999),
-  },
-  loanActions: {
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-    paddingTop: m(10),
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: m(8),
-  },
-  actionButtonText: {
-    fontSize: m(14),
-    fontWeight: '600',
-    color: '#3B82F6',
-  },
-  amountPanel: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    borderRadius: m(14),
-    padding: m(12),
-    marginBottom: m(12),
-    borderWidth: 1,
-    borderColor: '#EEF2F7',
-  },
-  amountBlockPrimary: {
-    flex: 1.25,
-  },
-  amountBlock: {
-    flex: 1,
-    alignItems: 'flex-end',
-  },
-  amountDivider: {
-    width: 1,
-    height: m(34),
-    backgroundColor: '#E5E7EB',
-    marginHorizontal: m(10),
-  },
-  amountLabel: {
-    fontSize: m(11),
-    fontWeight: '600',
-    color: '#6B7280',
-    marginBottom: m(4),
-  },
-  paidAmountText: {
-    fontSize: m(13),
-    fontWeight: '800',
-    color: '#10B981',
-  },
-  remainingAmountText: {
-    fontSize: m(13),
-    fontWeight: '800',
-    color: '#EF4444',
+  loanAmount: {
+    fontSize: m(20),
+    fontFamily: FontFamily.primaryExtraBold,
+    color: colors.ink,
   },
 
   // Summary Card
   summaryCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: m(16),
     paddingHorizontal: m(16),
     paddingVertical: m(16),
     marginBottom: m(16),
     borderWidth: 1,
-    borderColor: '#EEF0F3',
+    borderColor: colors.borderLight,
     elevation: 2,
-    shadowColor: '#111827',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.06,
     shadowRadius: 10,
   },
   summaryTitle: {
-    fontSize: m(16),
-    fontWeight: '700',
-    color: '#111827',
+    fontSize: m(15),
+    lineHeight: m(20),
+    fontFamily: FontFamily.primarySemiBold,
+    color: colors.textPrimary,
     marginBottom: m(12),
   },
   summaryGrid: {
@@ -1165,15 +864,19 @@ const styles = StyleSheet.create({
   },
   summaryValue: {
     fontSize: m(15),
-    fontWeight: '700',
+    fontFamily: FontFamily.primaryExtraBold,
   },
   summaryLabel: {
-    fontSize: m(11),
-    color: '#6B7280',
+    fontSize: m(10),
+    lineHeight: m(14),
+    fontFamily: FontFamily.bodyMedium,
+    color: colors.textSecondary,
     textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   summaryHighlightLabel: {
-    color: '#DC2626',
-    fontWeight: '600',
+    color: colors.error,
+    fontFamily: FontFamily.bodySemiBold,
   },
 });
