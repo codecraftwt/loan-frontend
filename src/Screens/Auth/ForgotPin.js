@@ -16,7 +16,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import Toast from 'react-native-toast-message';
 import { useSelector } from 'react-redux';
 import { m } from 'walstar-rn-responsive';
-import { FontFamily, FontSizes } from '../../constants';
+import { FontFamily, FontSizes, colors } from '../../constants';
 import bcrypt from 'react-native-bcrypt';
 import instance from '../../Utils/AxiosInstance';
 
@@ -189,7 +189,7 @@ export default function ForgotPin({ navigation }) {
           <Ionicons
             name="mail-outline"
             size={20}
-            color="#ff7900"
+            color={colors.gold}
             style={styles.inputIcon}
           />
           <Text style={styles.input}>{maskEmail(userEmail) || 'No email on file'}</Text>
@@ -206,17 +206,17 @@ export default function ForgotPin({ navigation }) {
         disabled={isSubmitting || !userEmail}
       >
         <LinearGradient
-          colors={['#ff6700', '#ff7900', '#ff8500']}
+          colors={[colors.navyDark, colors.navy, colors.navyLight]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.continueButtonGradient}
         >
           {isSubmitting ? (
-            <ActivityIndicator color="#FFF" />
+            <ActivityIndicator color={colors.white} />
           ) : (
             <>
               <Text style={styles.continueButtonText}>Send OTP</Text>
-              <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+              <Ionicons name="arrow-forward" size={20} color={colors.white} />
             </>
           )}
         </LinearGradient>
@@ -268,20 +268,20 @@ export default function ForgotPin({ navigation }) {
         disabled={isSubmitting || otp.includes('')}
       >
         <LinearGradient
-          colors={['#ff6700', '#ff7900', '#ff8500']}
+          colors={[colors.navyDark, colors.navy, colors.navyLight]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.continueButtonGradient}
         >
           {isSubmitting ? (
-            <ActivityIndicator color="#FFF" />
+            <ActivityIndicator color={colors.white} />
           ) : (
             <>
               <Text style={styles.continueButtonText}>Verify & Continue</Text>
               <Ionicons
                 name="checkmark-circle-outline"
                 size={20}
-                color="#FFFFFF"
+                color={colors.white}
               />
             </>
           )}
@@ -356,7 +356,7 @@ export default function ForgotPin({ navigation }) {
         <Ionicons
           name={showPin ? 'eye-off-outline' : 'eye-outline'}
           size={20}
-          color="#ff7900"
+          color={colors.gold}
         />
         <Text style={styles.showPinText}>
           {showPin ? 'Hide PIN' : 'Show PIN'}
@@ -377,17 +377,17 @@ export default function ForgotPin({ navigation }) {
         }
       >
         <LinearGradient
-          colors={['#ff6700', '#ff7900', '#ff8500']}
+          colors={[colors.navyDark, colors.navy, colors.navyLight]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.continueButtonGradient}
         >
           {isSubmitting ? (
-            <ActivityIndicator color="#FFF" />
+            <ActivityIndicator color={colors.white} />
           ) : (
             <>
               <Text style={styles.continueButtonText}>Save New PIN</Text>
-              <Ionicons name="save-outline" size={20} color="#FFFFFF" />
+              <Ionicons name="save-outline" size={20} color={colors.white} />
             </>
           )}
         </LinearGradient>
@@ -400,13 +400,13 @@ export default function ForgotPin({ navigation }) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <StatusBar barStyle="light-content" backgroundColor="#ff6700" />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.offWhite} />
       <View style={styles.topBar}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => (step > 1 ? setStep(step - 1) : navigation.goBack())}
         >
-          <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+          <Ionicons name="arrow-back" size={22} color={colors.navy} />
         </TouchableOpacity>
       </View>
 
@@ -430,7 +430,7 @@ export default function ForgotPin({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#ff6700' },
+  container: { flex: 1, backgroundColor: colors.offWhite },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: m(20),
@@ -446,45 +446,45 @@ const styles = StyleSheet.create({
     height: m(36),
     borderRadius: m(18),
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.4)',
+    borderColor: colors.navyBorder,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.08)',
+    backgroundColor: colors.surface,
   },
   headerContent: { alignItems: 'center', marginBottom: m(20) },
   appName: {
     fontSize: FontSizes['4xl'],
     fontFamily: FontFamily.secondaryBold,
-    color: '#FFFFFF',
+    color: colors.navy,
   },
   tagline: {
     fontSize: FontSizes.base,
     fontFamily: FontFamily.secondaryRegular,
-    color: '#FFFFFF',
+    color: colors.textSecondary,
     fontStyle: 'italic',
   },
   formCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: m(20),
     padding: m(24),
     borderWidth: 1,
-    borderColor: '#FFEDD5',
+    borderColor: colors.navyBorder,
     elevation: 8,
-    shadowColor: '#ff6700',
+    shadowColor: colors.navy,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
   },
   headerText: {
     fontSize: FontSizes['2xl'],
-    color: '#333',
+    color: colors.textPrimary,
     fontFamily: FontFamily.secondaryBold,
     textAlign: 'center',
     marginBottom: m(8),
   },
   instructionText: {
     fontSize: FontSizes.md,
-    color: '#666',
+    color: colors.textSecondary,
     fontFamily: FontFamily.primaryRegular,
     textAlign: 'center',
     marginBottom: m(24),
@@ -493,37 +493,37 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: FontSizes.base,
     fontFamily: FontFamily.primarySemiBold,
-    color: '#555',
+    color: colors.textSecondary,
     marginBottom: m(8),
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF9F0',
+    backgroundColor: colors.navyFaint,
     borderRadius: m(12),
     borderWidth: 1,
-    borderColor: '#FFEDD5',
+    borderColor: colors.navyBorder,
     paddingHorizontal: m(16),
     height: m(56),
   },
-  inputError: { borderColor: '#FF4444' },
+  inputError: { borderColor: colors.error },
   inputIcon: { marginRight: m(12) },
   input: {
     flex: 1,
     fontSize: FontSizes.md,
     fontFamily: FontFamily.primaryRegular,
-    color: '#333',
+    color: colors.textPrimary,
   },
   errorText: {
     fontSize: FontSizes.base,
-    color: '#FF4444',
+    color: colors.error,
     fontFamily: FontFamily.primaryRegular,
     marginTop: m(4),
     marginLeft: m(4),
   },
   errorTextCenter: {
     fontSize: FontSizes.base,
-    color: '#FF4444',
+    color: colors.error,
     fontFamily: FontFamily.primaryRegular,
     marginTop: m(10),
     textAlign: 'center',
@@ -542,7 +542,7 @@ const styles = StyleSheet.create({
     gap: m(8),
   },
   continueButtonText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: FontSizes.lg,
     fontFamily: FontFamily.primarySemiBold,
   },
@@ -556,16 +556,16 @@ const styles = StyleSheet.create({
     width: m(56),
     height: m(56),
     borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     borderRadius: m(12),
     fontSize: m(24),
     fontWeight: '600',
     textAlign: 'center',
-    color: '#111827',
-    backgroundColor: '#F9FAFB',
+    color: colors.textPrimary,
+    backgroundColor: colors.background,
   },
-  digitInputFilled: { borderColor: '#3B82F6', backgroundColor: '#FFFFFF' },
-  digitInputError: { borderColor: '#DC2626' },
+  digitInputFilled: { borderColor: colors.navy, backgroundColor: colors.surface },
+  digitInputError: { borderColor: colors.error },
   showPinButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -577,6 +577,6 @@ const styles = StyleSheet.create({
   showPinText: {
     fontSize: FontSizes.sm,
     fontFamily: FontFamily.primaryMedium,
-    color: '#ff7900',
+    color: colors.goldDark,
   },
 });

@@ -46,47 +46,42 @@ export default function BottomNavigation() {
 
   const renderIcon = (name, color, size, focused) => {
     return (
-      <View style={styles.iconWrapper}>
+      <View style={[styles.iconWrapper, focused && styles.activeIconWrapper]}>
         <Feather
           name={name}
-          size={focused ? size + 2 : size}
-          color={focused ? colors.navy : color}
+          size={focused ? size : size - 1}
+          color={focused ? colors.white : color}
         />
       </View>
     );
   };
 
+  const tabScreenOptions = {
+    headerShown: false,
+    tabBarHideOnKeyboard: true,
+    tabBarShowLabel: false,
+    tabBarActiveTintColor: colors.white,
+    tabBarInactiveTintColor: colors.ink,
+    tabBarLabelStyle: styles.hiddenLabel,
+    tabBarIconStyle: styles.tabBarIcon,
+    tabBarItemStyle: styles.tabBarItem,
+    tabBarStyle: [
+      styles.tabBar,
+      {
+        bottom: Platform.OS === 'ios'
+          ? Math.max(insets.bottom, m(10))
+          : Math.max(insets.bottom + m(6), m(12)),
+      },
+    ],
+  };
+
   // Admin Dashboard (roleId === 0)
   if (roleId === 0) {
     return (
-      <View style={{ flex: 1 }}>
+      <View style={styles.container}>
         <Tab.Navigator
           initialRouteName="AdminHome"
-          screenOptions={{
-            headerShown: false,
-            tabBarHideOnKeyboard: true,
-            tabBarActiveTintColor: colors.navy,
-            tabBarInactiveTintColor: '#666666',
-            tabBarLabelStyle: {
-              fontSize: m(11),
-              fontFamily: 'Poppins-SemiBold',
-              paddingTop: m(5)
-            },
-            tabBarStyle: {
-              position: 'absolute',
-              left: m(16),
-              right: m(16),
-              // bottom: insets.bottom,
-              bottom: Platform.OS === 'ios'
-                ? insets.bottom - 12
-                : insets.bottom,
-              height: m(68),
-              backgroundColor: colors.white,
-              borderTopWidth: 0,
-              paddingTop: m(5),
-              paddingBottom: insets.bottom > 0 ? m(5) : 0,
-            },
-          }}>
+          screenOptions={tabScreenOptions}>
           <Tab.Screen
             name="AdminHome"
             component={AdminDashboard}
@@ -139,34 +134,10 @@ export default function BottomNavigation() {
   // Borrower Dashboard (roleId === 2)
   if (roleId === 2) {
     return (
-      <View style={{ flex: 1 }}>
+      <View style={styles.container}>
         <Tab.Navigator
           initialRouteName="BorrowerHome"
-          screenOptions={{
-            headerShown: false,
-            tabBarHideOnKeyboard: true,
-            tabBarActiveTintColor: colors.navy,
-            tabBarInactiveTintColor: '#666666',
-            tabBarLabelStyle: {
-              fontSize: m(11),
-              fontFamily: 'Poppins-SemiBold',
-              paddingTop: m(5)
-            },
-            tabBarStyle: {
-              position: 'absolute',
-              left: m(16),
-              right: m(16),
-              // bottom: insets.bottom,
-              bottom: Platform.OS === 'ios'
-                ? insets.bottom - 12
-                : insets.bottom,
-              height: m(69),
-              backgroundColor: colors.white,
-              borderTopWidth: 0,
-              paddingTop: m(6),
-              paddingBottom: insets.bottom > 0 ? m(5) : 0,
-            },
-          }}>
+          screenOptions={tabScreenOptions}>
           <Tab.Screen
             name="BorrowerHome"
             component={BorrowerDashboard}
@@ -209,34 +180,10 @@ export default function BottomNavigation() {
 
   // Lender Dashboard (roleId === 1) - Default/Current Dashboard
   return (
-    <View style={{ flex: 1 }}>
+    <View style={styles.container}>
       <Tab.Navigator
         initialRouteName="Home"
-        screenOptions={{
-          headerShown: false,
-          tabBarHideOnKeyboard: true,
-          tabBarActiveTintColor: colors.navy,
-          tabBarInactiveTintColor: '#666666',
-          tabBarLabelStyle: {
-            fontSize: m(11),
-            fontFamily: 'Poppins-SemiBold',
-            paddingTop: m(5)
-          },
-          tabBarStyle: {
-            position: 'absolute',
-            left: m(16),
-            right: m(16),
-            // bottom: insets.bottom,
-            bottom: Platform.OS === 'ios'
-          ? insets.bottom - 12
-          : insets.bottom,
-            height: m(70),
-            backgroundColor: colors.white,
-            borderTopWidth: 0,
-            paddingTop: m(10),
-            paddingBottom: insets.bottom > 0 ? m(5) : 0,
-          },
-        }}>
+        screenOptions={tabScreenOptions}>
         <Tab.Screen
           name="Home"
           component={Home}
@@ -275,11 +222,56 @@ export default function BottomNavigation() {
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  tabBar: {
+    position: 'absolute',
+    left: m(48),
+    right: m(48),
+    height: m(62),
+    backgroundColor: colors.white,
+    borderTopWidth: 0,
+    borderRadius: m(31),
+    paddingHorizontal: m(9),
+    paddingTop: 0,
+    paddingBottom: 0,
+    elevation: 16,
+    shadowColor: colors.black,
+    shadowOffset: {
+      width: 0,
+      height: m(8),
+    },
+    shadowOpacity: 0.14,
+    shadowRadius: m(16),
+  },
+  tabBarItem: {
+    height: m(62),
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 0,
+    paddingBottom: 0,
+  },
+  tabBarIcon: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 0,
+  },
+  hiddenLabel: {
+    display: 'none',
+    height: 0,
+    margin: 0,
+    padding: 0,
+  },
   iconWrapper: {
-    width: m(34),
-    height: m(34),
-    borderRadius: m(17),
+    width: m(46),
+    height: m(46),
+    borderRadius: m(23),
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  activeIconWrapper: {
+    backgroundColor: colors.ink,
   },
 });

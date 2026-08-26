@@ -52,13 +52,25 @@ const ChangePasswordScreen = ({ navigation }) => {
   const passwordsMatch = confirmNewPassword.length > 0 && newPassword === confirmNewPassword;
   const passwordsMismatch = submitted && confirmNewPassword.length > 0 && newPassword !== confirmNewPassword;
 
+  const hasMinLength = newPassword.length >= 8;
+  const hasMixedCase = /[A-Z]/.test(newPassword) && /[a-z]/.test(newPassword);
+  const hasNumberAndSymbol = /[0-9]/.test(newPassword) && /[^A-Za-z0-9]/.test(newPassword);
+
   const validate = () => {
     if (!currentPassword.trim() || !newPassword.trim() || !confirmNewPassword.trim()) {
       Toast.show({ type: 'error', text1: 'All fields are required' });
       return false;
     }
-    if (newPassword.length < 6) {
-      Toast.show({ type: 'error', text1: 'New password must be at least 6 characters' });
+    if (!hasMinLength) {
+      Toast.show({ type: 'error', text1: 'New password must be at least 8 characters' });
+      return false;
+    }
+    if (!hasMixedCase) {
+      Toast.show({ type: 'error', text1: 'New password must include uppercase & lowercase letters' });
+      return false;
+    }
+    if (!hasNumberAndSymbol) {
+      Toast.show({ type: 'error', text1: 'New password must include numbers and symbols' });
       return false;
     }
     if (newPassword !== confirmNewPassword) {
@@ -186,13 +198,13 @@ const ChangePasswordScreen = ({ navigation }) => {
         {/* Hero Section */}
         <View style={styles.heroSection}>
           <LinearGradient
-            colors={['#FFF7ED', '#FEF3C7', '#FFEDD5']}
+            colors={['#FFF7ED', '#FFEDD5', '#FED7AA']}
             style={styles.heroIconWrapper}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}>
             <View style={styles.heroIconOuter}>
               <LinearGradient
-                colors={['#ff8800', '#ff6700']}
+                colors={['#ff9100ff', '#ffa200ff']}
                 style={styles.heroIconInner}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}>
@@ -295,25 +307,13 @@ const ChangePasswordScreen = ({ navigation }) => {
           </View>
           <View style={styles.tipsList}>
             {[
-              'At least 6 characters long',
-              'Mix uppercase & lowercase letters',
-              'Include numbers and symbols',
+              { label: 'At least 8 characters long', met: hasMinLength },
+              { label: 'Mix uppercase & lowercase letters', met: hasMixedCase },
+              { label: 'Include numbers and symbols', met: hasNumberAndSymbol },
             ].map((tip, i) => (
               <View key={i} style={styles.tipItem}>
-                <View style={[styles.tipDot, {
-                  backgroundColor:
-                    i === 0 && newPassword.length >= 6 ? '#10B981' :
-                    i === 1 && /[A-Z]/.test(newPassword) && /[a-z]/.test(newPassword) ? '#10B981' :
-                    i === 2 && /[0-9]/.test(newPassword) && /[^A-Za-z0-9]/.test(newPassword) ? '#10B981' :
-                    '#D1D5DB',
-                }]} />
-                <Text style={[styles.tipText, {
-                  color:
-                    i === 0 && newPassword.length >= 6 ? '#10B981' :
-                    i === 1 && /[A-Z]/.test(newPassword) && /[a-z]/.test(newPassword) ? '#10B981' :
-                    i === 2 && /[0-9]/.test(newPassword) && /[^A-Za-z0-9]/.test(newPassword) ? '#10B981' :
-                    '#6B7280',
-                }]}>{tip}</Text>
+                <View style={[styles.tipDot, { backgroundColor: tip.met ? '#10B981' : '#D1D5DB' }]} />
+                <Text style={[styles.tipText, { color: tip.met ? '#10B981' : '#6B7280' }]}>{tip.label}</Text>
               </View>
             ))}
           </View>
@@ -327,7 +327,7 @@ const ChangePasswordScreen = ({ navigation }) => {
             activeOpacity={0.8}
             disabled={loading}>
             <LinearGradient
-              colors={loading ? ['#d1d5db', '#9ca3af'] : ['#ff6700', '#ff9100']}
+              colors={loading ? ['#d1d5db', '#9ca3af'] : ['#ff9100ff', '#ffa200ff']}
               style={styles.primaryButtonGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}>
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
     width: m(72),
     height: m(72),
     borderRadius: m(36),
-    backgroundColor: 'rgba(255, 135, 0, 0.15)',
+    backgroundColor: '#FFEDD5',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -396,7 +396,7 @@ const styles = StyleSheet.create({
     borderRadius: m(28),
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#ff6700',
+    shadowColor: '#F97316',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
     shadowRadius: 12,
@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
   primaryButton: {
     borderRadius: m(16),
     overflow: 'hidden',
-    shadowColor: '#ff6700',
+    shadowColor: '#F97316',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 16,

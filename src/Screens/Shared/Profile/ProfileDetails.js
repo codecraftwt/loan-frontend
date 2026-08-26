@@ -3,7 +3,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useSelector } from 'react-redux';
@@ -48,28 +47,6 @@ const ProfileDetails = ({ navigation }) => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Profile Header Card */}
-        <View style={styles.profileHeaderCard}>
-          <View style={styles.profileImageSection}>
-            <View style={styles.imageContainer}>
-              {profileData?.profileImage ? (
-                <Image
-                  source={{ uri: profileData.profileImage }}
-                  style={styles.profileImage}
-                />
-              ) : (
-                <View style={styles.defaultProfileIcon}>
-                  <Icon name="user" size={56} color="#FFFFFF" />
-                </View>
-              )}
-            </View>
-
-            <View style={styles.userNameSection}>
-              <Text style={styles.userName}>{profileData?.userName || 'User Name'}</Text>
-            </View>
-          </View>
-        </View>
-
         {/* Profile Information Card */}
         <View style={styles.infoCard}>
           <View style={styles.infoCardHeader}>
@@ -102,58 +79,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: m(16),
     paddingBottom: m(100),
-  },
-  // Profile Header Card
-  profileHeaderCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(20),
-    padding: m(24),
-    marginBottom: m(16),
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
-  },
-  profileImageSection: {
-    alignItems: 'center',
-    width: '100%',
-  },
-  imageContainer: {
-    width: m(120),
-    height: m(120),
-    borderRadius: m(60),
-    backgroundColor: '#EFF6FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-    marginBottom: m(20),
-    borderWidth: 4,
-    borderColor: '#DBEAFE',
-  },
-  defaultProfileIcon: {
-    width: m(120),
-    height: m(120),
-    borderRadius: m(60),
-    backgroundColor: '#3B82F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  profileImage: {
-    width: m(120),
-    height: m(120),
-    borderRadius: m(60),
-  },
-  userNameSection: {
-    width: '100%',
-    alignItems: 'center',
-  },
-  userName: {
-    fontSize: m(24),
-    fontWeight: '700',
-    color: '#111827',
-    textAlign: 'center',
   },
   // Info Card
   infoCard: {

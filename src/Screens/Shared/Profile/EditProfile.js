@@ -6,63 +6,26 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
-  Image,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  PermissionsAndroid,
-  Alert,
-  Modal,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import LinearGradient from 'react-native-linear-gradient';
 import Toast from 'react-native-toast-message';
-import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import { useDispatch, useSelector } from 'react-redux';
 import { useFocusEffect } from '@react-navigation/native';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
-import PromptBox from '../../PromptBox/Prompt';
-import {
-  deleteProfileImage,
-  updateUser,
-  updateUserProfile,
-} from '../../../Redux/Slices/authslice';
+import { updateUser } from '../../../Redux/Slices/authslice';
 import useFetchUserFromStorage from '../../../Redux/hooks/useFetchUserFromStorage';
-
-const requestCameraPermission = async () => {
-  try {
-    if (Platform.OS === 'android') {
-      const granted = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.CAMERA,
-        {
-          title: 'Camera Permission',
-          message: 'App needs access to your camera to take profile photos.',
-          buttonNeutral: 'Ask Me Later',
-          buttonNegative: 'Cancel',
-          buttonPositive: 'OK',
-        }
-      );
-
-      return granted === PermissionsAndroid.RESULTS.GRANTED;
-    }
-
-    return true;
-  } catch (err) {
-    console.warn(err);
-    return false;
-  }
-};
 
 const EditProfile = ({ navigation }) => {
   const dispatch = useDispatch();
   const profileData = useSelector(state => state.auth.user);
   useFetchUserFromStorage();
 
-  const [isDeleteImagePromptVisible, setIsDeleteImagePromptVisible] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [isImagePickerModalVisible, setIsImagePickerModalVisible] = useState(false);
   
   // Helper function to extract only the numeric part (remove +91)
   const getDisplayPhoneNumber = (fullNumber) => {
@@ -96,123 +59,6 @@ const EditProfile = ({ navigation }) => {
       });
     }, [profileData])
   );
-
-  // Profile Image Functions
-  const handleProfileImageOption = (option) => {
-    setIsImagePickerModalVisible(false);
-    
-    switch(option) {
-      case 'camera':
-        launchCameraAction();
-        break;
-      case 'gallery':
-        launchGalleryAction();
-        break;
-      case 'remove':
-        if (profileData?.profileImage) {
-          setIsDeleteImagePromptVisible(true);
-        } else {
-          Toast.show({ 
-            type: 'info', 
-            text1: 'No Image', 
-            text2: 'You don\'t have a profile image to remove' 
-          });
-        }
-        break;
-      default:
-        break;
-    }
-  };
-
-const launchCameraAction = async () => {
-  const hasPermission = await requestCameraPermission();
-
-  if (!hasPermission) {
-    Alert.alert(
-      'Permission Denied',
-      'Camera permission is required to take photos.'
-    );
-    return;
-  }
-
-  const options = {
-    mediaType: 'photo',
-    cameraType: 'front',
-    quality: 1,
-    saveToPhotos: true,
-  };
-
-  launchCamera(options, response => {
-    if (response.didCancel) {
-      return;
-    }
-
-    if (response.errorCode) {
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: response.errorMessage,
-      });
-      return;
-    }
-
-    if (response.assets && response.assets[0]) {
-      handleImageUpload(response.assets[0]);
-    }
-  });
-};
-
-  const launchGalleryAction = () => {
-    const options = {
-      mediaType: 'photo',
-      quality: 1,
-    };
-    
-    launchImageLibrary(options, response => {
-      if (response.didCancel) {
-        return;
-      }
-      if (response.errorCode) {
-        Toast.show({ type: 'error', text1: 'Error', text2: response.errorMessage });
-        return;
-      }
-      if (response.assets && response.assets[0]) {
-        handleImageUpload(response.assets[0]);
-      }
-    });
-  };
-
-  const handleImageUpload = async asset => {
-    try {
-      setLoading(true);
-      const { uri, type, fileName } = asset;
-      const formData = new FormData();
-      formData.append('profileImage', { 
-        uri, 
-        type, 
-        name: fileName || 'profile.jpg' 
-      });
-      await dispatch(updateUserProfile(formData)).unwrap();
-      Toast.show({ type: 'success', text1: 'Profile Image Updated' });
-    } catch (err) {
-      Toast.show({ type: 'error', text1: 'Image Update Failed' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDeleteProfileImage = () => setIsDeleteImagePromptVisible(true);
-  
-  const handleConfirmDeleteImage = async () => {
-    try {
-      await dispatch(deleteProfileImage()).unwrap();
-      Toast.show({ type: 'success', text1: 'Profile Image Deleted' });
-      setIsDeleteImagePromptVisible(false);
-    } catch (err) {
-      Toast.show({ type: 'error', text1: 'Delete Failed' });
-      setIsDeleteImagePromptVisible(false);
-    }
-  };
 
   const handleSaveChanges = async () => {
     // Validate name field - cannot be empty
@@ -284,7 +130,7 @@ const launchCameraAction = async () => {
     }
 
     try {
-      const result = await dispatch(updateUser(dataToSave)).unwrap();
+      await dispatch(updateUser(dataToSave)).unwrap();
       
       // Show success message
       Toast.show({ 
@@ -295,6 +141,7 @@ const launchCameraAction = async () => {
       
       // Navigate back after a short delay to ensure toast is shown
       setTimeout(() => {
+        setSaving(false);
         navigation.goBack();
       }, 500);
       
@@ -384,72 +231,6 @@ const launchCameraAction = async () => {
     );
   };
 
-  // Image Picker Modal Component
-  const renderImagePickerModal = () => (
-    <Modal
-      animationType="slide"
-      transparent={true}
-      visible={isImagePickerModalVisible}
-      onRequestClose={() => setIsImagePickerModalVisible(false)}
-    >
-      <TouchableOpacity 
-        style={styles.modalOverlay} 
-        activeOpacity={1} 
-        onPress={() => setIsImagePickerModalVisible(false)}
-      >
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Profile Image</Text>
-            <TouchableOpacity onPress={() => setIsImagePickerModalVisible(false)}>
-              <Icon name="x" size={24} color="#6B7280" />
-            </TouchableOpacity>
-          </View>
-          
-          <TouchableOpacity 
-            style={styles.modalOption} 
-            onPress={() => handleProfileImageOption('camera')}
-          >
-            <View style={[styles.modalOptionIcon, { backgroundColor: '#3B82F6' }]}>
-              <Icon name="camera" size={22} color="#FFFFFF" />
-            </View>
-            <Text style={styles.modalOptionText}>Take Photo</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.modalOption} 
-            onPress={() => handleProfileImageOption('gallery')}
-          >
-            <View style={[styles.modalOptionIcon, { backgroundColor: '#10B981' }]}>
-              <Icon name="image" size={22} color="#FFFFFF" />
-            </View>
-            <Text style={styles.modalOptionText}>Choose from Gallery</Text>
-          </TouchableOpacity>
-          
-          {profileData?.profileImage && (
-            <TouchableOpacity 
-              style={[styles.modalOption, styles.modalOptionRemove]} 
-              onPress={() => handleProfileImageOption('remove')}
-            >
-              <View style={[styles.modalOptionIcon, { backgroundColor: '#EF4444' }]}>
-                <Icon name="trash-2" size={22} color="#FFFFFF" />
-              </View>
-              <Text style={[styles.modalOptionText, styles.modalOptionRemoveText]}>
-                Remove Photo
-              </Text>
-            </TouchableOpacity>
-          )}
-          
-          <TouchableOpacity 
-            style={styles.modalCancelButton} 
-            onPress={() => setIsImagePickerModalVisible(false)}
-          >
-            <Text style={styles.modalCancelText}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
-      </TouchableOpacity>
-    </Modal>
-  );
-
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -462,55 +243,6 @@ const launchCameraAction = async () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Profile Header Card */}
-        <View style={styles.profileHeaderCard}>
-          <View style={styles.profileImageSection}>
-            <TouchableOpacity 
-              style={styles.imageContainer}
-              onPress={() => setIsImagePickerModalVisible(true)}
-              activeOpacity={0.9}
-            >
-              {profileData?.profileImage ? (
-                <Image
-                  source={{ uri: profileData.profileImage }}
-                  style={styles.profileImage}
-                />
-              ) : (
-                <View style={styles.defaultProfileIcon}>
-                  <Icon name="user" size={56} color="#FFFFFF" />
-                </View>
-              )}
-
-              {/* Camera Icon Overlay - Always show in edit mode */}
-              <View style={styles.cameraBtn}>
-                <LinearGradient
-                  colors={['#3B82F6', '#2563EB']}
-                  style={styles.cameraIconBg}
-                >
-                  <Icon name="camera" size={18} color="#FFFFFF" />
-                </LinearGradient>
-              </View>
-            </TouchableOpacity>
-
-            {loading && (
-              <View style={styles.loadingOverlay}>
-                <ActivityIndicator size="small" color="#3B82F6" />
-              </View>
-            )}
-
-            <View style={styles.userNameSection}>
-              <TextInput
-                style={styles.userNameInput}
-                value={editedData.userName}
-                onChangeText={text => setEditedData({ ...editedData, userName: text })}
-                placeholder="Enter your name"
-                placeholderTextColor="#9CA3AF"
-                maxLength={50}
-              />
-            </View>
-          </View>
-        </View>
-
         {/* Profile Information Card */}
         <View style={styles.infoCard}>
           <View style={styles.infoCardHeader}>
@@ -556,16 +288,6 @@ const launchCameraAction = async () => {
         </View>
       </ScrollView>
 
-      {/* Image Picker Modal */}
-      {renderImagePickerModal()}
-
-      {/* Prompt Box for Delete Confirmation */}
-      <PromptBox
-        visible={isDeleteImagePromptVisible}
-        message="Are you sure you want to delete your profile image?"
-        onConfirm={handleConfirmDeleteImage}
-        onCancel={() => setIsDeleteImagePromptVisible(false)}
-      />
     </KeyboardAvoidingView>
   );
 };
@@ -581,95 +303,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: m(16),
     paddingBottom: m(100),
-  },
-  // Profile Header Card
-  profileHeaderCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(20),
-    padding: m(24),
-    marginBottom: m(16),
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
-  },
-  profileImageSection: {
-    alignItems: 'center',
-    width: '100%',
-  },
-  imageContainer: {
-    width: m(120),
-    height: m(120),
-    borderRadius: m(60),
-    backgroundColor: '#EFF6FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-    marginBottom: m(20),
-    borderWidth: 4,
-    borderColor: '#DBEAFE',
-  },
-  defaultProfileIcon: {
-    width: m(120),
-    height: m(120),
-    borderRadius: m(60),
-    backgroundColor: '#3B82F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  profileImage: {
-    width: m(120),
-    height: m(120),
-    borderRadius: m(60),
-  },
-  cameraBtn: {
-    position: 'absolute',
-    bottom: m(0),
-    right: m(0),
-    width: m(40),
-    height: m(40),
-    borderRadius: m(20),
-    overflow: 'hidden',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: '#FFFFFF',
-    elevation: 4,
-    shadowColor: '#3B82F6',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-  },
-  cameraIconBg: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingOverlay: {
-    position: 'absolute',
-    top: m(140),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  userNameSection: {
-    width: '100%',
-    alignItems: 'center',
-  },
-  userNameInput: {
-    fontSize: m(24),
-    fontWeight: '700',
-    color: '#111827',
-    textAlign: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: '#3B82F6',
-    paddingHorizontal: m(12),
-    paddingVertical: m(8),
-    minWidth: m(200),
-    backgroundColor: '#F9FAFB',
-    borderRadius: m(8),
   },
   // Info Card
   infoCard: {
@@ -832,73 +465,6 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontSize: m(16),
     fontWeight: '600',
-  },
-  // Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: m(20),
-    borderTopRightRadius: m(20),
-    padding: m(20),
-    paddingBottom: m(34),
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: m(20),
-    paddingBottom: m(12),
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  modalTitle: {
-    fontSize: m(18),
-    fontWeight: '700',
-    color: '#111827',
-  },
-  modalOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: m(14),
-    paddingHorizontal: m(12),
-    borderRadius: m(12),
-    marginBottom: m(8),
-    backgroundColor: '#F9FAFB',
-  },
-  modalOptionRemove: {
-    backgroundColor: '#FEF2F2',
-  },
-  modalOptionIcon: {
-    width: m(44),
-    height: m(44),
-    borderRadius: m(22),
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: m(16),
-  },
-  modalOptionText: {
-    fontSize: m(16),
-    fontWeight: '600',
-    color: '#111827',
-  },
-  modalOptionRemoveText: {
-    color: '#EF4444',
-  },
-  modalCancelButton: {
-    marginTop: m(12),
-    paddingVertical: m(14),
-    alignItems: 'center',
-    borderRadius: m(12),
-    backgroundColor: '#F3F4F6',
-  },
-  modalCancelText: {
-    fontSize: m(16),
-    fontWeight: '600',
-    color: '#6B7280',
   },
 });
 

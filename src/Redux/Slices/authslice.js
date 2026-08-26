@@ -182,16 +182,26 @@ export const registerUser = createAsyncThunk(
 
 export const updateUser = createAsyncThunk(
   'user/update-user',
-  async (userData, { rejectWithValue }) => {
+  async (userData, { getState, rejectWithValue }) => {
     try {
       const token = await AsyncStorage.getItem('token');
       if (!token) {
         return rejectWithValue('User is not authenticated');
       }
 
-      const response = await instance.patch('user/update-profile', {
-        userData: userData
-      });
+      const response = await instance.patch('user/update-profile', userData);
+
+      const updatedUser = response.data?.user || response.data;
+      if (updatedUser) {
+        const currentUser = getState().auth.user || {};
+        await AsyncStorage.setItem(
+          'user',
+          JSON.stringify({
+            ...currentUser,
+            ...updatedUser,
+          }),
+        );
+      }
 
       return response.data;
     } catch (error) {
@@ -205,7 +215,7 @@ export const updateUser = createAsyncThunk(
 
 export const updateUserProfile = createAsyncThunk(
   'user/updateProfile',
-  async (formData, thunkAPI) => {
+  async (formData, { getState, rejectWithValue }) => {
     try {
       const response = await instance.post(
         'user/uploadProfileImage',
@@ -216,18 +226,41 @@ export const updateUserProfile = createAsyncThunk(
           },
         },
       );
+
+      const updatedUser = response.data?.user || response.data;
+      if (updatedUser) {
+        const currentUser = getState().auth.user || {};
+        await AsyncStorage.setItem(
+          'user',
+          JSON.stringify({
+            ...currentUser,
+            ...updatedUser,
+          }),
+        );
+      }
+
       return response.data;
     } catch (error) {
-      return thunkAPI.rejectWithValue(error.response?.data || error.message);
+      return rejectWithValue(error.response?.data || error.message);
     }
   },
 );
 
 export const deleteProfileImage = createAsyncThunk(
   'user/deleteProfileImage',
-  async (_, {rejectWithValue}) => {
+  async (_, {getState, rejectWithValue}) => {
     try {
       const response = await instance.delete('user/delete-profile-image');
+
+      const currentUser = getState().auth.user || {};
+      await AsyncStorage.setItem(
+        'user',
+        JSON.stringify({
+          ...currentUser,
+          profileImage: null,
+        }),
+      );
+
       return response.data;
     } catch (error) {
       console.error(
@@ -429,8 +462,10 @@ const authSlice = createSlice({
       .addCase(updateUser.fulfilled, (state, action) => {
         state.isLoading = false;
         if (action.payload) {
-          // Update user data in the state
-          state.user = action.payload.user || action.payload;
+          state.user = {
+            ...state.user,
+            ...(action.payload.user || action.payload),
+          };
         } else {
           state.error = 'Failed to update profile';
         }
@@ -495,8 +530,11 @@ const authSlice = createSlice({
       .addCase(updateUserProfile.fulfilled, (state, action) => {
         state.isLoading = false;
         if (action.payload) {
-          // Update user data in the state
-          state.user = action.payload.user || action.payload;
+          // Preserve fields that the upload response does not return, such as roleId.
+          state.user = {
+            ...state.user,
+            ...(action.payload.user || action.payload),
+          };
         } else {
           state.error = 'Failed to update profile';
         }
