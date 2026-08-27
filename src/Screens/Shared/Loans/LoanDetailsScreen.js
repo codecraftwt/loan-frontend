@@ -26,6 +26,7 @@ import lenderLoanAPI from '../../../Services/lenderLoanService';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { baseurl } from '../../../Utils/API';
 import BorrowerReputationCard from '../../../Components/BorrowerReputationCard';
+import { FontFamily } from '../../../constants';
 
 const DetailItem = ({ icon, label, value, isStatus, onStatusChange }) => {
   const isAccepted = value?.toLowerCase() === 'accepted';
@@ -75,6 +76,7 @@ export default function LoanDetailScreen({ route, navigation }) {
   const [confirmNotes, setConfirmNotes] = useState('');
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
   const [selectedImageUrl, setSelectedImageUrl] = useState(null);
+  const [showReputation, setShowReputation] = useState(false);
 
   const isLender = user?.roleId === 1;
 
@@ -781,10 +783,51 @@ export default function LoanDetailScreen({ route, navigation }) {
 
         {/* Borrower Reputation Score - Only for Lenders */}
         {isLender && loanDetails.aadhaarNumber && (
-          <BorrowerReputationCard 
-            aadhaarNumber={loanDetails.aadhaarNumber} 
-            compact={false}
-          />
+          <View style={styles.reputationContainer}>
+            <TouchableOpacity
+              style={styles.reputationToggle}
+              onPress={() => setShowReputation(!showReputation)}
+              activeOpacity={0.8}
+            >
+              <View style={styles.reputationHeader}>
+                <View style={styles.reputationTitleContainer}>
+                  <View style={styles.reputationIconContainer}>
+                    <MaterialIcons
+                      name="verified"
+                      size={24}
+                      color="#3B82F6"
+                    />
+                  </View>
+                  <View>
+                    <Text style={styles.reputationTitle}>
+                      Credit Reputation
+                    </Text>
+                    <Text style={styles.reputationSubtitle}>
+                      View reliability score & insights
+                    </Text>
+                  </View>
+                </View>
+                <MaterialIcons
+                  name={
+                    showReputation
+                      ? 'keyboard-arrow-up'
+                      : 'keyboard-arrow-down'
+                  }
+                  size={28}
+                  color="#3B82F6"
+                />
+              </View>
+            </TouchableOpacity>
+
+            {showReputation && (
+              <View style={styles.reputationCardWrapper}>
+                <BorrowerReputationCard
+                  aadhaarNumber={loanDetails.aadhaarNumber}
+                  compact={false}
+                />
+              </View>
+            )}
+          </View>
         )}
 
         {/* Payment Summary Card */}
@@ -1190,7 +1233,7 @@ const styles = StyleSheet.create({
   errorRetryText: {
     fontSize: m(16),
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontFamily: FontFamily.primarySemiBold,
   },
   scrollView: {
     flex: 1,
@@ -1232,7 +1275,7 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     fontSize: m(24),
-    fontWeight: '500',
+    fontFamily: FontFamily.primaryMedium,
     color: '#FFFFFF',
   },
   profileImage: {
@@ -1247,8 +1290,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   profileName: {
-    fontSize: m(22),
-    fontWeight: '700',
+    fontSize: m(20),
+    fontFamily: FontFamily.primaryBold,
     color: '#111827',
     marginBottom: m(8),
   },
@@ -1288,7 +1331,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: m(12),
-    fontWeight: '600',
+    fontFamily: FontFamily.primarySemiBold,
     color: '#FFFFFF',
   },
   statusLabel: {
@@ -1323,7 +1366,7 @@ const styles = StyleSheet.create({
   },
   detailsTitle: {
     fontSize: m(20),
-    fontWeight: '700',
+    fontFamily: FontFamily.primaryBold,
     color: '#111827',
     marginBottom: m(4),
   },
@@ -1359,11 +1402,11 @@ const styles = StyleSheet.create({
     marginBottom: m(4),
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    fontWeight: '600',
+    fontFamily: FontFamily.primarySemiBold,
   },
   detailValue: {
     fontSize: m(15),
-    fontWeight: '600',
+    fontFamily: FontFamily.primarySemiBold,
     color: '#111827',
   },
   statusButton: {
@@ -1375,7 +1418,7 @@ const styles = StyleSheet.create({
   },
   statusButtonText: {
     fontSize: m(12),
-    fontWeight: '600',
+    fontFamily: FontFamily.primarySemiBold,
     color: '#FFFFFF',
   },
 
@@ -1394,7 +1437,7 @@ const styles = StyleSheet.create({
   },
   notesTitle: {
     fontSize: m(14),
-    fontWeight: '600',
+    fontFamily: FontFamily.primarySemiBold,
     color: '#374151',
   },
   notesText: {
@@ -1421,8 +1464,59 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     fontSize: m(16),
-    fontWeight: '600',
+    fontFamily: FontFamily.primarySemiBold,
     color: '#FFFFFF',
+  },
+
+  // Reputation Section
+  reputationContainer: {
+    backgroundColor: '#FFFFFF',
+    marginBottom: m(16),
+    borderRadius: m(18),
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  reputationToggle: {
+    padding: m(20),
+  },
+  reputationHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  reputationTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(12),
+  },
+  reputationIconContainer: {
+    width: m(48),
+    height: m(48),
+    borderRadius: m(14),
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  reputationTitle: {
+    fontSize: m(17),
+    fontFamily: FontFamily.primaryBold,
+    color: '#111827',
+    marginBottom: m(2),
+  },
+  reputationSubtitle: {
+    fontSize: m(12),
+    color: '#6B7280',
+    fontFamily: FontFamily.primaryRegular,
+  },
+  reputationCardWrapper: {
+    paddingHorizontal: m(16),
+    paddingBottom: m(16),
   },
 
   // Footer
@@ -1469,7 +1563,7 @@ const styles = StyleSheet.create({
   },
   paymentSummaryValue: {
     fontSize: m(16),
-    fontWeight: '700',
+    fontFamily: FontFamily.primaryBold,
     color: '#111827',
   },
   paidAmount: {
@@ -1500,7 +1594,7 @@ const styles = StyleSheet.create({
     fontSize: m(12),
     color: '#6B7280',
     textAlign: 'center',
-    fontWeight: '500',
+    fontFamily: FontFamily.primaryMedium,
   },
   closedBadge: {
     flexDirection: 'row',
@@ -1514,7 +1608,7 @@ const styles = StyleSheet.create({
   },
   closedBadgeText: {
     fontSize: m(14),
-    fontWeight: '600',
+    fontFamily: FontFamily.primarySemiBold,
     color: '#10B981',
   },
   overdueBadge: {
@@ -1531,7 +1625,7 @@ const styles = StyleSheet.create({
   },
   overdueBadgeText: {
     fontSize: m(14),
-    fontWeight: '600',
+    fontFamily: FontFamily.primarySemiBold,
     color: '#DC2626',
     flex: 1,
   },
@@ -1564,7 +1658,7 @@ const styles = StyleSheet.create({
   },
   pendingConfirmationsTitle: {
     fontSize: m(18),
-    fontWeight: '700',
+    fontFamily: FontFamily.primaryBold,
     color: '#111827',
   },
   pendingBadge: {
@@ -1579,7 +1673,7 @@ const styles = StyleSheet.create({
   pendingBadgeText: {
     color: '#FFFFFF',
     fontSize: m(12),
-    fontWeight: '700',
+    fontFamily: FontFamily.primaryBold,
   },
   pendingConfirmationsMessage: {
     fontSize: m(14),
@@ -1606,7 +1700,7 @@ const styles = StyleSheet.create({
   },
   pendingPaymentAmount: {
     fontSize: m(20),
-    fontWeight: '700',
+    fontFamily: FontFamily.primaryBold,
     color: '#111827',
   },
   pendingPaymentTypeBadge: {
@@ -1617,7 +1711,7 @@ const styles = StyleSheet.create({
   },
   pendingPaymentTypeText: {
     fontSize: m(10),
-    fontWeight: '600',
+    fontFamily: FontFamily.primarySemiBold,
     color: '#FFFFFF',
   },
   pendingPaymentDetails: {
@@ -1667,7 +1761,7 @@ const styles = StyleSheet.create({
   pendingPaymentProofText: {
     fontSize: m(14),
     color: '#3B82F6',
-    fontWeight: '600',
+    fontFamily: FontFamily.primarySemiBold,
     marginBottom: m(2),
   },
   proofSubtext: {
@@ -1695,7 +1789,7 @@ const styles = StyleSheet.create({
   },
   pendingActionButtonText: {
     fontSize: m(14),
-    fontWeight: '600',
+    fontFamily: FontFamily.primarySemiBold,
     color: '#FFFFFF',
   },
 
@@ -1722,7 +1816,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: m(20),
-    fontWeight: '700',
+    fontFamily: FontFamily.primaryBold,
     color: '#111827',
   },
   modalBody: {
@@ -1738,7 +1832,7 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: m(14),
-    fontWeight: '600',
+    fontFamily: FontFamily.primarySemiBold,
     color: '#374151',
     marginBottom: m(8),
   },
@@ -1771,7 +1865,7 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     fontSize: m(14),
-    fontWeight: '600',
+    fontFamily: FontFamily.primarySemiBold,
     color: '#6B7280',
   },
   confirmModalButton: {
@@ -1782,7 +1876,7 @@ const styles = StyleSheet.create({
   },
   modalButtonText: {
     fontSize: m(14),
-    fontWeight: '600',
+    fontFamily: FontFamily.primarySemiBold,
     color: '#FFFFFF',
   },
 
@@ -1812,7 +1906,7 @@ const styles = StyleSheet.create({
   },
   noPendingText: {
     fontSize: m(16),
-    fontWeight: '600',
+    fontFamily: FontFamily.primarySemiBold,
     color: '#111827',
     marginTop: m(12),
     marginBottom: m(4),
@@ -1833,7 +1927,7 @@ const imageViewerStyles = StyleSheet.create({
   },
   headerText: {
     fontSize: m(18),
-    fontWeight: '700',
+    fontFamily: FontFamily.primaryBold,
     color: '#FFFFFF',
   },
   closeButton: {

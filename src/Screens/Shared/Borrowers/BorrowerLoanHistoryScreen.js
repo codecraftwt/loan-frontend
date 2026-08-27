@@ -24,6 +24,7 @@ import { useSubscription } from '../../../hooks/useSubscription';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import moment from 'moment';
 import { m } from 'walstar-rn-responsive';
+import { FontFamily } from '../../../constants';
 
 const ORANGE_THEME = {
   primary: '#111827',
@@ -123,7 +124,7 @@ const LoanHistoryCard = ({ loan, onPress, index = 0 }) => {
         {/* Overdue Banner */}
         {isOverdue && (
           <View style={styles.overdueBanner}>
-            <Icon name="error" size={12} color="#FFFFFF" />
+            <Icon name="error" size={13} color={ORANGE_THEME.error} />
             <Text style={styles.overdueBannerText}>OVERDUE</Text>
             <Text style={styles.overdueDays}>
               {moment(loan.loanEndDate).fromNow()}
@@ -231,6 +232,9 @@ const LoanHistoryCard = ({ loan, onPress, index = 0 }) => {
             <Text style={styles.loanDate}>
               {moment(loan.createdAt).format('DD MMM YYYY')}
             </Text>
+          </View>
+          <View style={styles.viewButton}>
+            <Icon name="chevron-right" size={18} color={ORANGE_THEME.textLight} />
           </View>
         </View>
       </TouchableOpacity>
@@ -930,7 +934,7 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
                     { backgroundColor: ORANGE_THEME.primary + '20' },
                   ]}
                 >
-                  <Icon name="receipt" size={20} color={ORANGE_THEME.primary} />
+                  <Icon name="receipt" size={15} color={ORANGE_THEME.primary} />
                 </View>
                 <Text style={styles.summaryNumber}>
                   {historySummary.totalLoans || 0}
@@ -949,7 +953,7 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
                 >
                   <Icon
                     name="trending-up"
-                    size={20}
+                    size={15}
                     color={ORANGE_THEME.info}
                   />
                 </View>
@@ -972,7 +976,7 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
                 >
                   <Icon
                     name="check-circle"
-                    size={20}
+                    size={15}
                     color={ORANGE_THEME.warning}
                   />
                 </View>
@@ -1257,8 +1261,8 @@ const styles = StyleSheet.create({
     gap: m(10),
   },
   summaryTitle: {
-    fontSize: m(20),
-    fontWeight: '700',
+    fontSize: m(19),
+    fontFamily: FontFamily.primaryBold,
     color: ORANGE_THEME.text,
   },
   refreshButton: {
@@ -1272,33 +1276,34 @@ const styles = StyleSheet.create({
   summaryCards: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: m(20),
+    marginBottom: m(16),
   },
   summaryCard: {
     flex: 1,
     alignItems: 'center',
-    padding: m(12),
-    borderRadius: m(14),
-    marginHorizontal: m(4),
+    padding: m(6),
+    paddingVertical: m(8),
+    borderRadius: m(12),
+    marginHorizontal: m(3),
   },
   summaryIconContainer: {
-    width: m(40),
-    height: m(40),
-    borderRadius: m(12),
+    width: m(30),
+    height: m(30),
+    borderRadius: m(9),
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: m(8),
+    marginBottom: m(5),
   },
   summaryNumber: {
-    fontSize: m(24),
-    fontWeight: '800',
+    fontSize: m(18),
+    fontFamily: FontFamily.primaryExtraBold,
     color: ORANGE_THEME.primary,
-    marginBottom: m(2),
+    marginBottom: m(1),
   },
   summaryLabel: {
-    fontSize: m(12),
+    fontSize: m(10),
     color: ORANGE_THEME.textLight,
-    fontWeight: '500',
+    fontFamily: FontFamily.primaryMedium,
   },
   amountSummary: {
     backgroundColor: ORANGE_THEME.primaryLight,
@@ -1319,11 +1324,11 @@ const styles = StyleSheet.create({
   amountLabel: {
     fontSize: m(14),
     color: ORANGE_THEME.textLight,
-    fontWeight: '500',
+    fontFamily: FontFamily.primaryMedium,
   },
   amountValue: {
     fontSize: m(16),
-    fontWeight: '700',
+    fontFamily: FontFamily.primaryBold,
   },
   // Search and Filter
   searchFilterContainer: {
@@ -1354,7 +1359,7 @@ const styles = StyleSheet.create({
     height: m(44),
     fontSize: m(15),
     color: ORANGE_THEME.text,
-    fontWeight: '500',
+    fontFamily: FontFamily.primaryMedium,
   },
   clearSearchButton: {
     padding: m(4),
@@ -1386,13 +1391,13 @@ const styles = StyleSheet.create({
   // Loan Card
   loanCard: {
     backgroundColor: ORANGE_THEME.card,
-    borderRadius: m(20),
-    padding: m(14),
-    paddingLeft: m(16),
+    borderRadius: m(16),
+    padding: m(10),
+    paddingLeft: m(12),
     marginHorizontal: m(14),
-    marginBottom: m(14),
+    marginBottom: m(10),
     borderWidth: 1,
-    borderLeftWidth: m(5),
+    borderLeftWidth: m(4),
     borderColor: ORANGE_THEME.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -1409,71 +1414,73 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: ORANGE_THEME.ink,
+    backgroundColor: ORANGE_THEME.error + '12',
     paddingVertical: m(4),
     paddingHorizontal: m(10),
     marginLeft: m(-15),
     marginRight: m(-12),
     marginTop: m(-12),
-    marginBottom: m(10),
+    marginBottom: m(8),
     gap: m(5),
+    borderBottomWidth: 1,
+    borderBottomColor: ORANGE_THEME.error + '20',
   },
   overdueBannerText: {
-    color: '#FFFFFF',
+    color: ORANGE_THEME.error,
     fontSize: m(10.5),
-    fontWeight: '700',
+    fontFamily: FontFamily.primaryBold,
     letterSpacing: 0.5,
   },
   overdueDays: {
-    color: '#FFFFFF',
+    color: ORANGE_THEME.error,
     fontSize: m(10),
-    fontWeight: '500',
+    fontFamily: FontFamily.primarySemiBold,
     marginLeft: 'auto',
   },
   loanCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: m(8),
+    marginBottom: m(6),
   },
   loanInfo: {
     flex: 1,
     marginRight: m(8),
   },
   loanAmount: {
-    fontSize: m(18),
-    fontWeight: '800',
+    fontSize: m(16),
+    fontFamily: FontFamily.primaryBold,
     color: ORANGE_THEME.text,
-    marginBottom: m(2),
+    marginBottom: m(1),
     letterSpacing: -0.3,
   },
   loanPurpose: {
-    fontSize: m(12),
+    fontSize: m(11),
     color: ORANGE_THEME.textLight,
-    fontWeight: '500',
+    fontFamily: FontFamily.primaryMedium,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: m(8),
-    paddingVertical: m(4),
+    paddingHorizontal: m(7),
+    paddingVertical: m(3),
     borderRadius: m(16),
     gap: m(3),
   },
   statusText: {
-    fontSize: m(10.5),
-    fontWeight: '700',
+    fontSize: m(9.5),
+    fontFamily: FontFamily.primaryBold,
     textTransform: 'uppercase',
     letterSpacing: 0.3,
   },
   loanDetails: {
     flexDirection: 'row',
     backgroundColor: 'rgba(255, 255, 255, 0.55)',
-    borderRadius: m(9),
-    paddingVertical: m(7),
-    paddingHorizontal: m(9),
-    gap: m(14),
-    marginTop: m(8),
+    borderRadius: m(8),
+    paddingVertical: m(5),
+    paddingHorizontal: m(8),
+    gap: m(12),
+    marginTop: m(6),
   },
   progressRow: {
     flexDirection: 'row',
@@ -1482,7 +1489,7 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     flex: 1,
-    height: m(4),
+    height: m(3),
     backgroundColor: 'rgba(255, 255, 255, 0.62)',
     borderRadius: m(2),
     overflow: 'hidden',
@@ -1492,20 +1499,20 @@ const styles = StyleSheet.create({
     borderRadius: m(2),
   },
   progressPercentText: {
-    fontSize: m(10.5),
+    fontSize: m(10),
+    fontFamily: FontFamily.primaryBold,
     color: ORANGE_THEME.text,
-    fontWeight: '700',
     width: m(28),
     textAlign: 'right',
   },
   progressLabels: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: m(3),
+    marginTop: m(2),
   },
   progressLabel: {
-    fontSize: m(10.5),
-    fontWeight: '600',
+    fontSize: m(10),
+    fontFamily: FontFamily.primarySemiBold,
   },
   detailItem: {
     flexDirection: 'row',
@@ -1514,16 +1521,16 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   detailValue: {
-    fontSize: m(12),
-    fontWeight: '600',
+    fontSize: m(11),
+    fontFamily: FontFamily.primarySemiBold,
     color: ORANGE_THEME.text,
   },
   loanFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: m(8),
-    paddingTop: m(8),
+    marginTop: m(6),
+    paddingTop: m(6),
     borderTopWidth: 1,
     borderTopColor: 'rgba(17, 24, 39, 0.12)',
   },
@@ -1533,23 +1540,24 @@ const styles = StyleSheet.create({
     gap: m(4),
   },
   loanDate: {
-    fontSize: m(11),
+    fontSize: m(10),
     color: ORANGE_THEME.textLight,
-    fontWeight: '500',
+    fontFamily: FontFamily.primaryMedium,
   },
   viewButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: ORANGE_THEME.ink,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
     borderRadius: m(18),
     paddingHorizontal: m(10),
     paddingVertical: m(6),
     gap: m(3),
+    justifyContent: 'center',
   },
   viewButtonText: {
     fontSize: m(11),
     color: '#FFFFFF',
-    fontWeight: '700',
+    fontFamily: FontFamily.primaryBold,
   },
   // Loans Header
   loansHeader: {
@@ -1562,13 +1570,13 @@ const styles = StyleSheet.create({
   },
   loansTitle: {
     fontSize: m(20),
-    fontWeight: '700',
+    fontFamily: FontFamily.primaryBold,
     color: ORANGE_THEME.text,
   },
   loansCount: {
     fontSize: m(14),
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontFamily: FontFamily.primarySemiBold,
     backgroundColor: ORANGE_THEME.ink,
     paddingHorizontal: m(12),
     paddingVertical: m(4),
@@ -1583,7 +1591,7 @@ const styles = StyleSheet.create({
     marginTop: m(16),
     fontSize: m(14),
     color: ORANGE_THEME.textLight,
-    fontWeight: '500',
+    fontFamily: FontFamily.primaryMedium,
   },
   errorState: {
     padding: m(40),
@@ -1600,7 +1608,7 @@ const styles = StyleSheet.create({
   },
   errorStateTitle: {
     fontSize: m(18),
-    fontWeight: '700',
+    fontFamily: FontFamily.primaryBold,
     color: ORANGE_THEME.text,
     marginBottom: m(8),
   },
@@ -1623,7 +1631,7 @@ const styles = StyleSheet.create({
   retryButtonText: {
     color: '#FFFFFF',
     fontSize: m(14),
-    fontWeight: '600',
+    fontFamily: FontFamily.primarySemiBold,
   },
   emptyState: {
     padding: m(40),
@@ -1640,7 +1648,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: m(18),
-    fontWeight: '700',
+    fontFamily: FontFamily.primaryBold,
     color: ORANGE_THEME.text,
     marginBottom: m(8),
   },
@@ -1665,7 +1673,7 @@ const styles = StyleSheet.create({
   clearFilterText: {
     color: ORANGE_THEME.primary,
     fontSize: m(14),
-    fontWeight: '600',
+    fontFamily: FontFamily.primarySemiBold,
   },
   loadMoreButton: {
     flexDirection: 'row',
@@ -1684,7 +1692,7 @@ const styles = StyleSheet.create({
   loadMoreText: {
     color: ORANGE_THEME.primary,
     fontSize: m(14),
-    fontWeight: '600',
+    fontFamily: FontFamily.primarySemiBold,
   },
   // Reputation Section
   reputationContainer: {
@@ -1724,13 +1732,14 @@ const styles = StyleSheet.create({
   },
   reputationTitle: {
     fontSize: m(17),
-    fontWeight: '700',
+    fontFamily: FontFamily.primaryBold,
     color: ORANGE_THEME.text,
     marginBottom: m(2),
   },
   reputationSubtitle: {
     fontSize: m(12),
     color: ORANGE_THEME.textLight,
+    fontFamily: FontFamily.primaryRegular,
   },
   reputationCardWrapper: {
     paddingHorizontal: m(16),
@@ -1775,7 +1784,7 @@ const styles = StyleSheet.create({
   },
   filterModalTitle: {
     fontSize: m(20),
-    fontWeight: '700',
+    fontFamily: FontFamily.primaryBold,
     color: ORANGE_THEME.text,
   },
   closeButton: {
@@ -1804,7 +1813,7 @@ const styles = StyleSheet.create({
   },
   filterLabel: {
     fontSize: m(16),
-    fontWeight: '600',
+    fontFamily: FontFamily.primarySemiBold,
     color: ORANGE_THEME.text,
   },
   statusFilterGrid: {
@@ -1827,11 +1836,11 @@ const styles = StyleSheet.create({
   statusOptionText: {
     fontSize: m(14),
     color: ORANGE_THEME.text,
-    fontWeight: '500',
+    fontFamily: FontFamily.primaryMedium,
   },
   statusOptionTextSelected: {
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontFamily: FontFamily.primarySemiBold,
   },
   amountInputRow: {
     flexDirection: 'row',
@@ -1855,6 +1864,7 @@ const styles = StyleSheet.create({
     height: m(48),
     fontSize: m(15),
     color: ORANGE_THEME.text,
+    fontFamily: FontFamily.primaryMedium,
     paddingHorizontal: m(8),
   },
   rangeSeparator: {
@@ -1881,7 +1891,7 @@ const styles = StyleSheet.create({
     color: ORANGE_THEME.text,
     paddingHorizontal: m(8),
     paddingVertical: m(14),
-    fontWeight: '500',
+    fontFamily: FontFamily.primaryMedium,
   },
   dateInputPlaceholder: {
     color: '#9CA3AF',
@@ -1915,7 +1925,7 @@ const styles = StyleSheet.create({
   resetButtonText: {
     color: ORANGE_THEME.text,
     fontSize: m(15),
-    fontWeight: '600',
+    fontFamily: FontFamily.primarySemiBold,
   },
   applyButton: {
     backgroundColor: ORANGE_THEME.primary,
@@ -1926,7 +1936,7 @@ const styles = StyleSheet.create({
   applyButtonText: {
     color: '#FFFFFF',
     fontSize: m(15),
-    fontWeight: '600',
+    fontFamily: FontFamily.primarySemiBold,
   },
   applyButtonTextDisabled: {
     color: '#9CA3AF',
@@ -1941,7 +1951,7 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: m(16),
     color: ORANGE_THEME.error,
-    fontWeight: '600',
+    fontFamily: FontFamily.primarySemiBold,
     marginTop: m(16),
   },
   // Pending Payment Banner
@@ -1966,13 +1976,14 @@ const styles = StyleSheet.create({
   },
   pendingPaymentBannerTitle: {
     fontSize: m(16),
-    fontWeight: '700',
+    fontFamily: FontFamily.primaryBold,
     color: '#FFFFFF',
     marginBottom: m(4),
   },
   pendingPaymentBannerSubtitle: {
     fontSize: m(12),
     color: '#FFFFFF',
+    fontFamily: FontFamily.primaryRegular,
     opacity: 0.9,
   },
   pendingPaymentButton: {
@@ -1986,7 +1997,7 @@ const styles = StyleSheet.create({
   },
   pendingPaymentButtonText: {
     fontSize: m(13),
-    fontWeight: '600',
+    fontFamily: FontFamily.primarySemiBold,
     color: '#FFFFFF',
   },
 });

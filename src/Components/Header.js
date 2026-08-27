@@ -22,6 +22,7 @@ const Header = ({
   isEdit = false,
   onEditPress,
   showLogo = true,
+  headerStyle,
 }) => {
   const navigation = useNavigation();
 
@@ -63,7 +64,7 @@ const Header = ({
         colors={[colors.navyDark, colors.navy]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.headerBar}>
+        style={[styles.headerBar, headerStyle]}>
         <View style={styles.headerRow}>
 
           {/* LEFT: Back Button */}

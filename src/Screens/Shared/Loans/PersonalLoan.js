@@ -22,12 +22,32 @@ import borrowerLoanAPI from '../../../Services/borrowerLoanService';
 import Toast from 'react-native-toast-message';
 import { baseurl } from '../../../Utils/API';
 import PinVerificationModal from '../../../Components/PinVerificationModal';
+import { FontFamily } from '../../../constants';
 
+const ORANGE_THEME = {
+  primary: '#111827',
+  primaryLight: '#F1FAF7',
+  primaryDark: '#0F172A',
+  secondary: '#B7EDF4',
+  accent: '#D7F2C1',
+  background: '#F2FAF6',
+  card: '#FFFFFF',
+  text: '#111827',
+  textLight: '#6B7280',
+  border: '#DCEFEA',
+  success: '#10B981',
+  warning: '#F59E0B',
+  error: '#EF4444',
+  info: '#1B6E8C',
+  sky: '#B7EDF4',
+  mint: '#D7F2C1',
+  ink: '#111827',
+};
 
 const DetailCard = ({ icon, label, value }) => (
   <View style={styles.detailCard}>
     <View style={styles.detailIconContainer}>
-      <Icon name={icon} size={20} color="#3B82F6" />
+      <Icon name={icon} size={20} color={ORANGE_THEME.primary} />
     </View>
     <View style={styles.detailContent}>
       <Text style={styles.detailLabel}>{label}</Text>
@@ -139,12 +159,12 @@ export default function PersonalLoan({ route }) {
   const renderInstallmentItem = (installment, index) => {
     const getStatusColor = (status) => {
       switch (status?.toLowerCase()) {
-        case 'paid': return '#10B981';
-        case 'pending': return '#F59E0B';
-        case 'rejected': return '#EF4444';
-        case 'overdue': return '#EF4444';
-        case 'upcoming': return '#6B7280';
-        default: return '#6B7280';
+        case 'paid': return ORANGE_THEME.success;
+        case 'pending': return ORANGE_THEME.warning;
+        case 'rejected': return ORANGE_THEME.error;
+        case 'overdue': return ORANGE_THEME.error;
+        case 'upcoming': return ORANGE_THEME.textLight;
+        default: return ORANGE_THEME.textLight;
       }
     };
 
@@ -228,7 +248,7 @@ export default function PersonalLoan({ route }) {
                 </Text>
               </View>
               <View style={styles.pendingBadge}>
-                <Icon name="clock" size={14} color="#F59E0B" />
+                <Icon name="clock" size={14} color={ORANGE_THEME.warning} />
                 <Text style={styles.pendingBadgeText}>Awaiting your confirmation</Text>
               </View>
             </>
@@ -255,7 +275,7 @@ export default function PersonalLoan({ route }) {
 
           {installment.status === 'overdue' && (
             <View style={styles.installmentOverdueBadge}>
-              <Icon name="alert-circle" size={14} color="#EF4444" />
+              <Icon name="alert-circle" size={14} color={ORANGE_THEME.error} />
               <Text style={styles.installmentOverdueBadgeText}>
                 {installment.overdueDays} day(s) overdue
               </Text>
@@ -364,14 +384,14 @@ export default function PersonalLoan({ route }) {
   const getStatusColor = (status) => {
     const displayStatus = getDisplayStatus();
     switch (displayStatus?.toLowerCase()) {
-      case 'accepted': return '#10B981';
-      case 'rejected': return '#EF4444';
-      case 'pending': return '#F59E0B';
-      case 'paid': return '#10B981';
-      case 'closed': return '#10B981';
-      case 'part paid': return '#F59E0B';
-      case 'overdue': return '#EF4444';
-      default: return '#6B7280';
+      case 'accepted': return ORANGE_THEME.success;
+      case 'rejected': return ORANGE_THEME.error;
+      case 'pending': return ORANGE_THEME.warning;
+      case 'paid': return ORANGE_THEME.success;
+      case 'closed': return ORANGE_THEME.success;
+      case 'part paid': return ORANGE_THEME.warning;
+      case 'overdue': return ORANGE_THEME.error;
+      default: return ORANGE_THEME.textLight;
     }
   };
 
@@ -486,13 +506,13 @@ export default function PersonalLoan({ route }) {
               </Text>
               <View style={styles.profileMeta}>
                 <View style={styles.metaItem}>
-                  <Icon name="phone" size={14} color="#6B7280" />
+                  <Icon name="phone" size={14} color={ORANGE_THEME.textLight} />
                   <Text style={styles.metaText}>
                     {loanDetails.mobileNumber || 'N/A'}
                   </Text>
                 </View>
                 <View style={styles.metaItem}>
-                  <FontAwesome name="id-card" color="#6B7280" size={14} />
+                  <FontAwesome name="id-card" color={ORANGE_THEME.textLight} size={14} />
                   <Text style={styles.metaText}>
                     {loanDetails.aadhaarNumber || 'N/A'}
                   </Text>
@@ -505,7 +525,7 @@ export default function PersonalLoan({ route }) {
           <View style={styles.statusContainer}>
             <View style={styles.statusItem}>
               <View style={[styles.statusBadge, { backgroundColor: getStatusColor(loanDetails.status) }]}>
-                <Icon name={getStatusIcon(loanDetails.status)} size={14} color="#FFFFFF" />
+                <Icon name={getStatusIcon(loanDetails.status)} size={14} color={ORANGE_THEME.card} />
                 <Text style={styles.statusText}>
                   {isOverdue ? 'Overdue' : getStatusDisplayText()}
                 </Text>
@@ -520,10 +540,10 @@ export default function PersonalLoan({ route }) {
                 styles.statusBadge,
                 {
                   backgroundColor: loanDetails.borrowerAcceptanceStatus?.toLowerCase() === 'accepted'
-                    ? '#10B981'
+                    ? ORANGE_THEME.success
                     : loanDetails.borrowerAcceptanceStatus?.toLowerCase() === 'rejected'
-                      ? '#EF4444'
-                      : '#F59E0B'
+                      ? ORANGE_THEME.error
+                      : ORANGE_THEME.warning
                 }
               ]}>
                 <Icon
@@ -533,7 +553,7 @@ export default function PersonalLoan({ route }) {
                       ? 'x'
                       : 'clock'}
                   size={14}
-                  color="#FFFFFF"
+                  color={ORANGE_THEME.card}
                 />
                 <Text style={styles.statusText}>
                   {loanDetails.borrowerAcceptanceStatus?.toUpperCase() || 'PENDING'}
@@ -577,7 +597,7 @@ export default function PersonalLoan({ route }) {
                     styles.progressFill, 
                     { 
                       width: `${loanAmount > 0 ? (totalPaid / loanAmount) * 100 : 0}%`,
-                      backgroundColor: isOverdue ? '#EF4444' : (isLoanClosed ? '#10B981' : '#3B82F6')
+                      backgroundColor: isOverdue ? ORANGE_THEME.error : (isLoanClosed ? ORANGE_THEME.success : ORANGE_THEME.primary)
                     }
                   ]} 
                 />
@@ -591,7 +611,7 @@ export default function PersonalLoan({ route }) {
             {/* Overdue Badge */}
             {isOverdue && (
               <View style={styles.overdueBadge}>
-                <Icon name="alert-circle" size={20} color="#EF4444" />
+                <Icon name="alert-circle" size={20} color={ORANGE_THEME.error} />
                 <Text style={styles.overdueBadgeText}>
                   Overdue - Payment was due on {moment(loanDetails.loanEndDate).format('DD MMM YYYY')}
                 </Text>
@@ -601,7 +621,7 @@ export default function PersonalLoan({ route }) {
             {/* Loan Closed Badge */}
             {isLoanClosed && !isOverdue && (
               <View style={styles.closedBadge}>
-                <Icon name="check-circle" size={20} color="#10B981" />
+                <Icon name="check-circle" size={20} color={ORANGE_THEME.success} />
                 <Text style={styles.closedBadgeText}>Loan Closed - All Amount Paid</Text>
               </View>
             )}
@@ -635,18 +655,18 @@ export default function PersonalLoan({ route }) {
                 onPress={handleViewProof}
                 activeOpacity={0.8}>
                 <View style={styles.proofIconContainer}>
-                  <Icon name="file-image" size={24} color="#3B82F6" />
+                  <Icon name="file-image" size={24} color={ORANGE_THEME.primary} />
                 </View>
                 <View style={styles.proofTextContainer}>
                   <Text style={styles.proofTitle}>Proof Provided</Text>
                   <Text style={styles.proofSubtext}>Tap to view lender proof</Text>
                 </View>
-                <Icon name="chevron-right" size={20} color="#6B7280" />
+                <Icon name="chevron-right" size={20} color={ORANGE_THEME.textLight} />
               </TouchableOpacity>
             ) : (
               <View style={[styles.proofCard, styles.noProofCard]}>
                 <View style={[styles.proofIconContainer, styles.noProofIconContainer]}>
-                  <Icon name="file-x" size={24} color="#9CA3AF" />
+                  <Icon name="file-x" size={24} color={ORANGE_THEME.textLight} />
                 </View>
                 <View style={styles.proofTextContainer}>
                   <Text style={styles.proofTitle}>No Proof Provided</Text>
@@ -662,7 +682,7 @@ export default function PersonalLoan({ route }) {
         {/* Show message if loan is rejected */}
         {!fromPendingOffer && loanDetails.borrowerAcceptanceStatus?.toLowerCase() === 'rejected' && (
           <View style={styles.rejectionMessage}>
-            <Icon name="alert-circle" size={24} color="#EF4444" />
+            <Icon name="alert-circle" size={24} color={ORANGE_THEME.error} />
             <View style={styles.rejectionTextContainer}>
               <Text style={styles.rejectionTitle}>Loan Rejected</Text>
               <Text style={styles.rejectionSubtitle}>
@@ -678,14 +698,14 @@ export default function PersonalLoan({ route }) {
             style={styles.agreementButton}
             onPress={() => navigation.navigate('AgreementScreen', { agreement: loanDetails.agreement })}>
             <View style={styles.agreementButtonContent}>
-              <Icon name="file-text" size={24} color="#3B82F6" />
+              <Icon name="file-text" size={24} color={ORANGE_THEME.primary} />
               <View style={styles.agreementTextContainer}>
                 <Text style={styles.agreementTitle}>Loan Agreement</Text>
                 <Text style={styles.agreementSubtitle}>
                   View terms and conditions
                 </Text>
               </View>
-              <Icon name="chevron-right" size={24} color="#6B7280" />
+              <Icon name="chevron-right" size={24} color={ORANGE_THEME.textLight} />
             </View>
           </TouchableOpacity>
         )}
@@ -694,7 +714,7 @@ export default function PersonalLoan({ route }) {
           <View style={styles.pendingOfferActionCard}>
             <View style={styles.pendingOfferActionHeader}>
               <View style={styles.pendingOfferActionIcon}>
-                <Icon name="check-circle" size={22} color="#059669" />
+                <Icon name="check-circle" size={22} color={ORANGE_THEME.success} />
               </View>
               <View style={styles.pendingOfferActionText}>
                 <Text style={styles.pendingOfferActionTitle}>Accept loan offer</Text>
@@ -708,7 +728,7 @@ export default function PersonalLoan({ route }) {
               onPress={() => setAcceptPinModalVisible(true)}
               activeOpacity={0.85}>
               <Text style={styles.acceptOfferButtonText}>Accept with PIN</Text>
-              <Icon name="lock" size={16} color="#FFFFFF" />
+              <Icon name="lock" size={16} color={ORANGE_THEME.card} />
             </TouchableOpacity>
           </View>
         )}
@@ -718,7 +738,7 @@ export default function PersonalLoan({ route }) {
           <View style={styles.installmentSection}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionHeaderLeft}>
-                <Icon name="calendar" size={20} color="#111827" />
+                <Icon name="calendar" size={20} color={ORANGE_THEME.text} />
                 <Text style={styles.sectionTitle}>Installment History</Text>
               </View>
               {installmentHistory.installmentHistory?.length > 3 && (
@@ -744,19 +764,19 @@ export default function PersonalLoan({ route }) {
                   </View>
                   <View style={styles.planItem}>
                     <Text style={styles.planLabel}>Paid</Text>
-                    <Text style={[styles.planValue, { color: '#10B981' }]}>
+                    <Text style={[styles.planValue, { color: ORANGE_THEME.success }]}>
                       {installmentHistory.installmentPlan.paidInstallments}
                     </Text>
                   </View>
                   <View style={styles.planItem}>
                     <Text style={styles.planLabel}>Pending</Text>
-                    <Text style={[styles.planValue, { color: '#F59E0B' }]}>
+                    <Text style={[styles.planValue, { color: ORANGE_THEME.warning }]}>
                       {installmentHistory.installmentPlan.pendingInstallments}
                     </Text>
                   </View>
                   <View style={styles.planItem}>
                     <Text style={styles.planLabel}>Overdue</Text>
-                    <Text style={[styles.planValue, { color: '#EF4444' }]}>
+                    <Text style={[styles.planValue, { color: ORANGE_THEME.error }]}>
                       {installmentHistory.installmentPlan.overdueInstallments}
                     </Text>
                   </View>
@@ -783,19 +803,19 @@ export default function PersonalLoan({ route }) {
                 <View style={styles.summaryStatsRow}>
                   <View style={styles.summaryStatItem}>
                     <Text style={styles.summaryStatLabel}>Total Paid</Text>
-                    <Text style={[styles.summaryStatValue, { color: '#10B981' }]}>
+                    <Text style={[styles.summaryStatValue, { color: ORANGE_THEME.success }]}>
                       {formatCurrency(installmentHistory.summary.totalPaidAmount)}
                     </Text>
                   </View>
                   <View style={styles.summaryStatItem}>
                     <Text style={styles.summaryStatLabel}>Pending</Text>
-                    <Text style={[styles.summaryStatValue, { color: '#F59E0B' }]}>
+                    <Text style={[styles.summaryStatValue, { color: ORANGE_THEME.warning }]}>
                       {formatCurrency(installmentHistory.summary.totalPendingAmount)}
                     </Text>
                   </View>
                   <View style={styles.summaryStatItem}>
                     <Text style={styles.summaryStatLabel}>Overdue</Text>
-                    <Text style={[styles.summaryStatValue, { color: '#EF4444' }]}>
+                    <Text style={[styles.summaryStatValue, { color: ORANGE_THEME.error }]}>
                       {formatCurrency(installmentHistory.summary.totalOverdueAmount)}
                     </Text>
                   </View>
@@ -814,7 +834,7 @@ export default function PersonalLoan({ route }) {
             {/* Installment List */}
             {loadingInstallments ? (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="small" color="#3B82F6" />
+                <ActivityIndicator size="small" color={ORANGE_THEME.primary} />
                 <Text style={styles.loadingText}>Loading installments...</Text>
               </View>
             ) : installmentHistory.installmentHistory?.length > 0 ? (
@@ -833,7 +853,7 @@ export default function PersonalLoan({ route }) {
             {/* Action Message */}
             {installmentHistory.actions?.requiresAction && (
               <View style={styles.actionCard}>
-                <Icon name="alert-circle" size={20} color="#F59E0B" />
+                <Icon name="alert-circle" size={20} color={ORANGE_THEME.warning} />
                 <Text style={styles.actionText}>
                   {installmentHistory.actions.message}
                 </Text>
@@ -875,14 +895,14 @@ export default function PersonalLoan({ route }) {
         {!fromPendingOffer && (
           <View style={styles.footer}>
           <View style={styles.footerItem}>
-            <Icon name="clock" size={14} color="#9CA3AF" />
+            <Icon name="clock" size={14} color={ORANGE_THEME.textLight} />
             <Text style={styles.footerText}>
               Created {moment(loanDetails.createdAt).fromNow()}
             </Text>
           </View>
           {loanDetails.updatedAt && (
             <View style={styles.footerItem}>
-              <Icon name="edit" size={14} color="#9CA3AF" />
+              <Icon name="edit" size={14} color={ORANGE_THEME.textLight} />
               <Text style={styles.footerText}>
                 Updated {moment(loanDetails.updatedAt).fromNow()}
               </Text>
@@ -910,7 +930,7 @@ export default function PersonalLoan({ route }) {
                 setSelectedProofUrl(null);
               }}
               style={styles.proofViewerCloseButton}>
-              <Icon name="x" size={24} color="#FFFFFF" />
+              <Icon name="x" size={24} color={ORANGE_THEME.card} />
             </TouchableOpacity>
           </View>
           <ScrollView
@@ -958,7 +978,7 @@ export default function PersonalLoan({ route }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: ORANGE_THEME.background,
   },
   scrollView: {
     flex: 1,
@@ -970,12 +990,12 @@ const styles = StyleSheet.create({
 
   // Profile Card
   profileCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ORANGE_THEME.card,
     borderRadius: m(20),
     padding: m(24),
     marginBottom: m(16),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: ORANGE_THEME.border,
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -991,17 +1011,17 @@ const styles = StyleSheet.create({
     width: m(60),
     height: m(60),
     borderRadius: m(30),
-    backgroundColor: '#FF9800',
+    backgroundColor: ORANGE_THEME.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: m(16),
     borderWidth: 3,
-    borderColor: '#FFF3E0',
+    borderColor: ORANGE_THEME.primaryLight,
   },
   avatarText: {
     fontSize: m(23),
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontFamily: FontFamily.primarySemiBold,
+    color: ORANGE_THEME.card,
   },
   profileImage: {
     width: m(60),
@@ -1009,15 +1029,15 @@ const styles = StyleSheet.create({
     borderRadius: m(30),
     marginRight: m(16),
     borderWidth: 3,
-    borderColor: '#EFF6FF',
+    borderColor: ORANGE_THEME.primaryLight,
   },
   profileInfo: {
     flex: 1,
   },
   profileName: {
     fontSize: m(22),
-    fontWeight: '700',
-    color: '#111827',
+    fontFamily: FontFamily.primaryBold,
+    color: ORANGE_THEME.text,
     marginBottom: m(8),
   },
   profileMeta: {
@@ -1030,7 +1050,7 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontSize: m(14),
-    color: '#6B7280',
+    color: ORANGE_THEME.textLight,
   },
 
   // Status Container
@@ -1040,7 +1060,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: m(16),
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: ORANGE_THEME.border,
   },
   statusItem: {
     alignItems: 'center',
@@ -1056,17 +1076,17 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: m(12),
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontFamily: FontFamily.primarySemiBold,
+    color: ORANGE_THEME.card,
   },
   statusLabel: {
     fontSize: m(12),
-    color: '#6B7280',
+    color: ORANGE_THEME.textLight,
   },
   statusDivider: {
     width: 1,
     height: m(40),
-    backgroundColor: '#E5E7EB',
+    backgroundColor: ORANGE_THEME.border,
   },
 
   // Details Section
@@ -1075,8 +1095,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: m(20),
-    fontWeight: '700',
-    color: '#111827',
+    fontFamily: FontFamily.primaryBold,
+    color: ORANGE_THEME.text,
     marginBottom: m(16),
     paddingHorizontal: m(4),
   },
@@ -1086,12 +1106,12 @@ const styles = StyleSheet.create({
   detailCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ORANGE_THEME.card,
     borderRadius: m(14),
     padding: m(14),
     marginBottom: m(5),
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: ORANGE_THEME.border,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -1102,7 +1122,7 @@ const styles = StyleSheet.create({
     width: m(44),
     height: m(44),
     borderRadius: m(12),
-    backgroundColor: '#EFF6FF',
+    backgroundColor: ORANGE_THEME.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: m(14),
@@ -1112,26 +1132,26 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: m(11),
-    color: '#9CA3AF',
+    color: ORANGE_THEME.textLight,
     marginBottom: m(4),
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    fontWeight: '600',
+    fontFamily: FontFamily.primarySemiBold,
   },
   detailValue: {
     fontSize: m(16),
-    fontWeight: '600',
-    color: '#111827',
+    fontFamily: FontFamily.primarySemiBold,
+    color: ORANGE_THEME.text,
   },
 
   // Agreement Button
   agreementButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ORANGE_THEME.card,
     borderRadius: m(16),
     padding: m(20),
     marginBottom: m(16),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: ORANGE_THEME.border,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -1148,21 +1168,21 @@ const styles = StyleSheet.create({
   },
   agreementTitle: {
     fontSize: m(16),
-    fontWeight: '600',
-    color: '#111827',
+    fontFamily: FontFamily.primarySemiBold,
+    color: ORANGE_THEME.text,
     marginBottom: m(2),
   },
   agreementSubtitle: {
     fontSize: m(14),
-    color: '#6B7280',
+    color: ORANGE_THEME.textLight,
   },
   pendingOfferActionCard: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: ORANGE_THEME.primaryLight,
     borderRadius: m(14),
     padding: m(16),
     marginBottom: m(16),
     borderWidth: 1,
-    borderColor: '#BBF7D0',
+    borderColor: ORANGE_THEME.success + '40',
   },
   pendingOfferActionHeader: {
     flexDirection: 'row',
@@ -1173,7 +1193,7 @@ const styles = StyleSheet.create({
     width: m(42),
     height: m(42),
     borderRadius: m(21),
-    backgroundColor: '#DCFCE7',
+    backgroundColor: ORANGE_THEME.success + '12',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: m(12),
@@ -1183,19 +1203,19 @@ const styles = StyleSheet.create({
   },
   pendingOfferActionTitle: {
     fontSize: m(16),
-    fontWeight: '700',
-    color: '#14532D',
+    fontFamily: FontFamily.primaryBold,
+    color: ORANGE_THEME.success,
     marginBottom: m(3),
   },
   pendingOfferActionSubtitle: {
     fontSize: m(13),
     lineHeight: m(18),
-    color: '#166534',
+    color: ORANGE_THEME.success,
   },
   acceptOfferButton: {
     height: m(46),
     borderRadius: m(10),
-    backgroundColor: '#059669',
+    backgroundColor: ORANGE_THEME.success,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1203,19 +1223,19 @@ const styles = StyleSheet.create({
   },
   acceptOfferButtonText: {
     fontSize: m(15),
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontFamily: FontFamily.primaryBold,
+    color: ORANGE_THEME.card,
   },
 
   // Summary Card
   summaryCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ORANGE_THEME.card,
     borderRadius: m(16),
     padding: m(16),
     paddingVertical: m(14),
     marginBottom: m(12),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: ORANGE_THEME.border,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -1224,8 +1244,8 @@ const styles = StyleSheet.create({
   },
   summaryTitle: {
     fontSize: m(17),
-    fontWeight: '600',
-    color: '#111827',
+    fontFamily: FontFamily.primarySemiBold,
+    color: ORANGE_THEME.text,
     marginBottom: m(10),
   },
   summaryRow: {
@@ -1238,18 +1258,18 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: m(12),
-    color: '#6B7280',
+    color: ORANGE_THEME.textLight,
     marginBottom: m(4),
   },
   summaryValue: {
     fontSize: m(16),
-    fontWeight: '700',
-    color: '#111827',
+    fontFamily: FontFamily.primaryBold,
+    color: ORANGE_THEME.text,
   },
   summaryDivider: {
     width: 1,
     height: m(50),
-    backgroundColor: '#E5E7EB',
+    backgroundColor: ORANGE_THEME.border,
   },
 
   // Footer
@@ -1265,17 +1285,17 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: m(12),
-    color: '#9CA3AF',
+    color: ORANGE_THEME.textLight,
   },
   
   // Payment Summary Card
   paymentSummaryCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ORANGE_THEME.card,
     borderRadius: m(20),
     padding: m(24),
     marginBottom: m(16),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: ORANGE_THEME.border,
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -1284,8 +1304,8 @@ const styles = StyleSheet.create({
   },
   paymentSummaryTitle: {
     fontSize: m(20),
-    fontWeight: '700',
-    color: '#111827',
+    fontFamily: FontFamily.primaryBold,
+    color: ORANGE_THEME.text,
     marginBottom: m(20),
   },
   paymentSummaryRow: {
@@ -1300,29 +1320,29 @@ const styles = StyleSheet.create({
   },
   paymentSummaryLabel: {
     fontSize: m(12),
-    color: '#6B7280',
+    color: ORANGE_THEME.textLight,
     marginBottom: m(4),
   },
   paymentSummaryValue: {
     fontSize: m(16),
-    fontWeight: '700',
-    color: '#111827',
+    fontFamily: FontFamily.primaryBold,
+    color: ORANGE_THEME.text,
   },
   paidAmount: {
-    color: '#10B981',
+    color: ORANGE_THEME.success,
   },
   remainingAmount: {
-    color: '#EF4444',
+    color: ORANGE_THEME.error,
   },
   closedAmount: {
-    color: '#10B981',
+    color: ORANGE_THEME.success,
   },
   progressContainer: {
     marginBottom: m(16),
   },
   progressBar: {
     height: m(8),
-    backgroundColor: '#E5E7EB',
+    backgroundColor: ORANGE_THEME.border,
     borderRadius: m(4),
     overflow: 'hidden',
     marginBottom: m(8),
@@ -1330,19 +1350,19 @@ const styles = StyleSheet.create({
   progressFill: {
     height: '100%',
     borderRadius: m(4),
-    backgroundColor: '#3B82F6',
+    backgroundColor: ORANGE_THEME.primary,
   },
   progressText: {
     fontSize: m(12),
-    color: '#6B7280',
+    color: ORANGE_THEME.textLight,
     textAlign: 'center',
-    fontWeight: '500',
+    fontFamily: FontFamily.primaryMedium,
   },
   closedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#ECFDF5',
+    backgroundColor: ORANGE_THEME.primaryLight,
     borderRadius: m(8),
     padding: m(12),
     gap: m(8),
@@ -1350,25 +1370,25 @@ const styles = StyleSheet.create({
   },
   closedBadgeText: {
     fontSize: m(14),
-    fontWeight: '600',
-    color: '#10B981',
+    fontFamily: FontFamily.primarySemiBold,
+    color: ORANGE_THEME.success,
   },
   overdueBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FEE2E2',
+    backgroundColor: ORANGE_THEME.error + '12',
     borderRadius: m(8),
     padding: m(12),
     gap: m(8),
     marginTop: m(8),
     borderWidth: 1,
-    borderColor: '#FCA5A5',
+    borderColor: ORANGE_THEME.error + '40',
   },
   overdueBadgeText: {
     fontSize: m(14),
-    fontWeight: '600',
-    color: '#DC2626',
+    fontFamily: FontFamily.primarySemiBold,
+    color: ORANGE_THEME.error,
     flex: 1,
   },
 
@@ -1390,16 +1410,16 @@ const styles = StyleSheet.create({
   },
   viewAllText: {
     fontSize: m(14),
-    color: '#3B82F6',
-    fontWeight: '600',
+    color: ORANGE_THEME.primary,
+    fontFamily: FontFamily.primarySemiBold,
   },
   installmentPlanCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ORANGE_THEME.card,
     borderRadius: m(16),
     padding: m(16),
     marginBottom: m(12),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: ORANGE_THEME.border,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -1417,32 +1437,32 @@ const styles = StyleSheet.create({
   },
   planLabel: {
     fontSize: m(11),
-    color: '#6B7280',
+    color: ORANGE_THEME.textLight,
     marginBottom: m(4),
     textAlign: 'center',
   },
   planValue: {
     fontSize: m(16),
-    fontWeight: '700',
-    color: '#111827',
+    fontFamily: FontFamily.primaryBold,
+    color: ORANGE_THEME.text,
   },
   planDetails: {
     paddingTop: m(12),
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: ORANGE_THEME.border,
     gap: m(6),
   },
   planDetailText: {
     fontSize: m(13),
-    color: '#6B7280',
+    color: ORANGE_THEME.textLight,
   },
   summaryStatsCard: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: ORANGE_THEME.background,
     borderRadius: m(12),
     padding: m(16),
     marginBottom: m(12),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: ORANGE_THEME.border,
   },
   summaryStatsRow: {
     flexDirection: 'row',
@@ -1455,44 +1475,44 @@ const styles = StyleSheet.create({
   },
   summaryStatLabel: {
     fontSize: m(11),
-    color: '#6B7280',
+    color: ORANGE_THEME.textLight,
     marginBottom: m(4),
   },
   summaryStatValue: {
     fontSize: m(14),
-    fontWeight: '700',
-    color: '#111827',
+    fontFamily: FontFamily.primaryBold,
+    color: ORANGE_THEME.text,
   },
   onTimeRateContainer: {
     paddingTop: m(12),
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: ORANGE_THEME.border,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   onTimeRateLabel: {
     fontSize: m(13),
-    color: '#6B7280',
-    fontWeight: '600',
+    color: ORANGE_THEME.textLight,
+    fontFamily: FontFamily.primarySemiBold,
   },
   onTimeRateValue: {
     fontSize: m(16),
-    fontWeight: '700',
-    color: '#10B981',
+    fontFamily: FontFamily.primaryBold,
+    color: ORANGE_THEME.success,
   },
   installmentListContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ORANGE_THEME.card,
     borderRadius: m(16),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: ORANGE_THEME.border,
     overflow: 'hidden',
     marginBottom: m(12),
   },
   installmentCard: {
     padding: m(16),
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: ORANGE_THEME.border,
   },
   installmentCardLast: {
     borderBottomWidth: 0,
@@ -1521,18 +1541,18 @@ const styles = StyleSheet.create({
   },
   installmentNumber: {
     fontSize: m(15),
-    fontWeight: '600',
-    color: '#111827',
+    fontFamily: FontFamily.primarySemiBold,
+    color: ORANGE_THEME.text,
     marginBottom: m(2),
   },
   installmentStatus: {
     fontSize: m(12),
-    fontWeight: '500',
+    fontFamily: FontFamily.primaryMedium,
   },
   installmentAmount: {
     fontSize: m(16),
-    fontWeight: '700',
-    color: '#111827',
+    fontFamily: FontFamily.primaryBold,
+    color: ORANGE_THEME.text,
   },
   installmentDetails: {
     gap: m(8),
@@ -1544,18 +1564,18 @@ const styles = StyleSheet.create({
   },
   installmentDetailLabel: {
     fontSize: m(12),
-    color: '#6B7280',
-    fontWeight: '500',
+    color: ORANGE_THEME.textLight,
+    fontFamily: FontFamily.primaryMedium,
   },
   installmentDetailValue: {
     fontSize: m(12),
-    color: '#111827',
+    color: ORANGE_THEME.text,
     flex: 1,
   },
   pendingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF7ED',
+    backgroundColor: ORANGE_THEME.warning + '12',
     padding: m(8),
     borderRadius: m(6),
     gap: m(6),
@@ -1563,13 +1583,13 @@ const styles = StyleSheet.create({
   },
   pendingBadgeText: {
     fontSize: m(12),
-    color: '#F59E0B',
-    fontWeight: '500',
+    color: ORANGE_THEME.warning,
+    fontFamily: FontFamily.primaryMedium,
   },
   installmentOverdueBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEE2E2',
+    backgroundColor: ORANGE_THEME.error + '12',
     padding: m(8),
     borderRadius: m(6),
     gap: m(6),
@@ -1577,49 +1597,49 @@ const styles = StyleSheet.create({
   },
   installmentOverdueBadgeText: {
     fontSize: m(12),
-    color: '#EF4444',
-    fontWeight: '500',
+    color: ORANGE_THEME.error,
+    fontFamily: FontFamily.primaryMedium,
   },
   actionCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF7ED',
+    backgroundColor: ORANGE_THEME.warning + '12',
     borderRadius: m(12),
     padding: m(16),
     gap: m(12),
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: ORANGE_THEME.warning + '40',
   },
   actionText: {
     flex: 1,
     fontSize: m(14),
-    color: '#92400E',
-    fontWeight: '500',
+    color: ORANGE_THEME.warning,
+    fontFamily: FontFamily.primaryMedium,
   },
   loadingContainer: {
     padding: m(20),
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ORANGE_THEME.card,
     borderRadius: m(16),
     marginBottom: m(12),
   },
   loadingText: {
     marginTop: m(8),
     fontSize: m(12),
-    color: '#6B7280',
+    color: ORANGE_THEME.textLight,
   },
   emptyContainer: {
     padding: m(20),
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ORANGE_THEME.card,
     borderRadius: m(16),
     marginBottom: m(12),
   },
   emptyText: {
     fontSize: m(14),
-    color: '#9CA3AF',
+    color: ORANGE_THEME.textLight,
   },
   
   // Loan Proof Styles
@@ -1629,11 +1649,11 @@ const styles = StyleSheet.create({
   proofCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ORANGE_THEME.card,
     borderRadius: m(16),
     padding: m(16),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: ORANGE_THEME.border,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -1641,33 +1661,33 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   noProofCard: {
-    backgroundColor: '#F9FAFB',
-    borderColor: '#E5E7EB',
+    backgroundColor: ORANGE_THEME.background,
+    borderColor: ORANGE_THEME.border,
   },
   proofIconContainer: {
     width: m(48),
     height: m(48),
     borderRadius: m(12),
-    backgroundColor: '#EFF6FF',
+    backgroundColor: ORANGE_THEME.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: m(12),
   },
   noProofIconContainer: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: ORANGE_THEME.border,
   },
   proofTextContainer: {
     flex: 1,
   },
   proofTitle: {
     fontSize: m(16),
-    fontWeight: '600',
-    color: '#111827',
+    fontFamily: FontFamily.primarySemiBold,
+    color: ORANGE_THEME.text,
     marginBottom: m(4),
   },
   proofSubtext: {
     fontSize: m(14),
-    color: '#6B7280',
+    color: ORANGE_THEME.textLight,
   },
   
   // Proof Viewer Modal Styles
@@ -1686,8 +1706,8 @@ const styles = StyleSheet.create({
   },
   proofViewerHeaderText: {
     fontSize: m(18),
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontFamily: FontFamily.primarySemiBold,
+    color: ORANGE_THEME.card,
   },
   proofViewerCloseButton: {
     padding: m(8),
@@ -1708,12 +1728,12 @@ const styles = StyleSheet.create({
   rejectionMessage: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEE2E2',
+    backgroundColor: ORANGE_THEME.error + '12',
     borderRadius: m(16),
     padding: m(20),
     marginBottom: m(16),
     borderWidth: 1,
-    borderColor: '#FCA5A5',
+    borderColor: ORANGE_THEME.error + '40',
     gap: m(12),
   },
   rejectionTextContainer: {
@@ -1721,13 +1741,13 @@ const styles = StyleSheet.create({
   },
   rejectionTitle: {
     fontSize: m(18),
-    fontWeight: '700',
-    color: '#DC2626',
+    fontFamily: FontFamily.primaryBold,
+    color: ORANGE_THEME.error,
     marginBottom: m(4),
   },
   rejectionSubtitle: {
     fontSize: m(14),
-    color: '#991B1B',
+    color: ORANGE_THEME.error,
     lineHeight: m(20),
   },
 });

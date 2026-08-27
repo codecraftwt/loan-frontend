@@ -25,7 +25,7 @@ import SubscriptionRestriction from '../../../Components/SubscriptionRestriction
 import { useSubscription } from '../../../hooks/useSubscription';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
-import { colors } from '../../../constants';
+import { colors, FontFamily } from '../../../constants';
 
 const ALL_BORROWERS_LIMIT = 10000;
 
@@ -617,8 +617,8 @@ const Outward = ({ navigation, route }) => {
                             </Text>
                           </View>
                         </View>
-                        <View style={styles.detailsPill}>
-                          <Text style={styles.detailsPillText}>Details</Text>
+                        <View style={styles.viewButton}>
+                          <Icon name="chevron-right" size={20} color={colors.textSecondary} />
                         </View>
                       </View>
 
@@ -818,17 +818,16 @@ const styles = StyleSheet.create({
     borderRadius: m(4),
     backgroundColor: colors.error,
   },
-  detailsPill: {
-    backgroundColor: colors.textPrimary,
-    paddingHorizontal: m(12),
-    paddingVertical: m(7),
+  viewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
     borderRadius: m(18),
+    paddingHorizontal: m(10),
+    paddingVertical: m(6),
     marginLeft: m(8),
-  },
-  detailsPillText: {
-    fontSize: m(11),
-    fontWeight: '700',
-    color: colors.white,
+    gap: m(3),
+    justifyContent: 'center',
   },
   cardMainRow: {
     flexDirection: 'row',
@@ -868,9 +867,9 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontSize: m(14.5),
-    fontWeight: '800',
-    color: colors.textPrimary,
-    marginBottom: m(3),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.ink,
+    marginBottom: m(4),
   },
   userMeta: {
     flexDirection: 'row',
