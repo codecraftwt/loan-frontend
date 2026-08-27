@@ -25,10 +25,10 @@ import { useSubscription } from '../../../hooks/useSubscription';
 // getActivePlan is already dispatched in Home screen on app focus
 import { useFocusEffect, useRoute } from '@react-navigation/native';
 import moment from 'moment';
-import LoaderSkeleton from '../../../Components/LoaderSkeleton';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
+import { colors, FontFamily } from '../../../constants';
 
 export default function Inward({ navigation }) {
   const dispatch = useDispatch();
@@ -366,7 +366,7 @@ export default function Inward({ navigation }) {
           <TouchableOpacity
             style={styles.filterButton}
             onPress={() => setIsFilterModalVisible(true)}>
-            <Icon name="filter-list" size={24} color="#FF9800"/>
+          <Icon name="filter-list" size={24} color="#FFFFFF"/>
           </TouchableOpacity>
         </View>
       </View>
@@ -563,26 +563,23 @@ export default function Inward({ navigation }) {
       />
 
       {/* Loan List */}
-      {false ? (
-        <LoaderSkeleton />
-      ) : (
-        <ScrollView
-          ref={scrollViewRef}
-          style={[
-            styles.loanListContainer,
-            isLender && !planLoading && !hasActivePlan && { opacity: 0.5 }
-          ]}
-          contentContainerStyle={styles.scrollContent}
-          refreshControl={
-            <RefreshControl 
-              refreshing={loading} 
-              onRefresh={onRefresh}
-              enabled={isLender ? (planLoading || hasActivePlan) : true}
-            />
-          }
-          showsVerticalScrollIndicator={false}
-          scrollEnabled={isLender ? (planLoading || hasActivePlan) : true}>
-              {displayLoans?.length === 0 ? (
+      <ScrollView
+        ref={scrollViewRef}
+        style={[
+          styles.loanListContainer,
+          isLender && !planLoading && !hasActivePlan && { opacity: 0.5 }
+        ]}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={loading}
+            onRefresh={onRefresh}
+            enabled={isLender ? (planLoading || hasActivePlan) : true}
+          />
+        }
+        showsVerticalScrollIndicator={false}
+        scrollEnabled={isLender ? (planLoading || hasActivePlan) : true}>
+        {displayLoans?.length === 0 ? (
             <View style={styles.emptyState}>
               <Icon 
                 name="account-balance-wallet" 
@@ -634,10 +631,11 @@ export default function Inward({ navigation }) {
                   key={`borrower-${borrower.aadhaarNumber || borrower.name || 'unknown'}-${groupIndex}`}
                   style={[
                     styles.borrowerCard,
+                    { borderLeftColor: groupIndex % 2 === 0 ? colors.skyText : colors.mintText },
                     hasOverdue && styles.overdueBorrowerCard,
                     hasFraudRisk && styles.fraudRiskBorrowerCard,
                     borrowerPendingPayments && styles.pendingPaymentBorrowerCard,
-                    hasOffline && styles.offlineBorrowerCard
+                    hasOffline && styles.offlineBorrowerCard,
                   ]}
                   onPress={() => navigation.navigate('BorrowerLoansScreen', {
                     borrower: borrower,
@@ -649,15 +647,6 @@ export default function Inward({ navigation }) {
                       <Icon name="notifications" size={14} color="#FFFFFF" />
                       <Text style={styles.pendingPaymentBannerText} numberOfLines={1}>
                         {borrowerPendingPayments.count} PENDING - {formatCurrency(borrowerPendingPayments.amount)}
-                      </Text>
-                    </View>
-                  )}
-
-                  {hasOverdue && !borrowerPendingPayments && (
-                    <View style={styles.overdueBanner}>
-                      <Icon name="error" size={14} color="#FFFFFF" />
-                      <Text style={styles.overdueBannerText}>
-                        {overdueCount} OVERDUE LOAN{overdueCount > 1 ? 'S' : ''}
                       </Text>
                     </View>
                   )}
@@ -707,6 +696,14 @@ export default function Inward({ navigation }) {
                               {borrower.aadhaarNumber || 'N/A'}
                             </Text>
                           </View>
+                          {hasOverdue && (
+                            <View style={styles.metaItem}>
+                              <Icon name="error" size={12} color="#EF4444" />
+                              <Text style={[styles.metaText, styles.metaOverdueText]} numberOfLines={1}>
+                                {overdueCount} loan{overdueCount > 1 ? 's' : ''} overdue
+                              </Text>
+                            </View>
+                          )}
                         </View>
                         {hasFraudRisk && (
                           <View style={styles.fraudBadgeContainer}>
@@ -721,11 +718,11 @@ export default function Inward({ navigation }) {
                     <Icon name="chevron-right" size={20} color="#9CA3AF" />
                   </View>
 
-                  <View style={styles.borrowerSummary}>
+                  {/* <View style={styles.borrowerSummary}>
                     <View style={styles.summaryRow}>
                       <View style={styles.summaryItem}>
                         <View style={[styles.summaryIconContainer, { backgroundColor: '#EFF6FF' }]}>
-                          <Icon name="description" size={13} color="#3B82F6" />
+                      <Icon name="description" size={13} color="#1B6E8C" />
                         </View>
                         <Text style={styles.summaryValue} numberOfLines={1}>{loans.length}</Text>
                         <Text style={styles.summaryLabel}>Loans</Text>
@@ -733,9 +730,9 @@ export default function Inward({ navigation }) {
                       <View style={styles.summaryDivider} />
                       <View style={styles.summaryItem}>
                         <View style={[styles.summaryIconContainer, { backgroundColor: '#ECFDF5' }]}>
-                          <Icon name="account-balance-wallet" size={13} color="#10B981" />
+                      <Icon name="account-balance-wallet" size={13} color="#1F7A3D" />
                         </View>
-                        <Text style={[styles.summaryValue, { color: '#10B981' }]} numberOfLines={1}>
+                        <Text style={[styles.summaryValue, { color: '#1F7A3D' }]} numberOfLines={1}>
                           {formatCurrency(totalLoanAmount)}
                         </Text>
                         <Text style={styles.summaryLabel}>Given</Text>
@@ -751,15 +748,6 @@ export default function Inward({ navigation }) {
                         <Text style={styles.summaryLabel}>Due</Text>
                       </View>
                     </View>
-
-                    {hasOverdue && (
-                      <View style={styles.overdueWarning}>
-                        <Icon name="error" size={14} color="#EF4444" />
-                        <Text style={styles.overdueWarningText} numberOfLines={1}>
-                          {overdueCount} loan{overdueCount > 1 ? 's' : ''} overdue - action required
-                        </Text>
-                      </View>
-                    )}
 
                     {hasFraudRisk && !hasOverdue && (
                       <View style={[
@@ -788,7 +776,7 @@ export default function Inward({ navigation }) {
                         </Text>
                       </View>
                     )}
-                  </View>
+                  </View> */}
 
                   <View style={styles.borrowerCardFooter}>
                     <View style={styles.footerItem}>
@@ -809,9 +797,8 @@ export default function Inward({ navigation }) {
                 </TouchableOpacity>
               );
             })
-          )}
-        </ScrollView>
-      )}
+        )}
+      </ScrollView>
 
       {/* Subscription Restriction Overlay */}
       {isLender && !planLoading && !hasActivePlan && (
@@ -827,22 +814,22 @@ export default function Inward({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.navyFaint,
   },
   // Search Section
   searchSection: {
     flexDirection: 'row',
     paddingHorizontal: m(16),
     paddingVertical: m(12),
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: colors.border,
   },
   searchContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.background,
     borderRadius: m(12),
     paddingHorizontal: m(12),
   },
@@ -853,10 +840,13 @@ const styles = StyleSheet.create({
     flex: 1,
     height: m(44),
     fontSize: m(16),
-    color: '#374151',
+    color: colors.textPrimary,
+    fontFamily: FontFamily.bodyRegular,
   },
   filterButton: {
     padding: m(8),
+    backgroundColor: colors.ink,
+    borderRadius: m(12),
   },
 
   // Filter Modal
@@ -869,7 +859,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderTopLeftRadius: m(20),
     borderTopRightRadius: m(20),
     padding: m(24),
@@ -887,13 +877,13 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: m(20),
-    fontWeight: '600',
-    color: '#111827',
+    fontFamily: FontFamily.primarySemiBold,
+    color: colors.textPrimary,
   },
   filterLabel: {
     fontSize: m(14),
-    fontWeight: '500',
-    color: '#374151',
+    fontFamily: FontFamily.bodyMedium,
+    color: colors.textPrimary,
     marginBottom: m(8),
   },
   searchFilterContainer: {
@@ -902,9 +892,9 @@ const styles = StyleSheet.create({
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.background,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     borderRadius: m(10),
     paddingHorizontal: m(12),
     gap: m(8),
@@ -913,7 +903,8 @@ const styles = StyleSheet.create({
     flex: 1,
     height: m(44),
     fontSize: m(14),
-    color: '#374151',
+    color: colors.textPrimary,
+    fontFamily: FontFamily.bodyRegular,
   },
   dateFilterContainer: {
     marginBottom: m(20),
@@ -936,6 +927,7 @@ const styles = StyleSheet.create({
   dateText: {
     marginLeft: m(8),
     fontSize: m(14),
+    fontFamily: FontFamily.bodyRegular,
     color: '#374151',
   },
   amountFilterContainer: {
@@ -957,6 +949,7 @@ const styles = StyleSheet.create({
   amountPrefix: {
     paddingHorizontal: m(12),
     fontSize: m(14),
+    fontFamily: FontFamily.bodyRegular,
     color: '#6B7280',
   },
   amountInput: {
@@ -967,6 +960,7 @@ const styles = StyleSheet.create({
   amountSeparator: {
     marginHorizontal: m(8),
     fontSize: m(16),
+    fontFamily: FontFamily.bodyMedium,
     color: '#6B7280',
   },
   statusFilterContainer: {
@@ -984,14 +978,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statusButtonActive: {
-    backgroundColor: '#FF9800',
+    backgroundColor: colors.ink,
   },
   statusButtonInactive: {
     backgroundColor: '#F3F4F6',
   },
   statusButtonText: {
     fontSize: m(14),
-    fontWeight: '500',
+    fontFamily: FontFamily.bodyMedium,
   },
   statusButtonTextActive: {
     color: '#FFFFFF',
@@ -1020,7 +1014,7 @@ const styles = StyleSheet.create({
     marginRight: m(8),
   },
   applyButton: {
-    backgroundColor: '#FF9800',
+    backgroundColor: colors.ink,
     marginLeft: m(8),
   },
   applyButtonDisabled: {
@@ -1029,12 +1023,12 @@ const styles = StyleSheet.create({
   clearButtonText: {
     color: '#6B7280',
     fontSize: m(16),
-    fontWeight: '600',
+    fontFamily: FontFamily.bodySemiBold,
   },
   applyButtonText: {
     color: '#FFFFFF',
     fontSize: m(16),
-    fontWeight: '600',
+    fontFamily: FontFamily.bodySemiBold,
   },
   applyButtonTextDisabled: {
     color: '#9CA3AF',
@@ -1056,41 +1050,41 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: m(18),
-    fontWeight: '600',
+    fontFamily: FontFamily.primarySemiBold,
     color: '#6B7280',
     marginTop: m(12),
     marginBottom: m(4),
   },
   emptySubtitle: {
     fontSize: m(14),
+    fontFamily: FontFamily.bodyRegular,
     color: '#9CA3AF',
     textAlign: 'center',
   },
 
   // Borrower Card (Grouped)
   borrowerCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(16),
+    backgroundColor: colors.surface,
+    borderRadius: m(18),
     padding: m(14),
-    marginBottom: m(12),
+    marginBottom: m(14),
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    borderLeftWidth: m(4),
+    borderColor: colors.borderLight,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
-    overflow: 'hidden',
+    elevation: 2,
   },
   overdueBorrowerCard: {
     borderWidth: 1.5,
     borderColor: '#FCA5A5',
-    backgroundColor: '#FFF5F5',
   },
   fraudRiskBorrowerCard: {
     borderWidth: 1.5,
     borderColor: '#FED7AA',
-    backgroundColor: '#FFFBEB',
   },
   fraudBanner: {
     flexDirection: 'row',
@@ -1106,7 +1100,7 @@ const styles = StyleSheet.create({
   fraudBannerText: {
     color: '#FFFFFF',
     fontSize: m(11.5),
-    fontWeight: '700',
+    fontFamily: FontFamily.bodyBold,
     letterSpacing: 0.4,
   },
   fraudBadgeContainer: {
@@ -1125,26 +1119,8 @@ const styles = StyleSheet.create({
   },
   fraudWarningText: {
     fontSize: m(11.5),
-    fontWeight: '600',
+    fontFamily: FontFamily.bodySemiBold,
     flex: 1,
-  },
-  overdueBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#EF4444',
-    paddingVertical: m(6),
-    paddingHorizontal: m(12),
-    marginHorizontal: m(-14),
-    marginTop: m(-14),
-    marginBottom: m(12),
-    gap: m(6),
-  },
-  overdueBannerText: {
-    color: '#FFFFFF',
-    fontSize: m(11.5),
-    fontWeight: '700',
-    letterSpacing: 0.4,
   },
   borrowerCardHeader: {
     flexDirection: 'row',
@@ -1158,36 +1134,33 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   borrowerAvatar: {
-    width: m(48),
-    height: m(48),
-    borderRadius: m(24),
-    marginRight: m(12),
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
+    width: m(40),
+    height: m(40),
+    borderRadius: m(20),
+    marginRight: m(10),
+    backgroundColor: colors.navyTint,
   },
   borrowerAvatarPlaceholder: {
-    width: m(48),
-    height: m(48),
-    borderRadius: m(24),
-    backgroundColor: '#3B82F6',
+    width: m(40),
+    height: m(40),
+    borderRadius: m(20),
+    backgroundColor: colors.navyTint,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: m(12),
-    borderWidth: 2,
-    borderColor: '#DBEAFE',
+    marginRight: m(10),
   },
   borrowerAvatarText: {
-    fontSize: m(18),
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontSize: m(15),
+    color: colors.ink,
+    fontFamily: FontFamily.primaryExtraBold,
   },
   borrowerDetails: {
     flex: 1,
   },
   borrowerName: {
-    fontSize: m(15.5),
-    fontWeight: '700',
-    color: '#111827',
+    fontSize: m(14.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.ink,
     marginBottom: m(4),
   },
   borrowerMeta: {
@@ -1201,13 +1174,18 @@ const styles = StyleSheet.create({
     gap: m(4),
   },
   metaText: {
-    fontSize: m(12),
-    color: '#6B7280',
+    fontSize: m(11.5),
+    fontFamily: FontFamily.bodyRegular,
+    color: colors.inkSoft,
+  },
+  metaOverdueText: {
+    fontFamily: FontFamily.bodySemiBold,
+    color: '#EF4444',
   },
   borrowerSummary: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: m(10),
-    paddingVertical: m(8),
+    backgroundColor: colors.background,
+    borderRadius: m(9),
+    paddingVertical: m(7),
     paddingHorizontal: m(6),
   },
   summaryRow: {
@@ -1221,30 +1199,30 @@ const styles = StyleSheet.create({
     gap: m(4),
   },
   summaryIconContainer: {
-    width: m(28),
-    height: m(28),
-    borderRadius: m(9),
+    width: m(26),
+    height: m(26),
+    borderRadius: m(8),
     justifyContent: 'center',
     alignItems: 'center',
   },
   summaryValue: {
-    fontSize: m(13),
-    fontWeight: '700',
-    color: '#111827',
+    fontSize: m(12.5),
+    fontFamily: FontFamily.primaryExtraBold,
+    color: colors.ink,
     textAlign: 'center',
   },
   summaryLabel: {
     fontSize: m(9.5),
-    color: '#9CA3AF',
+    fontFamily: FontFamily.bodySemiBold,
+    color: colors.inkSoft,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
-    fontWeight: '600',
     textAlign: 'center',
   },
   summaryDivider: {
     width: 1,
     alignSelf: 'stretch',
-    backgroundColor: '#E5E7EB',
+    backgroundColor: 'rgba(17, 24, 39, 0.12)',
   },
   overdueWarning: {
     flexDirection: 'row',
@@ -1261,17 +1239,17 @@ const styles = StyleSheet.create({
   overdueWarningText: {
     fontSize: m(11.5),
     color: '#DC2626',
-    fontWeight: '600',
+    fontFamily: FontFamily.bodySemiBold,
     flex: 1,
   },
   borrowerCardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: m(10),
-    paddingTop: m(10),
+    marginTop: m(8),
+    paddingTop: m(8),
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: 'rgba(17, 24, 39, 0.12)',
   },
   footerItem: {
     flexDirection: 'row',
@@ -1280,13 +1258,12 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: m(11.5),
-    color: '#9CA3AF',
-    fontWeight: '500',
+    color: colors.inkSoft,
+    fontFamily: FontFamily.bodyRegular,
   },
   pendingPaymentBorrowerCard: {
     borderWidth: 1.5,
     borderColor: '#FDE68A',
-    backgroundColor: '#FFFBF5',
   },
   pendingPaymentBanner: {
     flexDirection: 'row',
@@ -1303,7 +1280,7 @@ const styles = StyleSheet.create({
   pendingPaymentBannerText: {
     color: '#FFFFFF',
     fontSize: m(11),
-    fontWeight: '700',
+    fontFamily: FontFamily.bodyBold,
     letterSpacing: 0.4,
   },
   pendingPaymentBadge: {
@@ -1319,13 +1296,14 @@ const styles = StyleSheet.create({
   },
   pendingPaymentBadgeText: {
     fontSize: m(10.5),
-    fontWeight: '600',
+    fontFamily: FontFamily.bodySemiBold,
     color: '#92400E',
   },
 
   // Input Styles
   input: {
     fontSize: m(14),
+    fontFamily: FontFamily.bodyRegular,
     color: '#374151',
     height: m(44),
   },

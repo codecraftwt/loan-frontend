@@ -25,6 +25,7 @@ import SubscriptionRestriction from '../../../Components/SubscriptionRestriction
 import { useSubscription } from '../../../hooks/useSubscription';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
+import { colors } from '../../../constants';
 
 const ALL_BORROWERS_LIMIT = 10000;
 
@@ -381,13 +382,13 @@ const Outward = ({ navigation, route }) => {
       ]}>
         <View style={styles.searchWrapper}>
           <View style={styles.searchContainer}>
-            <Icon name="search" size={22} color="#ff6700" style={styles.searchIcon} />
+            <Icon name="search" size={22} color={colors.gold} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
               placeholder="Search by name or mobile number"
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={colors.textMuted}
               editable={isLender ? hasActivePlan : true}
             />
             {searchQuery.length > 0 && (
@@ -395,7 +396,7 @@ const Outward = ({ navigation, route }) => {
                 onPress={() => setSearchQuery('')}
                 style={styles.clearButton}
                 disabled={isLender && !hasActivePlan}>
-                <Icon name="close" size={18} color="#6B7280" />
+                <Icon name="close" size={18} color={colors.textSecondary} />
               </TouchableOpacity>
             )}
           </View>
@@ -407,7 +408,7 @@ const Outward = ({ navigation, route }) => {
             }}
             activeOpacity={0.8}
             disabled={isLender && !hasActivePlan}>
-            <Icon name="add" size={24} color="#FFFFFF" />
+            <Icon name="add" size={24} color={colors.white} />
           </TouchableOpacity>
         </View>
       </View>
@@ -434,7 +435,7 @@ const Outward = ({ navigation, route }) => {
               <TouchableOpacity
                 onPress={() => setBorrowerActionModalVisible(false)}
                 style={styles.closeButton}>
-                <Icon name="close" size={22} color="#6B7280" />
+                <Icon name="close" size={22} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
@@ -443,40 +444,40 @@ const Outward = ({ navigation, route }) => {
                 style={[styles.actionButton, styles.historyButton]}
                 onPress={handleViewLoanHistory}
                 activeOpacity={0.8}>
-                <View style={[styles.actionIconContainer, { backgroundColor: '#FFF7ED' }]}>
-                  <Icon name="history" size={24} color="#ff6700" />
+                <View style={[styles.actionIconContainer, { backgroundColor: colors.butterSoft }]}>
+                  <Icon name="history" size={24} color={colors.goldDark} />
                 </View>
                 <View style={styles.actionButtonContent}>
                   <Text style={styles.actionButtonText}>Loan History</Text>
                   <Text style={styles.actionButtonSubtext}>View this borrower's loans directly</Text>
                 </View>
-                <Icon name="chevron-right" size={20} color="#9CA3AF" />
+                <Icon name="chevron-right" size={20} color={colors.textMuted} />
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.actionButton, styles.detailsButton]}
                 onPress={handleSeeDetails}
                 activeOpacity={0.8}>
-                <View style={[styles.actionIconContainer, { backgroundColor: '#3B82F620' }]}>
-                  <Icon name="info" size={24} color="#3B82F6" />
+                <View style={[styles.actionIconContainer, { backgroundColor: colors.skySoft }]}>
+                  <Icon name="info" size={24} color={colors.skyText} />
                 </View>
                 <View style={styles.actionButtonContent}>
                   <Text style={styles.actionButtonText}>Borrower Profile</Text>
                   <Text style={styles.actionButtonSubtext}>See full borrower information</Text>
                 </View>
-                <Icon name="chevron-right" size={20} color="#9CA3AF" />
+                <Icon name="chevron-right" size={20} color={colors.textMuted} />
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.actionButton, styles.addLoanButton]}
                 onPress={handleAddLoan}
                 activeOpacity={0.8}>
-                <View style={[styles.actionIconContainer, { backgroundColor: '#10B98120' }]}>
-                  <Icon name="add-circle" size={24} color="#10B981" />
+                <View style={[styles.actionIconContainer, { backgroundColor: colors.mintSoft }]}>
+                  <Icon name="add-circle" size={24} color={colors.mintText} />
                 </View>
                 <View style={styles.actionButtonContent}>
                   <Text style={styles.actionButtonText}>Add New Loan</Text>
                   <Text style={styles.actionButtonSubtext}>Create a loan for this borrower</Text>
                 </View>
-                <Icon name="chevron-right" size={20} color="#9CA3AF" />
+                <Icon name="chevron-right" size={20} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
             <View style={styles.actionModalFooter}>
@@ -509,7 +510,7 @@ const Outward = ({ navigation, route }) => {
           {borrowers?.length === 0 ? (
             <View style={styles.emptyState}>
               <View style={styles.emptyIconContainer}>
-                <Icon name="people-outline" size={80} color="#D1D5DB" />
+                <Icon name="people-outline" size={80} color={colors.textMuted} />
               </View>
               <Text style={styles.emptyTitle}>
                 {searchQuery ? 'No Results Found' : 'No Borrowers Yet'}
@@ -524,7 +525,7 @@ const Outward = ({ navigation, route }) => {
                   style={styles.emptyActionButton}
                   onPress={() => navigation.navigate('AddDetails')}
                   activeOpacity={0.8}>
-                  <Icon name="add" size={20} color="#FFFFFF" />
+                  <Icon name="add" size={20} color={colors.white} />
                   <Text style={styles.emptyActionText}>Add Borrower</Text>
                 </TouchableOpacity>
               )}
@@ -539,133 +540,116 @@ const Outward = ({ navigation, route }) => {
               const riskLevel = riskData?.riskLevel?.toLowerCase() || null;
               const riskBadge = riskData?.riskBadge || null;
               const borrowerPendingPayments = getBorrowerPendingPayments(borrower);
-              
-              return (
-                <TouchableOpacity
-                  key={borrower._id || index}
-                  onPress={() => handleBorrowerCardPress(borrower)}
-                  activeOpacity={isLender && !hasActivePlan ? 1 : 0.9}
-                  disabled={isLender && !hasActivePlan}>
-                  <View style={[
-                    styles.borrowerCard,
-                    isHighlighted && styles.highlightedBorrowerCard,
-                    hasRisk && styles.fraudRiskBorrowerCard,
-                    borrowerPendingPayments && styles.pendingPaymentBorrowerCard
-                  ]}>
-                    {/* Status Banners */}
-                    {borrowerPendingPayments && (
-                      <View style={styles.pendingPaymentBanner}>
-                        <Icon name="notifications" size={14} color="#FFFFFF" />
-                        <Text style={styles.pendingPaymentBannerText} numberOfLines={1}>
-                          {borrowerPendingPayments.count} Pending • {formatCurrency(borrowerPendingPayments.amount)}
-                        </Text>
-                      </View>
-                    )}
-                    {hasRisk && !borrowerPendingPayments && riskBadge && (
-                      <View style={[
-                        styles.fraudBanner,
-                        { backgroundColor: riskBadge.color || '#EA580C' }
-                      ]}>
-                        <Icon name="warning" size={14} color="#FFFFFF" />
-                        <Text style={styles.fraudBannerText}>
-                          {riskBadge.label?.toUpperCase() || riskLevel?.toUpperCase()} RISK DETECTED
-                        </Text>
-                      </View>
-                    )}
+              const cardTint = index % 2 === 0 ? colors.skyText : colors.mintText;
+              const avatarContent = borrower?.profileImage ? (
+                <Image
+                  source={{ uri: borrower?.profileImage }}
+                  style={styles.userAvatar}
+                />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Text style={styles.avatarText}>
+                    {borrower?.userName?.charAt(0)?.toUpperCase() || 'U'}
+                  </Text>
+                </View>
+              );
 
-                    {/* Card Header */}
-                    <View style={styles.cardHeader}>
-                      <View style={styles.userInfo}>
-                        {borrower?.profileImage ? (
-                          <Image
-                            source={{ uri: borrower?.profileImage }}
-                            style={styles.userAvatar}
-                          />
-                        ) : (
-                          <View style={styles.avatarPlaceholder}>
-                            <Text style={styles.avatarText}>
-                              {borrower?.userName?.charAt(0)?.toUpperCase() || 'U'}
-                            </Text>
+              return (
+                <React.Fragment key={borrower._id || index}>
+                  <TouchableOpacity
+                    onPress={() => handleBorrowerCardPress(borrower)}
+                    activeOpacity={isLender && !hasActivePlan ? 1 : 0.9}
+                    disabled={isLender && !hasActivePlan}>
+                    <View style={[
+                      styles.borrowerCard,
+                      isHighlighted && styles.highlightedBorrowerCard,
+                      hasRisk && styles.fraudRiskBorrowerCard,
+                      borrowerPendingPayments && styles.pendingPaymentBorrowerCard,
+                      { borderLeftColor: cardTint }
+                    ]}>
+                      {/* Status Banners */}
+                      {borrowerPendingPayments && (
+                        <View style={styles.pendingPaymentBanner}>
+                          <Icon name="notifications" size={14} color={colors.white} />
+                          <Text style={styles.pendingPaymentBannerText} numberOfLines={1}>
+                            {borrowerPendingPayments.count} Pending • {formatCurrency(borrowerPendingPayments.amount)}
+                          </Text>
+                        </View>
+                      )}
+                      {hasRisk && !borrowerPendingPayments && riskBadge && (
+                        <View style={[
+                          styles.fraudBanner,
+                          { borderColor: riskBadge.color || colors.error }
+                        ]}>
+                          <Icon name="warning" size={13} color={riskBadge.color || colors.error} />
+                          <Text
+                            style={[
+                              styles.fraudBannerText,
+                              { color: riskBadge.color || colors.error }
+                            ]}
+                            numberOfLines={1}>
+                            {riskBadge.label || riskLevel} Risk Detected
+                          </Text>
+                        </View>
+                      )}
+
+                      {/* Top Row — label + Details pill, mirrors MyLoans' loan card */}
+                      {/* Avatar + name + primary contact number */}
+                      <View style={styles.cardMainRow}>
+                        {borrower.aadharCardNo && borrower.aadharCardNo.length === 12 ? (
+                          <View style={styles.avatarReputationRing}>
+                            <BorrowerReputationCard
+                              aadhaarNumber={borrower.aadharCardNo}
+                              compact={true}
+                              circle={true}
+                              avatarContent={avatarContent}
+                            />
                           </View>
-                        )}
+                        ) : avatarContent}
                         <View style={styles.userDetails}>
                           <Text style={styles.userName} numberOfLines={1}>
                             {borrower.userName}
                           </Text>
                           <View style={styles.userMeta}>
-                            <Icon name="mail" size={12} color="#6B7280" />
-                            <Text style={styles.userEmail} numberOfLines={1}>
-                              {borrower.email || 'No email provided'}
+                            <Icon name="phone" size={12} color={colors.textSecondary} />
+                            <Text style={styles.userMobile} numberOfLines={1}>
+                              {borrower.mobileNo || 'Not provided'}
                             </Text>
                           </View>
                         </View>
+                        <View style={styles.detailsPill}>
+                          <Text style={styles.detailsPillText}>Details</Text>
+                        </View>
                       </View>
-                      <View style={styles.chevronCircle}>
-                        <Icon name="chevron-right" size={16} color="#ff6700" />
-                      </View>
-                    </View>
 
-                    {/* Borrower Details */}
-                    <View style={styles.borrowerDetails}>
-                      <View style={styles.detailsGrid}>
-                        <View style={styles.detailItem}>
-                          <Icon name="phone" size={13} color="#2563EB" />
-                          <Text style={styles.detailValue} numberOfLines={1}>
-                            {borrower.mobileNo || 'Not provided'}
-                          </Text>
-                        </View>
-                        <View style={styles.detailItem}>
-                          <Icon name="badge" size={13} color="#059669" />
-                          <Text style={styles.detailValue} numberOfLines={1}>
-                            {borrower.aadharCardNo || 'N/A'}
-                          </Text>
-                        </View>
-                      </View>
-                      {borrower.address && (
-                        <View style={styles.addressItem}>
-                          <Icon name="home" size={13} color="#D97706" />
-                          <Text style={styles.addressText} numberOfLines={1}>
-                            {borrower.address}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-
-                    {/* Reputation Score Card */}
-                    {borrower.aadharCardNo && borrower.aadharCardNo.length === 12 && (
-                      <View style={styles.reputationSection}>
-                        <View style={styles.reputationHeaderRow}>
-                          <View style={styles.reputationPill}>
-                            <Icon name="leaderboard" size={12} color="#1D4ED8" />
-                            <Text style={styles.reputationPillText}>Reputation</Text>
+                      {/* Reputation Score Card */}
+                      {borrower.aadharCardNo && borrower.aadharCardNo.length === 12 && (
+                        <View style={styles.reputationSection}>
+                          <View style={styles.reputationContainer}>
+                            <BorrowerReputationCard
+                              aadhaarNumber={borrower.aadharCardNo}
+                              compact={true}
+                              minimal={true}
+                            />
                           </View>
                         </View>
-                        <View style={styles.reputationContainer}>
-                          <BorrowerReputationCard
-                            aadhaarNumber={borrower.aadharCardNo}
-                            compact={true}
-                          />
-                        </View>
-                      </View>
-                    )}
+                      )}
 
-                    {/* Card Footer */}
-                    <View style={styles.cardFooter}>
-                      <View style={styles.footerBadge}>
-                        <Icon name="touch-app" size={12} color="#ff6700" />
-                        <Text style={styles.footerText}>History, profile, or loan</Text>
-                      </View>
+                      {/* Footer — pending payment status only */}
                       {borrowerPendingPayments && (
-                        <View style={styles.pendingPaymentBadge}>
-                          <Icon name="schedule" size={12} color="#F59E0B" />
-                          <Text style={styles.pendingPaymentBadgeText}>
-                            {borrowerPendingPayments.count} pending
-                          </Text>
+                        <View style={styles.cardFooter}>
+                          <View style={styles.pendingPaymentBadge}>
+                            <Icon name="schedule" size={12} color={colors.goldDark} />
+                            <Text style={styles.pendingPaymentBadgeText}>
+                              {borrowerPendingPayments.count} pending
+                            </Text>
+                          </View>
                         </View>
                       )}
                     </View>
-                  </View>
-                </TouchableOpacity>
+                  </TouchableOpacity>
+
+                </React.Fragment>
               );
             })}
             </>
@@ -689,17 +673,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     position: 'relative',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.background,
   },
   // Search Section
   searchSection: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     paddingHorizontal: m(16),
     paddingTop: m(16),
     paddingBottom: m(12),
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    shadowColor: '#000',
+    borderBottomColor: colors.border,
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
     shadowRadius: 4,
@@ -714,11 +698,11 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.background,
     borderRadius: m(16),
     paddingHorizontal: m(16),
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     minHeight: m(52),
   },
   searchIcon: {
@@ -727,7 +711,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: m(15),
-    color: '#374151',
+    color: colors.textPrimary,
     fontWeight: '500',
   },
   clearButton: {
@@ -738,11 +722,11 @@ const styles = StyleSheet.create({
     width: m(52),
     height: m(52),
     borderRadius: m(16),
-    backgroundColor: '#ff6700',
+    backgroundColor: colors.textPrimary,
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 3,
-    shadowColor: '#ff6700',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
@@ -773,7 +757,7 @@ const styles = StyleSheet.create({
     width: m(120),
     height: m(120),
     borderRadius: m(60),
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.borderLight,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: m(24),
@@ -781,13 +765,13 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: m(22),
     fontWeight: '700',
-    color: '#111827',
+    color: colors.textPrimary,
     marginBottom: m(8),
     textAlign: 'center',
   },
   emptySubtitle: {
     fontSize: m(15),
-    color: '#6B7280',
+    color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: m(24),
     lineHeight: m(22),
@@ -795,13 +779,13 @@ const styles = StyleSheet.create({
   emptyActionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ff6700',
+    backgroundColor: colors.navy,
     paddingHorizontal: m(24),
     paddingVertical: m(14),
     borderRadius: m(12),
     gap: m(8),
     elevation: 2,
-    shadowColor: '#ff6700',
+    shadowColor: colors.navy,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
@@ -809,12 +793,45 @@ const styles = StyleSheet.create({
   emptyActionText: {
     fontSize: m(16),
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.white,
   },
-  // Loan Card
-  cardHeader: {
+  // Borrower Card — top row (label + Details pill), mirrors MyLoans' loan card
+  cardTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: m(10),
+  },
+  cardLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(6),
+  },
+  cardLabel: {
+    fontSize: m(13),
+    fontWeight: '700',
+    color: colors.inkSoft,
+  },
+  riskDot: {
+    width: m(7),
+    height: m(7),
+    borderRadius: m(4),
+    backgroundColor: colors.error,
+  },
+  detailsPill: {
+    backgroundColor: colors.textPrimary,
+    paddingHorizontal: m(12),
+    paddingVertical: m(7),
+    borderRadius: m(18),
+    marginLeft: m(8),
+  },
+  detailsPillText: {
+    fontSize: m(11),
+    fontWeight: '700',
+    color: colors.white,
+  },
+  cardMainRow: {
+    flexDirection: 'row',
     alignItems: 'center',
     marginBottom: m(10),
   },
@@ -824,37 +841,35 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: m(8),
   },
-  userAvatar: {
-    width: m(46),
-    height: m(46),
-    borderRadius: m(23),
+  avatarReputationRing: {
     marginRight: m(12),
-    borderWidth: 2,
-    borderColor: '#F0F0F0',
+  },
+  userAvatar: {
+    width: m(42),
+    height: m(42),
+    borderRadius: m(21),
+    backgroundColor: colors.navyTint,
   },
   avatarPlaceholder: {
-    width: m(46),
-    height: m(46),
-    borderRadius: m(23),
-    backgroundColor: '#ff6700',
+    width: m(42),
+    height: m(42),
+    borderRadius: m(21),
+    backgroundColor: colors.navyTint,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: m(12),
-    borderWidth: 2,
-    borderColor: '#FFE5D0',
   },
   avatarText: {
-    fontSize: m(18),
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontSize: m(16),
+    fontWeight: '800',
+    color: colors.navyDark,
   },
   userDetails: {
     flex: 1,
   },
   userName: {
-    fontSize: m(15.5),
-    fontWeight: '700',
-    color: '#111827',
+    fontSize: m(14.5),
+    fontWeight: '800',
+    color: colors.textPrimary,
     marginBottom: m(3),
   },
   userMeta: {
@@ -862,21 +877,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: m(5),
   },
-  userEmail: {
-    fontSize: m(12),
-    color: '#6B7280',
+  userMobile: {
+    fontSize: m(11.5),
+    fontWeight: '500',
+    color: colors.textSecondary,
     flex: 1,
   },
-  chevronCircle: {
-    width: m(28),
-    height: m(28),
-    borderRadius: m(14),
-    backgroundColor: '#FFF5EB',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   borrowerDetails: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: 'rgba(255, 255, 255, 0.55)',
     borderRadius: m(10),
     paddingVertical: m(8),
     paddingHorizontal: m(10),
@@ -896,7 +904,7 @@ const styles = StyleSheet.create({
   detailValue: {
     fontSize: m(12.5),
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.textPrimary,
   },
   addressItem: {
     flexDirection: 'row',
@@ -906,26 +914,28 @@ const styles = StyleSheet.create({
   addressText: {
     fontSize: m(12),
     fontWeight: '500',
-    color: '#6B7280',
+    color: colors.textSecondary,
     flex: 1,
   },
-  // Borrower Card Styles
+  // Borrower Card Styles — flat pastel cards, alternating sky/mint like MyLoans
   borrowerCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: m(16),
     padding: m(14),
-    marginBottom: m(12),
+    marginBottom: m(14),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderLeftWidth: m(4),
+    borderColor: colors.borderLight,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
     elevation: 3,
-    shadowColor: '#111827',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
   },
   reputationSection: {
-    marginTop: m(4),
-    marginBottom: m(4),
+    paddingTop: m(2),
+    marginTop: 0,
+    marginBottom: 0,
   },
   reputationHeaderRow: {
     flexDirection: 'row',
@@ -938,66 +948,58 @@ const styles = StyleSheet.create({
     paddingHorizontal: m(8),
     paddingVertical: m(3),
     borderRadius: m(16),
-    backgroundColor: '#EEF2FF',
+    backgroundColor: 'rgba(255, 255, 255, 0.56)',
     gap: m(4),
   },
   reputationPillText: {
     fontSize: m(9.5),
     fontWeight: '700',
-    color: '#1D4ED8',
+    color: colors.navy,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
   reputationContainer: {
-    marginTop: m(2),
+    marginTop: 0,
   },
   cardFooter: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     alignItems: 'center',
+    marginTop: m(4),
   },
   highlightedBorrowerCard: {
     borderWidth: 2,
-    borderColor: '#b80266',
-    backgroundColor: '#FFF5F5',
-    shadowColor: '#b80266',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 6,
+    borderColor: colors.error,
   },
   fraudRiskBorrowerCard: {
     borderWidth: 1.5,
-    borderColor: '#FED7AA',
-    backgroundColor: '#FFFBEB',
+    borderColor: colors.goldDark,
   },
   fraudBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: m(6),
-    paddingHorizontal: m(12),
-    marginHorizontal: m(-14),
-    marginTop: m(-14),
-    marginBottom: m(12),
-    gap: m(6),
+    alignSelf: 'flex-start',
+    backgroundColor: colors.goldTint,
+    borderWidth: 1,
+    borderRadius: m(16),
+    paddingVertical: m(5),
+    paddingHorizontal: m(10),
+    marginBottom: m(10),
+    gap: m(5),
   },
   fraudBannerText: {
-    color: '#FFFFFF',
-    fontSize: m(11.5),
-    fontWeight: '700',
-    letterSpacing: 0.5,
+    fontSize: m(11),
+    fontWeight: '800',
   },
   pendingPaymentBorrowerCard: {
     borderWidth: 1.5,
-    borderColor: '#FDE68A',
-    backgroundColor: '#FFFBF5',
+    borderColor: colors.butterDark,
   },
   pendingPaymentBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F59E0B',
+    backgroundColor: colors.butterDark,
     paddingVertical: m(6),
     paddingHorizontal: m(12),
     marginHorizontal: m(-14),
@@ -1006,7 +1008,7 @@ const styles = StyleSheet.create({
     gap: m(6),
   },
   pendingPaymentBannerText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: m(11.5),
     fontWeight: '700',
     letterSpacing: 0.4,
@@ -1014,32 +1016,18 @@ const styles = StyleSheet.create({
   pendingPaymentBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF7ED',
+    backgroundColor: colors.butterSoft,
     borderRadius: m(8),
     paddingHorizontal: m(8),
     paddingVertical: m(4),
     gap: m(4),
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: colors.butter,
   },
   pendingPaymentBadgeText: {
     fontSize: m(10.5),
     fontWeight: '600',
-    color: '#92400E',
-  },
-  footerBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF7ED',
-    borderRadius: m(8),
-    paddingHorizontal: m(8),
-    paddingVertical: m(5),
-    gap: m(4),
-  },
-  footerText: {
-    fontSize: m(10.5),
-    fontWeight: '700',
-    color: '#C2410C',
+    color: colors.goldDarker,
   },
   // Action Modal Styles
   actionModalContent: {
@@ -1050,7 +1038,7 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'stretch',
     marginBottom: 0,
-    backgroundColor: '#FFFBF7',
+    backgroundColor: colors.surface,
     borderTopLeftRadius: m(26),
     borderTopRightRadius: m(26),
     padding: m(18),
@@ -1061,7 +1049,7 @@ const styles = StyleSheet.create({
   modalHandle: {
     width: m(44),
     height: m(4),
-    backgroundColor: '#FED7AA',
+    backgroundColor: colors.goldLight,
     borderRadius: m(2),
     alignSelf: 'center',
     marginBottom: m(14),
@@ -1079,12 +1067,12 @@ const styles = StyleSheet.create({
   actionModalTitle: {
     fontSize: m(20),
     fontWeight: '800',
-    color: '#111827',
+    color: colors.textPrimary,
     marginBottom: m(3),
   },
   actionModalSubtitle: {
     fontSize: m(13),
-    color: '#6B7280',
+    color: colors.textSecondary,
     fontWeight: '500',
   },
   closeButton: {
@@ -1093,18 +1081,18 @@ const styles = StyleSheet.create({
     borderRadius: m(18),
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: colors.borderLight,
   },
   selectedBorrowerCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: m(16),
     padding: m(12),
     borderWidth: 1,
-    borderColor: '#FED7AA',
+    borderColor: colors.goldLight,
     marginBottom: m(14),
   },
   selectedBorrowerAvatar: {
@@ -1113,13 +1101,13 @@ const styles = StyleSheet.create({
     borderRadius: m(14),
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFF7ED',
+    backgroundColor: colors.goldTint,
     marginRight: m(12),
   },
   selectedBorrowerAvatarText: {
     fontSize: m(18),
     fontWeight: '800',
-    color: '#C2410C',
+    color: colors.goldDark,
   },
   selectedBorrowerInfo: {
     flex: 1,
@@ -1127,13 +1115,13 @@ const styles = StyleSheet.create({
   selectedBorrowerName: {
     fontSize: m(15),
     fontWeight: '800',
-    color: '#111827',
+    color: colors.textPrimary,
     marginBottom: m(3),
   },
   selectedBorrowerMeta: {
     fontSize: m(12),
     fontWeight: '500',
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
   actionButtonsContainer: {
     gap: m(10),
@@ -1141,7 +1129,7 @@ const styles = StyleSheet.create({
   actionModalFooter: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFBF7',
+    backgroundColor: colors.surface,
     paddingTop: m(12),
     paddingBottom: m(10),
   },
@@ -1149,29 +1137,29 @@ const styles = StyleSheet.create({
     width: m(76),
     height: m(4),
     borderRadius: m(999),
-    backgroundColor: '#D1D5DB',
+    backgroundColor: colors.border,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: m(14),
     borderRadius: m(15),
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     gap: m(12),
   },
   historyButton: {
-    borderColor: '#FED7AA',
-    backgroundColor: '#FFF7ED',
+    borderColor: colors.butter,
+    backgroundColor: colors.butterSoft,
   },
   detailsButton: {
-    borderColor: '#DBEAFE',
-    backgroundColor: '#EFF6FF',
+    borderColor: colors.sky,
+    backgroundColor: colors.skySoft,
   },
   addLoanButton: {
-    borderColor: '#D1FAE5',
-    backgroundColor: '#ECFDF5',
+    borderColor: colors.mint,
+    backgroundColor: colors.mintSoft,
   },
   actionIconContainer: {
     width: m(44),
@@ -1186,12 +1174,12 @@ const styles = StyleSheet.create({
   actionButtonText: {
     fontSize: m(15),
     fontWeight: '800',
-    color: '#111827',
+    color: colors.textPrimary,
     marginBottom: m(2),
   },
   actionButtonSubtext: {
     fontSize: m(12),
-    color: '#6B7280',
+    color: colors.textSecondary,
     fontWeight: '500',
   },
   disabledButton: {

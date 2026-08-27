@@ -9,8 +9,15 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { m } from 'walstar-rn-responsive';
 import { reputationAPI } from '../Services/reputationService';
+import Svg, { Circle } from 'react-native-svg';
 
-const BorrowerReputationCard = ({ aadhaarNumber, compact = false }) => {
+const BorrowerReputationCard = ({
+  aadhaarNumber,
+  compact = false,
+  circle = false,
+  avatarContent = null,
+  minimal = false,
+}) => {
   const [reputation, setReputation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -124,6 +131,75 @@ const BorrowerReputationCard = ({ aadhaarNumber, compact = false }) => {
 
   // Compact view for borrower cards
   if (compact) {
+    if (circle) {
+      const ringSize = m(58);
+      const ringStroke = m(4);
+      const ringRadius = (ringSize - ringStroke) / 2;
+      const ringCircumference = 2 * Math.PI * ringRadius;
+      const clampedScore = Math.min(Math.max(reputationScore, 0), 100);
+
+      return (
+        <View style={styles.compactCircleRow}>
+          <View style={[styles.compactScoreRing, { width: ringSize, height: ringSize }]}>
+            <Svg
+              width={ringSize}
+              height={ringSize}
+              style={styles.compactScoreRingSvg}>
+              <Circle
+                cx={ringSize / 2}
+                cy={ringSize / 2}
+                r={ringRadius}
+                stroke="#E8F2EE"
+                strokeWidth={ringStroke}
+                fill="none"
+              />
+              <Circle
+                cx={ringSize / 2}
+                cy={ringSize / 2}
+                r={ringRadius}
+                stroke={color}
+                strokeWidth={ringStroke}
+                fill="none"
+                strokeLinecap="round"
+                strokeDasharray={`${ringCircumference} ${ringCircumference}`}
+                strokeDashoffset={ringCircumference - (clampedScore / 100) * ringCircumference}
+                rotation="-90"
+                origin={`${ringSize / 2}, ${ringSize / 2}`}
+              />
+            </Svg>
+            <View style={styles.compactScoreRingContent}>
+              {avatarContent || (
+                <>
+                  <Text style={[styles.compactCircleScore, { color }]}>
+                    {reputationScore.toFixed(1)}
+                  </Text>
+                  <Text style={styles.compactCircleMax}>/100</Text>
+                </>
+              )}
+            </View>
+          </View>
+        </View>
+      );
+    }
+
+    if (minimal) {
+      return (
+        <View style={styles.compactMinimalRow}>
+          <View style={styles.compactScoreContainer}>
+            <Text style={[styles.compactScore, { color }]}>
+              {reputationScore.toFixed(1)}
+            </Text>
+            <Text style={styles.compactMax}>/ 100</Text>
+          </View>
+          <View style={[styles.compactMinimalBadge, { backgroundColor: color + '18' }]}>
+            <Text style={[styles.compactMinimalBadgeText, { color }]}>
+              {reputationLevel}
+            </Text>
+          </View>
+        </View>
+      );
+    }
+
     return (
       <View style={[styles.compactCard, { borderColor: color + '40' }]}>
         <View style={styles.compactHeader}>
@@ -864,6 +940,62 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: m(10),
     fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  compactCircleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  compactScoreRing: {
+    borderRadius: m(29),
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  compactScoreRingSvg: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+  },
+  compactScoreRingContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  compactCircleScore: {
+    fontSize: m(15),
+    fontWeight: '800',
+    lineHeight: m(18),
+  },
+  compactCircleMax: {
+    fontSize: m(9),
+    fontWeight: '600',
+    color: '#7C8AA0',
+    lineHeight: m(11),
+  },
+  compactCircleBadge: {
+    paddingHorizontal: m(10),
+    paddingVertical: m(5),
+    borderRadius: m(14),
+  },
+  compactCircleBadgeText: {
+    fontSize: m(10),
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  compactMinimalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  compactMinimalBadge: {
+    marginLeft: m(14),
+    paddingHorizontal: m(10),
+    paddingVertical: m(5),
+    borderRadius: m(14),
+  },
+  compactMinimalBadgeText: {
+    fontSize: m(10),
+    fontWeight: '800',
     textTransform: 'uppercase',
   },
 

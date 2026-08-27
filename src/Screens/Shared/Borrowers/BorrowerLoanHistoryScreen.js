@@ -25,25 +25,27 @@ import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import moment from 'moment';
 import { m } from 'walstar-rn-responsive';
 
-// Orange Theme Colors
 const ORANGE_THEME = {
-  primary: '#FF6B35',
-  primaryLight: '#FFF7F4',
-  primaryDark: '#E55A2B',
-  secondary: '#FF9E6D',
-  accent: '#FFD166',
-  background: '#FFF9F5',
+  primary: '#111827',
+  primaryLight: '#F1FAF7',
+  primaryDark: '#0F172A',
+  secondary: '#B7EDF4',
+  accent: '#D7F2C1',
+  background: '#F2FAF6',
   card: '#FFFFFF',
-  text: '#2D3748',
-  textLight: '#718096',
-  border: '#FFE4D6',
+  text: '#111827',
+  textLight: '#6B7280',
+  border: '#DCEFEA',
   success: '#10B981',
   warning: '#F59E0B',
   error: '#EF4444',
-  info: '#3B82F6',
+  info: '#1B6E8C',
+  sky: '#B7EDF4',
+  mint: '#D7F2C1',
+  ink: '#111827',
 };
 
-const LoanHistoryCard = ({ loan, onPress }) => {
+const LoanHistoryCard = ({ loan, onPress, index = 0 }) => {
   const [scaleAnim] = useState(new Animated.Value(1));
 
   // Check if loan is overdue
@@ -103,23 +105,21 @@ const LoanHistoryCard = ({ loan, onPress }) => {
 
   const paymentPercent =
     loan.amount > 0 ? ((loan.totalPaid || 0) / loan.amount) * 100 : 0;
+  const cardTint = index % 2 === 0 ? ORANGE_THEME.sky : ORANGE_THEME.mint;
 
   return (
     <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
       <TouchableOpacity
-        style={[styles.loanCard, isOverdue && styles.overdueCard]}
+        style={[
+          styles.loanCard,
+          { borderLeftColor: cardTint },
+          isOverdue && styles.overdueCard,
+        ]}
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         activeOpacity={0.9}
       >
-        <View
-          style={[
-            styles.statusAccent,
-            { backgroundColor: getStatusColor(effectiveStatus) },
-          ]}
-        />
-
         {/* Overdue Banner */}
         {isOverdue && (
           <View style={styles.overdueBanner}>
@@ -231,14 +231,6 @@ const LoanHistoryCard = ({ loan, onPress }) => {
             <Text style={styles.loanDate}>
               {moment(loan.createdAt).format('DD MMM YYYY')}
             </Text>
-          </View>
-          <View style={styles.viewButton}>
-            <Text style={styles.viewButtonText}>View Details</Text>
-            <Icon
-              name="arrow-forward"
-              size={13}
-              color={ORANGE_THEME.primary}
-            />
           </View>
         </View>
       </TouchableOpacity>
@@ -857,14 +849,14 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
           style={styles.filterButtonContainer}
           onPress={() => setFilterModalVisible(true)}
         >
-          <Icon name="tune" size={24} color={ORANGE_THEME.primary} />
+          <Icon name="tune" size={24} color="#FFFFFF" />
           {(filters.status ||
             filters.startDate ||
             filters.endDate ||
             filters.minAmount ||
             filters.maxAmount) && (
             <View style={styles.filterIndicator}>
-              <Icon name="circle" size={8} color={ORANGE_THEME.primary} />
+              <Icon name="circle" size={8} color={ORANGE_THEME.accent} />
             </View>
           )}
         </TouchableOpacity>
@@ -923,12 +915,6 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
                 <Icon name="analytics" size={24} color={ORANGE_THEME.primary} />
                 <Text style={styles.summaryTitle}>Loan Overview</Text>
               </View>
-              <TouchableOpacity
-                style={styles.refreshButton}
-                onPress={onRefresh}
-              >
-                <Icon name="refresh" size={20} color={ORANGE_THEME.primary} />
-              </TouchableOpacity>
             </View>
 
             <View style={styles.summaryCards}>
@@ -1186,6 +1172,7 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
               <LoanHistoryCard
                 key={loan._id || index}
                 loan={loan}
+                index={index}
                 onPress={() => handleLoanCardPress(loan)}
               />
             ))}
@@ -1240,7 +1227,7 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: ORANGE_THEME.background,
   },
   // Summary Section
   summaryContainer: {
@@ -1249,12 +1236,14 @@ const styles = StyleSheet.create({
     marginTop: m(12),
     marginBottom: m(16),
     padding: m(20),
-    borderRadius: m(20),
+    borderRadius: m(18),
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.07,
+    shadowRadius: 12,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: ORANGE_THEME.border,
   },
   summaryHeader: {
     flexDirection: 'row',
@@ -1276,7 +1265,7 @@ const styles = StyleSheet.create({
     width: m(36),
     height: m(36),
     borderRadius: m(18),
-    backgroundColor: ORANGE_THEME.primaryLight,
+    backgroundColor: ORANGE_THEME.ink,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1289,7 +1278,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     padding: m(12),
-    borderRadius: m(16),
+    borderRadius: m(14),
     marginHorizontal: m(4),
   },
   summaryIconContainer: {
@@ -1312,7 +1301,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   amountSummary: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: ORANGE_THEME.primaryLight,
     borderRadius: m(16),
     padding: m(16),
   },
@@ -1350,7 +1339,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
+    backgroundColor: ORANGE_THEME.background,
     borderRadius: m(12),
     paddingHorizontal: m(14),
     marginRight: m(12),
@@ -1375,8 +1364,7 @@ const styles = StyleSheet.create({
     width: m(44),
     height: m(44),
     borderRadius: m(12),
-    // backgroundColor: ORANGE_THEME.primaryLight,
-    backgroundColor: 'white',
+    backgroundColor: ORANGE_THEME.ink,
     borderWidth: 1,
     borderColor: ORANGE_THEME.border,
     justifyContent: 'center',
@@ -1398,12 +1386,13 @@ const styles = StyleSheet.create({
   // Loan Card
   loanCard: {
     backgroundColor: ORANGE_THEME.card,
-    borderRadius: m(14),
-    padding: m(12),
-    paddingLeft: m(15),
+    borderRadius: m(20),
+    padding: m(14),
+    paddingLeft: m(16),
     marginHorizontal: m(14),
-    marginBottom: m(10),
+    marginBottom: m(14),
     borderWidth: 1,
+    borderLeftWidth: m(5),
     borderColor: ORANGE_THEME.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -1413,21 +1402,14 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   overdueCard: {
-    backgroundColor: '#FFF5F5',
-    borderColor: ORANGE_THEME.error + '40',
-  },
-  statusAccent: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: m(4),
+    borderWidth: 1.5,
+    borderColor: ORANGE_THEME.error + '80',
   },
   overdueBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: ORANGE_THEME.error,
+    backgroundColor: ORANGE_THEME.ink,
     paddingVertical: m(4),
     paddingHorizontal: m(10),
     marginLeft: m(-15),
@@ -1475,7 +1457,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: m(8),
     paddingVertical: m(4),
-    borderRadius: m(14),
+    borderRadius: m(16),
     gap: m(3),
   },
   statusText: {
@@ -1486,7 +1468,7 @@ const styles = StyleSheet.create({
   },
   loanDetails: {
     flexDirection: 'row',
-    backgroundColor: ORANGE_THEME.primaryLight,
+    backgroundColor: 'rgba(255, 255, 255, 0.55)',
     borderRadius: m(9),
     paddingVertical: m(7),
     paddingHorizontal: m(9),
@@ -1501,7 +1483,7 @@ const styles = StyleSheet.create({
   progressBar: {
     flex: 1,
     height: m(4),
-    backgroundColor: ORANGE_THEME.primaryLight,
+    backgroundColor: 'rgba(255, 255, 255, 0.62)',
     borderRadius: m(2),
     overflow: 'hidden',
   },
@@ -1543,7 +1525,7 @@ const styles = StyleSheet.create({
     marginTop: m(8),
     paddingTop: m(8),
     borderTopWidth: 1,
-    borderTopColor: ORANGE_THEME.border,
+    borderTopColor: 'rgba(17, 24, 39, 0.12)',
   },
   dateContainer: {
     flexDirection: 'row',
@@ -1558,12 +1540,16 @@ const styles = StyleSheet.create({
   viewButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: ORANGE_THEME.ink,
+    borderRadius: m(18),
+    paddingHorizontal: m(10),
+    paddingVertical: m(6),
     gap: m(3),
   },
   viewButtonText: {
-    fontSize: m(12),
-    color: ORANGE_THEME.primary,
-    fontWeight: '600',
+    fontSize: m(11),
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   // Loans Header
   loansHeader: {
@@ -1581,9 +1567,9 @@ const styles = StyleSheet.create({
   },
   loansCount: {
     fontSize: m(14),
-    color: ORANGE_THEME.primary,
+    color: '#FFFFFF',
     fontWeight: '600',
-    backgroundColor: ORANGE_THEME.primaryLight,
+    backgroundColor: ORANGE_THEME.ink,
     paddingHorizontal: m(12),
     paddingVertical: m(4),
     borderRadius: m(12),

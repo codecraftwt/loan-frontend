@@ -12,7 +12,6 @@ import {
   FlatList,
   BackHandler,
   Alert,
-  useWindowDimensions,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
@@ -26,7 +25,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import useFetchUserFromStorage from '../../../Redux/hooks/useFetchUserFromStorage';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
-import { FontFamily, FontSizes } from '../../../constants';
+import { FontFamily, FontSizes, colors } from '../../../constants';
 
 const formatCurrency = value => {
   if (!value) {
@@ -41,7 +40,6 @@ const formatCurrency = value => {
 export default function Home() {
   const navigation = useNavigation();
   const dispatch = useDispatch();
-  const { width: windowWidth } = useWindowDimensions();
 
   const user = useSelector(state => state.auth.user);
   const lenderStatistics = useSelector(state => state.loans.lenderStatistics);
@@ -260,28 +258,35 @@ export default function Home() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#ff6700']}
-            tintColor="#ff6700"
+            colors={[colors.ink]}
+            tintColor={colors.ink}
           />
         }>
 
         {/* Welcome Section */}
-        <View style={styles.welcomeContent}>
-          <View style={styles.welcomeText}>
+        <Animated.View
+          style={[
+            styles.heroCard,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideUpAnim }],
+            },
+          ]}>
+          <View style={styles.heroTopRow}>
             <Text style={styles.greeting}>Hello, {user?.userName || 'User'} 👋</Text>
-            <Text style={styles.subtitle}>Manage your loans efficiently</Text>
+            <TouchableOpacity
+              style={styles.avatarContainer}
+              onPress={() => navigation.navigate('ProfileDetails')}>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>
+                  {(user?.userName || 'U').charAt(0).toUpperCase()}
+                </Text>
+              </View>
+              <View style={styles.onlineIndicator} />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            style={styles.avatarContainer}
-            onPress={() => navigation.navigate('ProfileDetails')}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {(user?.userName || 'U').charAt(0).toUpperCase()}
-              </Text>
-            </View>
-            <View style={styles.onlineIndicator} />
-          </TouchableOpacity>
-        </View>
+          <Text style={styles.subtitle}>Manage your loans efficiently</Text>
+        </Animated.View>
 
         {/* Pending Payments Notification */}
         {(() => {
@@ -316,7 +321,7 @@ export default function Home() {
                 onPress={() => navigation.navigate('PendingPayments')}
                 activeOpacity={0.8}>
                 <LinearGradient
-                  colors={['#F59E0B', '#F97316']}
+                  colors={[colors.ink, colors.inkSoft]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.pendingPaymentGradient}>
@@ -397,7 +402,7 @@ export default function Home() {
             }]} />
 
             <LinearGradient
-              colors={['#1a1a1a', '#2c3e50', '#34495e', '#2c3e50']}
+              colors={[colors.ink, colors.inkSoft, colors.ink]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             // style={styles.premiumContent}
@@ -409,7 +414,7 @@ export default function Home() {
 
                 <View style={styles.premiumIcon}>
                   <LinearGradient
-                    colors={['#ffd900e8', '#ffed4edc', '#ffd900d9']}
+                    colors={[colors.goldLight, colors.gold, colors.goldDark]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                     style={styles.premiumIconBackground}
@@ -441,45 +446,37 @@ export default function Home() {
                 icon: 'plus-circle',
                 text: 'New Loan',
                 screen: 'AddDetails',
-                gradient: ['#ff8a00', '#ff6700'],
                 description: 'Create new loan',
-                lightColor: '#F4CDA6'
+                tint: colors.sky,
               },
               {
                 icon: 'bar-chart',
                 text: 'Analytics',
                 screen: 'AnalyticsScreen',
-                gradient: ['#2c3e50', '#34495e'],
                 description: 'View insights',
-                lightColor: '#ACB5AF'
+                tint: colors.mint,
               },
               {
                 icon: 'users',
                 text: 'Contacts',
                 screen: 'ContactsScreen',
-                gradient: ['#27ae60', '#2ecc71'],
                 description: 'Manage contacts',
-                lightColor: '#C0ECCC'
+                tint: colors.butter,
               },
               {
                 icon: 'activity',
                 text: 'Activity',
                 screen: 'LenderRecentActivity',
-                gradient: ['#a09240ff', '#a3964aff'],
                 description: 'Recent updates',
-                lightColor: '#ffec7f'
+                tint: colors.offWhite,
               },
-             
-            ].map((action, index) => (
+
+            ].map((action) => (
               <TouchableOpacity
                 key={action.text}
-                style={styles.actionItem}
+                style={[styles.actionItem, { backgroundColor: action.tint }]}
                 activeOpacity={action.screen ? 0.7 : 1}
                 onPress={() => action.screen && navigation.navigate(action.screen)}>
-                {/* Background Light Shade */}
-                <View style={[styles.actionBackground, { backgroundColor: action.lightColor }]} />
-
-                {/* Content */}
                 <View style={styles.actionContent}>
                   <View style={styles.actionTextContent}>
                     <Text style={styles.actionText}>{action.text}</Text>
@@ -487,14 +484,10 @@ export default function Home() {
                   </View>
 
                   {/* Icon in Bottom Right Corner */}
-                  <View
-                    style={styles.actionIconWrapper}>
-                    <LinearGradient
-                      colors={action.gradient}
-                      style={styles.actionIcon}
-                    >
-                      <Icon name={action.icon} size={19} color="#fff" />
-                    </LinearGradient>
+                  <View style={styles.actionIconWrapper}>
+                    <View style={styles.actionIcon}>
+                      <Icon name={action.icon} size={19} color={colors.ink} />
+                    </View>
                   </View>
                 </View>
               </TouchableOpacity>
@@ -510,30 +503,26 @@ export default function Home() {
                 icon: 'arrow-up-circle',
                 value: lenderStatistics?.counts?.totalLoans || 0,
                 label: 'Given',
-                gradient: ['#BBDEFB', '#90CAF9'],
-                textColor: '#1565C0',
+                tint: colors.sky,
                 tabName: 'Given'
               },
               {
                 icon: 'check-circle',
                 value: lenderStatistics?.counts?.paidLoans || 0,
                 label: 'Paid',
-                gradient: ['#C8E6C9', '#A5D6A7'],
-                textColor: '#2E7D32'
+                tint: colors.mint,
               },
               {
                 icon: 'clock',
                 value: lenderStatistics?.counts?.pendingLoans || 0,
                 label: 'Pending',
-                gradient: ['#E1BEE7', '#e6d6e9ff'],
-                textColor: '#7B1FA2'
+                tint: colors.butter,
               },
               {
                 icon: 'alert-circle',
                 value: lenderStatistics?.counts?.overdueLoans || 0,
                 label: 'Overdue',
-                gradient: ['#FFCDD2', '#EF9A9A'],
-                textColor: '#C62828'
+                tint: colors.offWhite,
               },
             ].map((stat) => {
               const StatContainer = stat.tabName ? TouchableOpacity : View;
@@ -553,19 +542,16 @@ export default function Home() {
                   style={styles.statItem}
                   {...statProps}
                 >
-                  <LinearGradient
-                    colors={stat.gradient}
-                    style={styles.statIcon}
-                  >
-                    <Text style={[styles.statValue, { color: stat.textColor }]}>{stat.value}</Text>
-                  </LinearGradient>
+                  <View style={[styles.statIcon, { backgroundColor: stat.tint }]}>
+                    <Text style={styles.statValue}>{stat.value}</Text>
+                  </View>
                   <Text style={styles.statLabel}>{stat.label}</Text>
                 </StatContainer>
               );
             })}
           </View>
         </View>
-        {/* Progress Card - responsive layout */}
+        {/* Progress Card */}
         <Animated.View
           style={[
             styles.progressCard,
@@ -574,84 +560,53 @@ export default function Home() {
               transform: [{ translateY: slideUpAnim }]
             }
           ]}>
-          {/* Background Pattern */}
-          <View style={styles.progressPattern} />
-
-          <LinearGradient
-            colors={['#667eea', '#764ba2', '#667eea']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={[
-              styles.progressGradient,
-              windowWidth < 380 && styles.progressGradientColumn
-            ]}
-          >
-            {/* Progress Circle */}
-            <View style={[
-              styles.progressCircleContainer,
-              windowWidth < 380 && styles.progressCircleContainerColumn
-            ]}>
-              <View style={styles.progressCircleBackground}>
-                <Animated.View style={[styles.progressCircleFill, {
-                  transform: [{
-                    rotate: fadeAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ['0deg', '360deg']
-                    })
-                  }]
-                }]} />
-              </View>
-              <Text style={styles.progressCircleText}>{Math.round(completionRate)}%</Text>
+          <View style={styles.progressTopRow}>
+            <View style={styles.progressHeaderText}>
+              <Text style={styles.progressTitle}>Loan Completion</Text>
+              <Text style={styles.progressText} numberOfLines={2}>
+                {lenderStatistics?.counts?.paidLoans || 0} of {lenderStatistics?.counts?.totalLoans || 1} loans completed
+              </Text>
+              <Text style={styles.progressAmountText} numberOfLines={1}>
+                ₹{formatCurrency(lenderStatistics?.totalPaidAmount || 0)} of ₹{formatCurrency(lenderStatistics?.totalLoanAmount || 0)}
+              </Text>
             </View>
-
-            <View style={styles.progressContent}>
-              <View style={styles.progressHeader}>
-                <View style={styles.progressHeaderText}>
-                  <Text style={styles.progressTitle}>Loan Completion</Text>
-                  <Text style={styles.progressText} numberOfLines={2}>
-                    {lenderStatistics?.counts?.paidLoans || 0} of {lenderStatistics?.counts?.totalLoans || 1} loans completed
-                  </Text>
-                  <Text style={styles.progressAmountText} numberOfLines={1}>
-                    ₹{formatCurrency(lenderStatistics?.totalPaidAmount || 0)} of ₹{formatCurrency(lenderStatistics?.totalLoanAmount || 0)}
-                  </Text>
-                </View>
-                <View style={styles.progressStats}>
-                  <View style={styles.statRow}>
-                    <View style={[styles.statDot, { backgroundColor: '#ffd700' }]} />
-                    <Text style={styles.statText} numberOfLines={1}>
-                      Completed ({lenderStatistics?.counts?.paidLoans || 0})
-                    </Text>
-                  </View>
-                  <View style={styles.statRow}>
-                    <View style={[styles.statDot, { backgroundColor: 'rgba(255,255,255,0.3)' }]} />
-                    <Text style={styles.statText} numberOfLines={1}>
-                      Remaining ({remainingLoans})
-                    </Text>
-                  </View>
-                </View>
-              </View>
-
-              {/* Enhanced Progress Bar */}
-              <View style={styles.progressBarContainer}>
-                <View style={styles.progressBar}>
-                  <Animated.View
-                    style={[
-                      styles.progressFill,
-                      {
-                        width: `${Math.min(completionRate, 100)}%`,
-                      }
-                    ]}
-                  >
-                    <View style={styles.progressGlow} />
-                  </Animated.View>
-                </View>
-                <View style={styles.progressLabels}>
-                  <Text style={styles.progressLabel}>0%</Text>
-                  <Text style={styles.progressLabel}>100%</Text>
-                </View>
-              </View>
+            <View style={styles.progressPercentPill}>
+              <Text style={styles.progressPercentText}>{Math.round(completionRate)}%</Text>
             </View>
-          </LinearGradient>
+          </View>
+
+          {/* Progress Bar */}
+          <View style={styles.progressBarContainer}>
+            <View style={styles.progressBar}>
+              <Animated.View
+                style={[
+                  styles.progressFill,
+                  {
+                    width: `${Math.min(completionRate, 100)}%`,
+                  }
+                ]}
+              />
+            </View>
+            <View style={styles.progressLabels}>
+              <Text style={styles.progressLabel}>0%</Text>
+              <Text style={styles.progressLabel}>100%</Text>
+            </View>
+          </View>
+
+          <View style={styles.progressStats}>
+            <View style={styles.statRow}>
+              <View style={[styles.statDot, { backgroundColor: colors.butterDark }]} />
+              <Text style={styles.statText} numberOfLines={1}>
+                Completed ({lenderStatistics?.counts?.paidLoans || 0})
+              </Text>
+            </View>
+            <View style={styles.statRow}>
+              <View style={[styles.statDot, { backgroundColor: colors.border }]} />
+              <Text style={styles.statText} numberOfLines={1}>
+                Remaining ({remainingLoans})
+              </Text>
+            </View>
+          </View>
         </Animated.View>
 
         {/* Recent Activity */}
@@ -802,24 +757,24 @@ const LenderActivityItem = memo(
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.offWhite,
     paddingBottom: m(40),
   },
   content: {
     paddingBottom: m(80),
   },
   // Welcome Section
-  welcomeContent: {
+  heroCard: {
+    marginHorizontal: m(16),
+    marginTop: m(20),
+    backgroundColor: colors.surface,
+    borderRadius: m(24),
+    padding: m(20),
+  },
+  heroTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: m(24),
-    backgroundColor: 'white',
-    marginHorizontal: m(16),
-    borderRadius: 20,
-    marginTop: m(20),
-    borderWidth: 0.4,
-    borderColor: 'lightgrey'
   },
   welcomeText: {
     flex: 1,
@@ -827,28 +782,28 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: FontSizes['2xl'],
     fontFamily: FontFamily.secondaryBold,
-    color: 'black',
-    marginBottom: m(6),
+    color: colors.ink,
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: FontSizes.base,
-    color: 'black',
+    color: colors.textSecondary,
     fontFamily: FontFamily.primaryRegular,
+    marginTop: m(6),
   },
   avatarContainer: {
     position: 'relative',
   },
   avatar: {
-    width: m(60),
-    height: m(60),
-    borderRadius: m(30),
+    width: m(48),
+    height: m(48),
+    borderRadius: m(24),
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'black'
+    backgroundColor: colors.ink,
   },
   avatarText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: FontSizes.xl,
     fontFamily: FontFamily.secondaryBold,
   },
@@ -859,9 +814,9 @@ const styles = StyleSheet.create({
     width: m(14),
     height: m(14),
     borderRadius: m(7),
-    backgroundColor: '#27ae60',
+    backgroundColor: colors.success,
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: colors.white,
   },
   // Premium Section
   premiumSection: {
@@ -869,13 +824,13 @@ const styles = StyleSheet.create({
     marginVertical: m(16),
     borderRadius: m(25),
     overflow: 'hidden',
-    shadowColor: '#ffd700',
+    shadowColor: colors.gold,
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.3,
     shadowRadius: 20,
     elevation: 15,
     borderWidth: 1,
-    borderColor: 'rgba(255, 215, 0, 0.2)',
+    borderColor: `${colors.gold}33`,
   },
   premiumContent: {
     flexDirection: 'row',
@@ -904,7 +859,7 @@ const styles = StyleSheet.create({
     width: m(40),
     height: m(40),
     borderRadius: m(20),
-    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    backgroundColor: `${colors.gold}1a`,
   },
   premiumOrnamentBottom: {
     position: 'absolute',
@@ -913,7 +868,7 @@ const styles = StyleSheet.create({
     width: m(48),
     height: m(48),
     borderRadius: m(25),
-    backgroundColor: 'rgba(255, 215, 0, 0.05)',
+    backgroundColor: `${colors.gold}0d`,
   },
   premiumIcon: {
     marginRight: m(16),
@@ -926,7 +881,7 @@ const styles = StyleSheet.create({
     borderRadius: m(28),
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#ffd700',
+    shadowColor: colors.gold,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.6,
     shadowRadius: 12,
@@ -937,7 +892,7 @@ const styles = StyleSheet.create({
     width: m(68),
     height: m(68),
     borderRadius: m(35),
-    backgroundColor: 'rgba(255, 215, 0, 0.2)',
+    backgroundColor: `${colors.gold}33`,
     zIndex: -1,
   },
   premiumText: {
@@ -948,9 +903,9 @@ const styles = StyleSheet.create({
   premiumTitle: {
     fontSize: FontSizes.xl,
     fontFamily: FontFamily.secondaryBold,
-    color: '#fff',
+    color: colors.white,
     marginBottom: m(6),
-    textShadowColor: 'rgba(255, 215, 0, 0.5)',
+    textShadowColor: `${colors.gold}80`,
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 10,
     letterSpacing: 0.5,
@@ -972,7 +927,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: FontSizes.lg,
     fontFamily: FontFamily.secondaryBold,
-    color: '#2c3e50',
+    color: colors.ink,
     marginBottom: m(16),
     letterSpacing: -0.3,
   },
@@ -997,11 +952,11 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: FontSizes.xl,
     fontFamily: FontFamily.primaryBold,
-    color: '#2c3e50',
+    color: colors.ink,
   },
   statLabel: {
     fontSize: FontSizes.sm,
-    color: 'black',
+    color: colors.ink,
     fontFamily: FontFamily.primaryMedium,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
@@ -1020,25 +975,11 @@ const styles = StyleSheet.create({
   actionItem: {
     width: '48%',
     marginBottom: m(16),
-    backgroundColor: '#fff',
     padding: m(18),
     borderRadius: m(20),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 8,
     position: 'relative',
     overflow: 'hidden',
     minHeight: m(120),
-  },
-  actionBackground: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    opacity: 0.6,
   },
   actionContent: {
     flex: 1,
@@ -1052,13 +993,13 @@ const styles = StyleSheet.create({
   },
   actionText: {
     fontSize: FontSizes.base,
-    color: '#2c3e50',
+    color: colors.ink,
     fontFamily: FontFamily.secondaryBold,
     marginBottom: m(3),
   },
   actionDescription: {
     fontSize: FontSizes.sm,
-    color: '#7f8c8d',
+    color: colors.inkSoft,
     fontFamily: FontFamily.primaryRegular,
     lineHeight: m(16),
     marginBottom: 10
@@ -1074,129 +1015,63 @@ const styles = StyleSheet.create({
     borderRadius: m(16),
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: colors.white,
   },
-  // Progress Card - responsive
+  // Progress Card
   progressCard: {
     marginHorizontal: m(16),
     marginBottom: m(16),
     borderRadius: m(24),
-    overflow: 'hidden',
-    shadowColor: '#667eea',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 15,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    position: 'relative',
+    padding: m(20),
+    backgroundColor: colors.surface,
   },
-  progressPattern: {
-    position: 'absolute',
-    top: m(-50),
-    right: m(-50),
-    width: m(100),
-    height: m(100),
-    borderRadius: m(50),
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    zIndex: 1,
-  },
-  progressGradient: {
-    padding: m(16),
+  progressTopRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    position: 'relative',
-    overflow: 'hidden',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: m(16),
   },
-  progressGradientColumn: {
-    flexDirection: 'column',
-    alignItems: 'center',
-    padding: m(18),
+  progressPercentPill: {
+    backgroundColor: colors.sky,
+    borderRadius: m(20),
+    paddingHorizontal: m(14),
+    paddingVertical: m(8),
   },
-  // Progress Circle
-  progressCircleContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: m(16),
-    position: 'relative',
-  },
-  progressCircleContainerColumn: {
-    marginRight: 0,
-    marginBottom: m(14),
-  },
-  progressCircleBackground: {
-    width: m(80),
-    height: m(80),
-    borderRadius: m(40),
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  progressCircleFill: {
-    position: 'absolute',
-    left: m(5),
-    top: m(5),
-    width: m(70),
-    height: m(70),
-    borderRadius: m(35),
-    borderWidth: 3,
-    borderColor: '#ffd700',
-    borderTopColor: 'transparent',
-    borderRightColor: 'transparent',
-  },
-  progressCircleText: {
-    position: 'absolute',
-    fontSize: FontSizes.lg,
-    fontFamily: FontFamily.secondaryBold,
-    color: '#ffd700',
-    textShadowColor: 'rgba(255, 215, 0, 0.5)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 10,
+  progressPercentText: {
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primaryExtraBold,
+    color: colors.skyText,
   },
   // Progress Content
-  progressContent: {
-    flex: 1,
-    minWidth: 0,
-  },
-  progressHeader: {
-    marginBottom: m(12),
-  },
   progressHeaderText: {
-    marginBottom: m(8),
+    flex: 1,
+    marginRight: m(12),
   },
   progressTitle: {
     fontSize: FontSizes.lg,
     fontFamily: FontFamily.secondaryBold,
-    color: '#fff',
+    color: colors.ink,
     marginBottom: m(4),
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
   },
   progressText: {
     fontSize: FontSizes.sm,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: colors.textSecondary,
     fontFamily: FontFamily.primaryRegular,
     marginBottom: m(4),
   },
   progressAmountText: {
     fontSize: FontSizes.xs,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: colors.textSecondary,
     fontFamily: FontFamily.primarySemiBold,
-    marginBottom: m(8),
   },
   progressStats: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     justifyContent: 'space-between',
-    gap: m(8),
+    marginTop: m(14),
   },
   statRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
-    minWidth: 0,
   },
   statDot: {
     width: m(8),
@@ -1206,43 +1081,24 @@ const styles = StyleSheet.create({
   },
   statText: {
     fontSize: FontSizes.xs,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.textSecondary,
     fontFamily: FontFamily.primaryRegular,
-    flex: 1,
   },
-  // Enhanced Progress Bar
+  // Progress Bar
   progressBarContainer: {
-    marginTop: m(8),
-    width: '100%',
+    marginTop: m(4),
   },
   progressBar: {
     height: m(12),
-    width: '100%',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: colors.borderLight,
     borderRadius: m(6),
     overflow: 'hidden',
     marginBottom: m(6),
-    position: 'relative',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#ffd700',
+    backgroundColor: colors.butterDark,
     borderRadius: m(6),
-    position: 'relative',
-    shadowColor: '#ffd700',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  progressGlow: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    width: m(20),
-    backgroundColor: 'rgba(255, 255, 255, 0.4)',
-    transform: [{ skewX: '-20deg' }],
   },
   progressLabels: {
     flexDirection: 'row',
@@ -1250,7 +1106,7 @@ const styles = StyleSheet.create({
   },
   progressLabel: {
     fontSize: FontSizes.xs,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: colors.textMuted,
     fontFamily: FontFamily.primaryRegular,
   },
   // Activity Section
@@ -1446,7 +1302,7 @@ const styles = StyleSheet.create({
     borderRadius: m(16),
     overflow: 'hidden',
     elevation: 4,
-    shadowColor: '#F59E0B',
+    shadowColor: colors.navyDark,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -1469,7 +1325,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -m(6),
     right: -m(6),
-    backgroundColor: '#EF4444',
+    backgroundColor: colors.error,
     borderRadius: m(10),
     minWidth: m(20),
     height: m(20),
@@ -1477,7 +1333,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: m(4),
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: colors.white,
   },
   badgeText: {
     color: '#FFFFFF',
