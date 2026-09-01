@@ -20,6 +20,7 @@ const Header = ({
   isEdit = false,
   onEditPress,
   headerStyle,
+  titleStyle,
 }) => {
   const navigation = useNavigation();
 
@@ -65,20 +66,24 @@ const Header = ({
         <View style={styles.headerRow}>
 
           {/* LEFT: Back Button */}
-          <View style={styles.leftContainer}>
+          <View
+            style={[
+              styles.leftContainer,
+              !showBackButton && styles.leftContainerHidden,
+            ]}>
             {showBackButton && (
               <TouchableOpacity
                 style={styles.backButton}
                 onPress={handleBackPress}
                 activeOpacity={0.7}>
-                <Feather name="arrow-left" size={m(24)} color="#ffffff" />
+                <Feather name="chevron-left" size={m(24)} color={colors.white} />
               </TouchableOpacity>
             )}
           </View>
 
           {/* CENTER: Title */}
           <View style={styles.centerContainer}>
-            <Text style={styles.headerText}>{title}</Text>
+            <Text style={[styles.headerText, titleStyle]}>{title}</Text>
           </View>
 
           {/* RIGHT: Optional Edit Button */}
@@ -131,10 +136,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'flex-start',
   },
+  leftContainerHidden: {
+    width: 0,
+  },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    paddingLeft: m(4),
   },
   rightContainer: {
     width: m(50),
@@ -142,9 +151,12 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   backButton: {
-    padding: m(8),
-    borderRadius: m(20),
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    width: m(34),
+    height: m(34),
+    borderRadius: m(17),
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   editButton: {
     padding: m(8),
@@ -159,7 +171,7 @@ const styles = StyleSheet.create({
     lineHeight: m(26),
     fontFamily: FontFamily.primaryBold,
     letterSpacing: m(1.2),
-    textAlign: 'center',
+    textAlign: 'left',
     textShadowColor: 'rgba(255, 255, 255, 0.3)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: m(8),

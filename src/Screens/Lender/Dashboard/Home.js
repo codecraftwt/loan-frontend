@@ -47,7 +47,9 @@ export default function Home() {
     state => state.lenderActivities,
   );
   const { pendingPayments } = useSelector(state => state.lenderPayments);
-  const { isActive: isSubscriptionActive } = useSelector(state => state.planPurchase);
+  const { isActive: isSubscriptionActive } = useSelector(
+    state => state.planPurchase,
+  );
 
   const [refreshing, setRefreshing] = useState(false);
   const [showAllActivity, setShowAllActivity] = useState(false);
@@ -169,15 +171,16 @@ export default function Home() {
 
   const completionRate = Math.min(
     lenderStatistics?.percentages?.paidPercentage || 0,
-    100
+    100,
   );
 
   // Calculate remaining loans (pending + overdue)
-  const remainingLoans = (lenderStatistics?.counts?.pendingLoans || 0) +
+  const remainingLoans =
+    (lenderStatistics?.counts?.pendingLoans || 0) +
     (lenderStatistics?.counts?.overdueLoans || 0);
 
   // Helper function to map activity type to UI properties
-  const getActivityProperties = (activity) => {
+  const getActivityProperties = activity => {
     const activityType = activity.type || '';
 
     let icon = 'clock';
@@ -224,7 +227,7 @@ export default function Home() {
     return { icon, color, gradient };
   };
 
-  const handleActivityPress = (activity) => {
+  const handleActivityPress = activity => {
     if (!isSubscriptionActive) {
       Alert.alert(
         'Subscription Required',
@@ -259,8 +262,8 @@ export default function Home() {
             colors={[colors.ink]}
             tintColor={colors.ink}
           />
-        }>
-
+        }
+      >
         {/* Welcome Section */}
         <Animated.View
           style={[
@@ -268,28 +271,32 @@ export default function Home() {
               opacity: fadeAnim,
               transform: [{ translateY: slideUpAnim }],
             },
-          ]}>
+          ]}
+        >
           <LinearGradient
-            colors={[colors.navy, colors.navyLight]}
+            colors={[colors.navyDark, colors.navy]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={styles.heroCard}>
-            <View style={styles.heroOrnamentTop} />
-            <View style={styles.heroOrnamentBottom} />
+            style={styles.heroCard}
+          >
             <View style={styles.heroTopRow}>
-              <Text style={styles.greeting}>Hello, {user?.userName || 'User'} 👋</Text>
-              <TouchableOpacity
-                style={styles.avatarContainer}
-                onPress={() => navigation.navigate('ProfileDetails')}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>
-                    {(user?.userName || 'U').charAt(0).toUpperCase()}
-                  </Text>
-                </View>
-                <View style={styles.onlineIndicator} />
-              </TouchableOpacity>
+              <View style={styles.welcomeText}>
+                <Text style={styles.greeting}>
+                  Hello, {user?.userName || 'User'} {'\u{1F44B}'}
+                </Text>
+              </View>
             </View>
-            <Text style={styles.subtitle}>Manage your loans efficiently</Text>
+
+            <View style={styles.dashboardNote}>
+              <Ionicons
+                name="trending-up-outline"
+                size={m(18)}
+                color={colors.white}
+              />
+              <Text style={styles.dashboardNoteText}>
+                Keep track of loans, payments, and borrower activity.
+              </Text>
+            </View>
           </LinearGradient>
         </Animated.View>
 
@@ -326,17 +333,21 @@ export default function Home() {
                 description: 'Recent updates',
                 tint: colors.goldTint,
               },
-
-            ].map((action) => (
+            ].map(action => (
               <TouchableOpacity
                 key={action.text}
                 style={[styles.actionItem, { backgroundColor: action.tint }]}
                 activeOpacity={action.screen ? 0.7 : 1}
-                onPress={() => action.screen && navigation.navigate(action.screen)}>
+                onPress={() =>
+                  action.screen && navigation.navigate(action.screen)
+                }
+              >
                 <View style={styles.actionContent}>
                   <View style={styles.actionTextContent}>
                     <Text style={styles.actionText}>{action.text}</Text>
-                    <Text style={styles.actionDescription}>{action.description}</Text>
+                    <Text style={styles.actionDescription}>
+                      {action.description}
+                    </Text>
                   </View>
 
                   {/* Icon in Bottom Right Corner */}
@@ -354,121 +365,179 @@ export default function Home() {
         {/* Pending Payments Notification */}
         {(() => {
           // Calculate total pending payments
-          if (!pendingPayments || !Array.isArray(pendingPayments) || pendingPayments.length === 0) {
+          if (
+            !pendingPayments ||
+            !Array.isArray(pendingPayments) ||
+            pendingPayments.length === 0
+          ) {
             return false;
           }
 
-          const hasPendingPayments = pendingPayments.some(loan =>
-            loan.pendingPayments &&
-            Array.isArray(loan.pendingPayments) &&
-            loan.pendingPayments.length > 0
+          const hasPendingPayments = pendingPayments.some(
+            loan =>
+              loan.pendingPayments &&
+              Array.isArray(loan.pendingPayments) &&
+              loan.pendingPayments.length > 0,
           );
 
           if (!hasPendingPayments) return false;
 
-          const totalPendingCount = pendingPayments.reduce((total, loan) =>
-            total + (Array.isArray(loan.pendingPayments) ? loan.pendingPayments.length : 0), 0
+          const totalPendingCount = pendingPayments.reduce(
+            (total, loan) =>
+              total +
+              (Array.isArray(loan.pendingPayments)
+                ? loan.pendingPayments.length
+                : 0),
+            0,
           );
 
           return totalPendingCount > 0;
         })() && (
-            <Animated.View
-              style={[
-                styles.pendingPaymentCard,
-                {
-                  opacity: fadeAnim,
-                  transform: [{ translateY: slideUpAnim }],
-                },
-              ]}>
-              <TouchableOpacity
-                onPress={() => navigation.navigate('PendingPayments')}
-                activeOpacity={0.8}>
-                <LinearGradient
-                  colors={[colors.ink, colors.inkSoft]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.pendingPaymentGradient}>
-                  <View style={styles.pendingPaymentContent}>
-                    <View style={styles.pendingPaymentIcon}>
-                      <Ionicons name="notifications" size={24} color="#FFFFFF" />
+          <Animated.View
+            style={[
+              styles.pendingPaymentCard,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideUpAnim }],
+              },
+            ]}
+          >
+            <TouchableOpacity
+              onPress={() => navigation.navigate('PendingPayments')}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={[colors.ink, colors.inkSoft]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.pendingPaymentGradient}
+              >
+                <View style={styles.pendingPaymentContent}>
+                  <View style={styles.pendingPaymentIcon}>
+                    <Ionicons name="notifications" size={24} color="#FFFFFF" />
+                    {(() => {
+                      const totalPending = pendingPayments.reduce(
+                        (total, loan) =>
+                          total +
+                          (Array.isArray(loan.pendingPayments)
+                            ? loan.pendingPayments.length
+                            : 0),
+                        0,
+                      );
+                      return totalPending > 0;
+                    })() && (
+                      <View style={styles.badge}>
+                        <Text style={styles.badgeText}>
+                          {pendingPayments.reduce(
+                            (total, loan) =>
+                              total +
+                              (Array.isArray(loan.pendingPayments)
+                                ? loan.pendingPayments.length
+                                : 0),
+                            0,
+                          )}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <View style={styles.pendingPaymentText}>
+                    <Text style={styles.pendingPaymentTitle}>
+                      Pending Payments
+                    </Text>
+                    <Text
+                      style={styles.pendingPaymentSubtitle}
+                      numberOfLines={2}
+                    >
                       {(() => {
-                        const totalPending = pendingPayments.reduce((total, loan) =>
-                          total + (Array.isArray(loan.pendingPayments) ? loan.pendingPayments.length : 0), 0
+                        const totalPending = pendingPayments.reduce(
+                          (total, loan) =>
+                            total +
+                            (Array.isArray(loan.pendingPayments)
+                              ? loan.pendingPayments.length
+                              : 0),
+                          0,
                         );
-                        return totalPending > 0;
-                      })() && (
-                          <View style={styles.badge}>
-                            <Text style={styles.badgeText}>
-                              {pendingPayments.reduce((total, loan) =>
-                                total + (Array.isArray(loan.pendingPayments) ? loan.pendingPayments.length : 0), 0
-                              )}
-                            </Text>
-                          </View>
-                        )}
-                    </View>
-                    <View style={styles.pendingPaymentText}>
-                      <Text style={styles.pendingPaymentTitle}>
-                        Pending Payments
-                      </Text>
-                      <Text style={styles.pendingPaymentSubtitle} numberOfLines={2}>
-                        {(() => {
-                          const totalPending = pendingPayments.reduce((total, loan) =>
-                            total + (Array.isArray(loan.pendingPayments) ? loan.pendingPayments.length : 0), 0
-                          );
-                          if (totalPending === 0) return '';
-                          const firstLoan = pendingPayments.find(loan =>
-                            Array.isArray(loan.pendingPayments) && loan.pendingPayments.length > 0
-                          );
-                          if (firstLoan && firstLoan.pendingPayments && firstLoan.pendingPayments.length > 0) {
-                            const firstPayment = firstLoan.pendingPayments[0];
-                            const borrowerName = firstLoan.borrowerName || firstLoan.loanName || 'Borrower';
-                            const amount = typeof firstPayment.amount === 'number'
+                        if (totalPending === 0) return '';
+                        const firstLoan = pendingPayments.find(
+                          loan =>
+                            Array.isArray(loan.pendingPayments) &&
+                            loan.pendingPayments.length > 0,
+                        );
+                        if (
+                          firstLoan &&
+                          firstLoan.pendingPayments &&
+                          firstLoan.pendingPayments.length > 0
+                        ) {
+                          const firstPayment = firstLoan.pendingPayments[0];
+                          const borrowerName =
+                            firstLoan.borrowerName ||
+                            firstLoan.loanName ||
+                            'Borrower';
+                          const amount =
+                            typeof firstPayment.amount === 'number'
                               ? firstPayment.amount
                               : parseFloat(firstPayment.amount) || 0;
-                            const formattedAmount = `₹${amount.toLocaleString('en-IN')}`;
-                            if (totalPending === 1) {
-                              return `${borrowerName} paid ${formattedAmount}. Please check`;
-                            } else {
-                              return `${borrowerName} paid ${formattedAmount} and ${totalPending - 1} more payment${totalPending - 1 !== 1 ? 's' : ''} awaiting review`;
-                            }
+                          const formattedAmount = `₹${amount.toLocaleString(
+                            'en-IN',
+                          )}`;
+                          if (totalPending === 1) {
+                            return `${borrowerName} paid ${formattedAmount}. Please check`;
+                          } else {
+                            return `${borrowerName} paid ${formattedAmount} and ${
+                              totalPending - 1
+                            } more payment${
+                              totalPending - 1 !== 1 ? 's' : ''
+                            } awaiting review`;
                           }
-                          return `${totalPending} payment${totalPending !== 1 ? 's' : ''} awaiting your review`;
-                        })()}
-                      </Text>
-                    </View>
-                    <Icon name="chevron-right" size={24} color="#FFFFFF" />
+                        }
+                        return `${totalPending} payment${
+                          totalPending !== 1 ? 's' : ''
+                        } awaiting your review`;
+                      })()}
+                    </Text>
                   </View>
-                </LinearGradient>
-              </TouchableOpacity>
-            </Animated.View>
-          )}
+                  <Icon name="chevron-right" size={24} color="#FFFFFF" />
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+          </Animated.View>
+        )}
 
         {/* Premium CTA with Simplified Animation */}
         <Animated.View
           style={[
             styles.premiumSection,
             {
-              transform: [{ scale: pulseAnim }]
-            }
-          ]}>
+              transform: [{ scale: pulseAnim }],
+            },
+          ]}
+        >
           <TouchableOpacity
             onPress={() => navigation.navigate('SubscriptionScreen')}
-            activeOpacity={0.9}>
+            activeOpacity={0.9}
+          >
             {/* Shiny Overlay Effect */}
-            <Animated.View style={[styles.shinyOverlay, {
-              transform: [{
-                translateX: pulseAnim.interpolate({
-                  inputRange: [1, 1.02],
-                  outputRange: [-100, 300]
-                })
-              }]
-            }]} />
+            <Animated.View
+              style={[
+                styles.shinyOverlay,
+                {
+                  transform: [
+                    {
+                      translateX: pulseAnim.interpolate({
+                        inputRange: [1, 1.02],
+                        outputRange: [-100, 300],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            />
 
             <LinearGradient
               colors={[colors.ink, colors.inkSoft, colors.ink]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-            // style={styles.premiumContent}
+              // style={styles.premiumContent}
             >
               <View style={styles.premiumContent}>
                 {/* Decorative Elements */}
@@ -489,7 +558,9 @@ export default function Home() {
 
                 <View style={styles.premiumText}>
                   <Text style={styles.premiumTitle}>Go Premium</Text>
-                  <Text style={styles.premiumSubtitle}>Unlock advanced features & insights</Text>
+                  <Text style={styles.premiumSubtitle}>
+                    Unlock advanced features & insights
+                  </Text>
                 </View>
 
                 <View style={styles.premiumArrow}>
@@ -510,7 +581,7 @@ export default function Home() {
                 value: lenderStatistics?.counts?.totalLoans || 0,
                 label: 'Given',
                 tint: colors.sky,
-                tabName: 'Given'
+                tabName: 'Given',
               },
               {
                 icon: 'check-circle',
@@ -530,16 +601,16 @@ export default function Home() {
                 label: 'Overdue',
                 tint: colors.goldTint,
               },
-            ].map((stat) => {
+            ].map(stat => {
               const StatContainer = stat.tabName ? TouchableOpacity : View;
               const statProps = stat.tabName
                 ? {
-                  onPress: () => {
-                    // Use jumpTo to navigate between tabs
-                    navigation.jumpTo(stat.tabName);
-                  },
-                  activeOpacity: 0.7
-                }
+                    onPress: () => {
+                      // Use jumpTo to navigate between tabs
+                      navigation.jumpTo(stat.tabName);
+                    },
+                    activeOpacity: 0.7,
+                  }
                 : {};
 
               return (
@@ -548,7 +619,9 @@ export default function Home() {
                   style={styles.statItem}
                   {...statProps}
                 >
-                  <View style={[styles.statIcon, { backgroundColor: stat.tint }]}>
+                  <View
+                    style={[styles.statIcon, { backgroundColor: stat.tint }]}
+                  >
                     <Text style={styles.statValue}>{stat.value}</Text>
                   </View>
                   <Text style={styles.statLabel}>{stat.label}</Text>
@@ -563,21 +636,26 @@ export default function Home() {
             styles.progressCard,
             {
               opacity: fadeAnim,
-              transform: [{ translateY: slideUpAnim }]
-            }
-          ]}>
+              transform: [{ translateY: slideUpAnim }],
+            },
+          ]}
+        >
           <View style={styles.progressTopRow}>
             <View style={styles.progressHeaderText}>
               <Text style={styles.progressTitle}>Loan Completion</Text>
               <Text style={styles.progressText} numberOfLines={2}>
-                {lenderStatistics?.counts?.paidLoans || 0} of {lenderStatistics?.counts?.totalLoans || 1} loans completed
+                {lenderStatistics?.counts?.paidLoans || 0} of{' '}
+                {lenderStatistics?.counts?.totalLoans || 1} loans completed
               </Text>
               <Text style={styles.progressAmountText} numberOfLines={1}>
-                ₹{formatCurrency(lenderStatistics?.totalPaidAmount || 0)} of ₹{formatCurrency(lenderStatistics?.totalLoanAmount || 0)}
+                ₹{formatCurrency(lenderStatistics?.totalPaidAmount || 0)} of ₹
+                {formatCurrency(lenderStatistics?.totalLoanAmount || 0)}
               </Text>
             </View>
             <View style={styles.progressPercentPill}>
-              <Text style={styles.progressPercentText}>{Math.round(completionRate)}%</Text>
+              <Text style={styles.progressPercentText}>
+                {Math.round(completionRate)}%
+              </Text>
             </View>
           </View>
 
@@ -589,7 +667,7 @@ export default function Home() {
                   styles.progressFill,
                   {
                     width: `${Math.min(completionRate, 100)}%`,
-                  }
+                  },
                 ]}
               />
             </View>
@@ -601,13 +679,17 @@ export default function Home() {
 
           <View style={styles.progressStats}>
             <View style={styles.statRow}>
-              <View style={[styles.statDot, { backgroundColor: colors.butterDark }]} />
+              <View
+                style={[styles.statDot, { backgroundColor: colors.butterDark }]}
+              />
               <Text style={styles.statText} numberOfLines={1}>
                 Completed ({lenderStatistics?.counts?.paidLoans || 0})
               </Text>
             </View>
             <View style={styles.statRow}>
-              <View style={[styles.statDot, { backgroundColor: colors.border }]} />
+              <View
+                style={[styles.statDot, { backgroundColor: colors.border }]}
+              />
               <Text style={styles.statText} numberOfLines={1}>
                 Remaining ({remainingLoans})
               </Text>
@@ -683,18 +765,9 @@ export default function Home() {
 }
 
 const LenderActivityItem = memo(
-  ({
-    activity,
-    activityProps,
-    showLine,
-    onPress,
-    slideUpAnim,
-    fadeAnim,
-  }) => {
+  ({ activity, activityProps, showLine, onPress, slideUpAnim, fadeAnim }) => {
     return (
-      <TouchableOpacity
-        activeOpacity={0.7}
-        onPress={onPress}>
+      <TouchableOpacity activeOpacity={0.7} onPress={onPress}>
         <Animated.View
           style={[
             styles.activityItem,
@@ -702,35 +775,47 @@ const LenderActivityItem = memo(
               transform: [{ translateX: slideUpAnim }],
               opacity: fadeAnim,
             },
-          ]}>
+          ]}
+        >
+          {/* Timeline Indicator */}
+          <View style={styles.timeline}>
+            <View
+              style={[
+                styles.timelineDot,
+                { backgroundColor: activityProps.color },
+              ]}
+            />
+            {showLine && <View style={styles.timelineLine} />}
+          </View>
 
-                    {/* Timeline Indicator */}
-                    <View style={styles.timeline}>
-                      <View style={[styles.timelineDot, { backgroundColor: activityProps.color }]} />
-                      {showLine && <View style={styles.timelineLine} />}
-                    </View>
-
-                    {/* Activity Content */}
-                    <View style={styles.activityContent}>
-                      <View style={styles.activityHeader}>
-                        <LinearGradient
-                          colors={activityProps.gradient}
-                          style={styles.activityIcon}
-                        >
-                          <Icon name={activityProps.icon} size={16} color="#fff" />
-                        </LinearGradient>
-                        <View style={styles.activityText}>
-                          <Text style={styles.activityTitle}>{activity.shortMessage || 'Activity'}</Text>
-                          <Text style={styles.activityPerson} numberOfLines={2}>
-                            {activity.message || ''}
-                          </Text>
-                        </View>
-                        <View style={styles.activityAmountContainer}>
-                          <Text style={[styles.activityAmount, { color: activityProps.color }]}>
-                            ₹{activity.amount?.toLocaleString('en-IN') || '0'}
-                          </Text>
-                        </View>
-                      </View>
+          {/* Activity Content */}
+          <View style={styles.activityContent}>
+            <View style={styles.activityHeader}>
+              <LinearGradient
+                colors={activityProps.gradient}
+                style={styles.activityIcon}
+              >
+                <Icon name={activityProps.icon} size={16} color="#fff" />
+              </LinearGradient>
+              <View style={styles.activityText}>
+                <Text style={styles.activityTitle}>
+                  {activity.shortMessage || 'Activity'}
+                </Text>
+                <Text style={styles.activityPerson} numberOfLines={2}>
+                  {activity.message || ''}
+                </Text>
+              </View>
+              <View style={styles.activityAmountContainer}>
+                <Text
+                  style={[
+                    styles.activityAmount,
+                    { color: activityProps.color },
+                  ]}
+                >
+                  ₹{activity.amount?.toLocaleString('en-IN') || '0'}
+                </Text>
+              </View>
+            </View>
 
             <View style={styles.activityFooter}>
               <View style={styles.timeContainer}>
@@ -743,12 +828,11 @@ const LenderActivityItem = memo(
                 style={[
                   styles.statusBadge,
                   { backgroundColor: `${activityProps.color}15` },
-                ]}>
+                ]}
+              >
                 <Text
-                  style={[
-                    styles.statusText,
-                    { color: activityProps.color },
-                  ]}>
+                  style={[styles.statusText, { color: activityProps.color }]}
+                >
                   {activity.type === 'loan_given' ? 'Given' : 'Taken'}
                 </Text>
               </View>
@@ -764,7 +848,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.offWhite,
-    paddingTop: Platform.OS === 'android' ? m(40) : m(24),
     paddingBottom: m(40),
   },
   content: {
@@ -781,83 +864,50 @@ const styles = StyleSheet.create({
   },
   // Welcome Section
   heroCard: {
-    marginHorizontal: m(16),
-    marginTop: m(20),
-    borderRadius: m(24),
-    padding: m(20),
+    marginTop: 0,
+    paddingHorizontal: m(24),
+    paddingTop: Platform.OS === 'android' ? m(50) : m(44),
+    paddingBottom: m(28),
+    borderBottomLeftRadius: m(24),
+    borderBottomRightRadius: m(24),
     overflow: 'hidden',
     shadowColor: colors.navyDark,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.18,
     shadowRadius: 16,
     elevation: 8,
-  },
-  heroOrnamentTop: {
-    position: 'absolute',
-    top: -m(20),
-    right: -m(20),
-    width: m(100),
-    height: m(100),
-    borderRadius: m(50),
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-  },
-  heroOrnamentBottom: {
-    position: 'absolute',
-    bottom: -m(30),
-    left: -m(20),
-    width: m(90),
-    height: m(90),
-    borderRadius: m(45),
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
   },
   heroTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    marginTop: m(6),
   },
   welcomeText: {
     flex: 1,
   },
   greeting: {
-    fontSize: FontSizes['2xl'],
-    fontFamily: FontFamily.secondaryBold,
+    fontSize: m(24),
+    fontFamily: FontFamily.primaryBold,
     color: colors.white,
-    letterSpacing: -0.5,
+    lineHeight: m(31),
   },
-  subtitle: {
-    fontSize: FontSizes.base,
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontFamily: FontFamily.primaryRegular,
-    marginTop: m(6),
-  },
-  avatarContainer: {
-    position: 'relative',
-  },
-  avatar: {
-    width: m(48),
-    height: m(48),
-    borderRadius: m(24),
-    justifyContent: 'center',
+  dashboardNote: {
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.18)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.4)',
+    marginTop: m(24),
+    paddingHorizontal: m(16),
+    paddingVertical: m(16),
+    borderRadius: m(14),
+    backgroundColor: 'rgba(255, 255, 255, 0.16)',
   },
-  avatarText: {
-    color: colors.white,
-    fontSize: FontSizes.xl,
-    fontFamily: FontFamily.secondaryBold,
-  },
-  onlineIndicator: {
-    position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: m(14),
-    height: m(14),
-    borderRadius: m(7),
-    backgroundColor: colors.success,
-    borderWidth: 2,
-    borderColor: colors.white,
+  dashboardNoteText: {
+    flex: 1,
+    marginLeft: m(8),
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.bodyMedium,
+    color: 'rgba(255, 255, 255, 0.86)',
+    lineHeight: m(18),
   },
   // Premium Section
   premiumSection: {
@@ -939,7 +989,7 @@ const styles = StyleSheet.create({
   premiumText: {
     flex: 1,
     zIndex: 2,
-    marginLeft: 10
+    marginLeft: 10,
   },
   premiumTitle: {
     fontSize: FontSizes.xl,
@@ -1044,7 +1094,7 @@ const styles = StyleSheet.create({
     color: colors.inkSoft,
     fontFamily: FontFamily.primaryRegular,
     lineHeight: m(16),
-    marginBottom: 10
+    marginBottom: 10,
   },
   actionIconWrapper: {
     position: 'absolute',
@@ -1172,7 +1222,7 @@ const styles = StyleSheet.create({
     borderRadius: m(4),
     backgroundColor: '#ff6700',
     marginLeft: m(8),
-    marginBottom:m(11)
+    marginBottom: m(11),
   },
   seeAllButton: {
     flexDirection: 'row',

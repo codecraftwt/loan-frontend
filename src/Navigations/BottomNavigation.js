@@ -5,7 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import { m } from 'walstar-rn-responsive';
-import { colors } from '../constants';
+import { FontFamily, FontSizes, colors } from '../constants';
 // import Fonts from '../constants/fonts';
 
 // Lender screens
@@ -59,18 +59,19 @@ export default function BottomNavigation() {
   const tabScreenOptions = {
     headerShown: false,
     tabBarHideOnKeyboard: true,
-    tabBarShowLabel: false,
-    tabBarActiveTintColor: colors.white,
+    tabBarShowLabel: true,
+    tabBarActiveTintColor: colors.ink,
     tabBarInactiveTintColor: colors.ink,
-    tabBarLabelStyle: styles.hiddenLabel,
+    tabBarLabelStyle: styles.tabBarLabel,
     tabBarIconStyle: styles.tabBarIcon,
     tabBarItemStyle: styles.tabBarItem,
     tabBarStyle: [
       styles.tabBar,
       {
-        bottom: Platform.OS === 'ios'
-          ? Math.max(insets.bottom, m(10))
-          : Math.max(insets.bottom + m(6), m(12)),
+        bottom:
+          Platform.OS === 'ios'
+            ? Math.max(insets.bottom, m(10))
+            : Math.max(insets.bottom + m(6), m(12)),
       },
     ],
   };
@@ -81,7 +82,8 @@ export default function BottomNavigation() {
       <View style={styles.container}>
         <Tab.Navigator
           initialRouteName="AdminHome"
-          screenOptions={tabScreenOptions}>
+          screenOptions={tabScreenOptions}
+        >
           <Tab.Screen
             name="AdminHome"
             component={AdminDashboard}
@@ -122,6 +124,7 @@ export default function BottomNavigation() {
             name="Profile"
             component={Profile}
             options={{
+              tabBarLabel: 'Profile',
               tabBarIcon: ({ color, size, focused }) =>
                 renderIcon('user', color, size, focused),
             }}
@@ -137,7 +140,8 @@ export default function BottomNavigation() {
       <View style={styles.container}>
         <Tab.Navigator
           initialRouteName="BorrowerHome"
-          screenOptions={tabScreenOptions}>
+          screenOptions={tabScreenOptions}
+        >
           <Tab.Screen
             name="BorrowerHome"
             component={BorrowerDashboard}
@@ -169,6 +173,7 @@ export default function BottomNavigation() {
             name="Profile"
             component={Profile}
             options={{
+              tabBarLabel: 'Profile',
               tabBarIcon: ({ color, size, focused }) =>
                 renderIcon('user', color, size, focused),
             }}
@@ -181,13 +186,12 @@ export default function BottomNavigation() {
   // Lender Dashboard (roleId === 1) - Default/Current Dashboard
   return (
     <View style={styles.container}>
-      <Tab.Navigator
-        initialRouteName="Home"
-        screenOptions={tabScreenOptions}>
+      <Tab.Navigator initialRouteName="Home" screenOptions={tabScreenOptions}>
         <Tab.Screen
           name="Home"
           component={Home}
           options={{
+            tabBarLabel: 'Home',
             tabBarIcon: ({ color, size, focused }) =>
               renderIcon('home', color, size, focused),
           }}
@@ -196,6 +200,7 @@ export default function BottomNavigation() {
           name="Borrowers"
           component={Outward}
           options={{
+            tabBarLabel: 'Borrowers',
             tabBarIcon: ({ color, size, focused }) =>
               renderIcon('arrow-up-circle', color, size, focused),
           }}
@@ -204,6 +209,7 @@ export default function BottomNavigation() {
           name="My Loans"
           component={Inward}
           options={{
+            tabBarLabel: 'My Loans',
             tabBarIcon: ({ color, size, focused }) =>
               renderIcon('arrow-down-circle', color, size, focused),
           }}
@@ -212,6 +218,7 @@ export default function BottomNavigation() {
           name="Profile"
           component={Profile}
           options={{
+            tabBarLabel: 'Profile',
             tabBarIcon: ({ color, size, focused }) =>
               renderIcon('user', color, size, focused),
           }}
@@ -227,15 +234,15 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     position: 'absolute',
-    left: m(48),
-    right: m(48),
-    height: m(62),
+    left: m(18),
+    right: m(18),
+    height: m(72),
     backgroundColor: colors.white,
     borderTopWidth: 0,
-    borderRadius: m(31),
-    paddingHorizontal: m(9),
-    paddingTop: 0,
-    paddingBottom: 0,
+    borderRadius: m(28),
+    paddingHorizontal: m(8),
+    paddingTop: m(6),
+    paddingBottom: m(6),
     elevation: 16,
     shadowColor: colors.black,
     shadowOffset: {
@@ -246,28 +253,28 @@ const styles = StyleSheet.create({
     shadowRadius: m(16),
   },
   tabBarItem: {
-    height: m(62),
+    height: m(60),
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 0,
-    paddingBottom: 0,
+    paddingTop: m(2),
+    paddingBottom: m(2),
   },
   tabBarIcon: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 0,
+    marginTop: m(2),
+    marginBottom: m(2),
   },
-  hiddenLabel: {
-    display: 'none',
-    height: 0,
-    margin: 0,
-    padding: 0,
+  tabBarLabel: {
+    fontSize: FontSizes.xs,
+    fontFamily: FontFamily.primarySemiBold,
+    marginTop: m(1),
+    marginBottom: m(2),
   },
   iconWrapper: {
-    width: m(46),
-    height: m(46),
-    borderRadius: m(23),
+    width: m(34),
+    height: m(34),
+    borderRadius: m(17),
     justifyContent: 'center',
     alignItems: 'center',
   },

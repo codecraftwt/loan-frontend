@@ -1,4 +1,4 @@
-import React, {useEffect} from 'react';
+import React, {useEffect, useRef} from 'react';
 import {
   View,
   Text,
@@ -13,12 +13,14 @@ import {useDispatch} from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {setUser} from '../../Redux/Slices/authslice';
 import {m} from 'walstar-rn-responsive';
+import {FontFamily, colors} from '../../constants';
 
 export default function SplashScreen({navigation}) {
   const dispatch = useDispatch();
-  const fadeAnim = new Animated.Value(0);
-  const scaleAnim = new Animated.Value(0.8);
-  const textAnim = new Animated.Value(0);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.84)).current;
+  const textAnim = useRef(new Animated.Value(0)).current;
+  const dotAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     // Animation sequence
@@ -44,6 +46,22 @@ export default function SplashScreen({navigation}) {
       }),
     ]).start();
 
+    const dotLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(dotAnim, {
+          toValue: 1,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+        Animated.timing(dotAnim, {
+          toValue: 0,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    dotLoop.start();
+
     const checkLoginStatus = async () => {
       try {
         const token = await AsyncStorage.getItem('token');
@@ -62,19 +80,29 @@ export default function SplashScreen({navigation}) {
       }
     };
 
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       checkLoginStatus();
     }, 2500);
-  }, [dispatch, navigation]);
+
+    return () => {
+      clearTimeout(timer);
+      dotLoop.stop();
+    };
+  }, [dispatch, navigation, dotAnim, fadeAnim, scaleAnim, textAnim]);
+
+  const dotOpacity = dotAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.35, 1],
+  });
 
   return (
     <LinearGradient
-      colors={['#ff6700', '#ff7900', '#ff8500', '#ff9100']}
+      colors={[colors.navyDark, colors.navy, colors.navyLight]}
       style={styles.container}
       start={{x: 0, y: 0}}
       end={{x: 1, y: 1}}>
-      <StatusBar barStyle="light-content" backgroundColor="#ff6700" />
-      
+      <StatusBar barStyle="light-content" backgroundColor={colors.navyDark} />
+
       {/* Animated Logo Container */}
       <Animated.View
         style={[
@@ -85,12 +113,9 @@ export default function SplashScreen({navigation}) {
           },
         ]}>
         <View style={styles.logoWrapper}>
-          <View style={styles.logoGlow} />
-          <Image
-            resizeMode="contain"
-            style={styles.logo}
-            source={logo}
-          />
+          <View style={styles.logoPlate}>
+            <Image resizeMode="contain" style={styles.logo} source={logo} />
+          </View>
         </View>
       </Animated.View>
 
@@ -109,7 +134,9 @@ export default function SplashScreen({navigation}) {
               },
             ],
           },
-        ]} />
+        ]}>
+        <Text style={styles.appName}>Loan Hub</Text>
+      </Animated.View>
 
       {/* Tagline with Animation */}
       <Animated.View
@@ -119,21 +146,31 @@ export default function SplashScreen({navigation}) {
             opacity: textAnim,
           },
         ]}>
-        <Text style={styles.tagline}>Smart Loan Management</Text>
+        <Text style={styles.tagline}>Simple lending. Clear tracking.</Text>
       </Animated.View>
 
       {/* Loading Indicator */}
-      <View>
-        <View style={styles.loadingDots}>
-          <View style={[styles.dot, styles.dot1]} />
-          <View style={[styles.dot, styles.dot2]} />
-          <View style={[styles.dot, styles.dot3]} />
-        </View>
+      <View style={styles.loadingDots}>
+        <Animated.View style={[styles.dot, {opacity: dotOpacity}]} />
+        <Animated.View
+          style={[
+            styles.dot,
+            styles.dotMiddle,
+            {
+              opacity: dotOpacity,
+              transform: [
+                {
+                  scale: dotAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.86, 1.15],
+                  }),
+                },
+              ],
+            },
+          ]}
+        />
+        <Animated.View style={[styles.dot, {opacity: dotOpacity}]} />
       </View>
-
-      {/* Optional: Add decorative elements */}
-      <View style={styles.decorativeCircle1} />
-      <View style={styles.decorativeCircle2} />
     </LinearGradient>
   );
 }
@@ -143,98 +180,70 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: m(28),
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: m(20),
+    marginBottom: m(18),
   },
   logoWrapper: {
-    position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logoGlow: {
-    position: 'absolute',
-    width: m(280),
-    height: m(280),
-    borderRadius: m(140),
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    zIndex: 0,
+  logoPlate: {
+    width: m(188),
+    height: m(188),
+    borderRadius: m(94),
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: colors.navyDark,
+    shadowOffset: {width: 0, height: 12},
+    shadowOpacity: 0.22,
+    shadowRadius: 20,
+    elevation: 10,
   },
   logo: {
-    width: m(250),
-    height: m(150),
-    zIndex: 1,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 8,
+    width: m(154),
+    height: m(94),
   },
   appNameContainer: {
-    marginBottom: m(8),
+    marginBottom: m(6),
+  },
+  appName: {
+    fontSize: m(30),
+    lineHeight: m(38),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
+    textAlign: 'center',
   },
   taglineContainer: {
-    marginBottom: m(30),
-    marginTop: m(50),
+    marginBottom: m(34),
   },
   tagline: {
-    fontSize: m(20),
-    color: 'white',
-    fontWeight: '300',
-    letterSpacing: 1.5,
-    opacity: 0.9,
+    fontSize: m(14),
+    lineHeight: m(20),
+    color: 'rgba(255, 255, 255, 0.84)',
+    fontFamily: FontFamily.bodyMedium,
+    textAlign: 'center',
   },
   loadingDots: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: m(8),
+    marginTop: m(4),
   },
   dot: {
-    width: m(12),
-    height: m(12),
-    borderRadius: m(6),
+    width: m(8),
+    height: m(8),
+    borderRadius: m(4),
     backgroundColor: '#FFFFFF',
-    opacity: 0.7,
+    marginHorizontal: m(4),
   },
-  dot1: {
-    animationDelay: '0s',
-    animationDuration: '1s',
-    animationIterationCount: 'infinite',
-    animationName: 'bounce',
-  },
-  dot2: {
-    animationDelay: '0.2s',
-    animationDuration: '1s',
-    animationIterationCount: 'infinite',
-    animationName: 'bounce',
-  },
-  dot3: {
-    animationDelay: '0.4s',
-    animationDuration: '1s',
-    animationIterationCount: 'infinite',
-    animationName: 'bounce',
-  },
-  decorativeCircle1: {
-    position: 'absolute',
-    top: -m(100),
-    right: -m(100),
-    width: m(300),
-    height: m(300),
-    borderRadius: m(150),
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    zIndex: 0,
-  },
-  decorativeCircle2: {
-    position: 'absolute',
-    bottom: -m(80),
-    left: -m(80),
-    width: m(250),
-    height: m(250),
-    borderRadius: m(125),
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    zIndex: 0,
+  dotMiddle: {
+    backgroundColor: colors.butter,
   },
 });
 

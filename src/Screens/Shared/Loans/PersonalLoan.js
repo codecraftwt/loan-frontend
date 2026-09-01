@@ -22,36 +22,38 @@ import borrowerLoanAPI from '../../../Services/borrowerLoanService';
 import Toast from 'react-native-toast-message';
 import { baseurl } from '../../../Utils/API';
 import PinVerificationModal from '../../../Components/PinVerificationModal';
-import { FontFamily } from '../../../constants';
+import { colors, FontFamily } from '../../../constants';
 
 const ORANGE_THEME = {
-  primary: '#111827',
-  primaryLight: '#F1FAF7',
-  primaryDark: '#0F172A',
-  secondary: '#B7EDF4',
-  accent: '#D7F2C1',
-  background: '#F2FAF6',
-  card: '#FFFFFF',
-  text: '#111827',
-  textLight: '#6B7280',
-  border: '#DCEFEA',
-  success: '#10B981',
-  warning: '#F59E0B',
-  error: '#EF4444',
-  info: '#1B6E8C',
-  sky: '#B7EDF4',
-  mint: '#D7F2C1',
-  ink: '#111827',
+  primary: colors.navy,
+  primaryLight: colors.navyTint,
+  primaryDark: colors.navyDark,
+  secondary: colors.skySoft,
+  accent: colors.butter,
+  background: colors.offWhite,
+  card: colors.white,
+  text: colors.ink,
+  textLight: colors.textSecondary,
+  border: '#E2DED4',
+  success: colors.success,
+  warning: colors.goldDark,
+  error: colors.error,
+  info: colors.skyText,
+  sky: colors.sky,
+  mint: colors.mint,
+  ink: colors.navyDark,
 };
 
 const DetailCard = ({ icon, label, value }) => (
   <View style={styles.detailCard}>
     <View style={styles.detailIconContainer}>
-      <Icon name={icon} size={20} color={ORANGE_THEME.primary} />
+      <Icon name={icon} size={17} color={ORANGE_THEME.info} />
     </View>
     <View style={styles.detailContent}>
       <Text style={styles.detailLabel}>{label}</Text>
-      <Text style={styles.detailValue}>{value}</Text>
+      <Text style={styles.detailValue} numberOfLines={2}>
+        {value}
+      </Text>
     </View>
   </View>
 );
@@ -79,7 +81,9 @@ export default function PersonalLoan({ route }) {
   const fetchInstallmentHistory = useCallback(async () => {
     try {
       setLoadingInstallments(true);
-      const response = await lenderLoanAPI.getInstallmentHistory(loanDetails._id);
+      const response = await lenderLoanAPI.getInstallmentHistory(
+        loanDetails._id,
+      );
       if (response) {
         setInstallmentHistory(response);
       }
@@ -91,7 +95,9 @@ export default function PersonalLoan({ route }) {
           type: 'error',
           position: 'top',
           text1: 'Error',
-          text2: error.response?.data?.message || 'Failed to fetch installment history',
+          text2:
+            error.response?.data?.message ||
+            'Failed to fetch installment history',
         });
       }
     } finally {
@@ -113,28 +119,29 @@ export default function PersonalLoan({ route }) {
   };
 
   const formatDate = date => moment(date).format('DD MMM, YYYY');
-  const formatCurrency = (amount) => {
-    const numAmount = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
+  const formatCurrency = amount => {
+    const numAmount =
+      typeof amount === 'number' ? amount : parseFloat(amount) || 0;
     return `₹${numAmount.toLocaleString('en-IN')}`;
   };
 
   // Get proof URL - Cloudinary URLs are already full URLs
-  const getProofUrl = (proof) => {
+  const getProofUrl = proof => {
     if (!proof) return null;
-    
+
     // If it's already a full URL (starts with http:// or https://), return as is
     if (proof.startsWith('http://') || proof.startsWith('https://')) {
       return proof;
     }
-    
+
     // If it's a relative path, construct full URL (unlikely for Cloudinary, but handle it)
     let baseUrl = baseurl.replace('/api', '').replace(/\/$/, '');
-    
+
     let proofPath = proof;
     if (proofPath.startsWith('/')) {
       proofPath = proofPath.substring(1);
     }
-    
+
     const fullUrl = `${baseUrl}/${proofPath}`;
     return fullUrl;
   };
@@ -157,41 +164,61 @@ export default function PersonalLoan({ route }) {
 
   // Render installment item
   const renderInstallmentItem = (installment, index) => {
-    const getStatusColor = (status) => {
+    const getStatusColor = status => {
       switch (status?.toLowerCase()) {
-        case 'paid': return ORANGE_THEME.success;
-        case 'pending': return ORANGE_THEME.warning;
-        case 'rejected': return ORANGE_THEME.error;
-        case 'overdue': return ORANGE_THEME.error;
-        case 'upcoming': return ORANGE_THEME.textLight;
-        default: return ORANGE_THEME.textLight;
+        case 'paid':
+          return ORANGE_THEME.success;
+        case 'pending':
+          return ORANGE_THEME.warning;
+        case 'rejected':
+          return ORANGE_THEME.error;
+        case 'overdue':
+          return ORANGE_THEME.error;
+        case 'upcoming':
+          return ORANGE_THEME.textLight;
+        default:
+          return ORANGE_THEME.textLight;
       }
     };
 
-    const getStatusIcon = (status) => {
+    const getStatusIcon = status => {
       switch (status?.toLowerCase()) {
-        case 'paid': return 'check-circle';
-        case 'pending': return 'clock';
-        case 'rejected': return 'x-circle';
-        case 'overdue': return 'alert-circle';
-        case 'upcoming': return 'calendar';
-        default: return 'circle';
+        case 'paid':
+          return 'check-circle';
+        case 'pending':
+          return 'clock';
+        case 'rejected':
+          return 'x-circle';
+        case 'overdue':
+          return 'alert-circle';
+        case 'upcoming':
+          return 'calendar';
+        default:
+          return 'circle';
       }
     };
 
     const statusColor = getStatusColor(installment.status);
     const statusIcon = getStatusIcon(installment.status);
-    const isLast = index === (showAllInstallments
-      ? installmentHistory.installmentHistory.length - 1
-      : Math.min(2, installmentHistory.installmentHistory.length - 1));
+    const isLast =
+      index ===
+      (showAllInstallments
+        ? installmentHistory.installmentHistory.length - 1
+        : Math.min(2, installmentHistory.installmentHistory.length - 1));
 
     return (
       <View
         key={installment.installmentNumber}
-        style={[styles.installmentCard, isLast && styles.installmentCardLast]}>
+        style={[styles.installmentCard, isLast && styles.installmentCardLast]}
+      >
         <View style={styles.installmentHeader}>
           <View style={styles.installmentLeftSection}>
-            <View style={[styles.installmentIconContainer, { backgroundColor: statusColor + '20' }]}>
+            <View
+              style={[
+                styles.installmentIconContainer,
+                { backgroundColor: statusColor + '20' },
+              ]}
+            >
               <Icon name={statusIcon} size={18} color={statusColor} />
             </View>
             <View style={styles.installmentInfo}>
@@ -199,7 +226,8 @@ export default function PersonalLoan({ route }) {
                 Installment #{installment.installmentNumber}
               </Text>
               <Text style={[styles.installmentStatus, { color: statusColor }]}>
-                {installment.status?.charAt(0).toUpperCase() + installment.status?.slice(1)}
+                {installment.status?.charAt(0).toUpperCase() +
+                  installment.status?.slice(1)}
               </Text>
             </View>
           </View>
@@ -227,7 +255,8 @@ export default function PersonalLoan({ route }) {
               <View style={styles.installmentDetailRow}>
                 <Text style={styles.installmentDetailLabel}>Payment Mode:</Text>
                 <Text style={styles.installmentDetailValue}>
-                  {installment.paymentMode?.charAt(0).toUpperCase() + installment.paymentMode?.slice(1)}
+                  {installment.paymentMode?.charAt(0).toUpperCase() +
+                    installment.paymentMode?.slice(1)}
                 </Text>
               </View>
             </>
@@ -238,18 +267,23 @@ export default function PersonalLoan({ route }) {
               <View style={styles.installmentDetailRow}>
                 <Text style={styles.installmentDetailLabel}>Submitted:</Text>
                 <Text style={styles.installmentDetailValue}>
-                  {moment(installment.submittedDate).format('DD MMM YYYY, hh:mm A')}
+                  {moment(installment.submittedDate).format(
+                    'DD MMM YYYY, hh:mm A',
+                  )}
                 </Text>
               </View>
               <View style={styles.installmentDetailRow}>
                 <Text style={styles.installmentDetailLabel}>Payment Mode:</Text>
                 <Text style={styles.installmentDetailValue}>
-                  {installment.paymentMode?.charAt(0).toUpperCase() + installment.paymentMode?.slice(1)}
+                  {installment.paymentMode?.charAt(0).toUpperCase() +
+                    installment.paymentMode?.slice(1)}
                 </Text>
               </View>
               <View style={styles.pendingBadge}>
                 <Icon name="clock" size={14} color={ORANGE_THEME.warning} />
-                <Text style={styles.pendingBadgeText}>Awaiting your confirmation</Text>
+                <Text style={styles.pendingBadgeText}>
+                  Awaiting your confirmation
+                </Text>
               </View>
             </>
           )}
@@ -257,7 +291,9 @@ export default function PersonalLoan({ route }) {
           {installment.status === 'rejected' && (
             <>
               <View style={styles.installmentDetailRow}>
-                <Text style={styles.installmentDetailLabel}>Rejected Date:</Text>
+                <Text style={styles.installmentDetailLabel}>
+                  Rejected Date:
+                </Text>
                 <Text style={styles.installmentDetailValue}>
                   {moment(installment.rejectedDate).format('DD MMM YYYY')}
                 </Text>
@@ -291,19 +327,29 @@ export default function PersonalLoan({ route }) {
     // Check multiple possible structures for lenderId object
     if (loanDetails?.lenderId) {
       // If lenderId is an object with userName
-      if (typeof loanDetails.lenderId === 'object' && loanDetails.lenderId.userName) {
+      if (
+        typeof loanDetails.lenderId === 'object' &&
+        loanDetails.lenderId.userName
+      ) {
         return loanDetails.lenderId.userName;
       }
       // If lenderId is an object with name
-      if (typeof loanDetails.lenderId === 'object' && loanDetails.lenderId.name) {
+      if (
+        typeof loanDetails.lenderId === 'object' &&
+        loanDetails.lenderId.name
+      ) {
         return loanDetails.lenderId.name;
       }
       // If lenderId is a string ID, check if current user is the lender
-      if (typeof loanDetails.lenderId === 'string' && user?.roleId === 1 && user?.userName) {
+      if (
+        typeof loanDetails.lenderId === 'string' &&
+        user?.roleId === 1 &&
+        user?.userName
+      ) {
         return user.userName;
       }
     }
-    
+
     // Check lender object
     if (loanDetails?.lender?.userName) {
       return loanDetails.lender.userName;
@@ -311,12 +357,12 @@ export default function PersonalLoan({ route }) {
     if (loanDetails?.lender?.name) {
       return loanDetails.lender.name;
     }
-    
+
     // Check lenderName field
     if (loanDetails?.lenderName) {
       return loanDetails.lenderName;
     }
-    
+
     // If user is a lender viewing their own loan, show their name
     if (user?.roleId === 1 && user?.userName) {
       return user.userName;
@@ -324,7 +370,7 @@ export default function PersonalLoan({ route }) {
     return 'Unknown';
   };
 
-  const handleAcceptWithPin = async (pinCode) => {
+  const handleAcceptWithPin = async pinCode => {
     const response = await borrowerLoanAPI.acceptLoan(loanDetails._id, pinCode);
 
     if (response?.success) {
@@ -348,23 +394,27 @@ export default function PersonalLoan({ route }) {
   };
 
   // Calculate loan amounts
-  const loanAmount = typeof loanDetails.amount === 'number' 
-    ? loanDetails.amount 
-    : parseFloat(loanDetails.amount) || 0;
-  const totalPaid = typeof loanDetails.totalPaid === 'number'
-    ? loanDetails.totalPaid
-    : parseFloat(loanDetails.totalPaid) || 0;
-  const remainingAmount = typeof loanDetails.remainingAmount === 'number'
-    ? loanDetails.remainingAmount
-    : parseFloat(loanDetails.remainingAmount) || loanAmount;
-  
+  const loanAmount =
+    typeof loanDetails.amount === 'number'
+      ? loanDetails.amount
+      : parseFloat(loanDetails.amount) || 0;
+  const totalPaid =
+    typeof loanDetails.totalPaid === 'number'
+      ? loanDetails.totalPaid
+      : parseFloat(loanDetails.totalPaid) || 0;
+  const remainingAmount =
+    typeof loanDetails.remainingAmount === 'number'
+      ? loanDetails.remainingAmount
+      : parseFloat(loanDetails.remainingAmount) || loanAmount;
+
   // Check if loan is closed
   const isLoanClosed = remainingAmount <= 0 && totalPaid > 0;
-  
+
   // Check if loan is overdue
-  const isOverdue = loanDetails.loanEndDate && 
-    moment(loanDetails.loanEndDate).isBefore(moment(), 'day') && 
-    remainingAmount > 0 && 
+  const isOverdue =
+    loanDetails.loanEndDate &&
+    moment(loanDetails.loanEndDate).isBefore(moment(), 'day') &&
+    remainingAmount > 0 &&
     !isLoanClosed;
 
   // Get display status based on borrower's decision
@@ -381,30 +431,40 @@ export default function PersonalLoan({ route }) {
     return loanDetails.paymentStatus || loanDetails.status;
   };
 
-  const getStatusColor = (status) => {
-    const displayStatus = getDisplayStatus();
+  const getStatusColor = status => {
+    const displayStatus = status || getDisplayStatus();
     switch (displayStatus?.toLowerCase()) {
-      case 'accepted': return ORANGE_THEME.success;
-      case 'rejected': return ORANGE_THEME.error;
-      case 'pending': return ORANGE_THEME.warning;
-      case 'paid': return ORANGE_THEME.success;
-      case 'closed': return ORANGE_THEME.success;
-      case 'part paid': return ORANGE_THEME.warning;
-      case 'overdue': return ORANGE_THEME.error;
-      default: return ORANGE_THEME.textLight;
+      case 'accepted':
+      case 'pending':
+      case 'paid':
+      case 'closed':
+      case 'part paid':
+        return colors.butter;
+      case 'rejected':
+      case 'overdue':
+        return colors.error;
+      default:
+        return colors.textSecondary;
     }
   };
 
-  const getStatusIcon = (status) => {
+  const getStatusIcon = status => {
     const displayStatus = getDisplayStatus();
     switch (displayStatus?.toLowerCase()) {
-      case 'accepted': return 'check-circle';
-      case 'rejected': return 'x-circle';
-      case 'paid': return 'check-circle';
-      case 'closed': return 'check-circle';
-      case 'part paid': return 'clock';
-      case 'overdue': return 'alert-circle';
-      default: return 'clock';
+      case 'accepted':
+        return 'check-circle';
+      case 'rejected':
+        return 'x-circle';
+      case 'paid':
+        return 'check-circle';
+      case 'closed':
+        return 'check-circle';
+      case 'part paid':
+        return 'clock';
+      case 'overdue':
+        return 'alert-circle';
+      default:
+        return 'clock';
     }
   };
 
@@ -416,7 +476,12 @@ export default function PersonalLoan({ route }) {
     if (isLoanClosed) {
       return 'Closed';
     }
-    return (loanDetails.paymentStatus || loanDetails.status)?.charAt(0).toUpperCase() + (loanDetails.paymentStatus || loanDetails.status)?.slice(1);
+    return (
+      (loanDetails.paymentStatus || loanDetails.status)
+        ?.charAt(0)
+        .toUpperCase() +
+      (loanDetails.paymentStatus || loanDetails.status)?.slice(1)
+    );
   };
 
   const loanInfo = [
@@ -432,7 +497,9 @@ export default function PersonalLoan({ route }) {
     },
     {
       label: 'Remaining Amount',
-      value: isLoanClosed ? '₹0 (Loan Closed)' : formatCurrency(remainingAmount),
+      value: isLoanClosed
+        ? '₹0 (Loan Closed)'
+        : formatCurrency(remainingAmount),
       icon: 'dollar-sign',
     },
     {
@@ -447,7 +514,9 @@ export default function PersonalLoan({ route }) {
     },
     {
       label: 'Start Date',
-      value: loanDetails.loanStartDate ? formatDate(loanDetails.loanStartDate) : 'N/A',
+      value: loanDetails.loanStartDate
+        ? formatDate(loanDetails.loanStartDate)
+        : 'N/A',
       icon: 'calendar',
     },
     {
@@ -469,10 +538,7 @@ export default function PersonalLoan({ route }) {
 
   return (
     <View style={styles.container}>
-      <Header
-        title="Loan Details"
-        showBackButton
-      />
+      <Header title="Loan Details" showBackButton />
 
       <ScrollView
         style={styles.scrollView}
@@ -487,93 +553,129 @@ export default function PersonalLoan({ route }) {
         {/* Profile Card */}
         {!fromPendingOffer && (
           <View style={styles.profileCard}>
-          <View style={styles.profileHeader}>
-            {loanDetails.profileImage ? (
-              <Image
-                source={{ uri: loanDetails.profileImage }}
-                style={styles.profileImage}
-              />
-            ) : (
-              <View style={styles.profileAvatar}>
-                <Text style={styles.avatarText}>
-                  {(loanDetails.name || user?.userName || 'U')?.charAt(0)?.toUpperCase()}
-                </Text>
-              </View>
-            )}
-            <View style={styles.profileInfo}>
-              <Text style={styles.profileName} numberOfLines={2}>
-                {loanDetails.name || user?.userName || 'User'}
-              </Text>
-              <View style={styles.profileMeta}>
-                <View style={styles.metaItem}>
-                  <Icon name="phone" size={14} color={ORANGE_THEME.textLight} />
-                  <Text style={styles.metaText}>
-                    {loanDetails.mobileNumber || 'N/A'}
-                  </Text>
-                </View>
-                <View style={styles.metaItem}>
-                  <FontAwesome name="id-card" color={ORANGE_THEME.textLight} size={14} />
-                  <Text style={styles.metaText}>
-                    {loanDetails.aadhaarNumber || 'N/A'}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          </View>
-
-          {/* Status Indicators */}
-          <View style={styles.statusContainer}>
-            <View style={styles.statusItem}>
-              <View style={[styles.statusBadge, { backgroundColor: getStatusColor(loanDetails.status) }]}>
-                <Icon name={getStatusIcon(loanDetails.status)} size={14} color={ORANGE_THEME.card} />
-                <Text style={styles.statusText}>
-                  {isOverdue ? 'Overdue' : getStatusDisplayText()}
-                </Text>
-              </View>
-              <Text style={styles.statusLabel}>Loan Status</Text>
-            </View>
-
-            <View style={styles.statusDivider} />
-
-            <View style={styles.statusItem}>
-              <View style={[
-                styles.statusBadge,
-                {
-                  backgroundColor: loanDetails.borrowerAcceptanceStatus?.toLowerCase() === 'accepted'
-                    ? ORANGE_THEME.success
-                    : loanDetails.borrowerAcceptanceStatus?.toLowerCase() === 'rejected'
-                      ? ORANGE_THEME.error
-                      : ORANGE_THEME.warning
-                }
-              ]}>
-                <Icon
-                  name={loanDetails.borrowerAcceptanceStatus?.toLowerCase() === 'accepted'
-                    ? 'check'
-                    : loanDetails.borrowerAcceptanceStatus?.toLowerCase() === 'rejected'
-                      ? 'x'
-                      : 'clock'}
-                  size={14}
-                  color={ORANGE_THEME.card}
+            <View style={styles.profileHeader}>
+              {loanDetails.profileImage ? (
+                <Image
+                  source={{ uri: loanDetails.profileImage }}
+                  style={styles.profileImage}
                 />
-                <Text style={styles.statusText}>
-                  {loanDetails.borrowerAcceptanceStatus?.toUpperCase() || 'PENDING'}
+              ) : (
+                <View style={styles.profileAvatar}>
+                  <Text style={styles.avatarText}>
+                    {(loanDetails.name || user?.userName || 'U')
+                      ?.charAt(0)
+                      ?.toUpperCase()}
+                  </Text>
+                </View>
+              )}
+              <View style={styles.profileInfo}>
+                <Text style={styles.profileName} numberOfLines={2}>
+                  {loanDetails.name || user?.userName || 'User'}
                 </Text>
+                <View style={styles.profileMeta}>
+                  <View style={styles.metaItem}>
+                    <Icon
+                      name="phone"
+                      size={14}
+                      color={ORANGE_THEME.textLight}
+                    />
+                    <Text style={styles.metaText}>
+                      {loanDetails.mobileNumber || 'N/A'}
+                    </Text>
+                  </View>
+                  <View style={styles.metaItem}>
+                    <FontAwesome
+                      name="id-card"
+                      color={ORANGE_THEME.textLight}
+                      size={14}
+                    />
+                    <Text style={styles.metaText}>
+                      {loanDetails.aadhaarNumber || 'N/A'}
+                    </Text>
+                  </View>
+                </View>
               </View>
-              <Text style={styles.statusLabel}>Borrower Decision</Text>
             </View>
-          </View>
+
+            {/* Status Indicators */}
+            <View style={styles.statusContainer}>
+              <View style={styles.statusItem}>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    { backgroundColor: getStatusColor(loanDetails.status) },
+                  ]}
+                >
+                  <Icon
+                    name={getStatusIcon(loanDetails.status)}
+                    size={14}
+                    color={isOverdue ? colors.white : colors.ink}
+                  />
+                  <Text style={styles.statusText}>
+                    {isOverdue ? 'Overdue' : getStatusDisplayText()}
+                  </Text>
+                </View>
+                <Text style={styles.statusLabel}>Loan Status</Text>
+              </View>
+
+              <View style={styles.statusDivider} />
+
+              <View style={styles.statusItem}>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    {
+                      backgroundColor: getStatusColor(
+                        loanDetails.borrowerAcceptanceStatus,
+                      ),
+                    },
+                  ]}
+                >
+                  <Icon
+                    name={
+                      loanDetails.borrowerAcceptanceStatus?.toLowerCase() ===
+                      'accepted'
+                        ? 'check'
+                        : loanDetails.borrowerAcceptanceStatus?.toLowerCase() ===
+                          'rejected'
+                        ? 'x'
+                        : 'clock'
+                    }
+                    size={14}
+                    color={
+                      loanDetails.borrowerAcceptanceStatus?.toLowerCase() ===
+                      'rejected'
+                        ? colors.white
+                        : colors.ink
+                    }
+                  />
+                  <Text style={styles.statusText}>
+                    {loanDetails.borrowerAcceptanceStatus?.toUpperCase() ||
+                      'PENDING'}
+                  </Text>
+                </View>
+                <Text style={styles.statusLabel}>Borrower Decision</Text>
+              </View>
+            </View>
           </View>
         )}
 
         {/* Payment Summary Card */}
         {!fromPendingOffer && loanAmount > 0 && (
           <View style={styles.paymentSummaryCard}>
-            <Text style={styles.paymentSummaryTitle}>Payment Summary</Text>
-            
+            <View style={styles.rowContainer}>
+              <View style={styles.titleIconTile}>
+                <Icon name="credit-card" size={17} color={colors.white} />
+              </View>
+              <Text style={styles.paymentSummaryTitle}>Payment Summary</Text>
+            </View>
+
             <View style={styles.paymentSummaryRow}>
               <View style={styles.paymentSummaryItem}>
                 <Text style={styles.paymentSummaryLabel}>Loan Amount</Text>
-                <Text style={styles.paymentSummaryValue}>{formatCurrency(loanAmount)}</Text>
+                <Text style={styles.paymentSummaryValue}>
+                  {formatCurrency(loanAmount)}
+                </Text>
               </View>
               <View style={styles.paymentSummaryItem}>
                 <Text style={styles.paymentSummaryLabel}>Total Paid</Text>
@@ -583,7 +685,12 @@ export default function PersonalLoan({ route }) {
               </View>
               <View style={styles.paymentSummaryItem}>
                 <Text style={styles.paymentSummaryLabel}>Remaining</Text>
-                <Text style={[styles.paymentSummaryValue, isLoanClosed ? styles.closedAmount : styles.remainingAmount]}>
+                <Text
+                  style={[
+                    styles.paymentSummaryValue,
+                    isLoanClosed ? styles.closedAmount : styles.remainingAmount,
+                  ]}
+                >
                   {isLoanClosed ? '₹0' : formatCurrency(remainingAmount)}
                 </Text>
               </View>
@@ -592,18 +699,27 @@ export default function PersonalLoan({ route }) {
             {/* Progress Bar */}
             <View style={styles.progressContainer}>
               <View style={styles.progressBar}>
-                <View 
+                <View
                   style={[
-                    styles.progressFill, 
-                    { 
-                      width: `${loanAmount > 0 ? (totalPaid / loanAmount) * 100 : 0}%`,
-                      backgroundColor: isOverdue ? ORANGE_THEME.error : (isLoanClosed ? ORANGE_THEME.success : ORANGE_THEME.primary)
-                    }
-                  ]} 
+                    styles.progressFill,
+                    {
+                      width: `${
+                        loanAmount > 0 ? (totalPaid / loanAmount) * 100 : 0
+                      }%`,
+                      backgroundColor: isOverdue
+                        ? ORANGE_THEME.error
+                        : isLoanClosed
+                        ? ORANGE_THEME.success
+                        : ORANGE_THEME.primary,
+                    },
+                  ]}
                 />
               </View>
               <Text style={styles.progressText}>
-                {loanAmount > 0 ? `${((totalPaid / loanAmount) * 100).toFixed(1)}%` : '0%'} Paid
+                {loanAmount > 0
+                  ? `${((totalPaid / loanAmount) * 100).toFixed(1)}%`
+                  : '0%'}{' '}
+                Paid
                 {isOverdue && ' • Overdue'}
               </Text>
             </View>
@@ -611,18 +727,29 @@ export default function PersonalLoan({ route }) {
             {/* Overdue Badge */}
             {isOverdue && (
               <View style={styles.overdueBadge}>
-                <Icon name="alert-circle" size={20} color={ORANGE_THEME.error} />
+                <Icon
+                  name="alert-circle"
+                  size={20}
+                  color={ORANGE_THEME.error}
+                />
                 <Text style={styles.overdueBadgeText}>
-                  Overdue - Payment was due on {moment(loanDetails.loanEndDate).format('DD MMM YYYY')}
+                  Overdue - Payment was due on{' '}
+                  {moment(loanDetails.loanEndDate).format('DD MMM YYYY')}
                 </Text>
               </View>
             )}
-            
+
             {/* Loan Closed Badge */}
             {isLoanClosed && !isOverdue && (
               <View style={styles.closedBadge}>
-                <Icon name="check-circle" size={20} color={ORANGE_THEME.success} />
-                <Text style={styles.closedBadgeText}>Loan Closed - All Amount Paid</Text>
+                <Icon
+                  name="check-circle"
+                  size={20}
+                  color={ORANGE_THEME.success}
+                />
+                <Text style={styles.closedBadgeText}>
+                  Loan Closed - All Amount Paid
+                </Text>
               </View>
             )}
           </View>
@@ -631,7 +758,12 @@ export default function PersonalLoan({ route }) {
         {/* Loan Details Grid */}
         {!fromPendingOffer && (
           <View style={styles.detailsSection}>
-            <Text style={styles.sectionTitle}>Loan Information</Text>
+            <View style={styles.rowContainer}>
+              <View style={styles.titleIconTile}>
+                <Icon name="info" size={17} color={colors.white} />
+              </View>
+              <Text style={styles.sectionTitle}>Loan Information</Text>
+            </View>
             <View style={styles.detailsGrid}>
               {loanInfo.map((item, index) => (
                 <DetailCard
@@ -653,20 +785,40 @@ export default function PersonalLoan({ route }) {
               <TouchableOpacity
                 style={styles.proofCard}
                 onPress={handleViewProof}
-                activeOpacity={0.8}>
+                activeOpacity={0.8}
+              >
                 <View style={styles.proofIconContainer}>
-                  <Icon name="file-image" size={24} color={ORANGE_THEME.primary} />
+                  <Icon
+                    name="file-image"
+                    size={24}
+                    color={ORANGE_THEME.primary}
+                  />
                 </View>
                 <View style={styles.proofTextContainer}>
                   <Text style={styles.proofTitle}>Proof Provided</Text>
-                  <Text style={styles.proofSubtext}>Tap to view lender proof</Text>
+                  <Text style={styles.proofSubtext}>
+                    Tap to view lender proof
+                  </Text>
                 </View>
-                <Icon name="chevron-right" size={20} color={ORANGE_THEME.textLight} />
+                <Icon
+                  name="chevron-right"
+                  size={20}
+                  color={ORANGE_THEME.textLight}
+                />
               </TouchableOpacity>
             ) : (
               <View style={[styles.proofCard, styles.noProofCard]}>
-                <View style={[styles.proofIconContainer, styles.noProofIconContainer]}>
-                  <Icon name="file-x" size={24} color={ORANGE_THEME.textLight} />
+                <View
+                  style={[
+                    styles.proofIconContainer,
+                    styles.noProofIconContainer,
+                  ]}
+                >
+                  <Icon
+                    name="file-x"
+                    size={24}
+                    color={ORANGE_THEME.textLight}
+                  />
                 </View>
                 <View style={styles.proofTextContainer}>
                   <Text style={styles.proofTitle}>No Proof Provided</Text>
@@ -680,44 +832,63 @@ export default function PersonalLoan({ route }) {
         )}
 
         {/* Show message if loan is rejected */}
-        {!fromPendingOffer && loanDetails.borrowerAcceptanceStatus?.toLowerCase() === 'rejected' && (
-          <View style={styles.rejectionMessage}>
-            <Icon name="alert-circle" size={24} color={ORANGE_THEME.error} />
-            <View style={styles.rejectionTextContainer}>
-              <Text style={styles.rejectionTitle}>Loan Rejected</Text>
-              <Text style={styles.rejectionSubtitle}>
-                This loan has been rejected and is no longer active
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {/* Agreement Button - Hide if loan is rejected */}
-        {!fromPendingOffer && loanDetails.borrowerAcceptanceStatus?.toLowerCase() !== 'rejected' && (
-          <TouchableOpacity
-            style={styles.agreementButton}
-            onPress={() => navigation.navigate('AgreementScreen', { agreement: loanDetails.agreement })}>
-            <View style={styles.agreementButtonContent}>
-              <Icon name="file-text" size={24} color={ORANGE_THEME.primary} />
-              <View style={styles.agreementTextContainer}>
-                <Text style={styles.agreementTitle}>Loan Agreement</Text>
-                <Text style={styles.agreementSubtitle}>
-                  View terms and conditions
+        {!fromPendingOffer &&
+          loanDetails.borrowerAcceptanceStatus?.toLowerCase() ===
+            'rejected' && (
+            <View style={styles.rejectionMessage}>
+              <Icon name="alert-circle" size={24} color={ORANGE_THEME.error} />
+              <View style={styles.rejectionTextContainer}>
+                <Text style={styles.rejectionTitle}>Loan Rejected</Text>
+                <Text style={styles.rejectionSubtitle}>
+                  This loan has been rejected and is no longer active
                 </Text>
               </View>
-              <Icon name="chevron-right" size={24} color={ORANGE_THEME.textLight} />
             </View>
-          </TouchableOpacity>
-        )}
+          )}
+
+        {/* Agreement Button - Hide if loan is rejected */}
+        {!fromPendingOffer &&
+          loanDetails.borrowerAcceptanceStatus?.toLowerCase() !==
+            'rejected' && (
+            <TouchableOpacity
+              style={styles.agreementButton}
+              onPress={() =>
+                navigation.navigate('AgreementScreen', {
+                  agreement: loanDetails.agreement,
+                })
+              }
+            >
+              <View style={styles.agreementButtonContent}>
+                <Icon name="file-text" size={24} color={ORANGE_THEME.primary} />
+                <View style={styles.agreementTextContainer}>
+                  <Text style={styles.agreementTitle}>Loan Agreement</Text>
+                  <Text style={styles.agreementSubtitle}>
+                    View terms and conditions
+                  </Text>
+                </View>
+                <Icon
+                  name="chevron-right"
+                  size={24}
+                  color={ORANGE_THEME.textLight}
+                />
+              </View>
+            </TouchableOpacity>
+          )}
 
         {canAcceptPendingOffer && (
           <View style={styles.pendingOfferActionCard}>
             <View style={styles.pendingOfferActionHeader}>
               <View style={styles.pendingOfferActionIcon}>
-                <Icon name="check-circle" size={22} color={ORANGE_THEME.success} />
+                <Icon
+                  name="check-circle"
+                  size={22}
+                  color={ORANGE_THEME.success}
+                />
               </View>
               <View style={styles.pendingOfferActionText}>
-                <Text style={styles.pendingOfferActionTitle}>Accept loan offer</Text>
+                <Text style={styles.pendingOfferActionTitle}>
+                  Accept loan offer
+                </Text>
                 <Text style={styles.pendingOfferActionSubtitle}>
                   Review the details and proof, then confirm with your PIN.
                 </Text>
@@ -726,7 +897,8 @@ export default function PersonalLoan({ route }) {
             <TouchableOpacity
               style={styles.acceptOfferButton}
               onPress={() => setAcceptPinModalVisible(true)}
-              activeOpacity={0.85}>
+              activeOpacity={0.85}
+            >
               <Text style={styles.acceptOfferButtonText}>Accept with PIN</Text>
               <Icon name="lock" size={16} color={ORANGE_THEME.card} />
             </TouchableOpacity>
@@ -744,7 +916,8 @@ export default function PersonalLoan({ route }) {
               {installmentHistory.installmentHistory?.length > 3 && (
                 <TouchableOpacity
                   onPress={() => setShowAllInstallments(!showAllInstallments)}
-                  activeOpacity={0.7}>
+                  activeOpacity={0.7}
+                >
                   <Text style={styles.viewAllText}>
                     {showAllInstallments ? 'Show Less' : 'See All'}
                   </Text>
@@ -764,33 +937,55 @@ export default function PersonalLoan({ route }) {
                   </View>
                   <View style={styles.planItem}>
                     <Text style={styles.planLabel}>Paid</Text>
-                    <Text style={[styles.planValue, { color: ORANGE_THEME.success }]}>
+                    <Text
+                      style={[
+                        styles.planValue,
+                        { color: ORANGE_THEME.success },
+                      ]}
+                    >
                       {installmentHistory.installmentPlan.paidInstallments}
                     </Text>
                   </View>
                   <View style={styles.planItem}>
                     <Text style={styles.planLabel}>Pending</Text>
-                    <Text style={[styles.planValue, { color: ORANGE_THEME.warning }]}>
+                    <Text
+                      style={[
+                        styles.planValue,
+                        { color: ORANGE_THEME.warning },
+                      ]}
+                    >
                       {installmentHistory.installmentPlan.pendingInstallments}
                     </Text>
                   </View>
                   <View style={styles.planItem}>
                     <Text style={styles.planLabel}>Overdue</Text>
-                    <Text style={[styles.planValue, { color: ORANGE_THEME.error }]}>
+                    <Text
+                      style={[styles.planValue, { color: ORANGE_THEME.error }]}
+                    >
                       {installmentHistory.installmentPlan.overdueInstallments}
                     </Text>
                   </View>
                 </View>
                 <View style={styles.planDetails}>
                   <Text style={styles.planDetailText}>
-                    Installment Amount: {formatCurrency(installmentHistory.installmentPlan.installmentAmount)}
+                    Installment Amount:{' '}
+                    {formatCurrency(
+                      installmentHistory.installmentPlan.installmentAmount,
+                    )}
                   </Text>
                   <Text style={styles.planDetailText}>
-                    Frequency: {installmentHistory.installmentPlan.frequency?.charAt(0).toUpperCase() + installmentHistory.installmentPlan.frequency?.slice(1)}
+                    Frequency:{' '}
+                    {installmentHistory.installmentPlan.frequency
+                      ?.charAt(0)
+                      .toUpperCase() +
+                      installmentHistory.installmentPlan.frequency?.slice(1)}
                   </Text>
                   {installmentHistory.installmentPlan.nextDueDate && (
                     <Text style={styles.planDetailText}>
-                      Next Due: {moment(installmentHistory.installmentPlan.nextDueDate).format('DD MMM YYYY')}
+                      Next Due:{' '}
+                      {moment(
+                        installmentHistory.installmentPlan.nextDueDate,
+                      ).format('DD MMM YYYY')}
                     </Text>
                   )}
                 </View>
@@ -803,26 +998,49 @@ export default function PersonalLoan({ route }) {
                 <View style={styles.summaryStatsRow}>
                   <View style={styles.summaryStatItem}>
                     <Text style={styles.summaryStatLabel}>Total Paid</Text>
-                    <Text style={[styles.summaryStatValue, { color: ORANGE_THEME.success }]}>
-                      {formatCurrency(installmentHistory.summary.totalPaidAmount)}
+                    <Text
+                      style={[
+                        styles.summaryStatValue,
+                        { color: ORANGE_THEME.success },
+                      ]}
+                    >
+                      {formatCurrency(
+                        installmentHistory.summary.totalPaidAmount,
+                      )}
                     </Text>
                   </View>
                   <View style={styles.summaryStatItem}>
                     <Text style={styles.summaryStatLabel}>Pending</Text>
-                    <Text style={[styles.summaryStatValue, { color: ORANGE_THEME.warning }]}>
-                      {formatCurrency(installmentHistory.summary.totalPendingAmount)}
+                    <Text
+                      style={[
+                        styles.summaryStatValue,
+                        { color: ORANGE_THEME.warning },
+                      ]}
+                    >
+                      {formatCurrency(
+                        installmentHistory.summary.totalPendingAmount,
+                      )}
                     </Text>
                   </View>
                   <View style={styles.summaryStatItem}>
                     <Text style={styles.summaryStatLabel}>Overdue</Text>
-                    <Text style={[styles.summaryStatValue, { color: ORANGE_THEME.error }]}>
-                      {formatCurrency(installmentHistory.summary.totalOverdueAmount)}
+                    <Text
+                      style={[
+                        styles.summaryStatValue,
+                        { color: ORANGE_THEME.error },
+                      ]}
+                    >
+                      {formatCurrency(
+                        installmentHistory.summary.totalOverdueAmount,
+                      )}
                     </Text>
                   </View>
                 </View>
                 {installmentHistory.summary.onTimePaymentRate !== undefined && (
                   <View style={styles.onTimeRateContainer}>
-                    <Text style={styles.onTimeRateLabel}>On-Time Payment Rate</Text>
+                    <Text style={styles.onTimeRateLabel}>
+                      On-Time Payment Rate
+                    </Text>
                     <Text style={styles.onTimeRateValue}>
                       {installmentHistory.summary.onTimePaymentRate.toFixed(1)}%
                     </Text>
@@ -842,18 +1060,26 @@ export default function PersonalLoan({ route }) {
                 {(showAllInstallments
                   ? installmentHistory.installmentHistory
                   : installmentHistory.installmentHistory.slice(0, 3)
-                ).map((installment, index) => renderInstallmentItem(installment, index))}
+                ).map((installment, index) =>
+                  renderInstallmentItem(installment, index),
+                )}
               </View>
             ) : (
               <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>No installment history available</Text>
+                <Text style={styles.emptyText}>
+                  No installment history available
+                </Text>
               </View>
             )}
 
             {/* Action Message */}
             {installmentHistory.actions?.requiresAction && (
               <View style={styles.actionCard}>
-                <Icon name="alert-circle" size={20} color={ORANGE_THEME.warning} />
+                <Icon
+                  name="alert-circle"
+                  size={20}
+                  color={ORANGE_THEME.warning}
+                />
                 <Text style={styles.actionText}>
                   {installmentHistory.actions.message}
                 </Text>
@@ -871,7 +1097,13 @@ export default function PersonalLoan({ route }) {
           </Text>
           <View style={styles.summaryRow}>
             <View style={styles.summaryItem}>
-              <Text style={styles.summaryLabel}>Amount {loanDetails.borrowerAcceptanceStatus?.toLowerCase() === 'rejected' ? 'Requested' : 'Taken'}</Text>
+              <Text style={styles.summaryLabel}>
+                Amount{' '}
+                {loanDetails.borrowerAcceptanceStatus?.toLowerCase() ===
+                'rejected'
+                  ? 'Requested'
+                  : 'Taken'}
+              </Text>
               <Text style={styles.summaryValue}>
                 ₹{loanDetails.amount?.toLocaleString('en-IN')}
               </Text>
@@ -882,9 +1114,9 @@ export default function PersonalLoan({ route }) {
               <Text style={styles.summaryValue}>
                 {loanDetails.loanStartDate && loanDetails.loanEndDate
                   ? `${moment(loanDetails.loanEndDate).diff(
-                    moment(loanDetails.loanStartDate),
-                    'days'
-                  )} days`
+                      moment(loanDetails.loanStartDate),
+                      'days',
+                    )} days`
                   : 'N/A'}
               </Text>
             </View>
@@ -894,20 +1126,20 @@ export default function PersonalLoan({ route }) {
         {/* Footer Info */}
         {!fromPendingOffer && (
           <View style={styles.footer}>
-          <View style={styles.footerItem}>
-            <Icon name="clock" size={14} color={ORANGE_THEME.textLight} />
-            <Text style={styles.footerText}>
-              Created {moment(loanDetails.createdAt).fromNow()}
-            </Text>
-          </View>
-          {loanDetails.updatedAt && (
             <View style={styles.footerItem}>
-              <Icon name="edit" size={14} color={ORANGE_THEME.textLight} />
+              <Icon name="clock" size={14} color={ORANGE_THEME.textLight} />
               <Text style={styles.footerText}>
-                Updated {moment(loanDetails.updatedAt).fromNow()}
+                Created {moment(loanDetails.createdAt).fromNow()}
               </Text>
             </View>
-          )}
+            {loanDetails.updatedAt && (
+              <View style={styles.footerItem}>
+                <Icon name="edit" size={14} color={ORANGE_THEME.textLight} />
+                <Text style={styles.footerText}>
+                  Updated {moment(loanDetails.updatedAt).fromNow()}
+                </Text>
+              </View>
+            )}
           </View>
         )}
       </ScrollView>
@@ -920,7 +1152,8 @@ export default function PersonalLoan({ route }) {
         onRequestClose={() => {
           setProofViewerVisible(false);
           setSelectedProofUrl(null);
-        }}>
+        }}
+      >
         <View style={styles.proofViewerOverlay}>
           <View style={styles.proofViewerHeader}>
             <Text style={styles.proofViewerHeaderText}>Loan Proof</Text>
@@ -929,7 +1162,8 @@ export default function PersonalLoan({ route }) {
                 setProofViewerVisible(false);
                 setSelectedProofUrl(null);
               }}
-              style={styles.proofViewerCloseButton}>
+              style={styles.proofViewerCloseButton}
+            >
               <Icon name="x" size={24} color={ORANGE_THEME.card} />
             </TouchableOpacity>
           </View>
@@ -938,28 +1172,29 @@ export default function PersonalLoan({ route }) {
             maximumZoomScale={3}
             minimumZoomScale={1}
             showsVerticalScrollIndicator={false}
-            showsHorizontalScrollIndicator={false}>
+            showsHorizontalScrollIndicator={false}
+          >
             {selectedProofUrl && (
               <Image
                 source={{ uri: selectedProofUrl }}
                 style={styles.proofViewerImage}
                 resizeMode="contain"
-                onError={(error) => {
+                onError={error => {
                   console.error('Image load error:', error);
                   console.error('Failed URL:', selectedProofUrl);
                   Toast.show({
                     type: 'error',
                     position: 'top',
                     text1: 'Error Loading Image',
-                    text2: 'Failed to load loan proof image. Please check the URL.',
+                    text2:
+                      'Failed to load loan proof image. Please check the URL.',
                     visibilityTime: 4000,
                   });
                 }}
               />
             )}
           </ScrollView>
-          </View>
-        )}
+        </View>
       </Modal>
 
       <PinVerificationModal
@@ -978,29 +1213,31 @@ export default function PersonalLoan({ route }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: ORANGE_THEME.background,
+    backgroundColor: colors.offWhite,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: m(16),
-    paddingBottom: m(45),
+    paddingHorizontal: m(18),
+    paddingTop: m(10),
+    paddingBottom: m(32),
   },
 
   // Profile Card
   profileCard: {
     backgroundColor: ORANGE_THEME.card,
-    borderRadius: m(20),
-    padding: m(24),
-    marginBottom: m(16),
+    borderRadius: m(16),
+    paddingVertical: m(18),
+    paddingHorizontal: m(18),
+    marginBottom: m(14),
     borderWidth: 1,
     borderColor: ORANGE_THEME.border,
-    elevation: 4,
-    shadowColor: '#000',
+    elevation: 2,
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
   },
   profileHeader: {
     flexDirection: 'row',
@@ -1008,37 +1245,33 @@ const styles = StyleSheet.create({
     marginBottom: m(12),
   },
   profileAvatar: {
-    width: m(60),
-    height: m(60),
-    borderRadius: m(30),
+    width: m(54),
+    height: m(54),
+    borderRadius: m(27),
     backgroundColor: ORANGE_THEME.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: m(16),
-    borderWidth: 3,
-    borderColor: ORANGE_THEME.primaryLight,
+    marginRight: m(14),
   },
   avatarText: {
-    fontSize: m(23),
+    fontSize: m(22),
     fontFamily: FontFamily.primarySemiBold,
     color: ORANGE_THEME.card,
   },
   profileImage: {
-    width: m(60),
-    height: m(60),
-    borderRadius: m(30),
-    marginRight: m(16),
-    borderWidth: 3,
-    borderColor: ORANGE_THEME.primaryLight,
+    width: m(54),
+    height: m(54),
+    borderRadius: m(27),
+    marginRight: m(14),
   },
   profileInfo: {
     flex: 1,
   },
   profileName: {
-    fontSize: m(22),
+    fontSize: m(17),
     fontFamily: FontFamily.primaryBold,
     color: ORANGE_THEME.text,
-    marginBottom: m(8),
+    marginBottom: m(5),
   },
   profileMeta: {
     gap: m(4),
@@ -1049,8 +1282,9 @@ const styles = StyleSheet.create({
     gap: m(6),
   },
   metaText: {
-    fontSize: m(14),
+    fontSize: m(11),
     color: ORANGE_THEME.textLight,
+    fontFamily: FontFamily.bodyRegular,
   },
 
   // Status Container
@@ -1058,7 +1292,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    paddingTop: m(16),
+    paddingTop: m(8),
     borderTopWidth: 1,
     borderTopColor: ORANGE_THEME.border,
   },
@@ -1068,80 +1302,103 @@ const styles = StyleSheet.create({
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: m(12),
+    paddingHorizontal: m(14),
     paddingVertical: m(6),
     borderRadius: m(20),
-    gap: m(6),
-    marginBottom: m(6),
+    gap: m(5),
+    marginBottom: m(4),
   },
   statusText: {
-    fontSize: m(12),
+    fontSize: m(11),
     fontFamily: FontFamily.primarySemiBold,
-    color: ORANGE_THEME.card,
+    color: colors.ink,
   },
   statusLabel: {
-    fontSize: m(12),
+    fontSize: m(10.5),
     color: ORANGE_THEME.textLight,
+    fontFamily: FontFamily.bodyRegular,
   },
   statusDivider: {
     width: 1,
-    height: m(40),
+    height: m(34),
     backgroundColor: ORANGE_THEME.border,
   },
 
   // Details Section
   detailsSection: {
-    marginBottom: m(16),
-  },
-  sectionTitle: {
-    fontSize: m(20),
-    fontFamily: FontFamily.primaryBold,
-    color: ORANGE_THEME.text,
-    marginBottom: m(16),
-    paddingHorizontal: m(4),
-  },
-  detailsGrid: {
-    gap: m(10),
-  },
-  detailCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: ORANGE_THEME.card,
-    borderRadius: m(14),
-    padding: m(14),
-    marginBottom: m(5),
+    borderRadius: m(16),
+    padding: m(15),
+    marginBottom: m(14),
     borderWidth: 1,
     borderColor: ORANGE_THEME.border,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.04,
     shadowRadius: 8,
   },
-  detailIconContainer: {
-    width: m(44),
-    height: m(44),
-    borderRadius: m(12),
-    backgroundColor: ORANGE_THEME.primaryLight,
+  rowContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(8),
+    marginBottom: m(12),
+  },
+  titleIconTile: {
+    width: m(34),
+    height: m(34),
+    borderRadius: m(9),
+    backgroundColor: colors.navyDark,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: m(14),
+  },
+  sectionTitle: {
+    fontSize: m(16),
+    fontFamily: FontFamily.primaryBold,
+    color: ORANGE_THEME.text,
+  },
+  detailsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    columnGap: m(8),
+    rowGap: m(8),
+  },
+  detailCard: {
+    width: '48%',
+    minHeight: m(92),
+    backgroundColor: '#F7F5EF',
+    borderRadius: m(10),
+    padding: m(10),
+    borderWidth: 1,
+    borderColor: ORANGE_THEME.border,
+    elevation: 0,
+  },
+  detailIconContainer: {
+    width: m(28),
+    height: m(28),
+    borderRadius: m(8),
+    backgroundColor: colors.skySoft,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: m(8),
   },
   detailContent: {
-    flex: 1,
+    minHeight: m(44),
   },
   detailLabel: {
-    fontSize: m(11),
+    fontSize: m(9),
     color: ORANGE_THEME.textLight,
-    marginBottom: m(4),
+    marginBottom: m(3),
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    fontFamily: FontFamily.primarySemiBold,
+    letterSpacing: 0,
+    fontFamily: FontFamily.bodySemiBold,
   },
   detailValue: {
-    fontSize: m(16),
+    fontSize: m(12),
     fontFamily: FontFamily.primarySemiBold,
     color: ORANGE_THEME.text,
+    lineHeight: m(16),
   },
 
   // Agreement Button
@@ -1153,7 +1410,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: ORANGE_THEME.border,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -1175,6 +1432,7 @@ const styles = StyleSheet.create({
   agreementSubtitle: {
     fontSize: m(14),
     color: ORANGE_THEME.textLight,
+    fontFamily: FontFamily.bodyRegular,
   },
   pendingOfferActionCard: {
     backgroundColor: ORANGE_THEME.primaryLight,
@@ -1211,6 +1469,7 @@ const styles = StyleSheet.create({
     fontSize: m(13),
     lineHeight: m(18),
     color: ORANGE_THEME.success,
+    fontFamily: FontFamily.bodyRegular,
   },
   acceptOfferButton: {
     height: m(46),
@@ -1237,7 +1496,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: ORANGE_THEME.border,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -1260,6 +1519,7 @@ const styles = StyleSheet.create({
     fontSize: m(12),
     color: ORANGE_THEME.textLight,
     marginBottom: m(4),
+    fontFamily: FontFamily.bodyRegular,
   },
   summaryValue: {
     fontSize: m(16),
@@ -1286,45 +1546,46 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: m(12),
     color: ORANGE_THEME.textLight,
+    fontFamily: FontFamily.bodyRegular,
   },
-  
+
   // Payment Summary Card
   paymentSummaryCard: {
     backgroundColor: ORANGE_THEME.card,
-    borderRadius: m(20),
-    padding: m(24),
-    marginBottom: m(16),
+    borderRadius: m(16),
+    padding: m(15),
+    marginBottom: m(14),
     borderWidth: 1,
     borderColor: ORANGE_THEME.border,
-    elevation: 4,
-    shadowColor: '#000',
+    elevation: 2,
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
   },
   paymentSummaryTitle: {
-    fontSize: m(20),
+    fontSize: m(16),
     fontFamily: FontFamily.primaryBold,
     color: ORANGE_THEME.text,
-    marginBottom: m(20),
   },
   paymentSummaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: m(16),
-    gap: m(12),
+    marginBottom: m(10),
+    gap: m(8),
   },
   paymentSummaryItem: {
     flex: 1,
     alignItems: 'center',
   },
   paymentSummaryLabel: {
-    fontSize: m(12),
+    fontSize: m(10),
     color: ORANGE_THEME.textLight,
-    marginBottom: m(4),
+    marginBottom: m(3),
+    fontFamily: FontFamily.bodyRegular,
   },
   paymentSummaryValue: {
-    fontSize: m(16),
+    fontSize: m(15),
     fontFamily: FontFamily.primaryBold,
     color: ORANGE_THEME.text,
   },
@@ -1338,14 +1599,14 @@ const styles = StyleSheet.create({
     color: ORANGE_THEME.success,
   },
   progressContainer: {
-    marginBottom: m(16),
+    marginBottom: m(10),
   },
   progressBar: {
-    height: m(8),
-    backgroundColor: ORANGE_THEME.border,
+    height: m(6),
+    backgroundColor: '#E7E2D8',
     borderRadius: m(4),
     overflow: 'hidden',
-    marginBottom: m(8),
+    marginBottom: m(5),
   },
   progressFill: {
     height: '100%',
@@ -1353,10 +1614,10 @@ const styles = StyleSheet.create({
     backgroundColor: ORANGE_THEME.primary,
   },
   progressText: {
-    fontSize: m(12),
+    fontSize: m(11),
     color: ORANGE_THEME.textLight,
     textAlign: 'center',
-    fontFamily: FontFamily.primaryMedium,
+    fontFamily: FontFamily.bodyMedium,
   },
   closedBadge: {
     flexDirection: 'row',
@@ -1364,12 +1625,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: ORANGE_THEME.primaryLight,
     borderRadius: m(8),
-    padding: m(12),
-    gap: m(8),
-    marginTop: m(8),
+    padding: m(9),
+    gap: m(6),
+    marginTop: m(6),
   },
   closedBadgeText: {
-    fontSize: m(14),
+    fontSize: m(12.5),
     fontFamily: FontFamily.primarySemiBold,
     color: ORANGE_THEME.success,
   },
@@ -1379,14 +1640,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: ORANGE_THEME.error + '12',
     borderRadius: m(8),
-    padding: m(12),
-    gap: m(8),
-    marginTop: m(8),
+    padding: m(9),
+    gap: m(6),
+    marginTop: m(6),
     borderWidth: 1,
     borderColor: ORANGE_THEME.error + '40',
   },
   overdueBadgeText: {
-    fontSize: m(14),
+    fontSize: m(12.5),
     fontFamily: FontFamily.primarySemiBold,
     color: ORANGE_THEME.error,
     flex: 1,
@@ -1421,7 +1682,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: ORANGE_THEME.border,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -1440,6 +1701,7 @@ const styles = StyleSheet.create({
     color: ORANGE_THEME.textLight,
     marginBottom: m(4),
     textAlign: 'center',
+    fontFamily: FontFamily.bodyRegular,
   },
   planValue: {
     fontSize: m(16),
@@ -1455,9 +1717,10 @@ const styles = StyleSheet.create({
   planDetailText: {
     fontSize: m(13),
     color: ORANGE_THEME.textLight,
+    fontFamily: FontFamily.bodyRegular,
   },
   summaryStatsCard: {
-    backgroundColor: ORANGE_THEME.background,
+    backgroundColor: '#F7F5EF',
     borderRadius: m(12),
     padding: m(16),
     marginBottom: m(12),
@@ -1477,6 +1740,7 @@ const styles = StyleSheet.create({
     fontSize: m(11),
     color: ORANGE_THEME.textLight,
     marginBottom: m(4),
+    fontFamily: FontFamily.bodyRegular,
   },
   summaryStatValue: {
     fontSize: m(14),
@@ -1494,7 +1758,7 @@ const styles = StyleSheet.create({
   onTimeRateLabel: {
     fontSize: m(13),
     color: ORANGE_THEME.textLight,
-    fontFamily: FontFamily.primarySemiBold,
+    fontFamily: FontFamily.bodySemiBold,
   },
   onTimeRateValue: {
     fontSize: m(16),
@@ -1547,7 +1811,7 @@ const styles = StyleSheet.create({
   },
   installmentStatus: {
     fontSize: m(12),
-    fontFamily: FontFamily.primaryMedium,
+    fontFamily: FontFamily.bodyMedium,
   },
   installmentAmount: {
     fontSize: m(16),
@@ -1565,12 +1829,13 @@ const styles = StyleSheet.create({
   installmentDetailLabel: {
     fontSize: m(12),
     color: ORANGE_THEME.textLight,
-    fontFamily: FontFamily.primaryMedium,
+    fontFamily: FontFamily.bodyMedium,
   },
   installmentDetailValue: {
     fontSize: m(12),
     color: ORANGE_THEME.text,
     flex: 1,
+    fontFamily: FontFamily.bodyRegular,
   },
   pendingBadge: {
     flexDirection: 'row',
@@ -1584,7 +1849,7 @@ const styles = StyleSheet.create({
   pendingBadgeText: {
     fontSize: m(12),
     color: ORANGE_THEME.warning,
-    fontFamily: FontFamily.primaryMedium,
+    fontFamily: FontFamily.bodyMedium,
   },
   installmentOverdueBadge: {
     flexDirection: 'row',
@@ -1598,7 +1863,7 @@ const styles = StyleSheet.create({
   installmentOverdueBadgeText: {
     fontSize: m(12),
     color: ORANGE_THEME.error,
-    fontFamily: FontFamily.primaryMedium,
+    fontFamily: FontFamily.bodyMedium,
   },
   actionCard: {
     flexDirection: 'row',
@@ -1614,7 +1879,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: m(14),
     color: ORANGE_THEME.warning,
-    fontFamily: FontFamily.primaryMedium,
+    fontFamily: FontFamily.bodyMedium,
   },
   loadingContainer: {
     padding: m(20),
@@ -1628,6 +1893,7 @@ const styles = StyleSheet.create({
     marginTop: m(8),
     fontSize: m(12),
     color: ORANGE_THEME.textLight,
+    fontFamily: FontFamily.bodyRegular,
   },
   emptyContainer: {
     padding: m(20),
@@ -1640,8 +1906,9 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: m(14),
     color: ORANGE_THEME.textLight,
+    fontFamily: FontFamily.bodyRegular,
   },
-  
+
   // Loan Proof Styles
   proofSection: {
     marginBottom: m(16),
@@ -1661,7 +1928,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   noProofCard: {
-    backgroundColor: ORANGE_THEME.background,
+    backgroundColor: '#F7F5EF',
     borderColor: ORANGE_THEME.border,
   },
   proofIconContainer: {
@@ -1688,8 +1955,9 @@ const styles = StyleSheet.create({
   proofSubtext: {
     fontSize: m(14),
     color: ORANGE_THEME.textLight,
+    fontFamily: FontFamily.bodyRegular,
   },
-  
+
   // Proof Viewer Modal Styles
   proofViewerOverlay: {
     flex: 1,
@@ -1723,7 +1991,7 @@ const styles = StyleSheet.create({
     height: m(500),
     borderRadius: m(8),
   },
-  
+
   // Rejection Message Styles
   rejectionMessage: {
     flexDirection: 'row',
@@ -1749,5 +2017,6 @@ const styles = StyleSheet.create({
     fontSize: m(14),
     color: ORANGE_THEME.error,
     lineHeight: m(20),
+    fontFamily: FontFamily.bodyRegular,
   },
 });

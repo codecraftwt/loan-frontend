@@ -10,7 +10,7 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   Image,
-  PermissionsAndroid
+  PermissionsAndroid,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
@@ -19,8 +19,12 @@ import { registerUser } from '../../Redux/Slices/authslice';
 import Toast from 'react-native-toast-message';
 import { m } from 'walstar-rn-responsive';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
-import { FontFamily, FontSizes } from '../../constants';
+import { FontFamily, FontSizes, colors } from '../../constants';
 import bcrypt from 'react-native-bcrypt';
+
+const GRADIENT_INDIGO = '#23305c';
+const GRADIENT_TEAL = '#1b6b5c';
+const GRADIENT_SOFT = '#E1F3EA';
 
 export default function Register({ navigation }) {
   const [currentStep, setCurrentStep] = useState(1);
@@ -75,17 +79,18 @@ export default function Register({ navigation }) {
       const granted = await PermissionsAndroid.request(
         PermissionsAndroid.PERMISSIONS.CAMERA,
         {
-          title: "App Needs Camera Access",
-          message: "This app needs access to your camera to take a profile photo.",
-          buttonNeutral: "Ask Me Later",
-          buttonNegative: "Cancel",
-          buttonPositive: "OK"
-        }
+          title: 'App Needs Camera Access',
+          message:
+            'This app needs access to your camera to take a profile photo.',
+          buttonNeutral: 'Ask Me Later',
+          buttonNegative: 'Cancel',
+          buttonPositive: 'OK',
+        },
       );
       // Check if permission was granted
       return granted === PermissionsAndroid.RESULTS.GRANTED;
     } catch (err) {
-      console.warn("Camera permission error:", err);
+      console.warn('Camera permission error:', err);
       return false;
     }
   };
@@ -206,84 +211,84 @@ export default function Register({ navigation }) {
   };
 
   // Validation functions - only called on button click
-const validateStep1 = () => {
-  let temp = {};
-  let valid = true;
+  const validateStep1 = () => {
+    let temp = {};
+    let valid = true;
 
-  if (!name || name.trim().length < 1) {
-    temp.name = 'Full Name is required.';
-    valid = false;
-  }
-
-  if (!email || email.trim().length < 1) {
-    temp.email = 'Email is required.';
-    valid = false;
-  } else {
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    if (!emailRegex.test(email)) {
-      temp.email = 'Enter a valid email.';
+    if (!name || name.trim().length < 1) {
+      temp.name = 'Full Name is required.';
       valid = false;
     }
-  }
 
-  if (!address || address.trim().length < 1) {
-    temp.address = 'Address is required.';
-    valid = false;
-  }
+    if (!email || email.trim().length < 1) {
+      temp.email = 'Email is required.';
+      valid = false;
+    } else {
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!emailRegex.test(email)) {
+        temp.email = 'Enter a valid email.';
+        valid = false;
+      }
+    }
 
-  if (!password || password.length < 6) {
-    temp.password = 'Password must be at least 6 characters.';
-    valid = false;
-  }
-
-  if (!confirmPassword) {
-    temp.confirmPassword = 'Confirm your password.';
-    valid = false;
-  } else if (password !== confirmPassword) {
-    temp.confirmPassword = 'Passwords do not match.';
-    valid = false;
-  }
-
-  setErrors(temp);
-  setNameError(temp.name || '');
-  setEmailError(temp.email || '');
-  setAddressError(temp.address || '');
-  setPasswordError(temp.password || '');
-  setConfirmPasswordError(temp.confirmPassword || '');
-  return valid;
-};
-
-const validateStep2 = () => {
-  let temp = {};
-  let valid = true;
-
-  if (!aadharNumber || aadharNumber.length !== 12) {
-    temp.aadharNumber = 'Aadhar must be 12 digits.';
-    valid = false;
-  }
-
-  if (!mobileNumber || mobileNumber.length !== 10) {
-    temp.mobileNumber = 'Mobile must be 10 digits.';
-    valid = false;
-  } else if (!/^[6-9]/.test(mobileNumber)) {
-    temp.mobileNumber = 'Mobile must start with 6-9.';
-    valid = false;
-  }
-
-  if (panCardNumber) {
-    const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
-    if (!panRegex.test(panCardNumber)) {
-      temp.panCardNumber = 'Invalid PAN format.';
+    if (!address || address.trim().length < 1) {
+      temp.address = 'Address is required.';
       valid = false;
     }
-  }
 
-  setErrors(temp);
-  setAadharError(temp.aadharNumber || '');
-  setMobileError(temp.mobileNumber || '');
-  setPanCardError(temp.panCardNumber || '');
-  return valid;
-};
+    if (!password || password.length < 6) {
+      temp.password = 'Password must be at least 6 characters.';
+      valid = false;
+    }
+
+    if (!confirmPassword) {
+      temp.confirmPassword = 'Confirm your password.';
+      valid = false;
+    } else if (password !== confirmPassword) {
+      temp.confirmPassword = 'Passwords do not match.';
+      valid = false;
+    }
+
+    setErrors(temp);
+    setNameError(temp.name || '');
+    setEmailError(temp.email || '');
+    setAddressError(temp.address || '');
+    setPasswordError(temp.password || '');
+    setConfirmPasswordError(temp.confirmPassword || '');
+    return valid;
+  };
+
+  const validateStep2 = () => {
+    let temp = {};
+    let valid = true;
+
+    if (!aadharNumber || aadharNumber.length !== 12) {
+      temp.aadharNumber = 'Aadhar must be 12 digits.';
+      valid = false;
+    }
+
+    if (!mobileNumber || mobileNumber.length !== 10) {
+      temp.mobileNumber = 'Mobile must be 10 digits.';
+      valid = false;
+    } else if (!/^[6-9]/.test(mobileNumber)) {
+      temp.mobileNumber = 'Mobile must start with 6-9.';
+      valid = false;
+    }
+
+    if (panCardNumber) {
+      const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+      if (!panRegex.test(panCardNumber)) {
+        temp.panCardNumber = 'Invalid PAN format.';
+        valid = false;
+      }
+    }
+
+    setErrors(temp);
+    setAadharError(temp.aadharNumber || '');
+    setMobileError(temp.mobileNumber || '');
+    setPanCardError(temp.panCardNumber || '');
+    return valid;
+  };
 
   const handleNext = () => {
     if (currentStep === 1) {
@@ -314,24 +319,24 @@ const validateStep2 = () => {
   // Image picker
   const handleImagePicker = async action => {
     // Request permission if using camera on Android
-  if (action === 'camera' && Platform.OS === 'android') {
-    const hasPermission = await requestCameraPermission();
-    if (!hasPermission) {
-      Toast.show({
-        type: 'error',
-        text1: 'Camera permission is required.',
-      });
-      return;
+    if (action === 'camera' && Platform.OS === 'android') {
+      const hasPermission = await requestCameraPermission();
+      if (!hasPermission) {
+        Toast.show({
+          type: 'error',
+          text1: 'Camera permission is required.',
+        });
+        return;
+      }
     }
-  }
     const options =
       action === 'camera'
         ? {
-          mediaType: 'photo',
-          cameraType: 'front',
-          quality: 0.8,
-          saveToPhotos: true,
-        }
+            mediaType: 'photo',
+            cameraType: 'front',
+            quality: 0.8,
+            saveToPhotos: true,
+          }
         : { mediaType: 'photo', quality: 0.8 };
 
     const launch = action === 'camera' ? launchCamera : launchImageLibrary;
@@ -431,14 +436,12 @@ const validateStep2 = () => {
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>Full Name</Text>
         <View
-          style={[
-            styles.inputContainer,
-            nameError ? styles.inputError : {},
-          ]}>
+          style={[styles.inputContainer, nameError ? styles.inputError : {}]}
+        >
           <Ionicons
             name="person-outline"
             size={20}
-            color={nameError ? '#FF4444' : '#ff7900'}
+            color={nameError ? colors.error : GRADIENT_TEAL}
             style={styles.inputIcon}
           />
           <TextInput
@@ -455,14 +458,12 @@ const validateStep2 = () => {
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>Email Address</Text>
         <View
-          style={[
-            styles.inputContainer,
-            emailError ? styles.inputError : {},
-          ]}>
+          style={[styles.inputContainer, emailError ? styles.inputError : {}]}
+        >
           <Ionicons
             name="mail-outline"
             size={20}
-            color={emailError ? '#FF4444' : '#ff7900'}
+            color={emailError ? colors.error : GRADIENT_TEAL}
             style={styles.inputIcon}
           />
           <TextInput
@@ -474,22 +475,18 @@ const validateStep2 = () => {
             onChangeText={handleEmailChange}
           />
         </View>
-        {emailError ? (
-          <Text style={styles.errorText}>{emailError}</Text>
-        ) : null}
+        {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
       </View>
 
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>Address</Text>
         <View
-          style={[
-            styles.inputContainer,
-            addressError ? styles.inputError : {},
-          ]}>
+          style={[styles.inputContainer, addressError ? styles.inputError : {}]}
+        >
           <Ionicons
             name="location-outline"
             size={20}
-            color={addressError ? '#FF4444' : '#ff7900'}
+            color={addressError ? colors.error : GRADIENT_TEAL}
             style={styles.inputIcon}
           />
           <TextInput
@@ -511,11 +508,12 @@ const validateStep2 = () => {
           style={[
             styles.inputContainer,
             passwordError ? styles.inputError : {},
-          ]}>
+          ]}
+        >
           <Ionicons
             name="lock-closed-outline"
             size={20}
-            color={passwordError ? '#FF4444' : '#ff7900'}
+            color={passwordError ? colors.error : GRADIENT_TEAL}
             style={styles.inputIcon}
           />
           <TextInput
@@ -528,11 +526,12 @@ const validateStep2 = () => {
           />
           <TouchableOpacity
             onPress={() => setPasswordVisible(!passwordVisible)}
-            style={styles.eyeButton}>
+            style={styles.eyeButton}
+          >
             <Ionicons
               name={passwordVisible ? 'eye-off-outline' : 'eye-outline'}
               size={20}
-              color="#ff7900"
+              color={GRADIENT_TEAL}
             />
           </TouchableOpacity>
         </View>
@@ -547,11 +546,12 @@ const validateStep2 = () => {
           style={[
             styles.inputContainer,
             confirmPasswordError ? styles.inputError : {},
-          ]}>
+          ]}
+        >
           <Ionicons
             name="lock-closed-outline"
             size={20}
-            color={confirmPasswordError ? '#FF4444' : '#ff7900'}
+            color={confirmPasswordError ? colors.error : GRADIENT_TEAL}
             style={styles.inputIcon}
           />
           <TextInput
@@ -564,11 +564,12 @@ const validateStep2 = () => {
           />
           <TouchableOpacity
             onPress={() => setConfirmPasswordVisible(!confirmPasswordVisible)}
-            style={styles.eyeButton}>
+            style={styles.eyeButton}
+          >
             <Ionicons
               name={confirmPasswordVisible ? 'eye-off-outline' : 'eye-outline'}
               size={20}
-              color="#ff7900"
+              color={GRADIENT_TEAL}
             />
           </TouchableOpacity>
         </View>
@@ -593,16 +594,17 @@ const validateStep2 = () => {
             aadharNumber.length === 12 && !aadharError
               ? styles.inputSuccess
               : {},
-          ]}>
+          ]}
+        >
           <Ionicons
             name="id-card-outline"
             size={20}
             color={
               aadharError
-                ? '#FF4444'
+                ? colors.error
                 : aadharNumber.length === 12 && !aadharError
-                  ? '#28a745'
-                  : '#ff7900'
+                ? colors.success
+                : GRADIENT_TEAL
             }
             style={styles.inputIcon}
           />
@@ -616,7 +618,11 @@ const validateStep2 = () => {
             maxLength={12}
           />
           {aadharNumber.length === 12 && !aadharError && (
-            <Ionicons name="checkmark-circle" size={20} color="#28a745" />
+            <Ionicons
+              name="checkmark-circle"
+              size={20}
+              color={colors.success}
+            />
           )}
         </View>
         {aadharError ? (
@@ -633,16 +639,17 @@ const validateStep2 = () => {
             mobileNumber.length === 10 && !mobileError
               ? styles.inputSuccess
               : {},
-          ]}>
+          ]}
+        >
           <Ionicons
             name="call-outline"
             size={20}
             color={
               mobileError
-                ? '#FF4444'
+                ? colors.error
                 : mobileNumber.length === 10 && !mobileError
-                  ? '#28a745'
-                  : '#ff7900'
+                ? colors.success
+                : GRADIENT_TEAL
             }
             style={styles.inputIcon}
           />
@@ -656,7 +663,11 @@ const validateStep2 = () => {
             maxLength={10}
           />
           {mobileNumber.length === 10 && !mobileError && (
-            <Ionicons name="checkmark-circle" size={20} color="#28a745" />
+            <Ionicons
+              name="checkmark-circle"
+              size={20}
+              color={colors.success}
+            />
           )}
         </View>
         {mobileError ? (
@@ -673,16 +684,17 @@ const validateStep2 = () => {
             panCardNumber.length === 10 && !panCardError
               ? styles.inputSuccess
               : {},
-          ]}>
+          ]}
+        >
           <Ionicons
             name="card-outline"
             size={20}
             color={
               panCardError
-                ? '#FF4444'
+                ? colors.error
                 : panCardNumber.length === 10 && !panCardError
-                  ? '#28a745'
-                  : '#ff7900'
+                ? colors.success
+                : GRADIENT_TEAL
             }
             style={styles.inputIcon}
           />
@@ -696,7 +708,11 @@ const validateStep2 = () => {
             maxLength={10}
           />
           {panCardNumber.length === 10 && !panCardError && (
-            <Ionicons name="checkmark-circle" size={20} color="#28a745" />
+            <Ionicons
+              name="checkmark-circle"
+              size={20}
+              color={colors.success}
+            />
           )}
         </View>
         {panCardError ? (
@@ -716,7 +732,7 @@ const validateStep2 = () => {
             <Ionicons
               name={roleId === 0 ? 'radio-button-on' : 'radio-button-off'}
               size={20}
-              color={roleId === 0 ? '#ff6700' : '#999'}
+              color={roleId === 0 ? GRADIENT_TEAL : '#999'}
             />
             <Text
               style={[
@@ -731,17 +747,19 @@ const validateStep2 = () => {
               styles.roleOption,
               roleId === 1 && styles.roleOptionSelected,
             ]}
-            onPress={() => setRoleId(1)}>
+            onPress={() => setRoleId(1)}
+          >
             <Ionicons
               name={roleId === 1 ? 'radio-button-on' : 'radio-button-off'}
               size={20}
-              color={roleId === 1 ? '#ff6700' : '#999'}
+              color={roleId === 1 ? GRADIENT_TEAL : '#999'}
             />
             <Text
               style={[
                 styles.roleOptionText,
                 roleId === 1 && styles.roleOptionTextSelected,
-              ]}>
+              ]}
+            >
               Lender
             </Text>
           </TouchableOpacity>
@@ -750,17 +768,19 @@ const validateStep2 = () => {
               styles.roleOption,
               roleId === 2 && styles.roleOptionSelected,
             ]}
-            onPress={() => setRoleId(2)}>
+            onPress={() => setRoleId(2)}
+          >
             <Ionicons
               name={roleId === 2 ? 'radio-button-on' : 'radio-button-off'}
               size={20}
-              color={roleId === 2 ? '#ff6700' : '#999'}
+              color={roleId === 2 ? GRADIENT_TEAL : '#999'}
             />
             <Text
               style={[
                 styles.roleOptionText,
                 roleId === 2 && styles.roleOptionTextSelected,
-              ]}>
+              ]}
+            >
               Borrower
             </Text>
           </TouchableOpacity>
@@ -772,30 +792,39 @@ const validateStep2 = () => {
   const renderStep3 = () => (
     <>
       <View style={styles.iconCircle}>
-        <Ionicons name="shield-checkmark-outline" size={m(50)} color="#ff6700" />
+        <Ionicons
+          name="shield-checkmark-outline"
+          size={m(50)}
+          color={GRADIENT_TEAL}
+        />
       </View>
 
       <Text style={styles.title}>Create Your Security PIN</Text>
 
       <View style={styles.warningBox}>
-        <Ionicons name="information-circle-outline" size={m(24)} color="#ff7900" />
+        <Ionicons
+          name="information-circle-outline"
+          size={m(24)}
+          color={GRADIENT_TEAL}
+        />
         <Text style={styles.warningText}>
-          This PIN will be required whenever you accept a loan or perform important actions.
+          This PIN will be required whenever you accept a loan or perform
+          important actions.
         </Text>
       </View>
 
       <Text style={styles.inputLabel}>Enter 4-Digit PIN</Text>
       <View style={styles.pinContainer}>
-        {[0, 1, 2, 3].map((index) => (
+        {[0, 1, 2, 3].map(index => (
           <TextInput
             key={`pin-${index}`}
-            ref={(ref) => {
+            ref={ref => {
               pinInputs.current[index] = ref;
             }}
             style={[styles.pinInput, pin[index] && styles.pinInputFilled]}
             value={pin[index]}
-            onChangeText={(text) => handlePinChange(text, index)}
-            onKeyPress={(e) => handlePinKeyPress(e, index)}
+            onChangeText={text => handlePinChange(text, index)}
+            onKeyPress={e => handlePinKeyPress(e, index)}
             keyboardType="number-pad"
             maxLength={1}
             secureTextEntry={!showPin}
@@ -806,16 +835,19 @@ const validateStep2 = () => {
 
       <Text style={[styles.inputLabel, styles.confirmLabel]}>Confirm PIN</Text>
       <View style={styles.pinContainer}>
-        {[0, 1, 2, 3].map((index) => (
+        {[0, 1, 2, 3].map(index => (
           <TextInput
             key={`confirm-${index}`}
-            ref={(ref) => {
+            ref={ref => {
               confirmPinInputs.current[index] = ref;
             }}
-            style={[styles.pinInput, confirmPin[index] && styles.pinInputFilled]}
+            style={[
+              styles.pinInput,
+              confirmPin[index] && styles.pinInputFilled,
+            ]}
             value={confirmPin[index]}
-            onChangeText={(text) => handleConfirmPinChange(text, index)}
-            onKeyPress={(e) => handleConfirmPinKeyPress(e, index)}
+            onChangeText={text => handleConfirmPinChange(text, index)}
+            onKeyPress={e => handleConfirmPinKeyPress(e, index)}
             keyboardType="number-pad"
             maxLength={1}
             secureTextEntry={!showPin}
@@ -826,11 +858,12 @@ const validateStep2 = () => {
 
       <TouchableOpacity
         style={styles.showPinButton}
-        onPress={() => setShowPin(!showPin)}>
+        onPress={() => setShowPin(!showPin)}
+      >
         <Ionicons
           name={showPin ? 'eye-off-outline' : 'eye-outline'}
           size={20}
-          color="#ff7900"
+          color={GRADIENT_TEAL}
         />
         <Text style={styles.showPinText}>
           {showPin ? 'Hide PIN' : 'Show PIN'}
@@ -839,7 +872,7 @@ const validateStep2 = () => {
 
       {pinError ? (
         <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle" size={18} color="#FF4444" />
+          <Ionicons name="alert-circle" size={18} color={colors.error} />
           <Text style={styles.pinErrorText}>{pinError}</Text>
         </View>
       ) : null}
@@ -847,19 +880,23 @@ const validateStep2 = () => {
       <View style={styles.tipsContainer}>
         <Text style={styles.tipsTitle}>PIN Security Tips:</Text>
         <View style={styles.tipItem}>
-          <Ionicons name="checkmark-circle" size={16} color="#28a745" />
+          <Ionicons name="checkmark-circle" size={16} color={colors.success} />
           <Text style={styles.tipText}>Never share your PIN with anyone</Text>
         </View>
         <View style={styles.tipItem}>
-          <Ionicons name="checkmark-circle" size={16} color="#28a745" />
-          <Text style={styles.tipText}>Avoid using 1234, 0000, or birth year</Text>
+          <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+          <Text style={styles.tipText}>
+            Avoid using 1234, 0000, or birth year
+          </Text>
         </View>
         <View style={styles.tipItem}>
-          <Ionicons name="checkmark-circle" size={16} color="#28a745" />
-          <Text style={styles.tipText}>Don't write it down or save in phone</Text>
+          <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+          <Text style={styles.tipText}>
+            Don't write it down or save in phone
+          </Text>
         </View>
         <View style={styles.tipItem}>
-          <Ionicons name="checkmark-circle" size={16} color="#28a745" />
+          <Ionicons name="checkmark-circle" size={16} color={colors.success} />
           <Text style={styles.tipText}>We will never ask for your PIN</Text>
         </View>
       </View>
@@ -883,7 +920,8 @@ const validateStep2 = () => {
               <TouchableOpacity
                 style={styles.removeImageButton}
                 onPress={() => setProfileImage(null)}
-                activeOpacity={0.7}>
+                activeOpacity={0.7}
+              >
                 <View style={styles.removeButtonInner}>
                   <Ionicons name="close" size={18} color="#FFFFFF" />
                 </View>
@@ -892,7 +930,7 @@ const validateStep2 = () => {
           ) : (
             <View style={styles.imagePlaceholder}>
               <View style={styles.placeholderIconContainer}>
-                <Ionicons name="camera" size={m(40)} color="#ff7900" />
+                <Ionicons name="camera" size={m(40)} color={GRADIENT_TEAL} />
               </View>
               <Text style={styles.imagePlaceholderText}>
                 No profile picture
@@ -909,9 +947,14 @@ const validateStep2 = () => {
           <TouchableOpacity
             style={styles.imagePickerButton}
             onPress={() => handleImagePicker('gallery')}
-            activeOpacity={0.7}>
+            activeOpacity={0.7}
+          >
             <View style={styles.imagePickerButtonIcon}>
-              <Ionicons name="images-outline" size={m(22)} color="#ff6700" />
+              <Ionicons
+                name="images-outline"
+                size={m(22)}
+                color={GRADIENT_TEAL}
+              />
             </View>
             <Text style={styles.imagePickerButtonText}>Gallery</Text>
           </TouchableOpacity>
@@ -919,9 +962,14 @@ const validateStep2 = () => {
           <TouchableOpacity
             style={styles.imagePickerButton}
             onPress={() => handleImagePicker('camera')}
-            activeOpacity={0.7}>
+            activeOpacity={0.7}
+          >
             <View style={styles.imagePickerButtonIcon}>
-              <Ionicons name="camera-outline" size={m(22)} color="#ff6700" />
+              <Ionicons
+                name="camera-outline"
+                size={m(22)}
+                color={GRADIENT_TEAL}
+              />
             </View>
             <Text style={styles.imagePickerButtonText}>Camera</Text>
           </TouchableOpacity>
@@ -931,8 +979,13 @@ const validateStep2 = () => {
           <TouchableOpacity
             style={styles.changeImageButton}
             onPress={() => handleImagePicker('gallery')}
-            activeOpacity={0.7}>
-            <Ionicons name="refresh-outline" size={m(18)} color="#ff6700" />
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="refresh-outline"
+              size={m(18)}
+              color={GRADIENT_TEAL}
+            />
             <Text style={styles.changeImageButtonText}>Change Photo</Text>
           </TouchableOpacity>
         )}
@@ -941,7 +994,11 @@ const validateStep2 = () => {
       {/* Terms Agreement */}
       <View style={styles.termsContainer}>
         <View style={styles.termsIconContainer}>
-          <Ionicons name="checkmark-circle" size={m(20)} color="#28a745" />
+          <Ionicons
+            name="checkmark-circle"
+            size={m(20)}
+            color={colors.success}
+          />
         </View>
         <Text style={styles.termsText}>
           By creating an account, you agree to our{' '}
@@ -956,145 +1013,169 @@ const validateStep2 = () => {
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}>
-      <StatusBar barStyle="light-content" backgroundColor="#ff6700" />
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+    >
+      <StatusBar barStyle="light-content" backgroundColor={GRADIENT_INDIGO} />
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled">
-        <View style={styles.gradientHeader}>
-          <View style={styles.headerContent}>
-            <View style={styles.logoContainer}>
-              <Text style={styles.appName}>LoanHub</Text>
-            </View>
-            <Text style={styles.tagline}>Smart Loan Management</Text>
-          </View>
-        </View>
-
-        {/* Progress Indicator */}
-        <View style={styles.progressContainer}>
-          {[1, 2, 3, 4].map(step => (
-            <View key={step} style={styles.progressStepContainer}>
-              <View
-                style={[
-                  styles.progressStep,
-                  currentStep >= step && styles.progressStepActive,
-                ]}>
-                {currentStep > step ? (
-                  <Ionicons name="checkmark" size={16} color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.progressStepText}>{step}</Text>
-                )}
+      <LinearGradient
+        colors={[GRADIENT_INDIGO, GRADIENT_TEAL]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.gradientContainer}
+      >
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.gradientHeader}>
+            <View style={styles.headerContent}>
+              <View style={styles.logoContainer}>
+                <Text style={styles.appName}>LoanHub</Text>
               </View>
-              {step < totalSteps && (
+              <Text style={styles.tagline}>Smart Loan Management</Text>
+            </View>
+          </View>
+
+          {/* Progress Indicator */}
+          <View style={styles.progressContainer}>
+            {[1, 2, 3, 4].map(step => (
+              <View key={step} style={styles.progressStepContainer}>
                 <View
                   style={[
-                    styles.progressLine,
-                    currentStep > step && styles.progressLineActive,
+                    styles.progressStep,
+                    currentStep >= step && styles.progressStepActive,
                   ]}
-                />
+                >
+                  {currentStep > step ? (
+                    <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                  ) : (
+                    <Text style={styles.progressStepText}>{step}</Text>
+                  )}
+                </View>
+                {step < totalSteps && (
+                  <View
+                    style={[
+                      styles.progressLine,
+                      currentStep > step && styles.progressLineActive,
+                    ]}
+                  />
+                )}
+              </View>
+            ))}
+          </View>
+
+          {/* Form Card */}
+          <View style={styles.formCard}>
+            {currentStep === 1 && renderStep1()}
+            {currentStep === 2 && renderStep2()}
+            {currentStep === 3 && renderStep3()}
+            {currentStep === 4 && renderStep4()}
+
+            {/* Navigation Buttons */}
+            <View style={styles.navigationButtons}>
+              {currentStep > 1 && (
+                <TouchableOpacity
+                  style={[
+                    styles.backButton,
+                    isLoading && styles.backButtonDisabled,
+                  ]}
+                  onPress={handleBack}
+                  disabled={isLoading}
+                >
+                  <Ionicons
+                    name="arrow-back"
+                    size={20}
+                    color={isLoading ? '#999' : GRADIENT_TEAL}
+                  />
+                  <Text
+                    style={[
+                      styles.backButtonText,
+                      isLoading && styles.backButtonTextDisabled,
+                    ]}
+                  >
+                    Back
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {currentStep < totalSteps ? (
+                <TouchableOpacity
+                  style={styles.nextButton}
+                  onPress={handleNext}
+                  disabled={isLoading}
+                >
+                  <LinearGradient
+                    colors={[GRADIENT_INDIGO, GRADIENT_TEAL]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.nextButtonGradient}
+                  >
+                    <Text style={styles.nextButtonText}>Next</Text>
+                    <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+                  </LinearGradient>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={[
+                    styles.registerButtonContainer,
+                    isLoading && styles.registerButtonDisabled,
+                  ]}
+                  onPress={handleRegister}
+                  disabled={isLoading}
+                >
+                  <LinearGradient
+                    colors={[GRADIENT_INDIGO, GRADIENT_TEAL]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.registerButtonGradient}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Text style={styles.registerButtonText}>
+                          Please wait...
+                        </Text>
+                        <Ionicons
+                          name="hourglass-outline"
+                          size={20}
+                          color="#FFFFFF"
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <Text style={styles.registerButtonText}>
+                          Create Account
+                        </Text>
+                      </>
+                    )}
+                  </LinearGradient>
+                </TouchableOpacity>
               )}
             </View>
-          ))}
-        </View>
 
-        {/* Form Card */}
-        <View style={styles.formCard}>
-          {currentStep === 1 && renderStep1()}
-          {currentStep === 2 && renderStep2()}
-          {currentStep === 3 && renderStep3()}
-          {currentStep === 4 && renderStep4()}
-
-          {/* Navigation Buttons */}
-          <View style={styles.navigationButtons}>
-            {currentStep > 1 && (
-              <TouchableOpacity
-                style={[
-                  styles.backButton,
-                  isLoading && styles.backButtonDisabled,
-                ]}
-                onPress={handleBack}
-                disabled={isLoading}>
-                <Ionicons
-                  name="arrow-back"
-                  size={20}
-                  color={isLoading ? '#999' : '#ff6700'}
-                />
-                <Text
-                  style={[
-                    styles.backButtonText,
-                    isLoading && styles.backButtonTextDisabled,
-                  ]}>
-                  Back
-                </Text>
+            {/* Login Link */}
+            <View style={styles.loginContainer}>
+              <Text style={styles.loginText}>Already have an account? </Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                <Text style={styles.loginLink}>Sign In</Text>
               </TouchableOpacity>
-            )}
-
-            {currentStep < totalSteps ? (
-              <TouchableOpacity
-                style={styles.nextButton}
-                onPress={handleNext}
-                disabled={isLoading}>
-                <LinearGradient
-                  colors={['#ff6700', '#ff7900', '#ff8500']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.nextButtonGradient}>
-                  <Text style={styles.nextButtonText}>Next</Text>
-                  <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
-                </LinearGradient>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                style={[
-                  styles.registerButtonContainer,
-                  isLoading && styles.registerButtonDisabled,
-                ]}
-                onPress={handleRegister}
-                disabled={isLoading}>
-                <LinearGradient
-                  colors={['#ff6700', '#ff7900', '#ff8500']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.registerButtonGradient}>
-                  {isLoading ? (
-                    <>
-                      <Text style={styles.registerButtonText}>
-                        Please wait...
-                      </Text>
-                      <Ionicons name="hourglass-outline" size={20} color="#FFFFFF" />
-                    </>
-                  ) : (
-                    <>
-                      <Text style={styles.registerButtonText}>
-                        Create Account
-                      </Text>
-                    </>
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
-            )}
+            </View>
           </View>
 
-          {/* Login Link */}
-          <View style={styles.loginContainer}>
-            <Text style={styles.loginText}>Already have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.loginLink}>Sign In</Text>
-            </TouchableOpacity>
+          {/* Security Info */}
+          <View style={styles.securityInfo}>
+            <Ionicons
+              name="shield-checkmark-outline"
+              size={20}
+              color={GRADIENT_TEAL}
+            />
+            <Text style={styles.securityText}>
+              Your data is secured with bank-level encryption
+            </Text>
           </View>
-        </View>
-
-        {/* Security Info */}
-        <View style={styles.securityInfo}>
-          <Ionicons name="shield-checkmark-outline" size={20} color="#ff7900" />
-          <Text style={styles.securityText}>
-            Your data is secured with bank-level encryption
-          </Text>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </LinearGradient>
     </KeyboardAvoidingView>
   );
 }
@@ -1102,7 +1183,9 @@ const validateStep2 = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ff6700',
+  },
+  gradientContainer: {
+    flex: 1,
   },
   gradientHeader: {
     paddingTop: Platform.OS === 'ios' ? m(50) : m(38),
@@ -1119,7 +1202,7 @@ const styles = StyleSheet.create({
   },
   appName: {
     fontSize: FontSizes['4xl'],
-    fontFamily: FontFamily.secondaryBold,
+    fontFamily: FontFamily.primaryBold,
     color: 'white',
     textShadowColor: 'rgba(0, 0, 0, 0.2)',
     textShadowOffset: { width: 1, height: 1 },
@@ -1127,21 +1210,21 @@ const styles = StyleSheet.create({
   },
   tagline: {
     fontSize: FontSizes.md,
-    fontFamily: FontFamily.secondaryRegular,
+    fontFamily: FontFamily.bodyRegular,
     color: 'white',
     textAlign: 'center',
     fontStyle: 'italic',
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#ff6700',
+    backgroundColor: 'transparent',
   },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: m(20),
     paddingTop: m(10),
     paddingBottom: m(100),
-    backgroundColor: '#ff6700',
+    backgroundColor: 'transparent',
   },
   progressContainer: {
     flexDirection: 'row',
@@ -1166,8 +1249,8 @@ const styles = StyleSheet.create({
     borderColor: '#D1D5DB',
   },
   progressStepActive: {
-    backgroundColor: '#ff6700',
-    borderColor: '#ff6700',
+    backgroundColor: GRADIENT_TEAL,
+    borderColor: GRADIENT_TEAL,
   },
   progressStepText: {
     fontSize: FontSizes.md,
@@ -1181,7 +1264,7 @@ const styles = StyleSheet.create({
     marginHorizontal: m(4),
   },
   progressLineActive: {
-    backgroundColor: '#ff6700',
+    backgroundColor: GRADIENT_TEAL,
   },
   formCard: {
     backgroundColor: '#FFFFFF',
@@ -1190,23 +1273,23 @@ const styles = StyleSheet.create({
     marginTop: m(20),
     marginBottom: m(20),
     borderWidth: 1,
-    borderColor: '#FFEDD5',
+    borderColor: colors.navyBorder,
     elevation: 8,
-    shadowColor: '#ff6700',
+    shadowColor: GRADIENT_TEAL,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
   },
   stepTitle: {
     fontSize: FontSizes['2xl'],
-    fontFamily: FontFamily.secondaryBold,
+    fontFamily: FontFamily.primaryBold,
     color: '#333',
     marginBottom: m(4),
     textAlign: 'center',
   },
   stepSubtitle: {
     fontSize: FontSizes.base,
-    fontFamily: FontFamily.primaryRegular,
+    fontFamily: FontFamily.bodyRegular,
     color: '#666',
     marginBottom: m(24),
     textAlign: 'center',
@@ -1215,36 +1298,36 @@ const styles = StyleSheet.create({
     width: m(90),
     height: m(90),
     borderRadius: m(45),
-    backgroundColor: '#FFF9F0',
+    backgroundColor: colors.navyFaint,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
     borderWidth: 2,
-    borderColor: '#FFEDD5',
+    borderColor: colors.navyBorder,
     marginBottom: m(16),
   },
   title: {
     fontSize: FontSizes['2xl'],
-    fontFamily: FontFamily.secondaryBold,
+    fontFamily: FontFamily.primaryBold,
     color: '#333',
     textAlign: 'center',
     marginBottom: m(16),
   },
   warningBox: {
     flexDirection: 'row',
-    backgroundColor: '#FFF7ED',
+    backgroundColor: GRADIENT_SOFT,
     borderRadius: m(12),
     padding: m(12),
     marginBottom: m(24),
     borderWidth: 1,
-    borderColor: '#FFEDD5',
+    borderColor: colors.navyBorder,
     gap: m(8),
   },
   warningText: {
     flex: 1,
     fontSize: FontSizes.sm,
-    fontFamily: FontFamily.primaryRegular,
-    color: '#7C2D12',
+    fontFamily: FontFamily.bodyRegular,
+    color: colors.navyDark,
     lineHeight: m(18),
   },
   inputGroup: {
@@ -1259,18 +1342,18 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF9F0',
+    backgroundColor: colors.navyFaint,
     borderRadius: m(12),
     borderWidth: 1,
-    borderColor: '#FFEDD5',
+    borderColor: colors.navyBorder,
     paddingHorizontal: m(16),
     height: m(56),
   },
   inputError: {
-    borderColor: '#FF4444',
+    borderColor: colors.error,
   },
   inputSuccess: {
-    borderColor: '#28a745',
+    borderColor: colors.success,
   },
   inputIcon: {
     marginRight: m(12),
@@ -1278,7 +1361,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: FontSizes.md,
-    fontFamily: FontFamily.primaryRegular,
+    fontFamily: FontFamily.bodyRegular,
     color: '#333',
     padding: 0,
   },
@@ -1288,8 +1371,8 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: FontSizes.sm,
-    fontFamily: FontFamily.primaryRegular,
-    color: '#FF4444',
+    fontFamily: FontFamily.bodyRegular,
+    color: colors.error,
     marginTop: m(4),
     marginLeft: m(4),
   },
@@ -1304,10 +1387,10 @@ const styles = StyleSheet.create({
   pinInput: {
     flex: 1,
     height: m(60),
-    backgroundColor: '#FFF9F0',
+    backgroundColor: colors.navyFaint,
     borderRadius: m(12),
     borderWidth: 2,
-    borderColor: '#FFEDD5',
+    borderColor: colors.navyBorder,
     fontSize: FontSizes['2xl'],
     fontFamily: FontFamily.primarySemiBold,
     color: '#333',
@@ -1315,7 +1398,7 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   pinInputFilled: {
-    borderColor: '#28a745',
+    borderColor: colors.success,
     backgroundColor: '#F0FFF4',
   },
   showPinButton: {
@@ -1328,8 +1411,8 @@ const styles = StyleSheet.create({
   },
   showPinText: {
     fontSize: FontSizes.sm,
-    fontFamily: FontFamily.primaryMedium,
-    color: '#ff7900',
+    fontFamily: FontFamily.bodyMedium,
+    color: GRADIENT_TEAL,
   },
   errorContainer: {
     flexDirection: 'row',
@@ -1343,8 +1426,8 @@ const styles = StyleSheet.create({
   pinErrorText: {
     flex: 1,
     fontSize: FontSizes.sm,
-    fontFamily: FontFamily.primaryRegular,
-    color: '#FF4444',
+    fontFamily: FontFamily.bodyRegular,
+    color: colors.error,
   },
   tipsContainer: {
     backgroundColor: '#F0FDF4',
@@ -1366,15 +1449,15 @@ const styles = StyleSheet.create({
   },
   tipText: {
     fontSize: FontSizes.sm,
-    fontFamily: FontFamily.primaryRegular,
+    fontFamily: FontFamily.bodyRegular,
     color: '#14532D',
   },
   roleContainer: {
     flexDirection: 'row',
-    backgroundColor: '#FFF9F0',
+    backgroundColor: colors.navyFaint,
     borderRadius: m(12),
     borderWidth: 1,
-    borderColor: '#FFEDD5',
+    borderColor: colors.navyBorder,
     padding: m(8),
     gap: m(8),
   },
@@ -1390,17 +1473,17 @@ const styles = StyleSheet.create({
     gap: m(6),
   },
   roleOptionSelected: {
-    backgroundColor: '#FFF7ED',
+    backgroundColor: GRADIENT_SOFT,
     borderWidth: 1,
-    borderColor: '#ff6700',
+    borderColor: GRADIENT_TEAL,
   },
   roleOptionText: {
     fontSize: FontSizes.base,
-    fontFamily: FontFamily.primaryMedium,
+    fontFamily: FontFamily.bodyMedium,
     color: '#666',
   },
   roleOptionTextSelected: {
-    color: '#ff6700',
+    color: GRADIENT_TEAL,
     fontFamily: FontFamily.primarySemiBold,
   },
   imagePickerContainer: {
@@ -1422,7 +1505,7 @@ const styles = StyleSheet.create({
     height: m(160),
     borderRadius: m(80),
     borderWidth: 4,
-    borderColor: '#ff6700',
+    borderColor: GRADIENT_TEAL,
     backgroundColor: '#F5F5F5',
   },
   removeImageButton: {
@@ -1435,7 +1518,7 @@ const styles = StyleSheet.create({
     width: m(32),
     height: m(32),
     borderRadius: m(16),
-    backgroundColor: '#FF4444',
+    backgroundColor: colors.error,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 4,
@@ -1448,9 +1531,9 @@ const styles = StyleSheet.create({
     width: m(160),
     height: m(160),
     borderRadius: m(80),
-    backgroundColor: '#FFF9F0',
+    backgroundColor: colors.navyFaint,
     borderWidth: 3,
-    borderColor: '#FFEDD5',
+    borderColor: colors.navyBorder,
     borderStyle: 'dashed',
     justifyContent: 'center',
     alignItems: 'center',
@@ -1460,7 +1543,7 @@ const styles = StyleSheet.create({
     width: m(60),
     height: m(60),
     borderRadius: m(30),
-    backgroundColor: '#FFEDD5',
+    backgroundColor: colors.navyBorder,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: m(12),
@@ -1474,7 +1557,7 @@ const styles = StyleSheet.create({
   },
   imagePlaceholderSubtext: {
     fontSize: FontSizes.sm,
-    fontFamily: FontFamily.primaryRegular,
+    fontFamily: FontFamily.bodyRegular,
     color: '#999',
     marginTop: m(4),
     textAlign: 'center',
@@ -1492,17 +1575,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: m(18),
     paddingHorizontal: m(12),
-    backgroundColor: '#FFF9F0',
+    backgroundColor: colors.navyFaint,
     borderRadius: m(12),
     borderWidth: 2,
-    borderColor: '#FFEDD5',
+    borderColor: colors.navyBorder,
     minHeight: m(100),
   },
   imagePickerButtonIcon: {
     width: m(48),
     height: m(48),
     borderRadius: m(24),
-    backgroundColor: '#FFEDD5',
+    backgroundColor: colors.navyBorder,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: m(8),
@@ -1510,7 +1593,7 @@ const styles = StyleSheet.create({
   imagePickerButtonText: {
     fontSize: FontSizes.base,
     fontFamily: FontFamily.primarySemiBold,
-    color: '#ff6700',
+    color: GRADIENT_TEAL,
     textAlign: 'center',
   },
   changeImageButton: {
@@ -1522,24 +1605,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: m(8),
     borderWidth: 1,
-    borderColor: '#ff6700',
+    borderColor: GRADIENT_TEAL,
     gap: m(8),
     alignSelf: 'center',
   },
   changeImageButtonText: {
     fontSize: FontSizes.base,
     fontFamily: FontFamily.primarySemiBold,
-    color: '#ff6700',
+    color: GRADIENT_TEAL,
   },
   termsContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: m(24),
     padding: m(16),
-    backgroundColor: '#FFF7ED',
+    backgroundColor: GRADIENT_SOFT,
     borderRadius: m(12),
     borderWidth: 1,
-    borderColor: '#FFEDD5',
+    borderColor: colors.navyBorder,
   },
   termsIconContainer: {
     marginRight: m(12),
@@ -1548,13 +1631,13 @@ const styles = StyleSheet.create({
   termsText: {
     flex: 1,
     fontSize: FontSizes.sm,
-    fontFamily: FontFamily.primaryRegular,
-    color: '#7C2D12',
+    fontFamily: FontFamily.bodyRegular,
+    color: colors.navyDark,
     lineHeight: m(18),
   },
   termsLink: {
     fontFamily: FontFamily.primarySemiBold,
-    color: '#C2410C',
+    color: GRADIENT_TEAL,
   },
   navigationButtons: {
     flexDirection: 'row',
@@ -1570,7 +1653,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: m(12),
     borderWidth: 1,
-    borderColor: '#ff6700',
+    borderColor: GRADIENT_TEAL,
     gap: m(8),
   },
   backButtonDisabled: {
@@ -1580,7 +1663,7 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: FontSizes.md,
     fontFamily: FontFamily.primarySemiBold,
-    color: '#ff6700',
+    color: GRADIENT_TEAL,
   },
   backButtonTextDisabled: {
     color: '#999',
@@ -1589,7 +1672,7 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: m(12),
     overflow: 'hidden',
-    shadowColor: '#ff6700',
+    shadowColor: GRADIENT_TEAL,
   },
   nextButtonGradient: {
     flexDirection: 'row',
@@ -1612,7 +1695,7 @@ const styles = StyleSheet.create({
     borderRadius: m(12),
     overflow: 'hidden',
     elevation: 4,
-    shadowColor: '#ff6700',
+    shadowColor: GRADIENT_TEAL,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
@@ -1644,13 +1727,13 @@ const styles = StyleSheet.create({
   },
   loginText: {
     fontSize: FontSizes.base,
-    fontFamily: FontFamily.primaryRegular,
+    fontFamily: FontFamily.bodyRegular,
     color: '#666',
   },
   loginLink: {
     fontSize: FontSizes.base,
     fontFamily: FontFamily.primarySemiBold,
-    color: '#ff6700',
+    color: GRADIENT_TEAL,
   },
   securityInfo: {
     flexDirection: 'row',
@@ -1661,12 +1744,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: m(12),
     borderWidth: 1,
-    borderColor: '#FFEDD5',
+    borderColor: colors.navyBorder,
     marginBottom: m(20),
   },
   securityText: {
     fontSize: FontSizes.sm,
-    fontFamily: FontFamily.primaryRegular,
+    fontFamily: FontFamily.bodyRegular,
     color: '#666',
   },
 });

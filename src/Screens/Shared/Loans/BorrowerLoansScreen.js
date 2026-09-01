@@ -8,42 +8,59 @@ import {
   Image,
   Animated,
   RefreshControl,
+  StatusBar,
+  Platform,
 } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import moment from 'moment';
 import { m } from 'walstar-rn-responsive';
-import Header from '../../../Components/Header';
 import BorrowerReputationCard from '../../../Components/BorrowerReputationCard';
-import { FontFamily } from '../../../constants';
+import { colors, FontFamily } from '../../../constants';
 
 const ORANGE_THEME = {
-  primary: '#111827',
-  primaryLight: '#F1FAF7',
-  primaryDark: '#0F172A',
-  secondary: '#B7EDF4',
-  accent: '#D7F2C1',
-  background: '#F2FAF6',
-  card: '#FFFFFF',
-  text: '#111827',
-  textLight: '#6B7280',
-  border: '#DCEFEA',
-  success: '#10B981',
-  warning: '#F59E0B',
-  error: '#EF4444',
-  info: '#1B6E8C',
-  sky: '#B7EDF4',
-  mint: '#D7F2C1',
-  ink: '#111827',
+  primary: colors.navy,
+  primaryLight: colors.navyTint,
+  primaryDark: colors.navyDark,
+  secondary: colors.skySoft,
+  accent: colors.butter,
+  background: colors.offWhite,
+  card: colors.white,
+  text: colors.ink,
+  textLight: colors.textSecondary,
+  border: '#E2DED4',
+  success: colors.success,
+  warning: colors.goldDark,
+  error: colors.error,
+  info: colors.skyText,
+  sky: colors.sky,
+  mint: colors.mint,
+  ink: colors.navyDark,
 };
+
+const HEADER_TOP_PADDING =
+  Platform.OS === 'android'
+    ? (StatusBar.currentHeight || m(24)) + m(16)
+    : m(50);
 
 const LoanCard = ({ loan, onPress, index = 0 }) => {
   const [scaleAnim] = useState(new Animated.Value(1));
 
-  const loanAmount = typeof loan.amount === 'number' ? loan.amount : parseFloat(loan.amount) || 0;
-  const totalPaid = typeof loan.totalPaid === 'number' ? loan.totalPaid : parseFloat(loan.totalPaid) || 0;
-  const remainingAmount = typeof loan.remainingAmount === 'number' ? loan.remainingAmount : parseFloat(loan.remainingAmount) || loanAmount;
+  const loanAmount =
+    typeof loan.amount === 'number'
+      ? loan.amount
+      : parseFloat(loan.amount) || 0;
+  const totalPaid =
+    typeof loan.totalPaid === 'number'
+      ? loan.totalPaid
+      : parseFloat(loan.totalPaid) || 0;
+  const remainingAmount =
+    typeof loan.remainingAmount === 'number'
+      ? loan.remainingAmount
+      : parseFloat(loan.remainingAmount) || loanAmount;
   const isLoanClosed = remainingAmount <= 0 && totalPaid > 0;
-  const isOverdue = loan.loanEndDate &&
+  const isOverdue =
+    loan.loanEndDate &&
     moment(loan.loanEndDate).isBefore(moment(), 'day') &&
     remainingAmount > 0 &&
     !isLoanClosed;
@@ -51,10 +68,10 @@ const LoanCard = ({ loan, onPress, index = 0 }) => {
   const effectiveStatus = isOverdue
     ? 'overdue'
     : isLoanClosed
-      ? 'closed'
-      : loan?.paymentStatus || loan?.status || 'pending';
+    ? 'closed'
+    : loan?.paymentStatus || loan?.status || 'pending';
 
-  const getStatusColor = (status) => {
+  const getStatusColor = status => {
     switch (status?.toLowerCase()) {
       case 'paid':
         return ORANGE_THEME.success;
@@ -102,14 +119,15 @@ const LoanCard = ({ loan, onPress, index = 0 }) => {
     }).start();
   };
 
-  const formatCurrency = (amount) => {
-    const numAmount = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
+  const formatCurrency = amount => {
+    const numAmount =
+      typeof amount === 'number' ? amount : parseFloat(amount) || 0;
     return `₹${numAmount.toLocaleString('en-IN')}`;
   };
 
   const paymentPercent = loanAmount > 0 ? (totalPaid / loanAmount) * 100 : 0;
   const statusColor = getStatusColor(effectiveStatus);
-  const cardTint = index % 2 === 0 ? ORANGE_THEME.sky : ORANGE_THEME.mint;
+  const cardTint = ORANGE_THEME.primaryDark;
 
   return (
     <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
@@ -146,7 +164,12 @@ const LoanCard = ({ loan, onPress, index = 0 }) => {
                 <View
                   style={[
                     styles.loanModeBadge,
-                    { backgroundColor: loan.loanMode === 'cash' ? ORANGE_THEME.success : ORANGE_THEME.info },
+                    {
+                      backgroundColor:
+                        loan.loanMode === 'cash'
+                          ? ORANGE_THEME.success
+                          : ORANGE_THEME.info,
+                    },
                   ]}
                 >
                   <Icon
@@ -154,17 +177,29 @@ const LoanCard = ({ loan, onPress, index = 0 }) => {
                     size={11}
                     color="#FFFFFF"
                   />
-                  <Text style={styles.loanModeText}>{loan.loanMode.toUpperCase()}</Text>
+                  <Text style={styles.loanModeText}>
+                    {loan.loanMode.toUpperCase()}
+                  </Text>
                 </View>
               )}
             </View>
           </View>
-          <View style={[styles.statusBadge, { backgroundColor: statusColor + '15' }]}>
-            <Icon name={getStatusIcon(effectiveStatus)} size={12} color={statusColor} />
+          <View
+            style={[
+              styles.statusBadge,
+              { backgroundColor: statusColor + '15' },
+            ]}
+          >
+            <Icon
+              name={getStatusIcon(effectiveStatus)}
+              size={12}
+              color={statusColor}
+            />
             <Text style={[styles.statusText, { color: statusColor }]}>
               {isLoanClosed && !isOverdue
                 ? 'Closed'
-                : effectiveStatus?.charAt(0).toUpperCase() + effectiveStatus?.slice(1) || 'Unknown'}
+                : effectiveStatus?.charAt(0).toUpperCase() +
+                    effectiveStatus?.slice(1) || 'Unknown'}
             </Text>
           </View>
         </View>
@@ -181,7 +216,9 @@ const LoanCard = ({ loan, onPress, index = 0 }) => {
               ]}
             />
           </View>
-          <Text style={styles.progressPercentText}>{paymentPercent.toFixed(0)}%</Text>
+          <Text style={styles.progressPercentText}>
+            {paymentPercent.toFixed(0)}%
+          </Text>
         </View>
         <View style={styles.progressLabels}>
           <Text style={[styles.progressLabel, { color: ORANGE_THEME.success }]}>
@@ -193,7 +230,9 @@ const LoanCard = ({ loan, onPress, index = 0 }) => {
               { color: isOverdue ? ORANGE_THEME.error : ORANGE_THEME.warning },
             ]}
           >
-            {isLoanClosed ? 'Settled' : `Due ${formatCurrency(remainingAmount)}`}
+            {isLoanClosed
+              ? 'Settled'
+              : `Due ${formatCurrency(remainingAmount)}`}
           </Text>
         </View>
 
@@ -220,11 +259,17 @@ const LoanCard = ({ loan, onPress, index = 0 }) => {
           <View style={styles.dateContainer}>
             <Icon name="event" size={11} color={ORANGE_THEME.textLight} />
             <Text style={styles.loanDate}>
-              {loan.loanStartDate ? moment(loan.loanStartDate).format('DD MMM YYYY') : 'Not started'}
+              {loan.loanStartDate
+                ? moment(loan.loanStartDate).format('DD MMM YYYY')
+                : 'Not started'}
             </Text>
           </View>
           <View style={styles.viewButton}>
-            <Icon name="chevron-right" size={18} color={ORANGE_THEME.textLight} />
+            <Icon
+              name="chevron-right"
+              size={18}
+              color={ORANGE_THEME.textLight}
+            />
           </View>
         </View>
       </TouchableOpacity>
@@ -245,11 +290,27 @@ export default function BorrowerLoansScreen({ route, navigation }) {
   if (!borrower || !loans || loans.length === 0) {
     return (
       <View style={styles.container}>
-        <Header
-          title="Borrower Loans"
-          showBackButton
-          headerStyle={{ backgroundColor: ORANGE_THEME.primary, height: m(72) }}
-        />
+        <StatusBar barStyle="light-content" backgroundColor={colors.navyDark} />
+        <LinearGradient
+          colors={[colors.navyDark, colors.navy]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.topHeader}
+        >
+          <TouchableOpacity
+            style={styles.headerBackButton}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.8}
+          >
+            <Icon name="chevron-left" size={24} color={colors.white} />
+          </TouchableOpacity>
+          <View style={styles.headerTextBlock}>
+            <Text style={styles.screenTitle}>Borrower Loans</Text>
+            <Text style={styles.screenSubtitle}>
+              Every loan issued to this borrower
+            </Text>
+          </View>
+        </LinearGradient>
         <View style={styles.errorContainer}>
           <View style={styles.emptyIconContainer}>
             <Icon name="error-outline" size={60} color={ORANGE_THEME.border} />
@@ -261,40 +322,70 @@ export default function BorrowerLoansScreen({ route, navigation }) {
   }
 
   const totalLoanAmount = loans.reduce((sum, loan) => {
-    const amount = typeof loan.amount === 'number' ? loan.amount : parseFloat(loan.amount) || 0;
+    const amount =
+      typeof loan.amount === 'number'
+        ? loan.amount
+        : parseFloat(loan.amount) || 0;
     return sum + amount;
   }, 0);
 
   const totalPaid = loans.reduce((sum, loan) => {
-    const paid = typeof loan.totalPaid === 'number' ? loan.totalPaid : parseFloat(loan.totalPaid) || 0;
+    const paid =
+      typeof loan.totalPaid === 'number'
+        ? loan.totalPaid
+        : parseFloat(loan.totalPaid) || 0;
     return sum + paid;
   }, 0);
 
   const totalRemaining = loans.reduce((sum, loan) => {
-    const remaining = typeof loan.remainingAmount === 'number' ? loan.remainingAmount : parseFloat(loan.remainingAmount) || 0;
+    const remaining =
+      typeof loan.remainingAmount === 'number'
+        ? loan.remainingAmount
+        : parseFloat(loan.remainingAmount) || 0;
     return sum + remaining;
   }, 0);
 
   const overdueCount = loans.filter(loan => {
-    const remaining = typeof loan.remainingAmount === 'number' ? loan.remainingAmount : parseFloat(loan.remainingAmount) || 0;
-    return loan.loanEndDate &&
+    const remaining =
+      typeof loan.remainingAmount === 'number'
+        ? loan.remainingAmount
+        : parseFloat(loan.remainingAmount) || 0;
+    return (
+      loan.loanEndDate &&
       moment(loan.loanEndDate).isBefore(moment(), 'day') &&
-      remaining > 0;
+      remaining > 0
+    );
   }).length;
 
   const aadhaarNumber = borrower.aadhaarNumber || borrower.aadharCardNo;
 
-  const formatCurrency = (amount) => {
+  const formatCurrency = amount => {
     return `₹${amount.toLocaleString('en-IN')}`;
   };
 
   return (
     <View style={styles.container}>
-      <Header
-        title="Borrower Loans"
-        showBackButton
-        headerStyle={{ backgroundColor: ORANGE_THEME.primary, height: m(72) }}
-      />
+      <StatusBar barStyle="light-content" backgroundColor={colors.navyDark} />
+      <LinearGradient
+        colors={[colors.navyDark, colors.navy]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.topHeader}
+      >
+        <TouchableOpacity
+          style={styles.headerBackButton}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.8}
+        >
+          <Icon name="chevron-left" size={24} color={colors.white} />
+        </TouchableOpacity>
+        <View style={styles.headerTextBlock}>
+          <Text style={styles.screenTitle}>Borrower Loans</Text>
+          <Text style={styles.screenSubtitle}>
+            Every loan issued to this borrower
+          </Text>
+        </View>
+      </LinearGradient>
 
       <ScrollView
         style={styles.scrollContainer}
@@ -313,7 +404,10 @@ export default function BorrowerLoansScreen({ route, navigation }) {
         <View style={styles.profileCard}>
           <View style={styles.profileHeader}>
             {borrower.profileImage ? (
-              <Image source={{ uri: borrower.profileImage }} style={styles.profileImage} />
+              <Image
+                source={{ uri: borrower.profileImage }}
+                style={styles.profileImage}
+              />
             ) : (
               <View style={styles.profileAvatar}>
                 <Text style={styles.avatarText}>
@@ -322,15 +416,21 @@ export default function BorrowerLoansScreen({ route, navigation }) {
               </View>
             )}
             <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{borrower.name || 'Unknown Borrower'}</Text>
+              <Text style={styles.profileName}>
+                {borrower.name || 'Unknown Borrower'}
+              </Text>
               <View style={styles.profileMeta}>
                 <View style={styles.metaItem}>
                   <Icon name="phone" size={14} color={ORANGE_THEME.textLight} />
-                  <Text style={styles.metaText}>{borrower.mobileNumber || borrower.mobileNo || 'N/A'}</Text>
+                  <Text style={styles.metaText}>
+                    {borrower.mobileNumber || borrower.mobileNo || 'N/A'}
+                  </Text>
                 </View>
                 <View style={styles.metaItem}>
                   <Icon name="badge" size={14} color={ORANGE_THEME.textLight} />
-                  <Text style={styles.metaText}>{borrower.aadhaarNumber || borrower.aadharCardNo || 'N/A'}</Text>
+                  <Text style={styles.metaText}>
+                    {borrower.aadhaarNumber || borrower.aadharCardNo || 'N/A'}
+                  </Text>
                 </View>
               </View>
             </View>
@@ -348,25 +448,32 @@ export default function BorrowerLoansScreen({ route, navigation }) {
               <View style={styles.reputationHeader}>
                 <View style={styles.reputationTitleContainer}>
                   <View style={styles.reputationIconContainer}>
-                    <Icon name="verified" size={24} color={ORANGE_THEME.primary} />
+                    <Icon name="shield" size={17} color={colors.skyText} />
                   </View>
                   <View>
-                    <Text style={styles.reputationTitle}>Credit Reputation</Text>
+                    <Text style={styles.reputationTitle}>
+                      Credit Reputation
+                    </Text>
                     <Text style={styles.reputationSubtitle}>
                       View reliability score & insights
                     </Text>
                   </View>
                 </View>
                 <Icon
-                  name={showReputation ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
+                  name={
+                    showReputation ? 'keyboard-arrow-up' : 'keyboard-arrow-down'
+                  }
                   size={28}
-                  color={ORANGE_THEME.primary}
+                  color={ORANGE_THEME.textLight}
                 />
               </View>
             </TouchableOpacity>
             {showReputation && (
               <View style={styles.reputationCardWrapper}>
-                <BorrowerReputationCard aadhaarNumber={aadhaarNumber} compact={false} />
+                <BorrowerReputationCard
+                  aadhaarNumber={aadhaarNumber}
+                  compact={false}
+                />
               </View>
             )}
           </View>
@@ -384,10 +491,16 @@ export default function BorrowerLoansScreen({ route, navigation }) {
           <View style={styles.amountSummary}>
             <View style={styles.amountSummaryCard}>
               <View style={styles.amountHeader}>
-                <Icon name="account-balance" size={18} color={ORANGE_THEME.info} />
+                <Icon
+                  name="account-balance"
+                  size={18}
+                  color={ORANGE_THEME.info}
+                />
                 <Text style={styles.amountLabel}>Total Given</Text>
               </View>
-              <Text style={[styles.amountValue, { color: ORANGE_THEME.info }]}>{formatCurrency(totalLoanAmount)}</Text>
+              <Text style={[styles.amountValue, { color: ORANGE_THEME.info }]}>
+                {formatCurrency(totalLoanAmount)}
+              </Text>
             </View>
 
             <View style={styles.amountSummaryCard}>
@@ -395,15 +508,25 @@ export default function BorrowerLoansScreen({ route, navigation }) {
                 <Icon name="payments" size={18} color={ORANGE_THEME.success} />
                 <Text style={styles.amountLabel}>Total Paid</Text>
               </View>
-              <Text style={[styles.amountValue, { color: ORANGE_THEME.success }]}>{formatCurrency(totalPaid)}</Text>
+              <Text
+                style={[styles.amountValue, { color: ORANGE_THEME.success }]}
+              >
+                {formatCurrency(totalPaid)}
+              </Text>
             </View>
 
             <View style={styles.amountSummaryCard}>
               <View style={styles.amountHeader}>
-                <Icon name="pending-actions" size={18} color={ORANGE_THEME.error} />
+                <Icon
+                  name="pending-actions"
+                  size={18}
+                  color={ORANGE_THEME.error}
+                />
                 <Text style={styles.amountLabel}>Remaining</Text>
               </View>
-              <Text style={[styles.amountValue, { color: ORANGE_THEME.error }]}>{formatCurrency(totalRemaining)}</Text>
+              <Text style={[styles.amountValue, { color: ORANGE_THEME.error }]}>
+                {formatCurrency(totalRemaining)}
+              </Text>
             </View>
 
             {overdueCount > 0 && (
@@ -429,10 +552,12 @@ export default function BorrowerLoansScreen({ route, navigation }) {
             key={loan._id || index}
             loan={loan}
             index={index}
-            onPress={() => navigation.navigate('PersonalLoan', {
-              loanDetails: loan,
-              isEdit: false,
-            })}
+            onPress={() =>
+              navigation.navigate('PersonalLoan', {
+                loanDetails: loan,
+                isEdit: false,
+              })
+            }
           />
         ))}
       </ScrollView>
@@ -443,13 +568,47 @@ export default function BorrowerLoansScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: ORANGE_THEME.background,
+    backgroundColor: colors.offWhite,
+  },
+  topHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: m(118),
+    paddingTop: HEADER_TOP_PADDING,
+    paddingHorizontal: m(18),
+    paddingBottom: m(18),
+    borderBottomLeftRadius: m(24),
+    borderBottomRightRadius: m(24),
+  },
+  headerBackButton: {
+    width: m(34),
+    height: m(34),
+    borderRadius: m(17),
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: m(12),
+  },
+  headerTextBlock: {
+    flex: 1,
+  },
+  screenTitle: {
+    fontSize: m(17),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
+  },
+  screenSubtitle: {
+    marginTop: m(2),
+    fontSize: m(10),
+    fontFamily: FontFamily.bodyMedium,
+    color: 'rgba(255, 255, 255, 0.82)',
   },
   scrollContainer: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: m(40),
+    paddingTop: m(16),
+    paddingBottom: m(28),
   },
   errorContainer: {
     flex: 1,
@@ -475,53 +634,53 @@ const styles = StyleSheet.create({
   profileCard: {
     backgroundColor: ORANGE_THEME.card,
     marginHorizontal: m(16),
-    marginTop: m(16),
-    marginBottom: m(16),
-    padding: m(20),
-    borderRadius: m(18),
+    marginBottom: m(12),
+    paddingVertical: m(15),
+    paddingHorizontal: m(16),
+    borderRadius: m(14),
     borderWidth: 1,
     borderColor: ORANGE_THEME.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.07,
-    shadowRadius: 12,
-    elevation: 3,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
   profileHeader: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   profileAvatar: {
-    width: m(60),
-    height: m(60),
-    borderRadius: m(30),
+    width: m(48),
+    height: m(48),
+    borderRadius: m(24),
     backgroundColor: ORANGE_THEME.ink,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: m(16),
+    marginRight: m(12),
   },
   avatarText: {
-    fontSize: m(24),
+    fontSize: m(18),
     fontFamily: FontFamily.primaryBold,
     color: '#FFFFFF',
   },
   profileImage: {
-    width: m(60),
-    height: m(60),
-    borderRadius: m(30),
-    marginRight: m(16),
+    width: m(46),
+    height: m(46),
+    borderRadius: m(23),
+    marginRight: m(12),
   },
   profileInfo: {
     flex: 1,
   },
   profileName: {
-    fontSize: m(18.5),
+    fontSize: m(15),
     fontFamily: FontFamily.primaryBold,
     color: ORANGE_THEME.text,
-    marginBottom: m(8),
+    marginBottom: m(5),
   },
   profileMeta: {
-    gap: m(6),
+    gap: m(3),
   },
   metaItem: {
     flexDirection: 'row',
@@ -529,7 +688,7 @@ const styles = StyleSheet.create({
     gap: m(6),
   },
   metaText: {
-    fontSize: m(14),
+    fontSize: m(10.5),
     color: ORANGE_THEME.textLight,
     fontFamily: FontFamily.primaryRegular,
   },
@@ -537,19 +696,19 @@ const styles = StyleSheet.create({
   reputationContainer: {
     backgroundColor: ORANGE_THEME.card,
     marginHorizontal: m(16),
-    marginBottom: m(16),
-    borderRadius: m(18),
+    marginBottom: m(12),
+    borderRadius: m(14),
     borderWidth: 1,
     borderColor: ORANGE_THEME.border,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
   reputationToggle: {
-    padding: m(20),
+    padding: m(14),
   },
   reputationHeader: {
     flexDirection: 'row',
@@ -559,43 +718,43 @@ const styles = StyleSheet.create({
   reputationTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(12),
+    gap: m(10),
   },
   reputationIconContainer: {
-    width: m(48),
-    height: m(48),
-    borderRadius: m(14),
-    backgroundColor: ORANGE_THEME.primaryLight,
+    width: m(34),
+    height: m(34),
+    borderRadius: m(10),
+    backgroundColor: colors.skySoft,
     justifyContent: 'center',
     alignItems: 'center',
   },
   reputationTitle: {
-    fontSize: m(17),
+    fontSize: m(12),
     fontFamily: FontFamily.primaryBold,
     color: ORANGE_THEME.text,
     marginBottom: m(2),
   },
   reputationSubtitle: {
-    fontSize: m(12),
+    fontSize: m(10),
     color: ORANGE_THEME.textLight,
     fontFamily: FontFamily.primaryRegular,
   },
   reputationCardWrapper: {
-    paddingHorizontal: m(16),
-    paddingBottom: m(16),
+    paddingHorizontal: m(12),
+    paddingBottom: m(12),
   },
   // Summary Section
   summaryContainer: {
     backgroundColor: ORANGE_THEME.card,
     marginHorizontal: m(16),
-    marginBottom: m(16),
-    padding: m(20),
-    borderRadius: m(18),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.07,
-    shadowRadius: 12,
-    elevation: 3,
+    marginBottom: m(14),
+    padding: m(12),
+    borderRadius: m(14),
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
     borderWidth: 1,
     borderColor: ORANGE_THEME.border,
   },
@@ -603,28 +762,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: m(10),
+    marginBottom: m(8),
   },
   summaryTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(10),
+    gap: m(8),
   },
   summaryTitle: {
-    fontSize: m(19),
+    fontSize: m(13),
     fontFamily: FontFamily.primaryBold,
     color: ORANGE_THEME.text,
   },
   amountSummary: {
-    backgroundColor: ORANGE_THEME.primaryLight,
-    borderRadius: m(16),
-    padding: m(16),
+    backgroundColor: '#F7F5EF',
+    borderRadius: m(10),
+    paddingHorizontal: m(10),
+    paddingVertical: m(8),
   },
   amountSummaryCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: m(12),
+    paddingVertical: m(6),
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2DED4',
   },
   amountHeader: {
     flexDirection: 'row',
@@ -632,12 +794,12 @@ const styles = StyleSheet.create({
     gap: m(8),
   },
   amountLabel: {
-    fontSize: m(14),
+    fontSize: m(12),
     color: ORANGE_THEME.textLight,
     fontFamily: FontFamily.primaryMedium,
   },
   amountValue: {
-    fontSize: m(16),
+    fontSize: m(14),
     fontFamily: FontFamily.primaryBold,
   },
   overdueSummaryCard: {
@@ -647,12 +809,12 @@ const styles = StyleSheet.create({
     gap: m(8),
     backgroundColor: ORANGE_THEME.error,
     borderRadius: m(10),
-    paddingVertical: m(10),
-    marginTop: m(4),
+    paddingVertical: m(8),
+    marginTop: m(2),
   },
   overdueSummaryText: {
     color: '#FFFFFF',
-    fontSize: m(13),
+    fontSize: m(12),
     fontFamily: FontFamily.primaryBold,
   },
   // Loans Header
@@ -661,37 +823,37 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: m(16),
-    marginTop: m(8),
-    marginBottom: m(6),
+    marginTop: m(4),
+    marginBottom: m(8),
   },
   loansTitle: {
-    fontSize: m(20),
+    fontSize: m(15),
     fontFamily: FontFamily.primaryBold,
     color: ORANGE_THEME.text,
   },
   loansCount: {
-    fontSize: m(14),
+    fontSize: m(12),
     color: '#FFFFFF',
     fontFamily: FontFamily.primarySemiBold,
-    backgroundColor: ORANGE_THEME.ink,
-    paddingHorizontal: m(12),
-    paddingVertical: m(4),
+    backgroundColor: colors.navyDark,
+    paddingHorizontal: m(10),
+    paddingVertical: m(3),
     borderRadius: m(12),
   },
   // Loan Card
   loanCard: {
     backgroundColor: ORANGE_THEME.card,
-    borderRadius: m(16),
-    padding: m(10),
+    borderRadius: m(12),
+    padding: m(12),
     paddingLeft: m(12),
-    marginHorizontal: m(14),
+    marginHorizontal: m(16),
     marginBottom: m(10),
     borderWidth: 1,
     borderLeftWidth: m(4),
     borderColor: ORANGE_THEME.border,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 3,
     overflow: 'hidden',
@@ -710,7 +872,7 @@ const styles = StyleSheet.create({
     marginLeft: m(-15),
     marginRight: m(-12),
     marginTop: m(-12),
-    marginBottom: m(8),
+    marginBottom: m(6),
     gap: m(5),
     borderBottomWidth: 1,
     borderBottomColor: ORANGE_THEME.error + '20',
@@ -731,14 +893,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: m(6),
+    marginBottom: m(5),
   },
   loanInfo: {
     flex: 1,
     marginRight: m(8),
   },
   loanAmount: {
-    fontSize: m(16),
+    fontSize: m(18),
     fontFamily: FontFamily.primaryBold,
     color: ORANGE_THEME.text,
     marginBottom: m(1),
@@ -809,7 +971,7 @@ const styles = StyleSheet.create({
   progressLabels: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: m(2),
+    marginTop: m(5),
   },
   progressLabel: {
     fontSize: m(10),
@@ -822,7 +984,7 @@ const styles = StyleSheet.create({
     paddingVertical: m(5),
     paddingHorizontal: m(8),
     gap: m(12),
-    marginTop: m(6),
+    marginTop: m(5),
   },
   detailItem: {
     flexDirection: 'row',
@@ -839,8 +1001,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: m(6),
-    paddingTop: m(6),
+    marginTop: m(8),
+    paddingTop: m(9),
     borderTopWidth: 1,
     borderTopColor: 'rgba(17, 24, 39, 0.12)',
   },
@@ -857,10 +1019,10 @@ const styles = StyleSheet.create({
   viewButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    backgroundColor: '#F1EFE8',
     borderRadius: m(18),
-    paddingHorizontal: m(10),
-    paddingVertical: m(6),
+    paddingHorizontal: m(8),
+    paddingVertical: m(5),
     gap: m(3),
     justifyContent: 'center',
   },

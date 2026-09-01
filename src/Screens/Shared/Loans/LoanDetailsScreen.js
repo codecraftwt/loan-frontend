@@ -16,7 +16,11 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import moment from 'moment';
 import { useDispatch, useSelector } from 'react-redux';
 import { updateLoanStatus } from '../../../Redux/Slices/loanSlice';
-import { getPendingPayments, confirmPayment, rejectPayment } from '../../../Redux/Slices/lenderPaymentSlice';
+import {
+  getPendingPayments,
+  confirmPayment,
+  rejectPayment,
+} from '../../../Redux/Slices/lenderPaymentSlice';
 import Toast from 'react-native-toast-message';
 import { m } from 'walstar-rn-responsive';
 import PromptBox from '../../PromptBox/Prompt';
@@ -26,24 +30,27 @@ import lenderLoanAPI from '../../../Services/lenderLoanService';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { baseurl } from '../../../Utils/API';
 import BorrowerReputationCard from '../../../Components/BorrowerReputationCard';
-import { FontFamily } from '../../../constants';
+import { colors, FontFamily } from '../../../constants';
 
 const DetailItem = ({ icon, label, value, isStatus, onStatusChange }) => {
   const isAccepted = value?.toLowerCase() === 'accepted';
-  
+
   return (
     <View style={styles.detailItem}>
       <View style={styles.detailIconContainer}>
-        <Icon name={icon} size={20} color="#3B82F6" />
+        <Icon name={icon} size={18} color={colors.skyText} />
       </View>
       <View style={styles.detailContent}>
         <Text style={styles.detailLabel}>{label}</Text>
-        <Text style={styles.detailValue}>{value}</Text>
+        <Text
+          style={styles.detailValue}
+          numberOfLines={label === 'Address' ? 3 : 2}
+        >
+          {value}
+        </Text>
       </View>
       {isStatus && value === 'pending' && isAccepted && (
-        <TouchableOpacity
-          style={styles.statusButton}
-          onPress={onStatusChange}>
+        <TouchableOpacity style={styles.statusButton} onPress={onStatusChange}>
           <Text style={styles.statusButtonText}>Mark as Paid</Text>
         </TouchableOpacity>
       )}
@@ -52,18 +59,27 @@ const DetailItem = ({ icon, label, value, isStatus, onStatusChange }) => {
 };
 
 export default function LoanDetailScreen({ route, navigation }) {
-  const { loanDetails: initialLoanDetails, loanId: routeLoanId, isEdit } = route.params || {};
+  const {
+    loanDetails: initialLoanDetails,
+    loanId: routeLoanId,
+    isEdit,
+  } = route.params || {};
   const dispatch = useDispatch();
   const { updateError } = useSelector(state => state.loans);
   const user = useSelector(state => state.auth.user);
-  const { pendingPayments, confirming, rejecting } = useSelector(state => state.lenderPayments);
+  const { pendingPayments, confirming, rejecting } = useSelector(
+    state => state.lenderPayments,
+  );
 
   const [isPromptVisible, setPromptVisible] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState(null);
   const [pendingPaymentsForLoan, setPendingPaymentsForLoan] = useState([]);
   const [loadingPendingPayments, setLoadingPendingPayments] = useState(false);
-  const [currentLoanDetails, setCurrentLoanDetails] = useState(initialLoanDetails);
-  const [loadingLoanDetails, setLoadingLoanDetails] = useState(!initialLoanDetails && !!routeLoanId);
+  const [currentLoanDetails, setCurrentLoanDetails] =
+    useState(initialLoanDetails);
+  const [loadingLoanDetails, setLoadingLoanDetails] = useState(
+    !initialLoanDetails && !!routeLoanId,
+  );
   const [loadError, setLoadError] = useState(null);
 
   // Resolved loan details: either from params or fetched by loanId
@@ -118,28 +134,21 @@ export default function LoanDetailScreen({ route, navigation }) {
     fetchByLoanId();
   }, [routeLoanId, initialLoanDetails]);
 
-  // Fetch loan details and check for pending confirmations
-  useFocusEffect(
-    useCallback(() => {
-      if (isLender && loanId) {
-        fetchLoanDetailsWithConfirmations();
-      }
-    }, [isLender, loanId])
-  );
-
   useEffect(() => {
     if (!isLender) return;
 
     // Helper function to check if payment has valid ID
-    const hasValidId = (payment) => payment?.paymentId || payment?._id || payment?.id;
+    const hasValidId = payment =>
+      payment?.paymentId || payment?._id || payment?.id;
 
     // PRIORITY 1: Check pendingPayments from Redux (has proper paymentId fields)
     if (pendingPayments && pendingPayments.length > 0) {
       const loanPendingPayments = pendingPayments.find(
-        loan => loan.loanId === loanId || loan._id === loanId
+        loan => loan.loanId === loanId || loan._id === loanId,
       );
       if (loanPendingPayments && loanPendingPayments.pendingPayments) {
-        const validPayments = loanPendingPayments.pendingPayments.filter(hasValidId);
+        const validPayments =
+          loanPendingPayments.pendingPayments.filter(hasValidId);
         if (validPayments.length > 0) {
           setPendingPaymentsForLoan(validPayments);
           return;
@@ -160,9 +169,14 @@ export default function LoanDetailScreen({ route, navigation }) {
     }
 
     // PRIORITY 3: Check paymentHistory for pending payments
-    if (loanDetails?.paymentHistory && Array.isArray(loanDetails.paymentHistory)) {
+    if (
+      loanDetails?.paymentHistory &&
+      Array.isArray(loanDetails.paymentHistory)
+    ) {
       const pendingFromHistory = loanDetails.paymentHistory.filter(
-        payment => payment.paymentStatus?.toLowerCase() === 'pending' && hasValidId(payment)
+        payment =>
+          payment.paymentStatus?.toLowerCase() === 'pending' &&
+          hasValidId(payment),
       );
       if (pendingFromHistory.length > 0) {
         setPendingPaymentsForLoan(pendingFromHistory);
@@ -184,23 +198,28 @@ export default function LoanDetailScreen({ route, navigation }) {
     setPendingPaymentsForLoan([]);
   }, [pendingPayments, currentLoanDetails, loanDetails, loanId, isLender]);
 
-  const fetchLoanDetailsWithConfirmations = async () => {
+  const fetchLoanDetailsWithConfirmations = useCallback(async () => {
     if (!isLender || !loanId) return;
 
     setLoadingPendingPayments(true);
     try {
       // PRIORITY 1: Try pending payments endpoint first (has proper paymentId fields)
       try {
-        const result = await dispatch(getPendingPayments({ page: 1, limit: 50 })).unwrap();
+        const result = await dispatch(
+          getPendingPayments({ page: 1, limit: 50 }),
+        ).unwrap();
         if (result.payments && result.payments.length > 0) {
           // Find payments for this loan
           const loanPending = result.payments.find(
-            loan => loan.loanId === loanId || loan._id === loanId
+            loan => loan.loanId === loanId || loan._id === loanId,
           );
-          if (loanPending?.pendingPayments && loanPending.pendingPayments.length > 0) {
+          if (
+            loanPending?.pendingPayments &&
+            loanPending.pendingPayments.length > 0
+          ) {
             // Verify payments have proper IDs before using
             const validPayments = loanPending.pendingPayments.filter(
-              p => p.paymentId || p._id || p.id
+              p => p.paymentId || p._id || p.id,
             );
             if (validPayments.length > 0) {
               setPendingPaymentsForLoan(validPayments);
@@ -211,7 +230,9 @@ export default function LoanDetailScreen({ route, navigation }) {
         }
       } catch (pendingError) {
         // This is expected - the endpoint returns 500, but Redux handles it gracefully
-        console.log('Pending payments endpoint failed, trying fallback strategies');
+        console.log(
+          'Pending payments endpoint failed, trying fallback strategies',
+        );
       }
 
       // PRIORITY 2: Try to fetch loan details from API (pendingConfirmations)
@@ -223,7 +244,7 @@ export default function LoanDetailScreen({ route, navigation }) {
             // Verify payments have proper IDs
             const payments = response.data.pendingConfirmations.payments;
             const validPayments = payments.filter(
-              p => p.paymentId || p._id || p.id
+              p => p.paymentId || p._id || p.id,
             );
             if (validPayments.length > 0) {
               setPendingPaymentsForLoan(validPayments);
@@ -238,10 +259,14 @@ export default function LoanDetailScreen({ route, navigation }) {
       }
 
       // PRIORITY 3: Check if loan object has paymentHistory with pending payments
-      if (loanDetails?.paymentHistory && Array.isArray(loanDetails.paymentHistory)) {
+      if (
+        loanDetails?.paymentHistory &&
+        Array.isArray(loanDetails.paymentHistory)
+      ) {
         const pendingFromHistory = loanDetails.paymentHistory.filter(
-          payment => payment.paymentStatus?.toLowerCase() === 'pending' && 
-                    (payment.paymentId || payment._id || payment.id)
+          payment =>
+            payment.paymentStatus?.toLowerCase() === 'pending' &&
+            (payment.paymentId || payment._id || payment.id),
         );
         if (pendingFromHistory.length > 0) {
           setPendingPaymentsForLoan(pendingFromHistory);
@@ -254,12 +279,15 @@ export default function LoanDetailScreen({ route, navigation }) {
       if (loanDetails?.pendingConfirmations?.payments) {
         const payments = loanDetails.pendingConfirmations.payments;
         const validPayments = payments.filter(
-          p => p.paymentId || p._id || p.id
+          p => p.paymentId || p._id || p.id,
         );
         if (validPayments.length > 0) {
           setPendingPaymentsForLoan(validPayments);
         } else {
-          console.warn('Pending payments found but none have valid IDs:', payments);
+          console.warn(
+            'Pending payments found but none have valid IDs:',
+            payments,
+          );
           setPendingPaymentsForLoan([]);
         }
       } else {
@@ -271,7 +299,7 @@ export default function LoanDetailScreen({ route, navigation }) {
       if (loanDetails?.pendingConfirmations?.payments) {
         const payments = loanDetails.pendingConfirmations.payments;
         const validPayments = payments.filter(
-          p => p.paymentId || p._id || p.id
+          p => p.paymentId || p._id || p.id,
         );
         setPendingPaymentsForLoan(validPayments);
       } else {
@@ -280,7 +308,16 @@ export default function LoanDetailScreen({ route, navigation }) {
     } finally {
       setLoadingPendingPayments(false);
     }
-  };
+  }, [dispatch, isLender, loanDetails, loanId]);
+
+  // Fetch loan details and check for pending confirmations
+  useFocusEffect(
+    useCallback(() => {
+      if (isLender && loanId) {
+        fetchLoanDetailsWithConfirmations();
+      }
+    }, [fetchLoanDetailsWithConfirmations, isLender, loanId]),
+  );
 
   const formatDate = date => moment(date).format('DD MMM, YYYY');
 
@@ -334,33 +371,37 @@ export default function LoanDetailScreen({ route, navigation }) {
     setPromptVisible(false);
   };
 
-  const formatCurrency = (amount) => {
-    const numAmount = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
+  const formatCurrency = amount => {
+    const numAmount =
+      typeof amount === 'number' ? amount : parseFloat(amount) || 0;
     return `₹${numAmount.toLocaleString('en-IN')}`;
   };
 
-  const getPaymentProofUrl = (paymentProof) => {
+  const getPaymentProofUrl = paymentProof => {
     if (!paymentProof) return null;
-    
+
     // If it's already a full URL (starts with http:// or https://), return as is
-    if (paymentProof.startsWith('http://') || paymentProof.startsWith('https://')) {
+    if (
+      paymentProof.startsWith('http://') ||
+      paymentProof.startsWith('https://')
+    ) {
       return paymentProof;
     }
-    
+
     // If it's a relative path, construct full URL
     let baseUrl = baseurl.replace('/api', '').replace(/\/$/, '');
-    
+
     // Handle payment proof path
     let proofPath = paymentProof;
     if (proofPath.startsWith('/')) {
       proofPath = proofPath.substring(1);
     }
-    
+
     const fullUrl = `${baseUrl}/${proofPath}`;
     return fullUrl;
   };
 
-  const handleViewProof = (paymentProof) => {
+  const handleViewProof = paymentProof => {
     const imageUrl = getPaymentProofUrl(paymentProof);
     if (imageUrl) {
       setSelectedImageUrl(imageUrl);
@@ -375,20 +416,22 @@ export default function LoanDetailScreen({ route, navigation }) {
     }
   };
 
-  const handlePaymentAction = (payment, type) => { 
+  const handlePaymentAction = (payment, type) => {
     // Ensure payment has an ID before proceeding
-    const extractedPaymentId = payment?.paymentId || payment?._id || payment?.id;
+    const extractedPaymentId =
+      payment?.paymentId || payment?._id || payment?.id;
     if (!extractedPaymentId) {
       console.error('No payment ID found in payment object:', payment);
       Toast.show({
         type: 'error',
         position: 'top',
         text1: 'Error',
-        text2: 'Unable to process payment - ID not found. Please refresh and try again.',
+        text2:
+          'Unable to process payment - ID not found. Please refresh and try again.',
       });
       return;
     }
-    
+
     setSelectedPayment(payment);
     setActionType(type);
     setActionModalVisible(true);
@@ -403,16 +446,19 @@ export default function LoanDetailScreen({ route, navigation }) {
     if (!selectedPayment || !loanDetails?._id) return;
 
     // Extract payment ID - check all possible field names
-    const paymentId = selectedPayment?.paymentId || 
-                     selectedPayment?._id ||
-                     selectedPayment?.id ||
-                     selectedPayment?.payment_id;
+    const paymentId =
+      selectedPayment?.paymentId ||
+      selectedPayment?._id ||
+      selectedPayment?.id ||
+      selectedPayment?.payment_id;
 
-    const loanId = loanDetails?._id || 
-                   loanDetails?.loanId;
-    
+    const loanId = loanDetails?._id || loanDetails?.loanId;
+
     if (!paymentId) {
-      console.error('Payment ID not found in payment object (LoanDetailsScreen):', JSON.stringify(selectedPayment, null, 2));
+      console.error(
+        'Payment ID not found in payment object (LoanDetailsScreen):',
+        JSON.stringify(selectedPayment, null, 2),
+      );
       Toast.show({
         type: 'error',
         position: 'top',
@@ -421,9 +467,12 @@ export default function LoanDetailScreen({ route, navigation }) {
       });
       return;
     }
-    
+
     if (!loanId) {
-      console.error('Loan ID not found in loan object (LoanDetailsScreen):', loanDetails);
+      console.error(
+        'Loan ID not found in loan object (LoanDetailsScreen):',
+        loanDetails,
+      );
       Toast.show({
         type: 'error',
         position: 'top',
@@ -439,14 +488,16 @@ export default function LoanDetailScreen({ route, navigation }) {
           loanId: loanId,
           paymentId: paymentId,
           notes: confirmNotes.trim(),
-        })
+        }),
       ).unwrap();
 
       Toast.show({
         type: 'success',
         position: 'top',
         text1: 'Payment Confirmed',
-        text2: `Payment of ${formatCurrency(selectedPayment.amount)} has been confirmed successfully.`,
+        text2: `Payment of ${formatCurrency(
+          selectedPayment.amount,
+        )} has been confirmed successfully.`,
       });
 
       setActionModalVisible(false);
@@ -457,19 +508,27 @@ export default function LoanDetailScreen({ route, navigation }) {
       await fetchLoanDetailsWithConfirmations();
 
       // Remove confirmed payment from local state
-      const confirmedPaymentId = selectedPayment.paymentId || selectedPayment._id || selectedPayment.id;
+      const confirmedPaymentId =
+        selectedPayment.paymentId || selectedPayment._id || selectedPayment.id;
       setPendingPaymentsForLoan(prev =>
-        prev.filter(p => (p.paymentId || p._id || p.id) !== confirmedPaymentId)
+        prev.filter(p => (p.paymentId || p._id || p.id) !== confirmedPaymentId),
       );
     } catch (error) {
-      const errorMessage = error?.response?.data?.message || error?.message || error || 'Failed to confirm payment';
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        error ||
+        'Failed to confirm payment';
       console.error('Confirm payment error:', errorMessage);
       console.error('Full error:', error);
       Toast.show({
         type: 'error',
         position: 'top',
         text1: 'Error',
-        text2: typeof errorMessage === 'string' ? errorMessage : 'Failed to confirm payment',
+        text2:
+          typeof errorMessage === 'string'
+            ? errorMessage
+            : 'Failed to confirm payment',
       });
     }
   };
@@ -486,17 +545,20 @@ export default function LoanDetailScreen({ route, navigation }) {
     }
 
     // Extract payment ID - check all possible field names
-    const paymentId = selectedPayment?.paymentId || 
-                     selectedPayment?._id ||
-                     selectedPayment?.id ||
-                     selectedPayment?.payment_id;
-    
+    const paymentId =
+      selectedPayment?.paymentId ||
+      selectedPayment?._id ||
+      selectedPayment?.id ||
+      selectedPayment?.payment_id;
+
     // Get loan ID - use _id from loanDetails
-    const loanId = loanDetails?._id || 
-                   loanDetails?.loanId;
-    
+    const loanId = loanDetails?._id || loanDetails?.loanId;
+
     if (!paymentId) {
-      console.error('Payment ID not found in payment object (LoanDetailsScreen reject):', JSON.stringify(selectedPayment, null, 2));
+      console.error(
+        'Payment ID not found in payment object (LoanDetailsScreen reject):',
+        JSON.stringify(selectedPayment, null, 2),
+      );
       Toast.show({
         type: 'error',
         position: 'top',
@@ -505,9 +567,12 @@ export default function LoanDetailScreen({ route, navigation }) {
       });
       return;
     }
-    
+
     if (!loanId) {
-      console.error('Loan ID not found in loan object (LoanDetailsScreen reject):', loanDetails);
+      console.error(
+        'Loan ID not found in loan object (LoanDetailsScreen reject):',
+        loanDetails,
+      );
       Toast.show({
         type: 'error',
         position: 'top',
@@ -523,14 +588,16 @@ export default function LoanDetailScreen({ route, navigation }) {
           loanId: loanId,
           paymentId: paymentId,
           reason: rejectReason.trim(),
-        })
+        }),
       ).unwrap();
 
       Toast.show({
         type: 'success',
         position: 'top',
         text1: 'Payment Rejected',
-        text2: `Payment of ${formatCurrency(selectedPayment.amount)} has been rejected.`,
+        text2: `Payment of ${formatCurrency(
+          selectedPayment.amount,
+        )} has been rejected.`,
       });
 
       setActionModalVisible(false);
@@ -541,45 +608,64 @@ export default function LoanDetailScreen({ route, navigation }) {
       await fetchLoanDetailsWithConfirmations();
 
       // Remove rejected payment from local state
-      const rejectedPaymentId = selectedPayment.paymentId || selectedPayment._id || selectedPayment.id;
+      const rejectedPaymentId =
+        selectedPayment.paymentId || selectedPayment._id || selectedPayment.id;
       setPendingPaymentsForLoan(prev =>
-        prev.filter(p => (p.paymentId || p._id || p.id) !== rejectedPaymentId)
+        prev.filter(p => (p.paymentId || p._id || p.id) !== rejectedPaymentId),
       );
     } catch (error) {
-      const errorMessage = error?.response?.data?.message || error?.message || error || 'Failed to reject payment';
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        error ||
+        'Failed to reject payment';
       console.error('Reject payment error:', errorMessage);
       console.error('Full error:', error);
       Toast.show({
         type: 'error',
         position: 'top',
         text1: 'Error',
-        text2: typeof errorMessage === 'string' ? errorMessage : 'Failed to reject payment',
+        text2:
+          typeof errorMessage === 'string'
+            ? errorMessage
+            : 'Failed to reject payment',
       });
     }
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = status => {
     switch (status?.toLowerCase()) {
-      case 'accepted': return '#10B981';
-      case 'rejected': return '#EF4444';
-      case 'pending': return '#F59E0B';
-      case 'paid': return '#10B981';
-      case 'closed': return '#10B981';
-      case 'part paid': return '#F59E0B';
-      case 'overdue': return '#EF4444';
-      default: return '#6B7280';
+      case 'accepted':
+      case 'paid':
+      case 'closed':
+        return colors.butter;
+      case 'rejected':
+      case 'overdue':
+        return colors.error;
+      case 'pending':
+      case 'part paid':
+        return colors.butter;
+      default:
+        return colors.textSecondary;
     }
   };
 
-  const getStatusIcon = (status) => {
+  const getStatusIcon = status => {
     switch (status?.toLowerCase()) {
-      case 'accepted': return 'check-circle';
-      case 'rejected': return 'x-circle';
-      case 'paid': return 'check-circle';
-      case 'closed': return 'check-circle';
-      case 'part paid': return 'clock';
-      case 'overdue': return 'alert-circle';
-      default: return 'clock';
+      case 'accepted':
+        return 'check-circle';
+      case 'rejected':
+        return 'x-circle';
+      case 'paid':
+        return 'check-circle';
+      case 'closed':
+        return 'check-circle';
+      case 'part paid':
+        return 'clock';
+      case 'overdue':
+        return 'alert-circle';
+      default:
+        return 'clock';
     }
   };
 
@@ -587,7 +673,11 @@ export default function LoanDetailScreen({ route, navigation }) {
   if (loadingLoanDetails || (!loanDetails && routeLoanId)) {
     return (
       <View style={styles.container}>
-        <Header title="Loan Details" showBackButton />
+        <Header
+          title="Loan Details"
+          showBackButton
+          titleStyle={styles.loanDetailsHeaderTitle}
+        />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#ff6700" />
           <Text style={styles.loadingText}>Loading loan details...</Text>
@@ -598,7 +688,11 @@ export default function LoanDetailScreen({ route, navigation }) {
   if (loadError) {
     return (
       <View style={styles.container}>
-        <Header title="Loan Details" showBackButton />
+        <Header
+          title="Loan Details"
+          showBackButton
+          titleStyle={styles.loanDetailsHeaderTitle}
+        />
         <View style={styles.loadingContainer}>
           <Icon name="alert-circle" size={48} color="#EF4444" />
           <Text style={styles.errorText}>{loadError}</Text>
@@ -615,7 +709,11 @@ export default function LoanDetailScreen({ route, navigation }) {
   if (!loanDetails) {
     return (
       <View style={styles.container}>
-        <Header title="Loan Details" showBackButton />
+        <Header
+          title="Loan Details"
+          showBackButton
+          titleStyle={styles.loanDetailsHeaderTitle}
+        />
         <View style={styles.loadingContainer}>
           <Text style={styles.errorText}>Loan details not available</Text>
           <TouchableOpacity
@@ -630,27 +728,40 @@ export default function LoanDetailScreen({ route, navigation }) {
   }
 
   // Calculate loan amounts
-  const loanAmount = typeof loanDetails.amount === 'number'
-    ? loanDetails.amount
-    : parseFloat(loanDetails.amount) || 0;
-  const totalPaid = typeof loanDetails.totalPaid === 'number'
-    ? loanDetails.totalPaid
-    : parseFloat(loanDetails.totalPaid) || 0;
-  const remainingAmount = typeof loanDetails.remainingAmount === 'number'
-    ? loanDetails.remainingAmount
-    : parseFloat(loanDetails.remainingAmount) || loanAmount;
+  const loanAmount =
+    typeof loanDetails.amount === 'number'
+      ? loanDetails.amount
+      : parseFloat(loanDetails.amount) || 0;
+  const totalPaid =
+    typeof loanDetails.totalPaid === 'number'
+      ? loanDetails.totalPaid
+      : parseFloat(loanDetails.totalPaid) || 0;
+  const remainingAmount =
+    typeof loanDetails.remainingAmount === 'number'
+      ? loanDetails.remainingAmount
+      : parseFloat(loanDetails.remainingAmount) || loanAmount;
 
   // Check if loan is closed
   const isLoanClosed = remainingAmount <= 0 && totalPaid > 0;
 
   // Check if loan is overdue
-  const isOverdue = loanDetails.loanEndDate &&
+  const isOverdue =
+    loanDetails.loanEndDate &&
     moment(loanDetails.loanEndDate).isBefore(moment(), 'day') &&
     remainingAmount > 0 &&
     !isLoanClosed;
 
   // Get effective status (overdue takes priority)
-  const effectiveStatus = isOverdue ? 'overdue' : (isLoanClosed ? 'closed' : (loanDetails.paymentStatus || loanDetails.status || 'pending'));
+  const effectiveStatus = isOverdue
+    ? 'overdue'
+    : isLoanClosed
+    ? 'closed'
+    : loanDetails.paymentStatus || loanDetails.status || 'pending';
+
+  const isAccepted =
+    loanDetails.borrowerAcceptanceStatus?.toLowerCase() === 'accepted';
+  const canMarkAsPaid =
+    isAccepted && loanDetails.status === 'pending' && !isLoanClosed;
 
   const loanInfo = [
     {
@@ -665,12 +776,18 @@ export default function LoanDetailScreen({ route, navigation }) {
     },
     {
       label: 'Remaining Amount',
-      value: isLoanClosed ? '₹0 (Loan Closed)' : formatCurrency(remainingAmount),
+      value: isLoanClosed
+        ? '₹0 (Loan Closed)'
+        : formatCurrency(remainingAmount),
       icon: 'dollar-sign',
     },
     {
       label: 'Loan Status',
-      value: isOverdue ? 'Overdue' : (isLoanClosed ? 'Closed' : (loanDetails.paymentStatus || loanDetails.status || 'N/A')),
+      value: isOverdue
+        ? 'Overdue'
+        : isLoanClosed
+        ? 'Closed'
+        : loanDetails.paymentStatus || loanDetails.status || 'N/A',
       icon: getStatusIcon(effectiveStatus),
       isStatus: !isLoanClosed && !isOverdue && canMarkAsPaid,
       onStatusChange: handleStatusChangeClick,
@@ -683,27 +800,28 @@ export default function LoanDetailScreen({ route, navigation }) {
     {
       label: 'Purpose',
       value: loanDetails.purpose || 'Not specified',
-      icon: 'book'
+      icon: 'book',
     },
     {
       label: 'Loan Start Date',
-      value: loanDetails.loanStartDate ? formatDate(loanDetails.loanStartDate) : 'N/A',
+      value: loanDetails.loanStartDate
+        ? formatDate(loanDetails.loanStartDate)
+        : 'N/A',
       icon: 'calendar',
     },
     {
       label: 'Loan End Date',
-      value: loanDetails.loanEndDate ? formatDate(loanDetails.loanEndDate) : 'N/A',
+      value: loanDetails.loanEndDate
+        ? formatDate(loanDetails.loanEndDate)
+        : 'N/A',
       icon: 'calendar',
     },
     {
       label: 'Address',
       value: loanDetails.address || 'Not specified',
-      icon: 'map-pin'
+      icon: 'map-pin',
     },
   ];
-
-  const isAccepted = loanDetails.borrowerAcceptanceStatus?.toLowerCase() === 'accepted';
-  const canMarkAsPaid = isAccepted && loanDetails.status === 'pending' && !isLoanClosed;
 
   return (
     <View style={styles.container}>
@@ -712,6 +830,7 @@ export default function LoanDetailScreen({ route, navigation }) {
         showBackButton
         isEdit={isEdit}
         onEditPress={handleEdit}
+        titleStyle={styles.loanDetailsHeaderTitle}
       />
 
       <ScrollView
@@ -746,7 +865,11 @@ export default function LoanDetailScreen({ route, navigation }) {
                   </Text>
                 </View>
                 <View style={styles.metaItem}>
-                  <FontAwesome name="id-card" color="black" size={14} />
+                  <FontAwesome
+                    name="id-card"
+                    color={colors.textSecondary}
+                    size={14}
+                  />
                   <Text style={styles.metaText}>
                     {loanDetails.aadhaarNumber || 'N/A'}
                   </Text>
@@ -758,10 +881,24 @@ export default function LoanDetailScreen({ route, navigation }) {
           {/* Status Indicators */}
           <View style={styles.statusContainer}>
             <View style={styles.statusItem}>
-              <View style={[styles.statusBadge, { backgroundColor: getStatusColor(effectiveStatus) }]}>
-                <Icon name={getStatusIcon(effectiveStatus)} size={14} color="#FFFFFF" />
+              <View
+                style={[
+                  styles.statusBadge,
+                  { backgroundColor: getStatusColor(effectiveStatus) },
+                ]}
+              >
+                <Icon
+                  name={getStatusIcon(effectiveStatus)}
+                  size={14}
+                  color={isOverdue ? colors.white : colors.ink}
+                />
                 <Text style={styles.statusText}>
-                  {isOverdue ? 'Overdue' : (isLoanClosed ? 'Loan Closed' : (loanDetails.status?.charAt(0).toUpperCase() + loanDetails.status?.slice(1)))}
+                  {isOverdue
+                    ? 'Overdue'
+                    : isLoanClosed
+                    ? 'Loan Closed'
+                    : loanDetails.status?.charAt(0).toUpperCase() +
+                      loanDetails.status?.slice(1)}
                 </Text>
               </View>
               <Text style={styles.statusLabel}>Loan Status</Text>
@@ -770,10 +907,22 @@ export default function LoanDetailScreen({ route, navigation }) {
             <View style={styles.statusDivider} />
 
             <View style={styles.statusItem}>
-              <View style={[styles.statusBadge, { backgroundColor: getStatusColor(loanDetails.borrowerAcceptanceStatus) }]}>
-                <Icon name="user-check" size={14} color="#FFFFFF" />
+              <View
+                style={[
+                  styles.statusBadge,
+                  {
+                    backgroundColor: getStatusColor(
+                      loanDetails.borrowerAcceptanceStatus,
+                    ),
+                  },
+                ]}
+              >
+                <Icon name="user-check" size={14} color={colors.ink} />
                 <Text style={styles.statusText}>
-                  {loanDetails.borrowerAcceptanceStatus?.charAt(0).toUpperCase() + loanDetails.borrowerAcceptanceStatus?.slice(1)}
+                  {loanDetails.borrowerAcceptanceStatus
+                    ?.charAt(0)
+                    .toUpperCase() +
+                    loanDetails.borrowerAcceptanceStatus?.slice(1)}
                 </Text>
               </View>
               <Text style={styles.statusLabel}>Borrower Status</Text>
@@ -793,9 +942,9 @@ export default function LoanDetailScreen({ route, navigation }) {
                 <View style={styles.reputationTitleContainer}>
                   <View style={styles.reputationIconContainer}>
                     <MaterialIcons
-                      name="verified"
-                      size={24}
-                      color="#3B82F6"
+                      name="shield"
+                      size={18}
+                      color={colors.skyText}
                     />
                   </View>
                   <View>
@@ -809,12 +958,10 @@ export default function LoanDetailScreen({ route, navigation }) {
                 </View>
                 <MaterialIcons
                   name={
-                    showReputation
-                      ? 'keyboard-arrow-up'
-                      : 'keyboard-arrow-down'
+                    showReputation ? 'keyboard-arrow-up' : 'keyboard-arrow-down'
                   }
                   size={28}
-                  color="#3B82F6"
+                  color={colors.textSecondary}
                 />
               </View>
             </TouchableOpacity>
@@ -834,14 +981,18 @@ export default function LoanDetailScreen({ route, navigation }) {
         {loanAmount > 0 && (
           <View style={styles.paymentSummaryCard}>
             <View style={styles.rowContainer}>
-              <MaterialIcons name="payments" color="#000" size={24} />
+              <View style={styles.titleIconTile}>
+                <MaterialIcons name="payments" color={colors.white} size={17} />
+              </View>
               <Text style={styles.detailsTitle}>Payment Summary</Text>
             </View>
 
             <View style={styles.paymentSummaryRow}>
               <View style={styles.paymentSummaryItem}>
                 <Text style={styles.paymentSummaryLabel}>Loan Amount</Text>
-                <Text style={styles.paymentSummaryValue}>{formatCurrency(loanAmount)}</Text>
+                <Text style={styles.paymentSummaryValue}>
+                  {formatCurrency(loanAmount)}
+                </Text>
               </View>
               <View style={styles.paymentSummaryItem}>
                 <Text style={styles.paymentSummaryLabel}>Total Paid</Text>
@@ -851,7 +1002,12 @@ export default function LoanDetailScreen({ route, navigation }) {
               </View>
               <View style={styles.paymentSummaryItem}>
                 <Text style={styles.paymentSummaryLabel}>Remaining</Text>
-                <Text style={[styles.paymentSummaryValue, isLoanClosed ? styles.closedAmount : styles.remainingAmount]}>
+                <Text
+                  style={[
+                    styles.paymentSummaryValue,
+                    isLoanClosed ? styles.closedAmount : styles.remainingAmount,
+                  ]}
+                >
                   {isLoanClosed ? '₹0' : formatCurrency(remainingAmount)}
                 </Text>
               </View>
@@ -864,14 +1020,21 @@ export default function LoanDetailScreen({ route, navigation }) {
                   style={[
                     styles.progressFill,
                     {
-                      width: `${loanAmount > 0 ? (totalPaid / loanAmount) * 100 : 0}%`,
-                      backgroundColor: isLoanClosed ? '#17e29fff' : '#3B82F6'
-                    }
+                      width: `${
+                        loanAmount > 0 ? (totalPaid / loanAmount) * 100 : 0
+                      }%`,
+                      backgroundColor: isLoanClosed
+                        ? colors.success
+                        : colors.navyLight,
+                    },
                   ]}
                 />
               </View>
               <Text style={styles.progressText}>
-                {loanAmount > 0 ? `${((totalPaid / loanAmount) * 100).toFixed(1)}%` : '0%'} Paid
+                {loanAmount > 0
+                  ? `${((totalPaid / loanAmount) * 100).toFixed(1)}%`
+                  : '0%'}{' '}
+                Paid
               </Text>
             </View>
 
@@ -880,7 +1043,8 @@ export default function LoanDetailScreen({ route, navigation }) {
               <View style={styles.overdueBadge}>
                 <Icon name="alert-circle" size={20} color="#EF4444" />
                 <Text style={styles.overdueBadgeText}>
-                  Overdue - Payment was due on {moment(loanDetails.loanEndDate).format('DD MMM YYYY')}
+                  Overdue - Payment was due on{' '}
+                  {moment(loanDetails.loanEndDate).format('DD MMM YYYY')}
                 </Text>
               </View>
             )}
@@ -889,7 +1053,9 @@ export default function LoanDetailScreen({ route, navigation }) {
             {isLoanClosed && !isOverdue && (
               <View style={styles.closedBadge}>
                 <Icon name="check-circle" size={20} color="#10B981" />
-                <Text style={styles.closedBadgeText}>Loan Closed - All Amount Paid</Text>
+                <Text style={styles.closedBadgeText}>
+                  Loan Closed - All Amount Paid
+                </Text>
               </View>
             )}
           </View>
@@ -898,7 +1064,9 @@ export default function LoanDetailScreen({ route, navigation }) {
         {/* Loan Details Card */}
         <View style={styles.detailsCard}>
           <View style={styles.rowContainer}>
-            <Icon name="info" color="#000" size={24} />
+            <View style={styles.titleIconTile}>
+              <Icon name="info" color={colors.white} size={17} />
+            </View>
             <Text style={styles.detailsTitle}>Loan Information</Text>
           </View>
 
@@ -933,7 +1101,9 @@ export default function LoanDetailScreen({ route, navigation }) {
             {loadingPendingPayments && (
               <View style={styles.loadingCard}>
                 <ActivityIndicator size="small" color="#F59E0B" />
-                <Text style={styles.loadingText}>Loading pending payments...</Text>
+                <Text style={styles.pendingLoadingText}>
+                  Loading pending payments...
+                </Text>
               </View>
             )}
             {pendingPaymentsForLoan && pendingPaymentsForLoan.length > 0 && (
@@ -946,90 +1116,142 @@ export default function LoanDetailScreen({ route, navigation }) {
                     </Text>
                   </View>
                   <View style={styles.pendingBadge}>
-                    <Text style={styles.pendingBadgeText}>{pendingPaymentsForLoan.length}</Text>
+                    <Text style={styles.pendingBadgeText}>
+                      {pendingPaymentsForLoan.length}
+                    </Text>
                   </View>
                 </View>
                 <Text style={styles.pendingConfirmationsMessage}>
-                  {loanDetails.name || 'Borrower'} has submitted {pendingPaymentsForLoan.length} payment{pendingPaymentsForLoan.length !== 1 ? 's' : ''} awaiting your review.
+                  {loanDetails.name || 'Borrower'} has submitted{' '}
+                  {pendingPaymentsForLoan.length} payment
+                  {pendingPaymentsForLoan.length !== 1 ? 's' : ''} awaiting your
+                  review.
                 </Text>
 
                 {pendingPaymentsForLoan.map((payment, index) => {
                   // Use paymentId as primary key, fallback to _id
-                  const paymentKey = payment.paymentId || payment._id || `payment-${index}`;
+                  const paymentKey =
+                    payment.paymentId || payment._id || `payment-${index}`;
                   return (
-                  <View key={paymentKey} style={styles.pendingPaymentItem}>
-                    <View style={styles.pendingPaymentInfo}>
-                      <View style={styles.pendingPaymentHeader}>
-                        <Text style={styles.pendingPaymentAmount}>
-                          {formatCurrency(payment.amount)}
-                        </Text>
-                        <View style={styles.pendingPaymentTypeBadge}>
-                          <Text style={styles.pendingPaymentTypeText}>
-                            {payment.installmentLabel || (payment.installmentNumber ? `Installment ${payment.installmentNumber}` : (payment.paymentType === 'one-time' ? 'One-time' : 'Installment'))}
+                    <View key={paymentKey} style={styles.pendingPaymentItem}>
+                      <View style={styles.pendingPaymentInfo}>
+                        <View style={styles.pendingPaymentHeader}>
+                          <Text style={styles.pendingPaymentAmount}>
+                            {formatCurrency(payment.amount)}
                           </Text>
+                          <View style={styles.pendingPaymentTypeBadge}>
+                            <Text style={styles.pendingPaymentTypeText}>
+                              {payment.installmentLabel ||
+                                (payment.installmentNumber
+                                  ? `Installment ${payment.installmentNumber}`
+                                  : payment.paymentType === 'one-time'
+                                  ? 'One-time'
+                                  : 'Installment')}
+                            </Text>
+                          </View>
                         </View>
+                        <Text style={styles.pendingPaymentDetails}>
+                          {payment.paymentMode?.charAt(0).toUpperCase() +
+                            payment.paymentMode?.slice(1)}{' '}
+                          Payment
+                        </Text>
+                        <Text style={styles.pendingPaymentDate}>
+                          Paid on:{' '}
+                          {moment(payment.paymentDate).format(
+                            'DD MMM YYYY, hh:mm A',
+                          )}
+                        </Text>
+                        {payment.transactionId && (
+                          <Text style={styles.pendingPaymentTxnId}>
+                            Txn ID: {payment.transactionId}
+                          </Text>
+                        )}
+                        {payment.notes && (
+                          <Text style={styles.pendingPaymentNotes}>
+                            Note: {payment.notes}
+                          </Text>
+                        )}
                       </View>
-                      <Text style={styles.pendingPaymentDetails}>
-                        {payment.paymentMode?.charAt(0).toUpperCase() + payment.paymentMode?.slice(1)} Payment
-                      </Text>
-                      <Text style={styles.pendingPaymentDate}>
-                        Paid on: {moment(payment.paymentDate).format('DD MMM YYYY, hh:mm A')}
-                      </Text>
-                      {payment.transactionId && (
-                        <Text style={styles.pendingPaymentTxnId}>
-                          Txn ID: {payment.transactionId}
-                        </Text>
-                      )}
-                      {payment.notes && (
-                        <Text style={styles.pendingPaymentNotes}>
-                          Note: {payment.notes}
-                        </Text>
-                      )}
-                    </View>
 
-                    {payment.paymentProof && (
-                      <TouchableOpacity
-                        style={styles.pendingPaymentProof}
-                        onPress={() => handleViewProof(payment.paymentProof)}
-                        activeOpacity={0.8}>
-                        <View style={styles.proofIconContainer}>
-                          <Ionicons name="image-outline" size={20} color="#3B82F6" />
-                        </View>
-                        <View style={styles.proofTextContainer}>
-                          <Text style={styles.pendingPaymentProofText}>Payment Proof Available</Text>
-                          <Text style={styles.proofSubtext}>Tap to view image</Text>
-                        </View>
-                        <Icon name="external-link" size={18} color="#3B82F6" />
-                      </TouchableOpacity>
-                    )}
+                      {payment.paymentProof && (
+                        <TouchableOpacity
+                          style={styles.pendingPaymentProof}
+                          onPress={() => handleViewProof(payment.paymentProof)}
+                          activeOpacity={0.8}
+                        >
+                          <View style={styles.proofIconContainer}>
+                            <Ionicons
+                              name="image-outline"
+                              size={20}
+                              color="#3B82F6"
+                            />
+                          </View>
+                          <View style={styles.proofTextContainer}>
+                            <Text style={styles.pendingPaymentProofText}>
+                              Payment Proof Available
+                            </Text>
+                            <Text style={styles.proofSubtext}>
+                              Tap to view image
+                            </Text>
+                          </View>
+                          <Icon
+                            name="external-link"
+                            size={18}
+                            color="#3B82F6"
+                          />
+                        </TouchableOpacity>
+                      )}
 
-                    <View style={styles.pendingPaymentActions}>
-                      <TouchableOpacity
-                        style={[styles.pendingActionButton, styles.rejectPendingButton]}
-                        onPress={() => handlePaymentAction(payment, 'reject')}
-                        disabled={rejecting}>
-                        <Icon name="x" size={16} color="#FFFFFF" />
-                        <Text style={styles.pendingActionButtonText}>Reject</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.pendingActionButton, styles.confirmPendingButton]}
-                        onPress={() => handlePaymentAction(payment, 'confirm')}
-                        disabled={confirming}>
-                        <Icon name="check" size={16} color="#FFFFFF" />
-                        <Text style={styles.pendingActionButtonText}>Accept</Text>
-                      </TouchableOpacity>
+                      <View style={styles.pendingPaymentActions}>
+                        <TouchableOpacity
+                          style={[
+                            styles.pendingActionButton,
+                            styles.rejectPendingButton,
+                          ]}
+                          onPress={() => handlePaymentAction(payment, 'reject')}
+                          disabled={rejecting}
+                        >
+                          <Icon name="x" size={16} color="#FFFFFF" />
+                          <Text style={styles.pendingActionButtonText}>
+                            Reject
+                          </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[
+                            styles.pendingActionButton,
+                            styles.confirmPendingButton,
+                          ]}
+                          onPress={() =>
+                            handlePaymentAction(payment, 'confirm')
+                          }
+                          disabled={confirming}
+                        >
+                          <Icon name="check" size={16} color="#FFFFFF" />
+                          <Text style={styles.pendingActionButtonText}>
+                            Accept
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
-                  </View>
                   );
                 })}
               </View>
             )}
-            {!loadingPendingPayments && pendingPaymentsForLoan && pendingPaymentsForLoan.length === 0 && isLender && (
-              <View style={styles.noPendingCard}>
-                <Ionicons name="checkmark-circle-outline" size={48} color="#D1D5DB" />
-                <Text style={styles.noPendingText}>No Pending Payment Requests</Text>
-              </View>
-            )}
+            {!loadingPendingPayments &&
+              pendingPaymentsForLoan &&
+              pendingPaymentsForLoan.length === 0 &&
+              isLender && (
+                <View style={styles.noPendingCard}>
+                  <Ionicons
+                    name="checkmark-circle-outline"
+                    size={48}
+                    color="#D1D5DB"
+                  />
+                  <Text style={styles.noPendingText}>
+                    No Pending Payment Requests
+                  </Text>
+                </View>
+              )}
           </>
         )}
 
@@ -1037,7 +1259,8 @@ export default function LoanDetailScreen({ route, navigation }) {
         {canMarkAsPaid && (
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: '#10B981' }]}
-            onPress={handleStatusChangeClick}>
+            onPress={handleStatusChangeClick}
+          >
             <Icon name="check-circle" size={20} color="#FFFFFF" />
             <Text style={styles.actionButtonText}>Mark as Paid</Text>
           </TouchableOpacity>
@@ -1055,7 +1278,9 @@ export default function LoanDetailScreen({ route, navigation }) {
       {/* PromptBox for Status Change */}
       <PromptBox
         visible={isPromptVisible}
-        message={`Are you sure you want to mark this loan as ${selectedStatus === 'pending' ? 'pending' : 'paid'}?`}
+        message={`Are you sure you want to mark this loan as ${
+          selectedStatus === 'pending' ? 'pending' : 'paid'
+        }?`}
         onConfirm={handleConfirm}
         onCancel={handleCancel}
       />
@@ -1066,12 +1291,15 @@ export default function LoanDetailScreen({ route, navigation }) {
           visible={actionModalVisible}
           transparent={true}
           animationType="slide"
-          onRequestClose={() => setActionModalVisible(false)}>
+          onRequestClose={() => setActionModalVisible(false)}
+        >
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>
-                  {actionType === 'reject' ? 'Reject Payment' : 'Confirm Payment'}
+                  {actionType === 'reject'
+                    ? 'Reject Payment'
+                    : 'Confirm Payment'}
                 </Text>
                 <TouchableOpacity onPress={() => setActionModalVisible(false)}>
                   <Icon name="x" size={24} color="#6B7280" />
@@ -1081,13 +1309,19 @@ export default function LoanDetailScreen({ route, navigation }) {
               <View style={styles.modalBody}>
                 <Text style={styles.modalMessage}>
                   {actionType === 'reject'
-                    ? `Are you sure you want to reject this payment of ${formatCurrency(selectedPayment.amount)}?`
-                    : `Confirm payment of ${formatCurrency(selectedPayment.amount)} from ${loanDetails.name || 'borrower'}?`}
+                    ? `Are you sure you want to reject this payment of ${formatCurrency(
+                        selectedPayment.amount,
+                      )}?`
+                    : `Confirm payment of ${formatCurrency(
+                        selectedPayment.amount,
+                      )} from ${loanDetails.name || 'borrower'}?`}
                 </Text>
 
                 {actionType === 'reject' ? (
                   <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Reason for Rejection *</Text>
+                    <Text style={styles.inputLabel}>
+                      Reason for Rejection *
+                    </Text>
                     <TextInput
                       style={styles.textInput}
                       placeholder="Enter reason for rejection..."
@@ -1117,25 +1351,38 @@ export default function LoanDetailScreen({ route, navigation }) {
               <View style={styles.modalActions}>
                 <TouchableOpacity
                   style={[styles.modalButton, styles.cancelButton]}
-                  onPress={() => setActionModalVisible(false)}>
+                  onPress={() => setActionModalVisible(false)}
+                >
                   <Text style={styles.cancelButtonText}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.modalButton, actionType === 'reject' ? styles.rejectModalButton : styles.confirmModalButton]}
-                  onPress={actionType === 'reject' ? handleRejectPayment : handleConfirmPayment}
-                  disabled={actionType === 'reject' ? !rejectReason.trim() || rejecting : confirming}>
+                  style={[
+                    styles.modalButton,
+                    actionType === 'reject'
+                      ? styles.rejectModalButton
+                      : styles.confirmModalButton,
+                  ]}
+                  onPress={
+                    actionType === 'reject'
+                      ? handleRejectPayment
+                      : handleConfirmPayment
+                  }
+                  disabled={
+                    actionType === 'reject'
+                      ? !rejectReason.trim() || rejecting
+                      : confirming
+                  }
+                >
                   {actionType === 'reject' ? (
                     rejecting ? (
                       <ActivityIndicator size="small" color="#FFFFFF" />
                     ) : (
                       <Text style={styles.modalButtonText}>Reject</Text>
                     )
+                  ) : confirming ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
                   ) : (
-                    confirming ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
-                    ) : (
-                      <Text style={styles.modalButtonText}>Confirm</Text>
-                    )
+                    <Text style={styles.modalButtonText}>Confirm</Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -1165,11 +1412,15 @@ const ImageViewer = ({ visible, imageUrl, onClose }) => {
       visible={visible}
       transparent={true}
       animationType="fade"
-      onRequestClose={onClose}>
+      onRequestClose={onClose}
+    >
       <View style={imageViewerStyles.overlay}>
         <View style={imageViewerStyles.header}>
           <Text style={imageViewerStyles.headerText}>Payment Proof</Text>
-          <TouchableOpacity onPress={onClose} style={imageViewerStyles.closeButton}>
+          <TouchableOpacity
+            onPress={onClose}
+            style={imageViewerStyles.closeButton}
+          >
             <Icon name="x" size={24} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
@@ -1178,19 +1429,21 @@ const ImageViewer = ({ visible, imageUrl, onClose }) => {
           maximumZoomScale={3}
           minimumZoomScale={1}
           showsVerticalScrollIndicator={false}
-          showsHorizontalScrollIndicator={false}>
+          showsHorizontalScrollIndicator={false}
+        >
           <Image
             source={{ uri: imageUrl }}
             style={imageViewerStyles.image}
             resizeMode="contain"
-            onError={(error) => {
+            onError={error => {
               console.error('Image load error:', error);
               console.error('Failed URL:', imageUrl);
               Toast.show({
                 type: 'error',
                 position: 'top',
                 text1: 'Error Loading Image',
-                text2: 'Failed to load payment proof image. Please check the URL.',
+                text2:
+                  'Failed to load payment proof image. Please check the URL.',
                 visibilityTime: 4000,
               });
             }}
@@ -1204,7 +1457,14 @@ const ImageViewer = ({ visible, imageUrl, onClose }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.offWhite,
+  },
+  loanDetailsHeaderTitle: {
+    fontSize: m(17),
+    lineHeight: m(23),
+    fontFamily: FontFamily.primaryBold,
+    letterSpacing: 0,
+    marginBottom: m(8),
   },
   loadingContainer: {
     flex: 1,
@@ -1215,85 +1475,85 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: m(12),
     fontSize: m(16),
-    color: '#6B7280',
+    color: colors.textSecondary,
+    fontFamily: FontFamily.bodyRegular,
   },
   errorText: {
     marginTop: m(12),
     fontSize: m(16),
-    color: '#6B7280',
+    color: colors.textSecondary,
     textAlign: 'center',
+    fontFamily: FontFamily.bodyRegular,
   },
   errorRetryButton: {
     marginTop: m(20),
     paddingHorizontal: m(24),
     paddingVertical: m(12),
-    backgroundColor: '#ff6700',
+    backgroundColor: colors.navy,
     borderRadius: m(12),
   },
   errorRetryText: {
     fontSize: m(16),
-    color: '#FFFFFF',
+    color: colors.white,
     fontFamily: FontFamily.primarySemiBold,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: m(16),
-    paddingBottom: m(40),
+    paddingHorizontal: m(18),
+    paddingTop: m(10),
+    paddingBottom: m(28),
   },
 
   // Profile Card
   profileCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(20),
-    padding: m(24),
-    marginBottom: m(16),
+    backgroundColor: colors.white,
+    borderRadius: m(16),
+    paddingVertical: m(18),
+    paddingHorizontal: m(18),
+    marginBottom: m(14),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    elevation: 4,
-    shadowColor: '#000',
+    borderColor: '#E2DED4',
+    elevation: 2,
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
   },
   profileHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: m(14),
+    marginBottom: m(12),
   },
   profileAvatar: {
-    width: m(60),
-    height: m(60),
-    borderRadius: m(30),
-    backgroundColor: '#3B82F6',
+    width: m(54),
+    height: m(54),
+    borderRadius: m(27),
+    backgroundColor: colors.navy,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: m(16),
-    borderWidth: 3,
-    borderColor: '#EFF6FF',
+    marginRight: m(14),
   },
   avatarText: {
-    fontSize: m(24),
+    fontSize: m(22),
     fontFamily: FontFamily.primaryMedium,
-    color: '#FFFFFF',
+    color: colors.white,
   },
   profileImage: {
-    width: m(60),
-    height: m(60),
-    borderRadius: m(30),
-    marginRight: m(16),
-    borderWidth: 3,
-    borderColor: '#EFF6FF',
+    width: m(54),
+    height: m(54),
+    borderRadius: m(27),
+    marginRight: m(14),
   },
   profileInfo: {
     flex: 1,
   },
   profileName: {
-    fontSize: m(20),
+    fontSize: m(17),
     fontFamily: FontFamily.primaryBold,
     color: '#111827',
-    marginBottom: m(8),
+    marginBottom: m(5),
   },
   profileMeta: {
     gap: m(5),
@@ -1304,8 +1564,9 @@ const styles = StyleSheet.create({
     gap: m(6),
   },
   metaText: {
-    fontSize: m(14),
-    color: '#6B7280',
+    fontSize: m(11),
+    color: colors.textSecondary,
+    fontFamily: FontFamily.bodyRegular,
   },
 
   // Status Container
@@ -1313,9 +1574,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    paddingTop: m(10),
+    paddingTop: m(8),
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: '#E2DED4',
   },
   statusItem: {
     alignItems: 'center',
@@ -1323,91 +1584,103 @@ const styles = StyleSheet.create({
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: m(12),
+    paddingHorizontal: m(14),
     paddingVertical: m(6),
     borderRadius: m(20),
     gap: m(6),
-    marginBottom: m(6),
+    marginBottom: m(5),
   },
   statusText: {
-    fontSize: m(12),
+    fontSize: m(11),
     fontFamily: FontFamily.primarySemiBold,
-    color: '#FFFFFF',
+    color: colors.ink,
   },
   statusLabel: {
-    fontSize: m(12),
-    color: '#6B7280',
+    fontSize: m(11),
+    color: colors.textSecondary,
+    fontFamily: FontFamily.bodyRegular,
   },
   statusDivider: {
     width: 1,
-    height: m(40),
+    height: m(34),
     backgroundColor: '#E5E7EB',
   },
 
   // Details Card
   detailsCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(20),
-    padding: m(24),
+    backgroundColor: colors.white,
+    borderRadius: m(18),
+    padding: m(18),
     marginBottom: m(16),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    elevation: 4,
-    shadowColor: '#000',
+    borderColor: '#E2DED4',
+    elevation: 2,
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
   },
   rowContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: m(10),
+    marginBottom: m(16),
     gap: m(8),
   },
+  titleIconTile: {
+    width: m(34),
+    height: m(34),
+    borderRadius: m(9),
+    backgroundColor: colors.navyDark,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   detailsTitle: {
-    fontSize: m(20),
+    fontSize: m(16),
     fontFamily: FontFamily.primaryBold,
-    color: '#111827',
+    color: colors.ink,
     marginBottom: m(4),
   },
   detailsGrid: {
-    gap: m(10),
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    columnGap: m(8),
+    rowGap: m(8),
   },
   detailItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f0f4f9ff',
-    borderRadius: m(14),
-    padding: m(14),
-    paddingVertical: m(10),
-    marginBottom: m(5),
+    width: '48%',
+    minHeight: m(92),
+    backgroundColor: '#F7F5EF',
+    borderRadius: m(10),
+    padding: m(10),
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: '#E2DED4',
   },
   detailIconContainer: {
-    width: m(40),
-    height: m(40),
-    borderRadius: m(12),
-    backgroundColor: '#EFF6FF',
+    width: m(28),
+    height: m(28),
+    borderRadius: m(8),
+    backgroundColor: colors.skySoft,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: m(14),
+    marginBottom: m(8),
   },
   detailContent: {
     flex: 1,
+    minWidth: 0,
   },
   detailLabel: {
-    fontSize: m(11),
-    color: '#9CA3AF',
-    marginBottom: m(4),
+    fontSize: m(9),
+    color: colors.textSecondary,
+    marginBottom: m(3),
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0,
     fontFamily: FontFamily.primarySemiBold,
   },
   detailValue: {
-    fontSize: m(15),
+    fontSize: m(12),
     fontFamily: FontFamily.primarySemiBold,
-    color: '#111827',
+    color: colors.ink,
+    lineHeight: m(16),
   },
   statusButton: {
     backgroundColor: '#10B981',
@@ -1438,11 +1711,12 @@ const styles = StyleSheet.create({
   notesTitle: {
     fontSize: m(14),
     fontFamily: FontFamily.primarySemiBold,
-    color: '#374151',
+    color: colors.textPrimary,
   },
   notesText: {
     fontSize: m(14),
-    color: '#6B7280',
+    color: colors.textSecondary,
+    fontFamily: FontFamily.bodyRegular,
     lineHeight: m(20),
   },
 
@@ -1452,7 +1726,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: m(8),
-    backgroundColor: '#3B82F6',
+    backgroundColor: colors.navy,
     borderRadius: m(12),
     padding: m(16),
     marginBottom: m(16),
@@ -1470,20 +1744,20 @@ const styles = StyleSheet.create({
 
   // Reputation Section
   reputationContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     marginBottom: m(16),
-    borderRadius: m(18),
+    borderRadius: m(14),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#E2DED4',
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
   reputationToggle: {
-    padding: m(20),
+    padding: m(18),
   },
   reputationHeader: {
     flexDirection: 'row',
@@ -1496,22 +1770,22 @@ const styles = StyleSheet.create({
     gap: m(12),
   },
   reputationIconContainer: {
-    width: m(48),
-    height: m(48),
+    width: m(46),
+    height: m(46),
     borderRadius: m(14),
-    backgroundColor: '#EFF6FF',
+    backgroundColor: colors.skySoft,
     justifyContent: 'center',
     alignItems: 'center',
   },
   reputationTitle: {
-    fontSize: m(17),
+    fontSize: m(16),
     fontFamily: FontFamily.primaryBold,
-    color: '#111827',
+    color: colors.ink,
     marginBottom: m(2),
   },
   reputationSubtitle: {
     fontSize: m(12),
-    color: '#6B7280',
+    color: colors.textSecondary,
     fontFamily: FontFamily.primaryRegular,
   },
   reputationCardWrapper: {
@@ -1534,56 +1808,58 @@ const styles = StyleSheet.create({
 
   // Payment Summary Card
   paymentSummaryCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(20),
-    padding: m(24),
-    marginBottom: m(16),
+    backgroundColor: colors.white,
+    borderRadius: m(16),
+    padding: m(15),
+    marginBottom: m(14),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    elevation: 4,
-    shadowColor: '#000',
+    borderColor: '#E2DED4',
+    elevation: 2,
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
   },
   paymentSummaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: m(16),
-    gap: m(12),
+    marginBottom: m(12),
+    gap: m(8),
   },
   paymentSummaryItem: {
     flex: 1,
     alignItems: 'center',
   },
   paymentSummaryLabel: {
-    fontSize: m(12),
-    color: '#6B7280',
-    marginBottom: m(4),
+    fontSize: m(10),
+    color: colors.textSecondary,
+    fontFamily: FontFamily.bodyMedium,
+    textTransform: 'uppercase',
+    marginBottom: m(3),
   },
   paymentSummaryValue: {
-    fontSize: m(16),
+    fontSize: m(15),
     fontFamily: FontFamily.primaryBold,
-    color: '#111827',
+    color: colors.ink,
   },
   paidAmount: {
-    color: '#10B981',
+    color: colors.success,
   },
   remainingAmount: {
-    color: '#EF4444',
+    color: colors.error,
   },
   closedAmount: {
-    color: '#10B981',
+    color: colors.success,
   },
   progressContainer: {
-    marginBottom: m(16),
+    marginBottom: m(10),
   },
   progressBar: {
-    height: m(8),
-    backgroundColor: '#E5E7EB',
+    height: m(6),
+    backgroundColor: '#E7E2D8',
     borderRadius: m(4),
     overflow: 'hidden',
-    marginBottom: m(8),
+    marginBottom: m(7),
   },
   progressFill: {
     height: '100%',
@@ -1591,8 +1867,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#3B82F6',
   },
   progressText: {
-    fontSize: m(12),
-    color: '#6B7280',
+    fontSize: m(11),
+    color: colors.textSecondary,
     textAlign: 'center',
     fontFamily: FontFamily.primaryMedium,
   },
@@ -1882,7 +2158,7 @@ const styles = StyleSheet.create({
 
   // Loading Card
   loadingCard: {
-    backgroundColor: '#FFF7ED',
+    backgroundColor: colors.goldFaint,
     borderRadius: m(12),
     padding: m(16),
     marginBottom: m(16),
@@ -1891,9 +2167,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: m(12),
   },
-  loadingText: {
+  pendingLoadingText: {
     fontSize: m(14),
-    color: '#92400E',
+    color: colors.goldDarker,
+    fontFamily: FontFamily.bodyMedium,
   },
 
   // No Pending Card

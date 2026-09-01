@@ -11,40 +11,47 @@ import {
   ActivityIndicator,
   Animated,
   Pressable,
+  StatusBar,
+  Platform,
 } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useDispatch, useSelector } from 'react-redux';
 import { getBorrowerLoansById } from '../../../Redux/Slices/borrowerLoanSlice';
 import { getPendingPayments } from '../../../Redux/Slices/lenderPaymentSlice';
-import Header from '../../../Components/Header';
 import BorrowerReputationCard from '../../../Components/BorrowerReputationCard';
 import SubscriptionRestriction from '../../../Components/SubscriptionRestriction';
 import { useSubscription } from '../../../hooks/useSubscription';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import moment from 'moment';
 import { m } from 'walstar-rn-responsive';
-import { FontFamily } from '../../../constants';
+import { colors, FontFamily } from '../../../constants';
 
 const ORANGE_THEME = {
-  primary: '#111827',
-  primaryLight: '#F1FAF7',
-  primaryDark: '#0F172A',
-  secondary: '#B7EDF4',
-  accent: '#D7F2C1',
-  background: '#F2FAF6',
+  primary: colors.navy,
+  primaryLight: colors.navyTint,
+  primaryDark: colors.navyDark,
+  secondary: colors.skySoft,
+  accent: colors.butter,
+  background: colors.offWhite,
   card: '#FFFFFF',
-  text: '#111827',
-  textLight: '#6B7280',
-  border: '#DCEFEA',
-  success: '#10B981',
-  warning: '#F59E0B',
-  error: '#EF4444',
-  info: '#1B6E8C',
-  sky: '#B7EDF4',
-  mint: '#D7F2C1',
-  ink: '#111827',
+  text: colors.ink,
+  textLight: colors.textSecondary,
+  border: '#E2DED4',
+  success: colors.success,
+  warning: colors.goldDark,
+  error: colors.error,
+  info: colors.skyText,
+  sky: colors.sky,
+  mint: colors.mint,
+  ink: colors.navyDark,
 };
+
+const HEADER_TOP_PADDING =
+  Platform.OS === 'android'
+    ? (StatusBar.currentHeight || m(24)) + m(16)
+    : m(50);
 
 const LoanHistoryCard = ({ loan, onPress, index = 0 }) => {
   const [scaleAnim] = useState(new Animated.Value(1));
@@ -106,7 +113,7 @@ const LoanHistoryCard = ({ loan, onPress, index = 0 }) => {
 
   const paymentPercent =
     loan.amount > 0 ? ((loan.totalPaid || 0) / loan.amount) * 100 : 0;
-  const cardTint = index % 2 === 0 ? ORANGE_THEME.sky : ORANGE_THEME.mint;
+  const cardTint = colors.navyDark;
 
   return (
     <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
@@ -224,17 +231,17 @@ const LoanHistoryCard = ({ loan, onPress, index = 0 }) => {
 
         <View style={styles.loanFooter}>
           <View style={styles.dateContainer}>
-            <Icon
-              name="access-time"
-              size={11}
-              color={ORANGE_THEME.textLight}
-            />
+            <Icon name="access-time" size={11} color={ORANGE_THEME.textLight} />
             <Text style={styles.loanDate}>
               {moment(loan.createdAt).format('DD MMM YYYY')}
             </Text>
           </View>
           <View style={styles.viewButton}>
-            <Icon name="chevron-right" size={18} color={ORANGE_THEME.textLight} />
+            <Icon
+              name="chevron-right"
+              size={18}
+              color={ORANGE_THEME.textLight}
+            />
           </View>
         </View>
       </TouchableOpacity>
@@ -800,11 +807,27 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
   if (!borrowerId) {
     return (
       <View style={styles.container}>
-        <Header
-          title="Loan History"
-          showBackButton
-          headerStyle={{ backgroundColor: ORANGE_THEME.primary }}
-        />
+        <StatusBar barStyle="light-content" backgroundColor={colors.navyDark} />
+        <LinearGradient
+          colors={[colors.navyDark, colors.navy]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.topHeader}
+        >
+          <TouchableOpacity
+            style={styles.headerBackButton}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.8}
+          >
+            <Icon name="chevron-left" size={24} color={colors.white} />
+          </TouchableOpacity>
+          <View style={styles.headerTextBlock}>
+            <Text style={styles.screenTitle}>Loan History</Text>
+            <Text style={styles.screenSubtitle}>
+              Track every loan you've extended
+            </Text>
+          </View>
+        </LinearGradient>
         <View style={styles.errorContainer}>
           <Icon name="error-outline" size={60} color={ORANGE_THEME.error} />
           <Text style={styles.errorText}>Borrower ID is required</Text>
@@ -815,11 +838,27 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
 
   return (
     <View style={styles.container}>
-      <Header
-        title="Loan History"
-        showBackButton
-        headerStyle={{ backgroundColor: ORANGE_THEME.primary }}
-      />
+      <StatusBar barStyle="light-content" backgroundColor={colors.navyDark} />
+      <LinearGradient
+        colors={[colors.navyDark, colors.navy]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.topHeader}
+      >
+        <TouchableOpacity
+          style={styles.headerBackButton}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.8}
+        >
+          <Icon name="chevron-left" size={24} color={colors.white} />
+        </TouchableOpacity>
+        <View style={styles.headerTextBlock}>
+          <Text style={styles.screenTitle}>Loan History</Text>
+          <Text style={styles.screenSubtitle}>
+            Track every loan you've extended
+          </Text>
+        </View>
+      </LinearGradient>
 
       {/* Search and Filter Bar */}
       <View
@@ -1061,11 +1100,7 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
                 <View style={styles.reputationHeader}>
                   <View style={styles.reputationTitleContainer}>
                     <View style={styles.reputationIconContainer}>
-                      <Icon
-                        name="verified"
-                        size={24}
-                        color={ORANGE_THEME.primary}
-                      />
+                      <Icon name="shield" size={17} color={colors.goldDarker} />
                     </View>
                     <View>
                       <Text style={styles.reputationTitle}>
@@ -1083,7 +1118,7 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
                         : 'keyboard-arrow-down'
                     }
                     size={28}
-                    color={ORANGE_THEME.primary}
+                    color={ORANGE_THEME.textLight}
                   />
                 </View>
               </TouchableOpacity>
@@ -1231,21 +1266,54 @@ const BorrowerLoanHistoryScreen = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: ORANGE_THEME.background,
+    backgroundColor: colors.offWhite,
+  },
+  topHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: m(118),
+    paddingTop: HEADER_TOP_PADDING,
+    paddingHorizontal: m(18),
+    paddingBottom: m(18),
+    borderBottomLeftRadius: m(24),
+    borderBottomRightRadius: m(24),
+  },
+  headerBackButton: {
+    width: m(34),
+    height: m(34),
+    borderRadius: m(17),
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: m(12),
+  },
+  headerTextBlock: {
+    flex: 1,
+  },
+  screenTitle: {
+    fontSize: m(17),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
+  },
+  screenSubtitle: {
+    marginTop: m(2),
+    fontSize: m(10),
+    fontFamily: FontFamily.bodyMedium,
+    color: 'rgba(255, 255, 255, 0.82)',
   },
   // Summary Section
   summaryContainer: {
     backgroundColor: ORANGE_THEME.card,
     marginHorizontal: m(16),
     marginTop: m(12),
-    marginBottom: m(16),
-    padding: m(20),
-    borderRadius: m(18),
+    marginBottom: m(12),
+    padding: m(12),
+    borderRadius: m(14),
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.07,
-    shadowRadius: 12,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
     borderWidth: 1,
     borderColor: ORANGE_THEME.border,
   },
@@ -1253,22 +1321,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: m(10),
+    marginBottom: m(12),
   },
   summaryTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(10),
+    gap: m(8),
   },
   summaryTitle: {
-    fontSize: m(19),
+    fontSize: m(13),
     fontFamily: FontFamily.primaryBold,
     color: ORANGE_THEME.text,
   },
   refreshButton: {
-    width: m(36),
-    height: m(36),
-    borderRadius: m(18),
+    width: m(32),
+    height: m(32),
+    borderRadius: m(16),
     backgroundColor: ORANGE_THEME.ink,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1276,58 +1344,60 @@ const styles = StyleSheet.create({
   summaryCards: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: m(16),
+    marginBottom: m(11),
   },
   summaryCard: {
     flex: 1,
     alignItems: 'center',
-    padding: m(6),
-    paddingVertical: m(8),
-    borderRadius: m(12),
-    marginHorizontal: m(3),
+    paddingVertical: m(10),
+    borderRadius: m(9),
+    marginHorizontal: m(4),
   },
   summaryIconContainer: {
-    width: m(30),
-    height: m(30),
-    borderRadius: m(9),
+    width: m(28),
+    height: m(28),
+    borderRadius: m(8),
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: m(5),
+    marginBottom: m(3),
   },
   summaryNumber: {
-    fontSize: m(18),
+    fontSize: m(16),
     fontFamily: FontFamily.primaryExtraBold,
     color: ORANGE_THEME.primary,
     marginBottom: m(1),
   },
   summaryLabel: {
-    fontSize: m(10),
+    fontSize: m(9),
     color: ORANGE_THEME.textLight,
     fontFamily: FontFamily.primaryMedium,
   },
   amountSummary: {
-    backgroundColor: ORANGE_THEME.primaryLight,
-    borderRadius: m(16),
-    padding: m(16),
+    backgroundColor: '#F7F5EF',
+    borderRadius: m(10),
+    paddingHorizontal: m(10),
+    paddingVertical: m(8),
   },
   amountSummaryCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: m(12),
+    paddingVertical: m(6),
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2DED4',
   },
   amountHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(8),
+    gap: m(6),
   },
   amountLabel: {
-    fontSize: m(14),
+    fontSize: m(12),
     color: ORANGE_THEME.textLight,
     fontFamily: FontFamily.primaryMedium,
   },
   amountValue: {
-    fontSize: m(16),
+    fontSize: m(14),
     fontFamily: FontFamily.primaryBold,
   },
   // Search and Filter
@@ -1335,19 +1405,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: m(16),
-    paddingVertical: m(12),
-    backgroundColor: ORANGE_THEME.card,
-    borderBottomWidth: 1,
-    borderBottomColor: ORANGE_THEME.border,
+    paddingTop: m(12),
+    paddingBottom: m(2),
+    backgroundColor: colors.offWhite,
   },
   searchContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: ORANGE_THEME.background,
-    borderRadius: m(12),
-    paddingHorizontal: m(14),
-    marginRight: m(12),
+    backgroundColor: colors.white,
+    borderRadius: m(10),
+    paddingHorizontal: m(12),
+    marginRight: m(10),
     borderWidth: 1,
     borderColor: ORANGE_THEME.border,
   },
@@ -1356,8 +1425,8 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    height: m(44),
-    fontSize: m(15),
+    height: m(42),
+    fontSize: m(12),
     color: ORANGE_THEME.text,
     fontFamily: FontFamily.primaryMedium,
   },
@@ -1366,9 +1435,9 @@ const styles = StyleSheet.create({
     marginLeft: m(4),
   },
   filterButtonContainer: {
-    width: m(44),
-    height: m(44),
-    borderRadius: m(12),
+    width: m(42),
+    height: m(42),
+    borderRadius: m(10),
     backgroundColor: ORANGE_THEME.ink,
     borderWidth: 1,
     borderColor: ORANGE_THEME.border,
@@ -1386,22 +1455,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: m(30),
+    paddingBottom: m(24),
   },
   // Loan Card
   loanCard: {
     backgroundColor: ORANGE_THEME.card,
-    borderRadius: m(16),
-    padding: m(10),
+    borderRadius: m(12),
+    padding: m(12),
     paddingLeft: m(12),
-    marginHorizontal: m(14),
+    marginHorizontal: m(16),
     marginBottom: m(10),
     borderWidth: 1,
-    borderLeftWidth: m(4),
+    borderLeftWidth: m(3),
     borderColor: ORANGE_THEME.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 3,
     overflow: 'hidden',
@@ -1420,7 +1489,7 @@ const styles = StyleSheet.create({
     marginLeft: m(-15),
     marginRight: m(-12),
     marginTop: m(-12),
-    marginBottom: m(8),
+    marginBottom: m(6),
     gap: m(5),
     borderBottomWidth: 1,
     borderBottomColor: ORANGE_THEME.error + '20',
@@ -1441,14 +1510,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: m(6),
+    marginBottom: m(8),
   },
   loanInfo: {
     flex: 1,
     marginRight: m(8),
   },
   loanAmount: {
-    fontSize: m(16),
+    fontSize: m(18),
     fontFamily: FontFamily.primaryBold,
     color: ORANGE_THEME.text,
     marginBottom: m(1),
@@ -1477,10 +1546,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: 'rgba(255, 255, 255, 0.55)',
     borderRadius: m(8),
-    paddingVertical: m(5),
+    paddingVertical: m(7),
     paddingHorizontal: m(8),
     gap: m(12),
-    marginTop: m(6),
+    marginTop: m(5),
   },
   progressRow: {
     flexDirection: 'row',
@@ -1508,7 +1577,7 @@ const styles = StyleSheet.create({
   progressLabels: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: m(2),
+    marginTop: m(5),
   },
   progressLabel: {
     fontSize: m(10),
@@ -1529,8 +1598,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: m(6),
-    paddingTop: m(6),
+    marginTop: m(8),
+    paddingTop: m(9),
     borderTopWidth: 1,
     borderTopColor: 'rgba(17, 24, 39, 0.12)',
   },
@@ -1547,10 +1616,10 @@ const styles = StyleSheet.create({
   viewButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    backgroundColor: '#F1EFE8',
     borderRadius: m(18),
-    paddingHorizontal: m(10),
-    paddingVertical: m(6),
+    paddingHorizontal: m(8),
+    paddingVertical: m(5),
     gap: m(3),
     justifyContent: 'center',
   },
@@ -1565,21 +1634,21 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: m(16),
-    marginTop: m(8),
-    marginBottom: m(16),
+    marginTop: m(4),
+    marginBottom: m(8),
   },
   loansTitle: {
-    fontSize: m(20),
+    fontSize: m(15),
     fontFamily: FontFamily.primaryBold,
     color: ORANGE_THEME.text,
   },
   loansCount: {
-    fontSize: m(14),
+    fontSize: m(12),
     color: '#FFFFFF',
     fontFamily: FontFamily.primarySemiBold,
-    backgroundColor: ORANGE_THEME.ink,
-    paddingHorizontal: m(12),
-    paddingVertical: m(4),
+    backgroundColor: colors.navyDark,
+    paddingHorizontal: m(10),
+    paddingVertical: m(3),
     borderRadius: m(12),
   },
   // Loading States
@@ -1698,19 +1767,20 @@ const styles = StyleSheet.create({
   reputationContainer: {
     backgroundColor: ORANGE_THEME.card,
     marginHorizontal: m(16),
-    marginBottom: m(16),
-    borderRadius: m(18),
+    marginBottom: m(12),
+    borderRadius: m(14),
     borderWidth: 1,
     borderColor: ORANGE_THEME.border,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
   reputationToggle: {
-    padding: m(20),
+    paddingVertical: m(12),
+    paddingHorizontal: m(14),
   },
   reputationHeader: {
     flexDirection: 'row',
@@ -1720,30 +1790,30 @@ const styles = StyleSheet.create({
   reputationTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(12),
+    gap: m(9),
   },
   reputationIconContainer: {
-    width: m(48),
-    height: m(48),
-    borderRadius: m(14),
-    backgroundColor: ORANGE_THEME.primaryLight,
+    width: m(34),
+    height: m(34),
+    borderRadius: m(10),
+    backgroundColor: colors.goldFaint,
     justifyContent: 'center',
     alignItems: 'center',
   },
   reputationTitle: {
-    fontSize: m(17),
+    fontSize: m(12),
     fontFamily: FontFamily.primaryBold,
     color: ORANGE_THEME.text,
     marginBottom: m(2),
   },
   reputationSubtitle: {
-    fontSize: m(12),
+    fontSize: m(10),
     color: ORANGE_THEME.textLight,
     fontFamily: FontFamily.primaryRegular,
   },
   reputationCardWrapper: {
-    paddingHorizontal: m(16),
-    paddingBottom: m(16),
+    paddingHorizontal: m(12),
+    paddingBottom: m(12),
   },
   // Filter Modal
   filterModalOverlay: {

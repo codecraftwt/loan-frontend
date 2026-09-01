@@ -15,7 +15,10 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useDispatch, useSelector } from 'react-redux';
-import { getAllBorrowers, searchBorrowers } from '../../../Redux/Slices/borrowerSlice';
+import {
+  getAllBorrowers,
+  searchBorrowers,
+} from '../../../Redux/Slices/borrowerSlice';
 import { getRiskAssessment } from '../../../Redux/Slices/loanSlice';
 import { getPendingPayments } from '../../../Redux/Slices/lenderPaymentSlice';
 import { useFocusEffect } from '@react-navigation/native';
@@ -33,7 +36,9 @@ const Outward = ({ navigation, route }) => {
   const scrollViewRef = React.useRef(null);
   const dispatch = useDispatch();
   const { pendingPayments } = useSelector(state => state.lenderPayments);
-  const { borrowers, loading: borrowersLoading,} = useSelector(state => state.borrowers);
+  const { borrowers, loading: borrowersLoading } = useSelector(
+    state => state.borrowers,
+  );
   const user = useSelector(state => state.auth.user);
   const isLender = user?.roleId === 1;
   const { hasActivePlan } = useSubscription();
@@ -42,26 +47,35 @@ const Outward = ({ navigation, route }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedBorrower, setSelectedBorrower] = useState(null);
-  const [borrowerActionModalVisible, setBorrowerActionModalVisible] = useState(false);
+  const [borrowerActionModalVisible, setBorrowerActionModalVisible] =
+    useState(false);
   const [highlightedBorrowerId, setHighlightedBorrowerId] = useState(null);
   const [pendingHighlightParams, setPendingHighlightParams] = useState(null);
   const [borrowerRiskAssessment, setBorrowerRiskAssessment] = useState({});
 
   // Scroll to specific borrower
-  const scrollToBorrower = useCallback((borrowerId) => {
-    if (!scrollViewRef.current || !borrowers) return;
-    
-    const index = borrowers.findIndex(b => b._id === borrowerId);
-    if (index !== -1) {
-      scrollViewRef.current?.scrollTo({ y: index * 200, animated: true });
-    }
-  }, [borrowers]);
+  const scrollToBorrower = useCallback(
+    borrowerId => {
+      if (!scrollViewRef.current || !borrowers) return;
+
+      const index = borrowers.findIndex(b => b._id === borrowerId);
+      if (index !== -1) {
+        scrollViewRef.current?.scrollTo({ y: index * 200, animated: true });
+      }
+    },
+    [borrowers],
+  );
 
   // Handle navigation from notification
   useEffect(() => {
-  if (route?.params) {
-      const { highlightBorrowerId, highlightMobileNumber, notificationId, notificationType } = route.params;
-      
+    if (route?.params) {
+      const {
+        highlightBorrowerId,
+        highlightMobileNumber,
+        notificationId,
+        notificationType,
+      } = route.params;
+
       // Store params for retry if borrowers not loaded yet
       if (highlightBorrowerId || highlightMobileNumber) {
         setPendingHighlightParams({
@@ -88,10 +102,11 @@ const Outward = ({ navigation, route }) => {
           }
         } else if (highlightMobileNumber) {
           // Find by mobile number
-          const borrower = borrowers.find(b => 
-            b.mobileNo === highlightMobileNumber || 
-            b.mobileNo === `+91${highlightMobileNumber}` ||
-            b.mobileNo === highlightMobileNumber.replace(/^\+91/, '')
+          const borrower = borrowers.find(
+            b =>
+              b.mobileNo === highlightMobileNumber ||
+              b.mobileNo === `+91${highlightMobileNumber}` ||
+              b.mobileNo === highlightMobileNumber.replace(/^\+91/, ''),
           );
           if (borrower) {
             setHighlightedBorrowerId(borrower._id);
@@ -99,7 +114,10 @@ const Outward = ({ navigation, route }) => {
               scrollToBorrower(borrower._id);
             }, 500);
           } else {
-            console.warn('Borrower not found with mobile number:', highlightMobileNumber);
+            console.warn(
+              'Borrower not found with mobile number:',
+              highlightMobileNumber,
+            );
           }
         }
       }
@@ -119,8 +137,9 @@ const Outward = ({ navigation, route }) => {
   // Retry highlighting when borrowers are loaded
   useEffect(() => {
     if (pendingHighlightParams && borrowers && borrowers.length > 0) {
-      const { highlightBorrowerId, highlightMobileNumber } = pendingHighlightParams;
-      
+      const { highlightBorrowerId, highlightMobileNumber } =
+        pendingHighlightParams;
+
       if (highlightBorrowerId) {
         const borrower = borrowers.find(b => b._id === highlightBorrowerId);
         if (borrower) {
@@ -131,10 +150,11 @@ const Outward = ({ navigation, route }) => {
           setPendingHighlightParams(null);
         }
       } else if (highlightMobileNumber) {
-        const borrower = borrowers.find(b => 
-          b.mobileNo === highlightMobileNumber || 
-          b.mobileNo === `+91${highlightMobileNumber}` ||
-          b.mobileNo === highlightMobileNumber.replace(/^\+91/, '')
+        const borrower = borrowers.find(
+          b =>
+            b.mobileNo === highlightMobileNumber ||
+            b.mobileNo === `+91${highlightMobileNumber}` ||
+            b.mobileNo === highlightMobileNumber.replace(/^\+91/, ''),
         );
         if (borrower) {
           setHighlightedBorrowerId(borrower._id);
@@ -161,16 +181,20 @@ const Outward = ({ navigation, route }) => {
   useEffect(() => {
     const fetchData = async () => {
       if (debouncedSearch && debouncedSearch.trim() !== '') {
-        dispatch(searchBorrowers({
-          search: debouncedSearch,
-          page: 1,
-          limit: ALL_BORROWERS_LIMIT,
-        }));
+        dispatch(
+          searchBorrowers({
+            search: debouncedSearch,
+            page: 1,
+            limit: ALL_BORROWERS_LIMIT,
+          }),
+        );
       } else {
         try {
-          await dispatch(getAllBorrowers({ page: 1, limit: ALL_BORROWERS_LIMIT }));
+          await dispatch(
+            getAllBorrowers({ page: 1, limit: ALL_BORROWERS_LIMIT }),
+          );
         } catch (error) {
-          console.error("Error fetching borrowers:", error);
+          console.error('Error fetching borrowers:', error);
         }
       }
     };
@@ -178,33 +202,39 @@ const Outward = ({ navigation, route }) => {
   }, [debouncedSearch, dispatch]);
 
   // Fetch risk assessment for a borrower
-  const fetchRiskAssessment = useCallback(async (aadhaarNumber) => {
-    if (!aadhaarNumber || aadhaarNumber.length !== 12) return;
-    
-    try {
-      const result = await dispatch(getRiskAssessment(aadhaarNumber));
-      if (getRiskAssessment.fulfilled.match(result)) {
-        setBorrowerRiskAssessment(prev => {
-          // Check if we already have risk assessment for this borrower
-          if (prev[aadhaarNumber]) return prev;
-          return {
-            ...prev,
-            [aadhaarNumber]: result.payload,
-          };
-        });
-      } else if (getRiskAssessment.rejected.match(result)) {
-        // Silently handle rejections - borrower may not have loan history
+  const fetchRiskAssessment = useCallback(
+    async aadhaarNumber => {
+      if (!aadhaarNumber || aadhaarNumber.length !== 12) return;
+
+      try {
+        const result = await dispatch(getRiskAssessment(aadhaarNumber));
+        if (getRiskAssessment.fulfilled.match(result)) {
+          setBorrowerRiskAssessment(prev => {
+            // Check if we already have risk assessment for this borrower
+            if (prev[aadhaarNumber]) return prev;
+            return {
+              ...prev,
+              [aadhaarNumber]: result.payload,
+            };
+          });
+        } else if (getRiskAssessment.rejected.match(result)) {
+          // Silently handle rejections - borrower may not have loan history
+        }
+      } catch (error) {
+        // Silently handle errors - borrower may not have loan history
       }
-    } catch (error) {
-      // Silently handle errors - borrower may not have loan history
-    }
-  }, [dispatch]);
+    },
+    [dispatch],
+  );
 
   // Fetch risk assessment for all borrowers when they load
   useEffect(() => {
     if (borrowers && borrowers.length > 0) {
       borrowers.forEach(borrower => {
-        const aadhaarNumber = borrower.aadharCardNo || borrower.aadhaarCardNo || borrower.aadhaarNumber;
+        const aadhaarNumber =
+          borrower.aadharCardNo ||
+          borrower.aadhaarCardNo ||
+          borrower.aadhaarNumber;
         if (aadhaarNumber && aadhaarNumber.length === 12) {
           fetchRiskAssessment(aadhaarNumber);
         }
@@ -216,63 +246,77 @@ const Outward = ({ navigation, route }) => {
   useFocusEffect(
     useCallback(() => {
       dispatch(getPendingPayments({ page: 1, limit: 100 }));
-    }, [dispatch])
+    }, [dispatch]),
   );
 
-  const formatCurrency = (amount) => {
-    const numAmount = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
+  const formatCurrency = amount => {
+    const numAmount =
+      typeof amount === 'number' ? amount : parseFloat(amount) || 0;
     return `₹${numAmount.toLocaleString('en-IN')}`;
   };
 
   // Helper function to get pending payments for a borrower
-  const getBorrowerPendingPayments = (borrower) => {
-    if (!pendingPayments || !Array.isArray(pendingPayments) || pendingPayments.length === 0) {
+  const getBorrowerPendingPayments = borrower => {
+    if (
+      !pendingPayments ||
+      !Array.isArray(pendingPayments) ||
+      pendingPayments.length === 0
+    ) {
       return null;
     }
-    
+
     const borrowerLoans = pendingPayments.filter(loan => {
       // Match by name
-      const nameMatch = (
-        (loan.loanName && borrower.userName && 
-         loan.loanName.toLowerCase() === borrower.userName.toLowerCase()) ||
-        (loan.borrowerName && borrower.userName && 
-         loan.borrowerName.toLowerCase() === borrower.userName.toLowerCase())
-      );
-      
+      const nameMatch =
+        (loan.loanName &&
+          borrower.userName &&
+          loan.loanName.toLowerCase() === borrower.userName.toLowerCase()) ||
+        (loan.borrowerName &&
+          borrower.userName &&
+          loan.borrowerName.toLowerCase() === borrower.userName.toLowerCase());
+
       // Match by mobile
-      const mobileMatch = loan.borrowerMobile && borrower.mobileNo && (
-        loan.borrowerMobile === borrower.mobileNo ||
-        loan.borrowerMobile === borrower.mobileNo.replace(/^\+91/, '') ||
-        loan.borrowerMobile.replace(/^\+91/, '') === borrower.mobileNo
-      );
-      
+      const mobileMatch =
+        loan.borrowerMobile &&
+        borrower.mobileNo &&
+        (loan.borrowerMobile === borrower.mobileNo ||
+          loan.borrowerMobile === borrower.mobileNo.replace(/^\+91/, '') ||
+          loan.borrowerMobile.replace(/^\+91/, '') === borrower.mobileNo);
+
       // Match by Aadhaar
-      const aadhaarMatch = loan.borrowerAadhaar && borrower.aadharCardNo && 
+      const aadhaarMatch =
+        loan.borrowerAadhaar &&
+        borrower.aadharCardNo &&
         loan.borrowerAadhaar === borrower.aadharCardNo;
-      
+
       return nameMatch || mobileMatch || aadhaarMatch;
     });
-    
+
     if (borrowerLoans.length === 0) return null;
-    
+
     // Aggregate all pending payments for this borrower
     let totalPendingCount = 0;
     let totalPendingAmount = 0;
-    
+
     borrowerLoans.forEach(loan => {
-      if (loan.pendingPayments && Array.isArray(loan.pendingPayments) && loan.pendingPayments.length > 0) {
+      if (
+        loan.pendingPayments &&
+        Array.isArray(loan.pendingPayments) &&
+        loan.pendingPayments.length > 0
+      ) {
         totalPendingCount += loan.pendingPayments.length;
         loan.pendingPayments.forEach(payment => {
-          const amount = typeof payment.amount === 'number' 
-            ? payment.amount 
-            : parseFloat(payment.amount) || 0;
+          const amount =
+            typeof payment.amount === 'number'
+              ? payment.amount
+              : parseFloat(payment.amount) || 0;
           totalPendingAmount += amount;
         });
       }
     });
-    
+
     if (totalPendingCount === 0) return null;
-    
+
     return {
       count: totalPendingCount,
       amount: totalPendingAmount,
@@ -281,17 +325,19 @@ const Outward = ({ navigation, route }) => {
 
   const onRefresh = useCallback(async () => {
     if (debouncedSearch && debouncedSearch.trim() !== '') {
-      await dispatch(searchBorrowers({
-        search: debouncedSearch,
-        page: 1,
-        limit: ALL_BORROWERS_LIMIT,
-      }));
+      await dispatch(
+        searchBorrowers({
+          search: debouncedSearch,
+          page: 1,
+          limit: ALL_BORROWERS_LIMIT,
+        }),
+      );
     } else {
       await dispatch(getAllBorrowers({ page: 1, limit: ALL_BORROWERS_LIMIT }));
     }
   }, [dispatch, debouncedSearch]);
 
-  const handleBorrowerCardPress = (borrower) => {
+  const handleBorrowerCardPress = borrower => {
     if (isLender && !hasActivePlan) {
       return;
     }
@@ -301,7 +347,9 @@ const Outward = ({ navigation, route }) => {
 
   const handleSeeDetails = () => {
     setBorrowerActionModalVisible(false);
-    navigation.navigate('BorrowerDetailsScreen', { borrowerDetails: selectedBorrower });
+    navigation.navigate('BorrowerDetailsScreen', {
+      borrowerDetails: selectedBorrower,
+    });
   };
 
   const handleViewLoanHistory = () => {
@@ -316,19 +364,27 @@ const Outward = ({ navigation, route }) => {
 
   const handleAddLoan = () => {
     setBorrowerActionModalVisible(false);
-    
+
     // Check for risk assessment before proceeding
     const aadhaarNumber = selectedBorrower.aadharCardNo;
-    const riskData = aadhaarNumber ? borrowerRiskAssessment[aadhaarNumber] : null;
-    
+    const riskData = aadhaarNumber
+      ? borrowerRiskAssessment[aadhaarNumber]
+      : null;
+
     // Check if borrower has medium, high, or critical risk
     if (riskData && riskData.riskLevel) {
       const riskLevel = riskData.riskLevel.toLowerCase();
-      if (riskLevel === 'medium' || riskLevel === 'high' || riskLevel === 'critical') {
+      if (
+        riskLevel === 'medium' ||
+        riskLevel === 'high' ||
+        riskLevel === 'critical'
+      ) {
         // Show alert with risk warning
         Alert.alert(
           '⚠️ Fraud Risk Detected',
-          riskData.warning || riskData.recommendation || `This borrower has been flagged as ${riskLevel.toUpperCase()} RISK. Do you still want to proceed with creating a loan?`,
+          riskData.warning ||
+            riskData.recommendation ||
+            `This borrower has been flagged as ${riskLevel.toUpperCase()} RISK. Do you still want to proceed with creating a loan?`,
           [
             {
               text: 'Cancel',
@@ -344,7 +400,9 @@ const Outward = ({ navigation, route }) => {
                 // User confirmed, proceed with loan creation
                 const borrowerData = {
                   name: selectedBorrower.userName,
-                  mobileNumber: selectedBorrower.mobileNo?.replace(/^\+91/, '') || selectedBorrower.mobileNo,
+                  mobileNumber:
+                    selectedBorrower.mobileNo?.replace(/^\+91/, '') ||
+                    selectedBorrower.mobileNo,
                   aadhaarNumber: selectedBorrower.aadharCardNo,
                   address: selectedBorrower.address,
                 };
@@ -352,16 +410,18 @@ const Outward = ({ navigation, route }) => {
               },
             },
           ],
-          { cancelable: true }
+          { cancelable: true },
         );
         return;
       }
     }
-    
+
     // No risk or low risk - proceed directly
     const borrowerData = {
       name: selectedBorrower.userName,
-      mobileNumber: selectedBorrower.mobileNo?.replace(/^\+91/, '') || selectedBorrower.mobileNo,
+      mobileNumber:
+        selectedBorrower.mobileNo?.replace(/^\+91/, '') ||
+        selectedBorrower.mobileNo,
       aadhaarNumber: selectedBorrower.aadharCardNo,
       address: selectedBorrower.address,
     };
@@ -372,295 +432,404 @@ const Outward = ({ navigation, route }) => {
     <View style={styles.container}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <Header title="Borrowers" />
 
-      {/* Search and Filter Section */}
-      <View style={[
-        styles.searchSection,
-        isLender && !hasActivePlan && styles.disabledSection
-      ]}>
-        <View style={styles.searchWrapper}>
-          <View style={styles.searchContainer}>
-            <Icon name="search" size={22} color={colors.gold} style={styles.searchIcon} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search by name or mobile number"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholderTextColor={colors.textMuted}
-              editable={isLender ? hasActivePlan : true}
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity
-                onPress={() => setSearchQuery('')}
-                style={styles.clearButton}
-                disabled={isLender && !hasActivePlan}>
-                <Icon name="close" size={18} color={colors.textSecondary} />
-              </TouchableOpacity>
-            )}
-          </View>
-          <TouchableOpacity
-            style={[styles.addButton, (!isLender || !hasActivePlan) && styles.disabledButton]}
-            onPress={() => {
-              if (isLender && !hasActivePlan) return;
-              navigation.navigate('AddDetails');
-            }}
-            activeOpacity={0.8}
-            disabled={isLender && !hasActivePlan}>
-            <Icon name="add" size={24} color={colors.white} />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Borrower Action Modal */}
-      <Modal
-        visible={borrowerActionModalVisible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setBorrowerActionModalVisible(false)}>
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setBorrowerActionModalVisible(false)}>
-          <View style={styles.actionModalContent}>
-            <View style={styles.modalHandle} />
-            <View style={styles.actionModalHeader}>
-              <View style={styles.actionModalTitleBlock}>
-                <Text style={styles.actionModalTitle}>Choose Action</Text>
-                <Text style={styles.actionModalSubtitle}>
-                  Select what you want to do next
-                </Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => setBorrowerActionModalVisible(false)}
-                style={styles.closeButton}>
-                <Icon name="close" size={22} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.actionButtonsContainer}>
-              <TouchableOpacity
-                style={[styles.actionButton, styles.historyButton]}
-                onPress={handleViewLoanHistory}
-                activeOpacity={0.8}>
-                <View style={[styles.actionIconContainer, { backgroundColor: colors.butterSoft }]}>
-                  <Icon name="history" size={24} color={colors.goldDark} />
-                </View>
-                <View style={styles.actionButtonContent}>
-                  <Text style={styles.actionButtonText}>Loan History</Text>
-                  <Text style={styles.actionButtonSubtext}>View this borrower's loans directly</Text>
-                </View>
-                <Icon name="chevron-right" size={20} color={colors.textMuted} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.actionButton, styles.detailsButton]}
-                onPress={handleSeeDetails}
-                activeOpacity={0.8}>
-                <View style={[styles.actionIconContainer, { backgroundColor: colors.skySoft }]}>
-                  <Icon name="info" size={24} color={colors.skyText} />
-                </View>
-                <View style={styles.actionButtonContent}>
-                  <Text style={styles.actionButtonText}>Borrower Profile</Text>
-                  <Text style={styles.actionButtonSubtext}>See full borrower information</Text>
-                </View>
-                <Icon name="chevron-right" size={20} color={colors.textMuted} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.actionButton, styles.addLoanButton]}
-                onPress={handleAddLoan}
-                activeOpacity={0.8}>
-                <View style={[styles.actionIconContainer, { backgroundColor: colors.mintSoft }]}>
-                  <Icon name="add-circle" size={24} color={colors.mintText} />
-                </View>
-                <View style={styles.actionButtonContent}>
-                  <Text style={styles.actionButtonText}>Add New Loan</Text>
-                  <Text style={styles.actionButtonSubtext}>Create a loan for this borrower</Text>
-                </View>
-                <Icon name="chevron-right" size={20} color={colors.textMuted} />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.actionModalFooter}>
-              <View style={styles.actionModalFooterHandle} />
-            </View>
-          </View>
-        </TouchableOpacity>
-      </Modal>
-
-      {/* Borrowers List */}
-      {loading ? (
-        <LoaderSkeleton />
-      ) : (
-        <ScrollView
-          ref={scrollViewRef}
+        {/* Search and Filter Section */}
+        <View
           style={[
-            styles.loanListContainer,
-            isLender && !hasActivePlan && styles.disabledSection
+            styles.searchSection,
+            isLender && !hasActivePlan && styles.disabledSection,
           ]}
-          contentContainerStyle={styles.scrollContent}
-          refreshControl={
-            <RefreshControl 
-              refreshing={loading} 
-              onRefresh={onRefresh}
-              enabled={isLender ? hasActivePlan : true}
-            />
-          }
-          showsVerticalScrollIndicator={false}
-          scrollEnabled={isLender ? hasActivePlan : true}>
-          {borrowers?.length === 0 ? (
-            <View style={styles.emptyState}>
-              <View style={styles.emptyIconContainer}>
-                <Icon name="people-outline" size={80} color={colors.textMuted} />
-              </View>
-              <Text style={styles.emptyTitle}>
-                {searchQuery ? 'No Results Found' : 'No Borrowers Yet'}
-              </Text>
-              <Text style={styles.emptySubtitle}>
-                {searchQuery
-                  ? 'Try adjusting your search terms'
-                  : 'Start by adding your first borrower'}
-              </Text>
-              {!searchQuery && (
+        >
+          <View style={styles.searchWrapper}>
+            <View style={styles.searchContainer}>
+              <Icon
+                name="search"
+                size={22}
+                color={colors.gold}
+                style={styles.searchIcon}
+              />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search by name or mobile number"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholderTextColor={colors.textMuted}
+                editable={isLender ? hasActivePlan : true}
+              />
+              {searchQuery.length > 0 && (
                 <TouchableOpacity
-                  style={styles.emptyActionButton}
-                  onPress={() => navigation.navigate('AddDetails')}
-                  activeOpacity={0.8}>
-                  <Icon name="add" size={20} color={colors.white} />
-                  <Text style={styles.emptyActionText}>Add Borrower</Text>
+                  onPress={() => setSearchQuery('')}
+                  style={styles.clearButton}
+                  disabled={isLender && !hasActivePlan}
+                >
+                  <Icon name="close" size={18} color={colors.textSecondary} />
                 </TouchableOpacity>
               )}
             </View>
-          ) : (
-            <>
-            {(borrowers || []).map((borrower, index) => {
-              const isHighlighted = highlightedBorrowerId === borrower._id;
-              const aadhaarNumber = borrower.aadharCardNo || borrower.aadhaarCardNo || borrower.aadhaarNumber;
-              const riskData = aadhaarNumber ? borrowerRiskAssessment[aadhaarNumber] : null;
-              const hasRisk = riskData && riskData.riskLevel && riskData.riskLevel.toLowerCase() !== 'low';
-              const riskLevel = riskData?.riskLevel?.toLowerCase() || null;
-              const riskBadge = riskData?.riskBadge || null;
-              const borrowerPendingPayments = getBorrowerPendingPayments(borrower);
-              const cardTint = index % 2 === 0 ? colors.skyText : colors.mintText;
-              const avatarContent = borrower?.profileImage ? (
-                <Image
-                  source={{ uri: borrower?.profileImage }}
-                  style={styles.userAvatar}
-                />
-              ) : (
-                <View style={styles.avatarPlaceholder}>
-                  <Text style={styles.avatarText}>
-                    {borrower?.userName?.charAt(0)?.toUpperCase() || 'U'}
+            <TouchableOpacity
+              style={[
+                styles.addButton,
+                (!isLender || !hasActivePlan) && styles.disabledButton,
+              ]}
+              onPress={() => {
+                if (isLender && !hasActivePlan) return;
+                navigation.navigate('AddDetails');
+              }}
+              activeOpacity={0.8}
+              disabled={isLender && !hasActivePlan}
+            >
+              <Icon name="add" size={24} color={colors.white} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Borrower Action Modal */}
+        <Modal
+          visible={borrowerActionModalVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setBorrowerActionModalVisible(false)}
+        >
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setBorrowerActionModalVisible(false)}
+          >
+            <View style={styles.actionModalContent}>
+              <View style={styles.modalHandle} />
+              <View style={styles.actionModalHeader}>
+                <View style={styles.actionModalTitleBlock}>
+                  <Text style={styles.actionModalTitle}>Choose Action</Text>
+                  <Text style={styles.actionModalSubtitle}>
+                    Select what you want to do next
                   </Text>
                 </View>
-              );
+                <TouchableOpacity
+                  onPress={() => setBorrowerActionModalVisible(false)}
+                  style={styles.closeButton}
+                >
+                  <Icon name="close" size={22} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
 
-              return (
-                <React.Fragment key={borrower._id || index}>
+              <View style={styles.actionButtonsContainer}>
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.historyButton]}
+                  onPress={handleViewLoanHistory}
+                  activeOpacity={0.8}
+                >
+                  <View
+                    style={[
+                      styles.actionIconContainer,
+                      { backgroundColor: colors.butterSoft },
+                    ]}
+                  >
+                    <Icon name="history" size={24} color={colors.goldDark} />
+                  </View>
+                  <View style={styles.actionButtonContent}>
+                    <Text style={styles.actionButtonText}>Loan history</Text>
+                    <Text style={styles.actionButtonSubtext}>
+                      View this borrower's loans directly
+                    </Text>
+                  </View>
+                  <Icon
+                    name="chevron-right"
+                    size={20}
+                    color={colors.textMuted}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.detailsButton]}
+                  onPress={handleSeeDetails}
+                  activeOpacity={0.8}
+                >
+                  <View
+                    style={[
+                      styles.actionIconContainer,
+                      { backgroundColor: colors.skySoft },
+                    ]}
+                  >
+                    <Icon name="info" size={24} color={colors.skyText} />
+                  </View>
+                  <View style={styles.actionButtonContent}>
+                    <Text style={styles.actionButtonText}>
+                      Borrower profile
+                    </Text>
+                    <Text style={styles.actionButtonSubtext}>
+                      See full borrower information
+                    </Text>
+                  </View>
+                  <Icon
+                    name="chevron-right"
+                    size={20}
+                    color={colors.textMuted}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.addLoanButton]}
+                  onPress={handleAddLoan}
+                  activeOpacity={0.8}
+                >
+                  <View
+                    style={[
+                      styles.actionIconContainer,
+                      { backgroundColor: colors.mintSoft },
+                    ]}
+                  >
+                    <Icon name="add-circle" size={24} color={colors.mintText} />
+                  </View>
+                  <View style={styles.actionButtonContent}>
+                    <Text style={styles.actionButtonText}>Add new loan</Text>
+                    <Text style={styles.actionButtonSubtext}>
+                      Create a loan for this borrower
+                    </Text>
+                  </View>
+                  <Icon
+                    name="chevron-right"
+                    size={20}
+                    color={colors.textMuted}
+                  />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.actionModalFooter}>
+                <View style={styles.actionModalFooterHandle} />
+              </View>
+            </View>
+          </TouchableOpacity>
+        </Modal>
+
+        {/* Borrowers List */}
+        {loading ? (
+          <LoaderSkeleton />
+        ) : (
+          <ScrollView
+            ref={scrollViewRef}
+            style={[
+              styles.loanListContainer,
+              isLender && !hasActivePlan && styles.disabledSection,
+            ]}
+            contentContainerStyle={styles.scrollContent}
+            refreshControl={
+              <RefreshControl
+                refreshing={loading}
+                onRefresh={onRefresh}
+                enabled={isLender ? hasActivePlan : true}
+              />
+            }
+            showsVerticalScrollIndicator={false}
+            scrollEnabled={isLender ? hasActivePlan : true}
+          >
+            {borrowers?.length === 0 ? (
+              <View style={styles.emptyState}>
+                <View style={styles.emptyIconContainer}>
+                  <Icon
+                    name="people-outline"
+                    size={80}
+                    color={colors.textMuted}
+                  />
+                </View>
+                <Text style={styles.emptyTitle}>
+                  {searchQuery ? 'No Results Found' : 'No Borrowers Yet'}
+                </Text>
+                <Text style={styles.emptySubtitle}>
+                  {searchQuery
+                    ? 'Try adjusting your search terms'
+                    : 'Start by adding your first borrower'}
+                </Text>
+                {!searchQuery && (
                   <TouchableOpacity
-                    onPress={() => handleBorrowerCardPress(borrower)}
-                    activeOpacity={isLender && !hasActivePlan ? 1 : 0.9}
-                    disabled={isLender && !hasActivePlan}>
-                    <View style={[
-                      styles.borrowerCard,
-                      isHighlighted && styles.highlightedBorrowerCard,
-                      hasRisk && styles.fraudRiskBorrowerCard,
-                      borrowerPendingPayments && styles.pendingPaymentBorrowerCard,
-                      { borderLeftColor: cardTint }
-                    ]}>
-                      {/* Status Banners */}
-                      {borrowerPendingPayments && (
-                        <View style={styles.pendingPaymentBanner}>
-                          <Icon name="notifications" size={14} color={colors.white} />
-                          <Text style={styles.pendingPaymentBannerText} numberOfLines={1}>
-                            {borrowerPendingPayments.count} Pending • {formatCurrency(borrowerPendingPayments.amount)}
-                          </Text>
-                        </View>
-                      )}
-                      {hasRisk && !borrowerPendingPayments && riskBadge && (
-                        <View style={[
-                          styles.fraudBanner,
-                          { borderColor: riskBadge.color || colors.error }
-                        ]}>
-                          <Icon name="warning" size={13} color={riskBadge.color || colors.error} />
-                          <Text
-                            style={[
-                              styles.fraudBannerText,
-                              { color: riskBadge.color || colors.error }
-                            ]}
-                            numberOfLines={1}>
-                            {riskBadge.label || riskLevel} Risk Detected
-                          </Text>
-                        </View>
-                      )}
-
-                      {/* Top Row — label + Details pill, mirrors MyLoans' loan card */}
-                      {/* Avatar + name + primary contact number */}
-                      <View style={styles.cardMainRow}>
-                        {borrower.aadharCardNo && borrower.aadharCardNo.length === 12 ? (
-                          <View style={styles.avatarReputationRing}>
-                            <BorrowerReputationCard
-                              aadhaarNumber={borrower.aadharCardNo}
-                              compact={true}
-                              circle={true}
-                              avatarContent={avatarContent}
-                            />
-                          </View>
-                        ) : avatarContent}
-                        <View style={styles.userDetails}>
-                          <Text style={styles.userName} numberOfLines={1}>
-                            {borrower.userName}
-                          </Text>
-                          <View style={styles.userMeta}>
-                            <Icon name="phone" size={12} color={colors.textSecondary} />
-                            <Text style={styles.userMobile} numberOfLines={1}>
-                              {borrower.mobileNo || 'Not provided'}
-                            </Text>
-                          </View>
-                        </View>
-                        <View style={styles.viewButton}>
-                          <Icon name="chevron-right" size={20} color={colors.textSecondary} />
-                        </View>
-                      </View>
-
-                      {/* Reputation Score Card */}
-                      {borrower.aadharCardNo && borrower.aadharCardNo.length === 12 && (
-                        <View style={styles.reputationSection}>
-                          <View style={styles.reputationContainer}>
-                            <BorrowerReputationCard
-                              aadhaarNumber={borrower.aadharCardNo}
-                              compact={true}
-                              minimal={true}
-                            />
-                          </View>
-                        </View>
-                      )}
-
-                      {/* Footer — pending payment status only */}
-                      {borrowerPendingPayments && (
-                        <View style={styles.cardFooter}>
-                          <View style={styles.pendingPaymentBadge}>
-                            <Icon name="schedule" size={12} color={colors.goldDark} />
-                            <Text style={styles.pendingPaymentBadgeText}>
-                              {borrowerPendingPayments.count} pending
-                            </Text>
-                          </View>
-                        </View>
-                      )}
-                    </View>
+                    style={styles.emptyActionButton}
+                    onPress={() => navigation.navigate('AddDetails')}
+                    activeOpacity={0.8}
+                  >
+                    <Icon name="add" size={20} color={colors.white} />
+                    <Text style={styles.emptyActionText}>Add Borrower</Text>
                   </TouchableOpacity>
+                )}
+              </View>
+            ) : (
+              <>
+                {(borrowers || []).map((borrower, index) => {
+                  const isHighlighted = highlightedBorrowerId === borrower._id;
+                  const aadhaarNumber =
+                    borrower.aadharCardNo ||
+                    borrower.aadhaarCardNo ||
+                    borrower.aadhaarNumber;
+                  const riskData = aadhaarNumber
+                    ? borrowerRiskAssessment[aadhaarNumber]
+                    : null;
+                  const hasRisk =
+                    riskData &&
+                    riskData.riskLevel &&
+                    riskData.riskLevel.toLowerCase() !== 'low';
+                  const riskLevel = riskData?.riskLevel?.toLowerCase() || null;
+                  const riskBadge = riskData?.riskBadge || null;
+                  const borrowerPendingPayments =
+                    getBorrowerPendingPayments(borrower);
+                  const cardTint =
+                    index % 2 === 0 ? colors.skyText : colors.mintText;
+                  const avatarContent = borrower?.profileImage ? (
+                    <Image
+                      source={{ uri: borrower?.profileImage }}
+                      style={styles.userAvatar}
+                    />
+                  ) : (
+                    <View style={styles.avatarPlaceholder}>
+                      <Text style={styles.avatarText}>
+                        {borrower?.userName?.charAt(0)?.toUpperCase() || 'U'}
+                      </Text>
+                    </View>
+                  );
 
-                </React.Fragment>
-              );
-            })}
-            </>
-          )}
-        </ScrollView>
-      )}
+                  return (
+                    <React.Fragment key={borrower._id || index}>
+                      <TouchableOpacity
+                        onPress={() => handleBorrowerCardPress(borrower)}
+                        activeOpacity={isLender && !hasActivePlan ? 1 : 0.9}
+                        disabled={isLender && !hasActivePlan}
+                      >
+                        <View
+                          style={[
+                            styles.borrowerCard,
+                            isHighlighted && styles.highlightedBorrowerCard,
+                            hasRisk && styles.fraudRiskBorrowerCard,
+                            borrowerPendingPayments &&
+                              styles.pendingPaymentBorrowerCard,
+                            { borderLeftColor: cardTint },
+                          ]}
+                        >
+                          {/* Status Banners */}
+                          {borrowerPendingPayments && (
+                            <View style={styles.pendingPaymentBanner}>
+                              <Icon
+                                name="notifications"
+                                size={14}
+                                color={colors.white}
+                              />
+                              <Text
+                                style={styles.pendingPaymentBannerText}
+                                numberOfLines={1}
+                              >
+                                {borrowerPendingPayments.count} Pending •{' '}
+                                {formatCurrency(borrowerPendingPayments.amount)}
+                              </Text>
+                            </View>
+                          )}
+                          {hasRisk && !borrowerPendingPayments && riskBadge && (
+                            <View
+                              style={[
+                                styles.fraudBanner,
+                                {
+                                  borderColor: riskBadge.color || colors.error,
+                                },
+                              ]}
+                            >
+                              <Icon
+                                name="warning"
+                                size={13}
+                                color={riskBadge.color || colors.error}
+                              />
+                              <Text
+                                style={[
+                                  styles.fraudBannerText,
+                                  { color: riskBadge.color || colors.error },
+                                ]}
+                                numberOfLines={1}
+                              >
+                                {riskBadge.label || riskLevel} Risk Detected
+                              </Text>
+                            </View>
+                          )}
+
+                          {/* Top Row — label + Details pill, mirrors MyLoans' loan card */}
+                          {/* Avatar + name + primary contact number */}
+                          <View style={styles.cardMainRow}>
+                            {borrower.aadharCardNo &&
+                            borrower.aadharCardNo.length === 12 ? (
+                              <View style={styles.avatarReputationRing}>
+                                <BorrowerReputationCard
+                                  aadhaarNumber={borrower.aadharCardNo}
+                                  compact={true}
+                                  circle={true}
+                                  avatarContent={avatarContent}
+                                />
+                              </View>
+                            ) : (
+                              avatarContent
+                            )}
+                            <View style={styles.userDetails}>
+                              <Text style={styles.userName} numberOfLines={1}>
+                                {borrower.userName}
+                              </Text>
+                              <View style={styles.userMeta}>
+                                <Icon
+                                  name="phone"
+                                  size={12}
+                                  color={colors.textSecondary}
+                                />
+                                <Text
+                                  style={styles.userMobile}
+                                  numberOfLines={1}
+                                >
+                                  {borrower.mobileNo || 'Not provided'}
+                                </Text>
+                              </View>
+                            </View>
+                            <View style={styles.viewButton}>
+                              <Icon
+                                name="chevron-right"
+                                size={20}
+                                color={colors.textSecondary}
+                              />
+                            </View>
+                          </View>
+
+                          {/* Reputation Score Card */}
+                          {borrower.aadharCardNo &&
+                            borrower.aadharCardNo.length === 12 && (
+                              <View style={styles.reputationSection}>
+                                <View style={styles.reputationContainer}>
+                                  <BorrowerReputationCard
+                                    aadhaarNumber={borrower.aadharCardNo}
+                                    compact={true}
+                                    minimal={true}
+                                  />
+                                </View>
+                              </View>
+                            )}
+
+                          {/* Footer — pending payment status only */}
+                          {borrowerPendingPayments && (
+                            <View style={styles.cardFooter}>
+                              <View style={styles.pendingPaymentBadge}>
+                                <Icon
+                                  name="schedule"
+                                  size={12}
+                                  color={colors.goldDark}
+                                />
+                                <Text style={styles.pendingPaymentBadgeText}>
+                                  {borrowerPendingPayments.count} pending
+                                </Text>
+                              </View>
+                            </View>
+                          )}
+                        </View>
+                      </TouchableOpacity>
+                    </React.Fragment>
+                  );
+                })}
+              </>
+            )}
+          </ScrollView>
+        )}
       </KeyboardAvoidingView>
-      
+
       {/* Subscription Restriction Overlay */}
       {isLender && !planLoading && !hasActivePlan && (
-        <SubscriptionRestriction 
+        <SubscriptionRestriction
           message="Purchase a plan to view and search borrowers"
           asOverlay={true}
         />
@@ -1038,51 +1207,52 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     marginBottom: 0,
     backgroundColor: colors.surface,
-    borderTopLeftRadius: m(26),
-    borderTopRightRadius: m(26),
-    padding: m(18),
+    borderTopLeftRadius: m(28),
+    borderTopRightRadius: m(28),
+    paddingHorizontal: m(20),
     paddingTop: m(12),
     paddingBottom: 0,
-    maxHeight: '68%',
+    maxHeight: '72%',
   },
   modalHandle: {
     width: m(44),
     height: m(4),
-    backgroundColor: colors.goldLight,
+    backgroundColor: '#E6E3DB',
     borderRadius: m(2),
     alignSelf: 'center',
-    marginBottom: m(14),
+    marginBottom: m(18),
   },
   actionModalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: m(12),
+    marginBottom: m(16),
   },
   actionModalTitleBlock: {
     flex: 1,
     paddingRight: m(12),
+    alignItems: 'flex-start',
   },
   actionModalTitle: {
-    fontSize: m(20),
+    fontSize: m(22),
     fontWeight: '800',
     color: colors.textPrimary,
     marginBottom: m(3),
+    textAlign: 'left',
   },
   actionModalSubtitle: {
-    fontSize: m(13),
+    fontSize: m(14),
     color: colors.textSecondary,
     fontWeight: '500',
+    textAlign: 'left',
   },
   closeButton: {
-    width: m(36),
-    height: m(36),
-    borderRadius: m(18),
+    width: m(40),
+    height: m(40),
+    borderRadius: m(20),
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
+    backgroundColor: '#F6F4EE',
   },
   selectedBorrowerCard: {
     flexDirection: 'row',
@@ -1123,13 +1293,13 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   actionButtonsContainer: {
-    gap: m(10),
+    gap: m(16),
   },
   actionModalFooter: {
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface,
-    paddingTop: m(12),
+    paddingTop: m(14),
     paddingBottom: m(10),
   },
   actionModalFooterHandle: {
@@ -1141,28 +1311,24 @@ const styles = StyleSheet.create({
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: m(14),
-    borderRadius: m(15),
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: m(12),
+    paddingVertical: m(16),
+    paddingHorizontal: m(18),
+    borderRadius: m(16),
+    backgroundColor: '#F7F5EF',
+    gap: m(14),
   },
   historyButton: {
-    borderColor: colors.butter,
-    backgroundColor: colors.butterSoft,
+    backgroundColor: colors.goldFaint,
   },
   detailsButton: {
-    borderColor: colors.sky,
-    backgroundColor: colors.skySoft,
+    backgroundColor: '#F7F5EF',
   },
   addLoanButton: {
-    borderColor: colors.mint,
-    backgroundColor: colors.mintSoft,
+    backgroundColor: '#F7F5EF',
   },
   actionIconContainer: {
-    width: m(44),
-    height: m(44),
+    width: m(48),
+    height: m(48),
     borderRadius: m(13),
     justifyContent: 'center',
     alignItems: 'center',
@@ -1171,13 +1337,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   actionButtonText: {
-    fontSize: m(15),
+    fontSize: m(16),
     fontWeight: '800',
     color: colors.textPrimary,
     marginBottom: m(2),
   },
   actionButtonSubtext: {
-    fontSize: m(12),
+    fontSize: m(14),
     color: colors.textSecondary,
     fontWeight: '500',
   },

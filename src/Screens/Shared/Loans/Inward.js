@@ -34,14 +34,12 @@ export default function Inward({ navigation }) {
   const dispatch = useDispatch();
   const route = useRoute();
   const user = useSelector(state => state.auth.user);
-  const { lenderLoans, loading } = useSelector(
-    state => state.loans,
-  );
+  const { lenderLoans, loading } = useSelector(state => state.loans);
   const { pendingPayments } = useSelector(state => state.lenderPayments);
   const isLender = user?.roleId === 1;
   const { hasActivePlan } = useSubscription();
   const { loading: planLoading } = useSelector(state => state.planPurchase);
-  
+
   // Get highlightLoanId from route params
   const highlightLoanId = route.params?.highlightLoanId;
   const scrollViewRef = React.useRef(null);
@@ -60,7 +58,7 @@ export default function Inward({ navigation }) {
 
   // Add debounced search state
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  
+
   // Fraud status state for borrowers
   const [borrowerFraudStatus, setBorrowerFraudStatus] = useState({});
 
@@ -68,9 +66,10 @@ export default function Inward({ navigation }) {
 
   const fetchLocalLoans = useCallback(async () => {
     try {
-      const pendingLoans = await database.get('loans').query(
-        Q.where('sync_status', 'pending')
-      ).fetch();
+      const pendingLoans = await database
+        .get('loans')
+        .query(Q.where('sync_status', 'pending'))
+        .fetch();
 
       const standardLoans = pendingLoans.map(loan => ({
         _id: loan.id,
@@ -104,54 +103,68 @@ export default function Inward({ navigation }) {
   const formatDate = date => moment(date).format('DD MMM, YYYY');
 
   // Helper function to get pending payments for a borrower
-  const getBorrowerPendingPayments = (borrower) => {
-    if (!isLender || !pendingPayments || !Array.isArray(pendingPayments) || pendingPayments.length === 0) {
+  const getBorrowerPendingPayments = borrower => {
+    if (
+      !isLender ||
+      !pendingPayments ||
+      !Array.isArray(pendingPayments) ||
+      pendingPayments.length === 0
+    ) {
       return null;
     }
-    
+
     // Try multiple matching strategies
     const borrowerLoans = pendingPayments.filter(loan => {
       // Match by name
-      const nameMatch = (
-        (loan.loanName && borrower.name && 
-         loan.loanName.toLowerCase() === borrower.name.toLowerCase()) ||
-        (loan.borrowerName && borrower.name && 
-         loan.borrowerName.toLowerCase() === borrower.name.toLowerCase())
-      );
-      
+      const nameMatch =
+        (loan.loanName &&
+          borrower.name &&
+          loan.loanName.toLowerCase() === borrower.name.toLowerCase()) ||
+        (loan.borrowerName &&
+          borrower.name &&
+          loan.borrowerName.toLowerCase() === borrower.name.toLowerCase());
+
       // Match by mobile
-      const mobileMatch = loan.borrowerMobile && borrower.mobileNumber && (
-        loan.borrowerMobile === borrower.mobileNumber ||
-        loan.borrowerMobile === borrower.mobileNumber.replace(/^\+91/, '') ||
-        loan.borrowerMobile.replace(/^\+91/, '') === borrower.mobileNumber
-      );
-      
+      const mobileMatch =
+        loan.borrowerMobile &&
+        borrower.mobileNumber &&
+        (loan.borrowerMobile === borrower.mobileNumber ||
+          loan.borrowerMobile === borrower.mobileNumber.replace(/^\+91/, '') ||
+          loan.borrowerMobile.replace(/^\+91/, '') === borrower.mobileNumber);
+
       // Match by Aadhaar
-      const aadhaarMatch = loan.borrowerAadhaar && borrower.aadhaarNumber && 
+      const aadhaarMatch =
+        loan.borrowerAadhaar &&
+        borrower.aadhaarNumber &&
         loan.borrowerAadhaar === borrower.aadhaarNumber;
       return nameMatch || mobileMatch || aadhaarMatch;
     });
-    
+
     if (borrowerLoans.length === 0) return null;
-    
+
     // Aggregate all pending payments for this borrower
     let totalPendingCount = 0;
     let totalPendingAmount = 0;
-    
+
     borrowerLoans.forEach(loan => {
-      if (loan.pendingPayments && Array.isArray(loan.pendingPayments) && loan.pendingPayments.length > 0) {
+      if (
+        loan.pendingPayments &&
+        Array.isArray(loan.pendingPayments) &&
+        loan.pendingPayments.length > 0
+      ) {
         totalPendingCount += loan.pendingPayments.length;
         loan.pendingPayments.forEach(payment => {
-          const amount = typeof payment.amount === 'number' 
-            ? payment.amount 
-            : parseFloat(payment.amount) || 0;
+          const amount =
+            typeof payment.amount === 'number'
+              ? payment.amount
+              : parseFloat(payment.amount) || 0;
           totalPendingAmount += amount;
         });
       }
     });
-    
+
     if (totalPendingCount === 0) return null;
-    
+
     return {
       count: totalPendingCount,
       amount: totalPendingAmount,
@@ -179,11 +192,11 @@ export default function Inward({ navigation }) {
   // Check if any filter has a value
   const hasActiveFilters = Boolean(
     startDateFilter ||
-    endDateFilter ||
-    minAmount ||
-    maxAmount ||
-    statusFilter ||
-    searchQuery
+      endDateFilter ||
+      minAmount ||
+      maxAmount ||
+      statusFilter ||
+      searchQuery,
   );
 
   const handleResetOrClose = () => {
@@ -235,7 +248,7 @@ export default function Inward({ navigation }) {
       }
       dispatch(getLoanByLender(filters));
       fetchLocalLoans();
-      
+
       // Fetch pending payments for lender
       if (isLender) {
         dispatch(getPendingPayments({ page: 1, limit: 100 }));
@@ -246,20 +259,29 @@ export default function Inward({ navigation }) {
   // Effect to scroll to and highlight loan when highlightLoanId is provided
   useEffect(() => {
     if (highlightLoanId && lenderLoans?.length > 0 && scrollViewRef.current) {
-      const loanIndex = lenderLoans.findIndex(loan => loan._id === highlightLoanId);
+      const loanIndex = lenderLoans.findIndex(
+        loan => loan._id === highlightLoanId,
+      );
       if (loanIndex !== -1) {
         setTimeout(() => {
           const cardRef = loanCardRefs.current[highlightLoanId];
           if (cardRef && scrollViewRef.current) {
             cardRef.measureLayout(
-              scrollViewRef.current.getInnerViewNode?.() || scrollViewRef.current,
+              scrollViewRef.current.getInnerViewNode?.() ||
+                scrollViewRef.current,
               (x, y) => {
-                scrollViewRef.current?.scrollTo({ y: Math.max(0, y - 100), animated: true });
+                scrollViewRef.current?.scrollTo({
+                  y: Math.max(0, y - 100),
+                  animated: true,
+                });
               },
               () => {
                 const estimatedY = loanIndex * 200;
-                scrollViewRef.current?.scrollTo({ y: Math.max(0, estimatedY - 100), animated: true });
-              }
+                scrollViewRef.current?.scrollTo({
+                  y: Math.max(0, estimatedY - 100),
+                  animated: true,
+                });
+              },
             );
           }
         }, 800);
@@ -267,41 +289,43 @@ export default function Inward({ navigation }) {
     }
   }, [highlightLoanId, lenderLoans]);
 
-  const formatCurrency = (amount) => {
-    const numAmount = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
+  const formatCurrency = amount => {
+    const numAmount =
+      typeof amount === 'number' ? amount : parseFloat(amount) || 0;
     return `₹${numAmount.toLocaleString('en-IN')}`;
   };
 
   // Fetch fraud status for a borrower
-  const fetchFraudStatus = async (aadhaarNumber) => {
+  const fetchFraudStatus = async aadhaarNumber => {
     if (!aadhaarNumber || aadhaarNumber.length !== 12) return;
-    
+
     // Check if we already have fraud status for this borrower
     if (borrowerFraudStatus[aadhaarNumber]) return;
-    
-      try {
-        const result = await dispatch(checkFraudStatus(aadhaarNumber));
-        if (checkFraudStatus.fulfilled.match(result)) {
-          setBorrowerFraudStatus(prev => ({
-            ...prev,
-            [aadhaarNumber]: result.payload,
-          }));
-        }
-      } catch (error) {
-        console.error('Error fetching fraud status:', error);
+
+    try {
+      const result = await dispatch(checkFraudStatus(aadhaarNumber));
+      if (checkFraudStatus.fulfilled.match(result)) {
+        setBorrowerFraudStatus(prev => ({
+          ...prev,
+          [aadhaarNumber]: result.payload,
+        }));
       }
+    } catch (error) {
+      console.error('Error fetching fraud status:', error);
+    }
   };
 
   // Group loans by borrower (using aadhaarNumber or name as identifier)
-  const groupLoansByBorrower = (loans) => {
+  const groupLoansByBorrower = loans => {
     if (!loans || loans.length === 0) return [];
-    
+
     const grouped = {};
     loans.forEach(loan => {
       // Use aadhaarNumber as primary identifier, fallback to name
-      const borrowerId = loan.aadhaarNumber || loan.aadharCardNo || loan.name || 'unknown';
+      const borrowerId =
+        loan.aadhaarNumber || loan.aadharCardNo || loan.name || 'unknown';
       const aadhaarNumber = loan.aadhaarNumber || loan.aadharCardNo;
-      
+
       if (!grouped[borrowerId]) {
         grouped[borrowerId] = {
           borrower: {
@@ -316,17 +340,17 @@ export default function Inward({ navigation }) {
       }
       grouped[borrowerId].loans.push(loan);
     });
-    
+
     // Sort by borrower name for consistent display
-    return Object.values(grouped).sort((a, b) => 
-      (a.borrower.name || '').localeCompare(b.borrower.name || '')
+    return Object.values(grouped).sort((a, b) =>
+      (a.borrower.name || '').localeCompare(b.borrower.name || ''),
     );
   };
 
   // Fetch fraud status for all unique borrowers when loans change
   useEffect(() => {
     if (!lenderLoans || lenderLoans.length === 0) return;
-    
+
     // Get unique aadhaar numbers from all loans
     const uniqueAadhaarNumbers = new Set();
     lenderLoans.forEach(loan => {
@@ -335,7 +359,7 @@ export default function Inward({ navigation }) {
         uniqueAadhaarNumbers.add(aadhaarNumber);
       }
     });
-    
+
     // Fetch fraud status for each unique aadhaar number
     uniqueAadhaarNumbers.forEach(aadhaarNumber => {
       if (!borrowerFraudStatus[aadhaarNumber]) {
@@ -346,27 +370,35 @@ export default function Inward({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <Header title="My Loans"/>
+      <Header title="My Loans" />
 
       {/* Search and Filter Section */}
-      <View style={[
-        styles.searchSection,
-        isLender && !planLoading && !hasActivePlan && { opacity: 0.5 }
-      ]}>
+      <View
+        style={[
+          styles.searchSection,
+          isLender && !planLoading && !hasActivePlan && { opacity: 0.5 },
+        ]}
+      >
         <View style={styles.searchContainer}>
-          <Icon name="search" size={20} color="#6B7280" style={styles.searchIcon}/>
+          <Icon
+            name="search"
+            size={20}
+            color="#6B7280"
+            style={styles.searchIcon}
+          />
           <TextInput
             style={styles.searchInput}
             placeholder="Search by borrower name"
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholderTextColor="#9CA3AF"
-            editable={isLender ? (planLoading || hasActivePlan) : true}
+            editable={isLender ? planLoading || hasActivePlan : true}
           />
           <TouchableOpacity
             style={styles.filterButton}
-            onPress={() => setIsFilterModalVisible(true)}>
-          <Icon name="filter-list" size={24} color="#FFFFFF"/>
+            onPress={() => setIsFilterModalVisible(true)}
+          >
+            <Icon name="filter-list" size={24} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
       </View>
@@ -376,7 +408,8 @@ export default function Inward({ navigation }) {
         visible={isFilterModalVisible}
         transparent={true}
         animationType="slide"
-        onRequestClose={() => setIsFilterModalVisible(false)}>
+        onRequestClose={() => setIsFilterModalVisible(false)}
+      >
         <View style={styles.modalOverlay}>
           <TouchableOpacity
             style={styles.modalBackdrop}
@@ -391,11 +424,12 @@ export default function Inward({ navigation }) {
               </TouchableOpacity>
             </View>
 
-            <ScrollView 
+            <ScrollView
               style={styles.modalScrollContent}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
-              nestedScrollEnabled={true}>
+              nestedScrollEnabled={true}
+            >
               {/* Search in Filter Modal */}
               <View style={styles.searchFilterContainer}>
                 <Text style={styles.filterLabel}>Search by Borrower</Text>
@@ -421,7 +455,8 @@ export default function Inward({ navigation }) {
                       setCurrentDateType('start');
                       setTempDate(startDateFilter || new Date());
                       setDatePickerOpen(true);
-                    }}>
+                    }}
+                  >
                     <Icon name="calendar-today" size={18} color="#6B7280" />
                     <Text style={styles.dateText}>
                       {startDateFilter
@@ -436,12 +471,11 @@ export default function Inward({ navigation }) {
                       setCurrentDateType('end');
                       setTempDate(endDateFilter || new Date());
                       setDatePickerOpen(true);
-                    }}>
+                    }}
+                  >
                     <Icon name="calendar-today" size={18} color="#6B7280" />
                     <Text style={styles.dateText}>
-                      {endDateFilter
-                        ? formatDate(endDateFilter)
-                        : 'End Date'}
+                      {endDateFilter ? formatDate(endDateFilter) : 'End Date'}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -457,7 +491,9 @@ export default function Inward({ navigation }) {
                       style={[styles.input, styles.amountInput]}
                       placeholder="Min"
                       value={minAmount}
-                      onChangeText={text => setMinAmount(text.replace(/[^0-9]/g, ''))}
+                      onChangeText={text =>
+                        setMinAmount(text.replace(/[^0-9]/g, ''))
+                      }
                       keyboardType="numeric"
                       placeholderTextColor="#9CA3AF"
                     />
@@ -469,7 +505,9 @@ export default function Inward({ navigation }) {
                       style={[styles.input, styles.amountInput]}
                       placeholder="Max"
                       value={maxAmount}
-                      onChangeText={text => setMaxAmount(text.replace(/[^0-9]/g, ''))}
+                      onChangeText={text =>
+                        setMaxAmount(text.replace(/[^0-9]/g, ''))
+                      }
                       keyboardType="numeric"
                       placeholderTextColor="#9CA3AF"
                     />
@@ -486,17 +524,24 @@ export default function Inward({ navigation }) {
                       key={status}
                       style={[
                         styles.statusButton,
-                        statusFilter === status || (status === 'all' && !statusFilter)
+                        statusFilter === status ||
+                        (status === 'all' && !statusFilter)
                           ? styles.statusButtonActive
                           : styles.statusButtonInactive,
                       ]}
-                      onPress={() => setStatusFilter(status === 'all' ? null : status)}>
-                      <Text style={[
-                        styles.statusButtonText,
-                        statusFilter === status || (status === 'all' && !statusFilter)
-                          ? styles.statusButtonTextActive
-                          : styles.statusButtonTextInactive,
-                      ]}>
+                      onPress={() =>
+                        setStatusFilter(status === 'all' ? null : status)
+                      }
+                    >
+                      <Text
+                        style={[
+                          styles.statusButtonText,
+                          statusFilter === status ||
+                          (status === 'all' && !statusFilter)
+                            ? styles.statusButtonTextActive
+                            : styles.statusButtonTextInactive,
+                        ]}
+                      >
                         {status.charAt(0).toUpperCase() + status.slice(1)}
                       </Text>
                     </TouchableOpacity>
@@ -509,35 +554,39 @@ export default function Inward({ navigation }) {
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.clearButton]}
-                onPress={handleResetOrClose}>
-                <Icon 
-                  name={hasActiveFilters ? "refresh" : "close"} 
-                  size={18} 
-                  color="#6B7280" 
+                onPress={handleResetOrClose}
+              >
+                <Icon
+                  name={hasActiveFilters ? 'refresh' : 'close'}
+                  size={18}
+                  color="#6B7280"
                   style={styles.buttonIcon}
                 />
                 <Text style={styles.clearButtonText}>
-                  {hasActiveFilters ? "Reset" : "Close"}
+                  {hasActiveFilters ? 'Reset' : 'Close'}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
-                  styles.modalButton, 
+                  styles.modalButton,
                   styles.applyButton,
-                  !hasActiveFilters && styles.applyButtonDisabled
+                  !hasActiveFilters && styles.applyButtonDisabled,
                 ]}
                 onPress={handleSubmitFilters}
-                disabled={!hasActiveFilters}>
-                <Icon 
-                  name="check" 
-                  size={18} 
-                  color={hasActiveFilters ? "#FFFFFF" : "#9CA3AF"} 
+                disabled={!hasActiveFilters}
+              >
+                <Icon
+                  name="check"
+                  size={18}
+                  color={hasActiveFilters ? '#FFFFFF' : '#9CA3AF'}
                   style={styles.buttonIcon}
                 />
-                <Text style={[
-                  styles.applyButtonText,
-                  !hasActiveFilters && styles.applyButtonTextDisabled
-                ]}>
+                <Text
+                  style={[
+                    styles.applyButtonText,
+                    !hasActiveFilters && styles.applyButtonTextDisabled,
+                  ]}
+                >
                   Apply Filters
                 </Text>
               </TouchableOpacity>
@@ -567,97 +616,136 @@ export default function Inward({ navigation }) {
         ref={scrollViewRef}
         style={[
           styles.loanListContainer,
-          isLender && !planLoading && !hasActivePlan && { opacity: 0.5 }
+          isLender && !planLoading && !hasActivePlan && { opacity: 0.5 },
         ]}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl
             refreshing={loading}
             onRefresh={onRefresh}
-            enabled={isLender ? (planLoading || hasActivePlan) : true}
+            enabled={isLender ? planLoading || hasActivePlan : true}
           />
         }
         showsVerticalScrollIndicator={false}
-        scrollEnabled={isLender ? (planLoading || hasActivePlan) : true}>
+        scrollEnabled={isLender ? planLoading || hasActivePlan : true}
+      >
         {displayLoans?.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Icon 
-                name="account-balance-wallet" 
-                size={60} 
-                color="#E5E7EB" 
-              />
-              <Text style={styles.emptyTitle}>No loans given</Text>
-              <Text style={styles.emptySubtitle}>
-                {searchQuery 
-                  ? 'Try a different search term' 
-                  : 'No loans given yet'}
-              </Text>
-            </View>
-          ) : (
-            groupLoansByBorrower(displayLoans).map((borrowerGroup, groupIndex) => {
+          <View style={styles.emptyState}>
+            <Icon name="account-balance-wallet" size={60} color="#E5E7EB" />
+            <Text style={styles.emptyTitle}>No loans given</Text>
+            <Text style={styles.emptySubtitle}>
+              {searchQuery
+                ? 'Try a different search term'
+                : 'No loans given yet'}
+            </Text>
+          </View>
+        ) : (
+          groupLoansByBorrower(displayLoans).map(
+            (borrowerGroup, groupIndex) => {
               const borrower = borrowerGroup.borrower;
               const loans = borrowerGroup.loans;
-              
+
               // Calculate totals for this borrower
               const totalLoanAmount = loans.reduce((sum, loan) => {
-                const amount = typeof loan.amount === 'number' ? loan.amount : parseFloat(loan.amount) || 0;
+                const amount =
+                  typeof loan.amount === 'number'
+                    ? loan.amount
+                    : parseFloat(loan.amount) || 0;
                 return sum + amount;
               }, 0);
-              
+
               const totalRemaining = loans.reduce((sum, loan) => {
-                const remaining = typeof loan.remainingAmount === 'number' ? loan.remainingAmount : parseFloat(loan.remainingAmount) || 0;
+                const remaining =
+                  typeof loan.remainingAmount === 'number'
+                    ? loan.remainingAmount
+                    : parseFloat(loan.remainingAmount) || 0;
                 return sum + remaining;
               }, 0);
-              
+
               const overdueCount = loans.filter(loan => {
-                const remaining = typeof loan.remainingAmount === 'number' ? loan.remainingAmount : parseFloat(loan.remainingAmount) || 0;
-                return loan.loanEndDate && 
-                  moment(loan.loanEndDate).isBefore(moment(), 'day') && 
-                  remaining > 0;
+                const remaining =
+                  typeof loan.remainingAmount === 'number'
+                    ? loan.remainingAmount
+                    : parseFloat(loan.remainingAmount) || 0;
+                return (
+                  loan.loanEndDate &&
+                  moment(loan.loanEndDate).isBefore(moment(), 'day') &&
+                  remaining > 0
+                );
               }).length;
-              
+
               const hasOverdue = overdueCount > 0;
               const hasOffline = loans.some(loan => loan.isOffline);
-              
+
               // Get fraud status for this borrower
-              const fraudData = borrower.aadhaarNumber ? borrowerFraudStatus[borrower.aadhaarNumber] : null;
-              const hasFraudRisk = fraudData && fraudData.success && fraudData.riskLevel && fraudData.riskLevel !== 'low';
-              
+              const fraudData = borrower.aadhaarNumber
+                ? borrowerFraudStatus[borrower.aadhaarNumber]
+                : null;
+              const hasFraudRisk =
+                fraudData &&
+                fraudData.success &&
+                fraudData.riskLevel &&
+                fraudData.riskLevel !== 'low';
+
               // Get pending payments for this borrower
-              const borrowerPendingPayments = getBorrowerPendingPayments(borrower);
-              
+              const borrowerPendingPayments =
+                getBorrowerPendingPayments(borrower);
+
               return (
                 <TouchableOpacity
-                  key={`borrower-${borrower.aadhaarNumber || borrower.name || 'unknown'}-${groupIndex}`}
+                  key={`borrower-${
+                    borrower.aadhaarNumber || borrower.name || 'unknown'
+                  }-${groupIndex}`}
                   style={[
                     styles.borrowerCard,
-                    { borderLeftColor: groupIndex % 2 === 0 ? colors.skyText : colors.mintText },
+                    {
+                      borderLeftColor:
+                        groupIndex % 2 === 0 ? colors.skyText : colors.mintText,
+                    },
                     hasOverdue && styles.overdueBorrowerCard,
                     hasFraudRisk && styles.fraudRiskBorrowerCard,
-                    borrowerPendingPayments && styles.pendingPaymentBorrowerCard,
+                    borrowerPendingPayments &&
+                      styles.pendingPaymentBorrowerCard,
                     hasOffline && styles.offlineBorrowerCard,
                   ]}
-                  onPress={() => navigation.navigate('BorrowerLoansScreen', {
-                    borrower: borrower,
-                    loans: loans,
-                  })}
-                  activeOpacity={0.8}>
-                  {borrowerPendingPayments && borrowerPendingPayments.count > 0 && (
-                    <View style={styles.pendingPaymentBanner}>
-                      <Icon name="notifications" size={14} color="#FFFFFF" />
-                      <Text style={styles.pendingPaymentBannerText} numberOfLines={1}>
-                        {borrowerPendingPayments.count} PENDING - {formatCurrency(borrowerPendingPayments.amount)}
-                      </Text>
-                    </View>
-                  )}
+                  onPress={() =>
+                    navigation.navigate('BorrowerLoansScreen', {
+                      borrower: borrower,
+                      loans: loans,
+                    })
+                  }
+                  activeOpacity={0.8}
+                >
+                  {borrowerPendingPayments &&
+                    borrowerPendingPayments.count > 0 && (
+                      <View style={styles.pendingPaymentBanner}>
+                        <Icon name="notifications" size={14} color="#FFFFFF" />
+                        <Text
+                          style={styles.pendingPaymentBannerText}
+                          numberOfLines={1}
+                        >
+                          {borrowerPendingPayments.count} PENDING -{' '}
+                          {formatCurrency(borrowerPendingPayments.amount)}
+                        </Text>
+                      </View>
+                    )}
 
                   {hasFraudRisk && !hasOverdue && !borrowerPendingPayments && (
-                    <View style={[
-                      styles.fraudBanner,
-                      { backgroundColor: fraudData.riskLevel === 'critical' ? '#DC2626' :
-                                       fraudData.riskLevel === 'high' ? '#EA580C' :
-                                       fraudData.riskLevel === 'medium' ? '#D97706' : '#059669' }
-                    ]}>
+                    <View
+                      style={[
+                        styles.fraudBanner,
+                        {
+                          backgroundColor:
+                            fraudData.riskLevel === 'critical'
+                              ? '#DC2626'
+                              : fraudData.riskLevel === 'high'
+                              ? '#EA580C'
+                              : fraudData.riskLevel === 'medium'
+                              ? '#D97706'
+                              : '#059669',
+                        },
+                      ]}
+                    >
                       <Icon name="shield-alert" size={14} color="#FFFFFF" />
                       <Text style={styles.fraudBannerText}>
                         {fraudData.riskLevel?.toUpperCase()} FRAUD RISK
@@ -699,8 +787,15 @@ export default function Inward({ navigation }) {
                           {hasOverdue && (
                             <View style={styles.metaItem}>
                               <Icon name="error" size={12} color="#EF4444" />
-                              <Text style={[styles.metaText, styles.metaOverdueText]} numberOfLines={1}>
-                                {overdueCount} loan{overdueCount > 1 ? 's' : ''} overdue
+                              <Text
+                                style={[
+                                  styles.metaText,
+                                  styles.metaOverdueText,
+                                ]}
+                                numberOfLines={1}
+                              >
+                                {overdueCount} loan{overdueCount > 1 ? 's' : ''}{' '}
+                                overdue
                               </Text>
                             </View>
                           )}
@@ -780,29 +875,40 @@ export default function Inward({ navigation }) {
 
                   <View style={styles.borrowerCardFooter}>
                     <View style={styles.footerItem}>
-                      <Icon name="account-balance-wallet" size={13} color="#9CA3AF" />
+                      <Icon
+                        name="account-balance-wallet"
+                        size={13}
+                        color="#9CA3AF"
+                      />
                       <Text style={styles.footerText}>
-                        {loans.length} loan{loans.length > 1 ? 's' : ''} • Tap to view all
+                        {loans.length} loan{loans.length > 1 ? 's' : ''} • Tap
+                        to view all
                       </Text>
                     </View>
-                    {borrowerPendingPayments && borrowerPendingPayments.count > 0 && (
-                      <View style={styles.pendingPaymentBadge}>
-                        <Icon name="schedule" size={12} color="#F59E0B" />
-                        <Text style={styles.pendingPaymentBadgeText} numberOfLines={1}>
-                          {borrowerPendingPayments.count} pending • {formatCurrency(borrowerPendingPayments.amount)}
-                        </Text>
-                      </View>
-                    )}
+                    {borrowerPendingPayments &&
+                      borrowerPendingPayments.count > 0 && (
+                        <View style={styles.pendingPaymentBadge}>
+                          <Icon name="schedule" size={12} color="#F59E0B" />
+                          <Text
+                            style={styles.pendingPaymentBadgeText}
+                            numberOfLines={1}
+                          >
+                            {borrowerPendingPayments.count} pending •{' '}
+                            {formatCurrency(borrowerPendingPayments.amount)}
+                          </Text>
+                        </View>
+                      )}
                   </View>
                 </TouchableOpacity>
               );
-            })
+            },
+          )
         )}
       </ScrollView>
 
       {/* Subscription Restriction Overlay */}
       {isLender && !planLoading && !hasActivePlan && (
-        <SubscriptionRestriction 
+        <SubscriptionRestriction
           message="Purchase a plan to view and search your loans"
           asOverlay={true}
         />
@@ -814,7 +920,7 @@ export default function Inward({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.navyFaint,
+    backgroundColor: colors.background,
   },
   // Search Section
   searchSection: {
