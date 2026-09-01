@@ -1,7 +1,6 @@
 import {
   View,
   Text,
-  Image,
   StyleSheet,
   StatusBar,
   Platform,
@@ -12,7 +11,6 @@ import { useNavigation } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
 import Icon from 'react-native-vector-icons/Feather';
 import { m } from 'walstar-rn-responsive';
-import { logo } from '../Assets';
 import { FontFamily, colors } from '../constants';
 
 const Header = ({
@@ -21,7 +19,6 @@ const Header = ({
   onBackPress,
   isEdit = false,
   onEditPress,
-  showLogo = true,
   headerStyle,
 }) => {
   const navigation = useNavigation();
@@ -84,7 +81,7 @@ const Header = ({
             <Text style={styles.headerText}>{title}</Text>
           </View>
 
-          {/* RIGHT: Optional Logo or Edit Button */}
+          {/* RIGHT: Optional Edit Button */}
           <View style={styles.rightContainer}>
             {isEdit ? (
               <TouchableOpacity
@@ -93,8 +90,6 @@ const Header = ({
                 activeOpacity={0.7}>
                 <Icon name="edit" size={m(24)} color="#FFF" />
               </TouchableOpacity>
-            ) : showLogo ? (
-              <Image source={logo} style={styles.logo} />
             ) : (
               <View style={{ width: m(50) }} />
             )}
@@ -115,8 +110,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerBar: {
-    height: m(90),
-    paddingTop: Platform.OS === 'android' ? m(20) : m(0),
+    height: m(70),
+    paddingTop: Platform.OS === 'android' ? m(14) : m(0),
     borderBottomEndRadius: m(25),
     borderBottomStartRadius: m(25),
     overflow: 'hidden',
@@ -169,12 +164,6 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: m(8),
     marginBottom: m(10),
-  },
-  logo: {
-    width: m(65),
-    height: m(32),
-    resizeMode: 'contain',
-    tintColor: '#ffffff',
   },
 });
 

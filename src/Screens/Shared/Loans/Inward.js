@@ -346,7 +346,7 @@ export default function Inward({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <Header title="Given Loans"/>
+      <Header title="My Loans"/>
 
       {/* Search and Filter Section */}
       <View style={[

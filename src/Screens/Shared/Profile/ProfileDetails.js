@@ -3,6 +3,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  TouchableOpacity,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useSelector } from 'react-redux';
@@ -38,8 +39,6 @@ const ProfileDetails = ({ navigation }) => {
       <Header
         title="Profile Details"
         showBackButton
-        isEdit={true}
-        onEditPress={handleEditProfile}
       />
 
       <ScrollView
@@ -52,6 +51,12 @@ const ProfileDetails = ({ navigation }) => {
           <View style={styles.infoCardHeader}>
             <Icon name="info" size={20} color="#3B82F6" />
             <Text style={styles.infoCardTitle}>Personal Information</Text>
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={handleEditProfile}
+              activeOpacity={0.7}>
+              <Icon name="edit" size={m(18)} color="#3B82F6" />
+            </TouchableOpacity>
           </View>
           
           <View style={styles.fieldsContainer}>
@@ -99,9 +104,15 @@ const styles = StyleSheet.create({
     gap: m(10),
   },
   infoCardTitle: {
+    flex: 1,
     fontSize: m(18),
     fontWeight: '700',
     color: '#111827',
+  },
+  editButton: {
+    padding: m(8),
+    borderRadius: m(20),
+    backgroundColor: '#3B82F615',
   },
   fieldsContainer: {
     gap: m(16),

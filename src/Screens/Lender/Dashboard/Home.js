@@ -12,6 +12,7 @@ import {
   FlatList,
   BackHandler,
   Alert,
+  SafeAreaView,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
@@ -24,7 +25,6 @@ import { getActivePlan } from '../../../Redux/Slices/planPurchaseSlice';
 import { useDispatch, useSelector } from 'react-redux';
 import useFetchUserFromStorage from '../../../Redux/hooks/useFetchUserFromStorage';
 import { m } from 'walstar-rn-responsive';
-import Header from '../../../Components/Header';
 import { FontFamily, FontSizes, colors } from '../../../constants';
 
 const formatCurrency = value => {
@@ -248,9 +248,7 @@ export default function Home() {
   };
 
   return (
-    <View style={styles.container}>
-      <Header title="Home" />
-
+    <SafeAreaView style={styles.container}>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -266,27 +264,92 @@ export default function Home() {
         {/* Welcome Section */}
         <Animated.View
           style={[
-            styles.heroCard,
             {
               opacity: fadeAnim,
               transform: [{ translateY: slideUpAnim }],
             },
           ]}>
-          <View style={styles.heroTopRow}>
-            <Text style={styles.greeting}>Hello, {user?.userName || 'User'} 👋</Text>
-            <TouchableOpacity
-              style={styles.avatarContainer}
-              onPress={() => navigation.navigate('ProfileDetails')}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>
-                  {(user?.userName || 'U').charAt(0).toUpperCase()}
-                </Text>
-              </View>
-              <View style={styles.onlineIndicator} />
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.subtitle}>Manage your loans efficiently</Text>
+          <LinearGradient
+            colors={[colors.navy, colors.navyLight]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.heroCard}>
+            <View style={styles.heroOrnamentTop} />
+            <View style={styles.heroOrnamentBottom} />
+            <View style={styles.heroTopRow}>
+              <Text style={styles.greeting}>Hello, {user?.userName || 'User'} 👋</Text>
+              <TouchableOpacity
+                style={styles.avatarContainer}
+                onPress={() => navigation.navigate('ProfileDetails')}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>
+                    {(user?.userName || 'U').charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+                <View style={styles.onlineIndicator} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.subtitle}>Manage your loans efficiently</Text>
+          </LinearGradient>
         </Animated.View>
+
+        {/* Quick Actions */}
+        <View style={styles.actionsSection}>
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <View style={styles.actionsGrid}>
+            {[
+              {
+                icon: 'plus-circle',
+                text: 'New Loan',
+                screen: 'AddDetails',
+                description: 'Create new loan',
+                tint: colors.sky,
+              },
+              {
+                icon: 'bar-chart',
+                text: 'Analytics',
+                screen: 'AnalyticsScreen',
+                description: 'View insights',
+                tint: colors.mint,
+              },
+              {
+                icon: 'users',
+                text: 'Contacts',
+                screen: 'ContactsScreen',
+                description: 'Manage contacts',
+                tint: colors.butter,
+              },
+              {
+                icon: 'activity',
+                text: 'Activity',
+                screen: 'LenderRecentActivity',
+                description: 'Recent updates',
+                tint: colors.goldTint,
+              },
+
+            ].map((action) => (
+              <TouchableOpacity
+                key={action.text}
+                style={[styles.actionItem, { backgroundColor: action.tint }]}
+                activeOpacity={action.screen ? 0.7 : 1}
+                onPress={() => action.screen && navigation.navigate(action.screen)}>
+                <View style={styles.actionContent}>
+                  <View style={styles.actionTextContent}>
+                    <Text style={styles.actionText}>{action.text}</Text>
+                    <Text style={styles.actionDescription}>{action.description}</Text>
+                  </View>
+
+                  {/* Icon in Bottom Right Corner */}
+                  <View style={styles.actionIconWrapper}>
+                    <View style={styles.actionIcon}>
+                      <Icon name={action.icon} size={19} color={colors.ink} />
+                    </View>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
 
         {/* Pending Payments Notification */}
         {(() => {
@@ -437,63 +500,6 @@ export default function Home() {
           </TouchableOpacity>
         </Animated.View>
 
-        {/* Quick Actions */}
-        <View style={styles.actionsSection}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.actionsGrid}>
-            {[
-              {
-                icon: 'plus-circle',
-                text: 'New Loan',
-                screen: 'AddDetails',
-                description: 'Create new loan',
-                tint: colors.sky,
-              },
-              {
-                icon: 'bar-chart',
-                text: 'Analytics',
-                screen: 'AnalyticsScreen',
-                description: 'View insights',
-                tint: colors.mint,
-              },
-              {
-                icon: 'users',
-                text: 'Contacts',
-                screen: 'ContactsScreen',
-                description: 'Manage contacts',
-                tint: colors.butter,
-              },
-              {
-                icon: 'activity',
-                text: 'Activity',
-                screen: 'LenderRecentActivity',
-                description: 'Recent updates',
-                tint: colors.offWhite,
-              },
-
-            ].map((action) => (
-              <TouchableOpacity
-                key={action.text}
-                style={[styles.actionItem, { backgroundColor: action.tint }]}
-                activeOpacity={action.screen ? 0.7 : 1}
-                onPress={() => action.screen && navigation.navigate(action.screen)}>
-                <View style={styles.actionContent}>
-                  <View style={styles.actionTextContent}>
-                    <Text style={styles.actionText}>{action.text}</Text>
-                    <Text style={styles.actionDescription}>{action.description}</Text>
-                  </View>
-
-                  {/* Icon in Bottom Right Corner */}
-                  <View style={styles.actionIconWrapper}>
-                    <View style={styles.actionIcon}>
-                      <Icon name={action.icon} size={19} color={colors.ink} />
-                    </View>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
         {/* Stats Overview */}
         <View style={styles.statsSection}>
           <Text style={styles.sectionTitle}>Loan Statistics</Text>
@@ -522,7 +528,7 @@ export default function Home() {
                 icon: 'alert-circle',
                 value: lenderStatistics?.counts?.overdueLoans || 0,
                 label: 'Overdue',
-                tint: colors.offWhite,
+                tint: colors.goldTint,
               },
             ].map((stat) => {
               const StatContainer = stat.tabName ? TouchableOpacity : View;
@@ -672,7 +678,7 @@ export default function Home() {
           />
         </Animated.View> */}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -758,18 +764,51 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.offWhite,
+    paddingTop: Platform.OS === 'android' ? m(40) : m(24),
     paddingBottom: m(40),
   },
   content: {
     paddingBottom: m(80),
   },
+  pageTitle: {
+    fontSize: FontSizes.xl,
+    fontFamily: FontFamily.secondaryBold,
+    color: colors.ink,
+    marginHorizontal: m(16),
+    marginTop: m(12),
+    marginBottom: m(4),
+    letterSpacing: -0.3,
+  },
   // Welcome Section
   heroCard: {
     marginHorizontal: m(16),
     marginTop: m(20),
-    backgroundColor: colors.surface,
     borderRadius: m(24),
     padding: m(20),
+    overflow: 'hidden',
+    shadowColor: colors.navyDark,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  heroOrnamentTop: {
+    position: 'absolute',
+    top: -m(20),
+    right: -m(20),
+    width: m(100),
+    height: m(100),
+    borderRadius: m(50),
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  heroOrnamentBottom: {
+    position: 'absolute',
+    bottom: -m(30),
+    left: -m(20),
+    width: m(90),
+    height: m(90),
+    borderRadius: m(45),
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
   },
   heroTopRow: {
     flexDirection: 'row',
@@ -782,12 +821,12 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: FontSizes['2xl'],
     fontFamily: FontFamily.secondaryBold,
-    color: colors.ink,
+    color: colors.white,
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: FontSizes.base,
-    color: colors.textSecondary,
+    color: 'rgba(255, 255, 255, 0.8)',
     fontFamily: FontFamily.primaryRegular,
     marginTop: m(6),
   },
@@ -800,7 +839,9 @@ const styles = StyleSheet.create({
     borderRadius: m(24),
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.ink,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
   },
   avatarText: {
     color: colors.white,
@@ -965,6 +1006,7 @@ const styles = StyleSheet.create({
   // Actions Section
   actionsSection: {
     paddingHorizontal: m(16),
+    marginTop: m(20),
     marginBottom: m(16),
   },
   actionsGrid: {

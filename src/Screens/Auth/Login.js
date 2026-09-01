@@ -17,7 +17,10 @@ import { login } from '../../Redux/Slices/authslice';
 import { getActivePlan } from '../../Redux/Slices/planPurchaseSlice';
 import Toast from 'react-native-toast-message';
 import { m } from 'walstar-rn-responsive';
-import { FontFamily, FontSizes } from '../../constants';
+import { FontFamily, FontSizes, colors } from '../../constants';
+
+const GRADIENT_INDIGO = '#23305c';
+const GRADIENT_TEAL = '#1b6b5c';
 
 export default function LoginScreen({ navigation }) {
   const [mobileNumber, setMobileNumber] = useState('');
@@ -96,26 +99,31 @@ export default function LoginScreen({ navigation }) {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={styles.keyboardView}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}>
-      <StatusBar barStyle="light-content" backgroundColor="#ff6700" />
+      <StatusBar barStyle="light-content" backgroundColor={GRADIENT_INDIGO} />
 
-      {/* ScrollView to prevent keyboard hiding content */}
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled">
+      <LinearGradient
+        colors={[GRADIENT_INDIGO, GRADIENT_TEAL]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.container}>
+        {/* ScrollView to prevent keyboard hiding content */}
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled">
 
-        <View style={styles.headerContent}>
-          <View style={styles.logoContainer}>
-            <Text style={styles.appName}>LoanHub</Text>
+          <View style={styles.headerContent}>
+            <View style={styles.logoContainer}>
+              <Text style={styles.appName}>LoanHub</Text>
+            </View>
+            <Text style={styles.tagline}>Smart Loan Management</Text>
           </View>
-          <Text style={styles.tagline}>Smart Loan Management</Text>
-        </View>
-        {/* Login Form Card - EXACTLY your design */}
-        <View style={styles.formCard}>
+          {/* Login Form Card - EXACTLY your design */}
+          <View style={styles.formCard}>
           <Text style={styles.formTitle}>Welcome Back</Text>
           <Text style={styles.formSubtitle}>Sign in to manage your loans</Text>
 
@@ -130,7 +138,7 @@ export default function LoginScreen({ navigation }) {
               <Ionicons
                 name="call-outline"
                 size={20}
-                color={mobileError ? '#FF4444' : mobileNumber.length === 10 ? '#28a745' : '#ff7900'}
+                color={mobileError ? '#FF4444' : mobileNumber.length === 10 ? '#28a745' : colors.navy}
                 style={styles.inputIcon}
               />
               <TextInput
@@ -161,7 +169,7 @@ export default function LoginScreen({ navigation }) {
               <Ionicons
                 name="lock-closed-outline"
                 size={20}
-                color={passwordError ? '#FF4444' : '#ff7900'}
+                color={passwordError ? '#FF4444' : colors.navy}
                 style={styles.inputIcon}
               />
               <TextInput
@@ -187,7 +195,7 @@ export default function LoginScreen({ navigation }) {
             ) : null}
           </View>
 
-          {/* Login Button with Orange Gradient */}
+          {/* Login Button - matches header gradient */}
           <TouchableOpacity
             style={[
               styles.loginButtonContainer,
@@ -196,9 +204,9 @@ export default function LoginScreen({ navigation }) {
             onPress={handleLogin}
             disabled={!mobileNumber || !password || isLoading}>
             <LinearGradient
-              colors={['#ff6700', '#ff7900', '#ff8500']}
+              colors={[GRADIENT_INDIGO, GRADIENT_TEAL]}
               start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
+              end={{ x: 1, y: 1 }}
               style={styles.loginButtonGradient}>
               <Text style={styles.loginButtonText}>
                 {isLoading ? 'Logging in...' : 'Sign In'}
@@ -209,21 +217,13 @@ export default function LoginScreen({ navigation }) {
             </LinearGradient>
           </TouchableOpacity>
 
-          {/* Divider */}
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
           {/* Alternative Actions */}
-          <TouchableOpacity
-            onPress={() => navigation.navigate('Register')}>
-            <View
-              style={styles.registerButtonGradient}>
-              <Text style={styles.registerButtonText}>Create New Account</Text>
-            </View>
-          </TouchableOpacity>
+          <View style={styles.registerRow}>
+            <Text style={styles.registerPromptText}>New to LoanHub? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+              <Text style={styles.registerLinkText}>Create account</Text>
+            </TouchableOpacity>
+          </View>
 
           {/* Forgot Password */}
           <TouchableOpacity
@@ -231,16 +231,19 @@ export default function LoginScreen({ navigation }) {
             onPress={() => navigation.navigate('ForgotPassword')}>
             <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
           </TouchableOpacity>
-        </View>
-      </ScrollView>
+          </View>
+        </ScrollView>
+      </LinearGradient>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  keyboardView: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#ff6700',
   },
   headerContent: {
     borderBottomLeftRadius: m(25),
@@ -253,16 +256,17 @@ const styles = StyleSheet.create({
   logoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: m(14),
     marginBottom: m(12),
   },
   appName: {
     fontSize: FontSizes['4xl'],
-    fontFamily: FontFamily.secondaryBold,
+    fontFamily: FontFamily.primaryBold,
     color: '#FFFFFF',
   },
   tagline: {
     fontSize: FontSizes.md,
-    fontFamily: FontFamily.secondaryRegular,
+    fontFamily: FontFamily.primaryRegular,
     color: '#FFFFFF',
     textAlign: 'center',
     fontStyle: 'italic',
@@ -271,12 +275,10 @@ const styles = StyleSheet.create({
   // ScrollView to prevent keyboard hiding
   scrollView: {
     flex: 1,
-    backgroundColor: '#ff6700',
   },
   scrollContent: {
     flexGrow: 1,
     paddingBottom: m(40),
-    backgroundColor: '#ff6700',
   },
 
   // Form Card
@@ -287,16 +289,16 @@ const styles = StyleSheet.create({
     marginTop: m(30),
     marginHorizontal: m(20),
     borderWidth: 1,
-    borderColor: '#FFEDD5',
+    borderColor: colors.navyBorder,
     elevation: 8,
-    shadowColor: '#ff6700',
+    shadowColor: GRADIENT_TEAL,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
   },
   formTitle: {
     fontSize: FontSizes['2xl'],
-    fontFamily: FontFamily.secondaryBold,
+    fontFamily: FontFamily.primaryBold,
     color: '#333',
     marginBottom: m(4),
     textAlign: 'center',
@@ -322,10 +324,10 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF9F0',
+    backgroundColor: colors.navyFaint,
     borderRadius: m(12),
     borderWidth: 1,
-    borderColor: '#FFEDD5',
+    borderColor: colors.navyBorder,
     paddingHorizontal: m(16),
     height: m(56),
   },
@@ -362,7 +364,7 @@ const styles = StyleSheet.create({
     marginTop: m(8),
     overflow: 'hidden',
     elevation: 4,
-    shadowColor: '#ff6700',
+    shadowColor: GRADIENT_TEAL,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
@@ -387,33 +389,23 @@ const styles = StyleSheet.create({
     paddingVertical: Platform.OS === 'android' ? m(0) : m(16),
   },
 
-  // Divider
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: m(24),
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#FFEDD5',
-  },
-  dividerText: {
-    fontSize: FontSizes.base,
-    fontFamily: FontFamily.primaryMedium,
-    color: '#ff7900',
-    marginHorizontal: m(16),
-  },
-
   // Alternative Buttons
-  registerButtonGradient: {
-    paddingVertical: m(8),
+  registerRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
+    paddingTop: m(12),
+    paddingBottom: m(8),
   },
-  registerButtonText: {
+  registerPromptText: {
+    fontSize: FontSizes.md,
+    fontFamily: FontFamily.primaryRegular,
+    color: '#999',
+  },
+  registerLinkText: {
     fontSize: FontSizes.md,
     fontFamily: FontFamily.primarySemiBold,
-    color: '#ff6700',
+    color: GRADIENT_TEAL,
   },
 
   // Forgot Password
@@ -424,6 +416,6 @@ const styles = StyleSheet.create({
   forgotPasswordText: {
     fontSize: FontSizes.base,
     fontFamily: FontFamily.primarySemiBold,
-    color: '#ff7900',
+    color: colors.navy,
   },
 });
