@@ -7,6 +7,9 @@ import {
   TouchableOpacity,
   Modal,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import Toast from 'react-native-toast-message';
@@ -101,6 +104,11 @@ const PinVerificationModal = ({
       animationType="slide"
       onRequestClose={onClose}
     >
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? m(20) : 0}
+      >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
@@ -110,7 +118,12 @@ const PinVerificationModal = ({
             </TouchableOpacity>
           </View>
 
-          <View style={styles.content}>
+          <ScrollView
+            style={styles.content}
+            contentContainerStyle={styles.contentContainer}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
             <View style={styles.infoBanner}>
               <Icon name="info-outline" size={20} color="#3B82F6" />
               <Text style={styles.infoText}>
@@ -181,14 +194,18 @@ const PinVerificationModal = ({
                 <Text style={styles.forgotPinText}>Forgot PIN?</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </ScrollView>
         </View>
       </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -221,7 +238,11 @@ const styles = StyleSheet.create({
     padding: m(4),
   },
   content: {
+    flexGrow: 0,
+  },
+  contentContainer: {
     padding: m(20),
+    paddingBottom: m(32),
   },
   infoBanner: {
     flexDirection: 'row',
@@ -289,7 +310,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#10B981', // green for accept
+    backgroundColor: '#10B981',
     padding: m(16),
     borderRadius: m(12),
     marginBottom: m(16),

@@ -11,11 +11,10 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
-import LinearGradient from 'react-native-linear-gradient';
 import { useDispatch, useSelector } from 'react-redux';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
-import { FontFamily, FontSizes } from '../../../constants';
+import { colors, FontFamily, FontSizes } from '../../../constants';
 import { getLenderRecentActivities } from '../../../Redux/Slices/lenderActivitiesSlice';
 import { getLenderStatistics } from '../../../Redux/Slices/loanSlice';
 import { getActivePlan } from '../../../Redux/Slices/planPurchaseSlice';
@@ -130,11 +129,10 @@ export default function LenderRecentActivity() {
   );
   const loanLinkedCount = recentActivities.filter(activity => activity.loanId).length;
 
-  const renderActivity = ({ item, index }) => (
+  const renderActivity = ({ item }) => (
     <LenderActivityItem
       activity={item}
       activityProps={getActivityProperties(item)}
-      isLast={index === recentActivities.length - 1}
       onPress={() => handleActivityPress(item)}
     />
   );
@@ -158,19 +156,15 @@ export default function LenderRecentActivity() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#ff6700']}
-            tintColor="#ff6700"
+            colors={[colors.ink]}
+            tintColor={colors.ink}
           />
         }
         ListHeaderComponent={
           <>
-            <LinearGradient
-              colors={['#FF9800', '#F97316']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.screenIntro}>
+            <View style={styles.screenIntro}>
               <View style={styles.introIconWrap}>
-                <Icon name="activity" size={24} color="#FFFFFF" />
+                <Icon name="activity" size={22} color={colors.ink} />
               </View>
               <View style={styles.introText}>
                 <Text style={styles.screenTitle}>Recent Activity</Text>
@@ -178,24 +172,22 @@ export default function LenderRecentActivity() {
                   Track loan creation, borrower decisions, payments, and overdue updates.
                 </Text>
               </View>
-            </LinearGradient>
+            </View>
 
             <View style={styles.summaryRow}>
-              <View style={styles.summaryItem}>
+              <View style={[styles.summaryItem, { backgroundColor: colors.sky }]}>
                 <Text style={styles.summaryValue}>{recentActivities.length}</Text>
                 <Text style={styles.summaryLabel}>Updates</Text>
               </View>
-              <View style={styles.summaryDivider} />
-              <View style={styles.summaryItem}>
+              <View style={[styles.summaryItem, { backgroundColor: colors.mint }]}>
                 <Text style={styles.summaryValue}>{loanLinkedCount}</Text>
                 <Text style={styles.summaryLabel}>Linked Loans</Text>
               </View>
-              <View style={styles.summaryDivider} />
-              <View style={styles.summaryItem}>
+              <View style={[styles.summaryItem, { backgroundColor: colors.butter }]}>
                 <Text style={styles.summaryValue}>
                   Rs {totalAmount.toLocaleString('en-IN')}
                 </Text>
-                <Text style={styles.summaryLabel}>Activity Amount</Text>
+                <Text style={styles.summaryLabel}>Amount</Text>
               </View>
             </View>
           </>
@@ -203,12 +195,12 @@ export default function LenderRecentActivity() {
         ListEmptyComponent={
           loading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color="#ff6700" />
+              <ActivityIndicator size="small" color={colors.ink} />
               <Text style={styles.loadingText}>Loading activities...</Text>
             </View>
           ) : (
             <View style={styles.emptyContainer}>
-              <Icon name={error ? 'alert-circle' : 'inbox'} size={42} color="#E5E7EB" />
+              <Icon name={error ? 'alert-circle' : 'inbox'} size={42} color={colors.border} />
               <Text style={styles.emptyText}>
                 {error || 'No recent activities'}
               </Text>
@@ -221,16 +213,12 @@ export default function LenderRecentActivity() {
 }
 
 const LenderActivityItem = memo(
-  ({ activity, activityProps, isLast, onPress }) => {
+  ({ activity, activityProps, onPress }) => {
     const activityLabel = getActivityLabel(activity);
 
     return (
-      <TouchableOpacity activeOpacity={0.7} onPress={onPress}>
-        <View
-          style={[
-            styles.activityItem,
-            { borderLeftColor: activityProps.color },
-          ]}>
+      <TouchableOpacity activeOpacity={0.78} onPress={onPress}>
+        <View style={styles.activityItem}>
           <View style={styles.activityTopRow}>
             <View
               style={[
@@ -240,24 +228,14 @@ const LenderActivityItem = memo(
               <Icon name={activityProps.icon} size={18} color={activityProps.color} />
             </View>
             <View style={styles.activityText}>
-              <View style={styles.activityTitleRow}>
-                <Text style={styles.activityTitle} numberOfLines={1}>
-                  {activity.shortMessage || activityLabel}
-                </Text>
-                <View
-                  style={[
-                    styles.typePill,
-                    { backgroundColor: `${activityProps.color}15` },
-                  ]}>
-                  <Text style={[styles.typePillText, { color: activityProps.color }]}>
-                    {activityLabel}
-                  </Text>
-                </View>
-              </View>
+              <Text style={styles.activityTitle} numberOfLines={1}>
+                {activity.shortMessage || activityLabel}
+              </Text>
               <Text style={styles.activityDescription} numberOfLines={2}>
                 {activity.message || ''}
               </Text>
             </View>
+            <Icon name="chevron-right" size={18} color={colors.textMuted} />
           </View>
 
           <View style={styles.activityMetaRow}>
@@ -280,24 +258,6 @@ const LenderActivityItem = memo(
               </View>
             ) : null}
           </View>
-
-          <View style={styles.activityBottomRow}>
-            <View style={styles.timelinePreview}>
-              <View
-                style={[
-                  styles.timelineDot,
-                  { backgroundColor: activityProps.color },
-                ]}
-              />
-              {!isLast && <View style={styles.timelineLine} />}
-            </View>
-            <View style={styles.openDetailsHint}>
-              <Text style={styles.openDetailsText}>
-                {activity.loanId ? 'View loan' : 'View dashboard'}
-              </Text>
-              <Icon name="chevron-right" size={14} color="#ff6700" />
-            </View>
-          </View>
         </View>
       </TouchableOpacity>
     );
@@ -307,7 +267,7 @@ const LenderActivityItem = memo(
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F1F0ED',
   },
   listContent: {
     padding: m(16),
@@ -316,95 +276,82 @@ const styles = StyleSheet.create({
   screenIntro: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: m(18),
-    padding: m(18),
+    borderRadius: m(20),
+    padding: m(16),
     marginBottom: m(16),
-    elevation: 4,
-    shadowColor: '#F97316',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.22,
-    shadowRadius: 12,
+    backgroundColor: colors.navyFaint,
+    borderWidth: 1,
+    borderColor: colors.navyBorder,
   },
   introIconWrap: {
-    width: m(52),
-    height: m(52),
-    borderRadius: m(16),
+    width: m(48),
+    height: m(48),
+    borderRadius: m(15),
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    marginRight: m(14),
+    backgroundColor: colors.mint,
+    marginRight: m(12),
   },
   introText: {
     flex: 1,
   },
   screenTitle: {
-    fontSize: FontSizes.xl,
-    fontFamily: FontFamily.secondaryBold,
-    color: '#FFFFFF',
+    fontSize: m(20),
+    lineHeight: m(26),
+    fontFamily: FontFamily.primaryExtraBold,
+    color: colors.ink,
     marginBottom: m(4),
   },
   screenSubtitle: {
-    fontSize: FontSizes.sm,
-    color: '#FFF7ED',
+    fontSize: m(12),
+    color: colors.textSecondary,
     fontFamily: FontFamily.primaryRegular,
-    lineHeight: m(19),
+    lineHeight: m(17),
   },
   summaryRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(16),
-    paddingVertical: m(14),
-    paddingHorizontal: m(10),
+    justifyContent: 'space-between',
     marginBottom: m(16),
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    gap: m(10),
   },
   summaryItem: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'center',
+    minHeight: m(78),
+    borderRadius: m(16),
+    padding: m(12),
   },
   summaryValue: {
-    fontSize: FontSizes.base,
-    fontFamily: FontFamily.primaryBold,
-    color: '#111827',
-    marginBottom: m(3),
-    textAlign: 'center',
+    fontSize: m(15),
+    lineHeight: m(20),
+    fontFamily: FontFamily.primaryExtraBold,
+    color: colors.ink,
+    marginBottom: m(4),
   },
   summaryLabel: {
-    fontSize: FontSizes.xs,
-    fontFamily: FontFamily.primaryRegular,
-    color: '#6B7280',
-    textAlign: 'center',
-  },
-  summaryDivider: {
-    width: 1,
-    height: m(34),
-    backgroundColor: '#E5E7EB',
+    fontSize: m(10),
+    lineHeight: m(14),
+    fontFamily: FontFamily.primarySemiBold,
+    color: colors.inkSoft,
+    textTransform: 'uppercase',
   },
   activityItem: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(16),
-    marginBottom: m(14),
+    backgroundColor: colors.surface,
+    borderRadius: m(18),
+    marginBottom: m(12),
     padding: m(14),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 3,
     borderWidth: 1,
-    borderColor: '#EEF2F7',
-    borderLeftWidth: m(4),
+    borderColor: colors.borderLight,
   },
   activityTopRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: m(12),
+    alignItems: 'center',
+    marginBottom: m(10),
   },
   activityIconShell: {
-    width: m(44),
-    height: m(44),
+    width: m(42),
+    height: m(42),
     borderRadius: m(14),
     alignItems: 'center',
     justifyContent: 'center',
@@ -413,130 +360,73 @@ const styles = StyleSheet.create({
   activityText: {
     flex: 1,
   },
-  activityTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: m(5),
-    gap: m(8),
-  },
   activityTitle: {
-    flex: 1,
-    fontSize: FontSizes.md,
+    fontSize: m(14),
+    lineHeight: m(19),
     fontFamily: FontFamily.primarySemiBold,
-    color: '#111827',
-  },
-  typePill: {
-    maxWidth: m(116),
-    paddingHorizontal: m(8),
-    paddingVertical: m(4),
-    borderRadius: m(999),
-  },
-  typePillText: {
-    fontSize: FontSizes.xs,
-    fontFamily: FontFamily.primarySemiBold,
+    color: colors.ink,
+    marginBottom: m(3),
   },
   activityDescription: {
-    fontSize: FontSizes.sm,
-    color: '#6B7280',
+    fontSize: m(12),
+    color: colors.textSecondary,
     fontFamily: FontFamily.primaryRegular,
-    lineHeight: m(18),
+    lineHeight: m(17),
   },
   activityMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: m(12),
     gap: m(8),
   },
   activityAmountContainer: {
-    backgroundColor: '#F9FAFB',
-    paddingHorizontal: m(10),
-    paddingVertical: m(6),
-    borderRadius: m(12),
-    borderWidth: 1,
-    borderColor: '#EEF2F7',
+    backgroundColor: colors.white,
+    paddingHorizontal: m(9),
+    paddingVertical: m(5),
+    borderRadius: m(999),
   },
   activityAmount: {
-    fontSize: FontSizes.sm,
+    fontSize: m(12),
     fontFamily: FontFamily.primaryBold,
-  },
-  activityBottomRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: m(5),
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-  },
-  timelinePreview: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    marginRight: m(12),
-  },
-  timelineDot: {
-    width: m(8),
-    height: m(8),
-    borderRadius: m(4),
-    marginRight: m(8),
-  },
-  timelineLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E5E7EB',
   },
   timeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   activityTime: {
-    fontSize: FontSizes.xs,
-    color: '#7f8c8d',
+    fontSize: m(11),
+    color: colors.textMuted,
     fontFamily: FontFamily.primaryRegular,
     marginLeft: m(4),
-  },
-  openDetailsHint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF7ED',
-    paddingHorizontal: m(9),
-    paddingVertical: m(5),
-    borderRadius: m(10),
-  },
-  openDetailsText: {
-    fontSize: FontSizes.xs,
-    color: '#ff6700',
-    fontFamily: FontFamily.primarySemiBold,
-    marginRight: m(2),
   },
   loadingContainer: {
     padding: m(34),
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: m(16),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.borderLight,
   },
   loadingText: {
     marginTop: m(10),
     fontSize: FontSizes.sm,
-    color: '#6B7280',
+    color: colors.textSecondary,
     fontFamily: FontFamily.primaryRegular,
   },
   emptyContainer: {
     padding: m(42),
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: m(16),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.borderLight,
   },
   emptyText: {
     marginTop: m(12),
     fontSize: FontSizes.base,
-    color: '#9CA3AF',
+    color: colors.textMuted,
     fontFamily: FontFamily.primaryRegular,
     textAlign: 'center',
   },

@@ -26,6 +26,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import useFetchUserFromStorage from '../../../Redux/hooks/useFetchUserFromStorage';
 import { m } from 'walstar-rn-responsive';
 import { FontFamily, FontSizes, colors } from '../../../constants';
+import PromptBox from '../../PromptBox/Prompt';
 
 const formatCurrency = value => {
   if (!value) {
@@ -53,6 +54,7 @@ export default function Home() {
 
   const [refreshing, setRefreshing] = useState(false);
   const [showAllActivity, setShowAllActivity] = useState(false);
+  const [exitPromptVisible, setExitPromptVisible] = useState(false);
 
   // Enhanced Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -125,21 +127,7 @@ export default function Home() {
       // Handle Android hardware back button: confirm before exiting app
       const onBackPress = () => {
         if (Platform.OS === 'android') {
-          Alert.alert(
-            'Exit App',
-            'Do you want to exit the app?',
-            [
-              {
-                text: 'No',
-                style: 'cancel',
-              },
-              {
-                text: 'Yes',
-                onPress: () => BackHandler.exitApp(),
-              },
-            ],
-            { cancelable: true },
-          );
+          setExitPromptVisible(true);
           // Return true to prevent default navigation (e.g., going to Login)
           return true;
         }
@@ -760,6 +748,18 @@ export default function Home() {
           />
         </Animated.View> */}
       </ScrollView>
+      <PromptBox
+        visible={exitPromptVisible}
+        title="Exit App"
+        message="Do you want to exit the app?"
+        confirmText="Exit App"
+        cancelText="Cancel"
+        onConfirm={() => {
+          setExitPromptVisible(false);
+          BackHandler.exitApp();
+        }}
+        onCancel={() => setExitPromptVisible(false)}
+      />
     </SafeAreaView>
   );
 }

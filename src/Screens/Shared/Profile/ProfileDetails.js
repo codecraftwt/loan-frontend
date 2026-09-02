@@ -10,6 +10,7 @@ import { useSelector } from 'react-redux';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
 import useFetchUserFromStorage from '../../../Redux/hooks/useFetchUserFromStorage';
+import { FontFamily } from '../../../constants';
 
 const ProfileDetails = ({ navigation }) => {
   const profileData = useSelector(state => state.auth.user);
@@ -106,7 +107,7 @@ const styles = StyleSheet.create({
   infoCardTitle: {
     flex: 1,
     fontSize: m(18),
-    fontWeight: '700',
+    fontFamily: FontFamily.primaryBold,
     color: '#111827',
   },
   editButton: {
@@ -140,14 +141,14 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: m(13),
     color: '#6B7280',
-    fontWeight: '600',
+    fontFamily: FontFamily.primarySemiBold,
     marginBottom: m(6),
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   fieldValue: {
     fontSize: m(16),
-    fontWeight: '600',
+    fontFamily: FontFamily.bodySemiBold,
     color: '#111827',
     lineHeight: m(22),
   },

@@ -550,7 +550,7 @@ const styles = StyleSheet.create({
   // Container
   container: {
     flex: 1,
-    backgroundColor: colors.navyFaint,
+    backgroundColor: colors.offWhite,
   },
   
   // Content Container - This ensures proper flex behavior

@@ -1278,9 +1278,12 @@ export default function LoanDetailScreen({ route, navigation }) {
       {/* PromptBox for Status Change */}
       <PromptBox
         visible={isPromptVisible}
+        title="Update Status"
         message={`Are you sure you want to mark this loan as ${
           selectedStatus === 'pending' ? 'pending' : 'paid'
         }?`}
+        confirmText="Update"
+        cancelText="Cancel"
         onConfirm={handleConfirm}
         onCancel={handleCancel}
       />

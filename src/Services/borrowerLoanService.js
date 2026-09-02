@@ -78,8 +78,6 @@ export const borrowerLoanAPI = {
       
       return response.data;
     } catch (error) {
-      console.error('Error accepting loan:', error);
-      
       // Extract detailed error message
       let errorMessage = 'Failed to accept loan';
       if (error.response?.data?.message) {
@@ -88,6 +86,14 @@ export const borrowerLoanAPI = {
         errorMessage = error.response.data.error;
       } else if (error.message) {
         errorMessage = error.message;
+      }
+
+      if (error.response?.status !== 401) {
+        console.error('Error accepting loan:', {
+          message: errorMessage,
+          status: error.response?.status,
+          data: error.response?.data,
+        });
       }
       
       // Throw enhanced error

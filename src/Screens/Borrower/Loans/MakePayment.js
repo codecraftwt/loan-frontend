@@ -11,6 +11,7 @@ import {
   Image,
   Platform,
   PermissionsAndroid,
+  Modal,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
@@ -24,6 +25,7 @@ import { getBorrowerLoans } from '../../../Redux/Slices/borrowerLoanSlice';
 import { openRazorpayCheckoutForLoan } from '../../../Services/razorpayService';
 import moment from 'moment';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
+import { colors, FontFamily } from '../../../constants';
 
 export default function MakePayment() {
   const navigation = useNavigation();
@@ -41,6 +43,8 @@ export default function MakePayment() {
   const [transactionId, setTransactionId] = useState('');
   const [notes, setNotes] = useState('');
   const [paymentProof, setPaymentProof] = useState(null);
+  const [proofModalVisible, setProofModalVisible] = useState(false);
+  const [confirmPaymentModalVisible, setConfirmPaymentModalVisible] = useState(false);
 
   const paymentModes = [
     { id: 'cash', label: 'Cash', icon: 'dollar-sign', description: 'Pay directly to lender (requires confirmation)' },
@@ -181,15 +185,7 @@ export default function MakePayment() {
       return;
     }
 
-    // For cash payments, show confirmation dialog
-    Alert.alert(
-      'Confirm Payment',
-      `Are you sure you want to submit this payment?\n\nAmount: ₹${amount}\nMode: ${paymentMode}\nType: ${paymentType}`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Confirm', onPress: submitPayment },
-      ]
-    );
+    setConfirmPaymentModalVisible(true);
   };
 
   const handleOnlinePayment = async () => {
@@ -747,120 +743,99 @@ export default function MakePayment() {
     }
   };
 
-  const selectImage = () => {
-    Alert.alert(
-      'Upload Payment Proof',
-      'Choose an option to upload payment proof',
-      [
-        {
-          text: 'Camera',
-          onPress: async () => {
-            try {
-              // Request camera permission for Android (required since it's in manifest)
-              if (Platform.OS === 'android') {
-                const hasPermission = await requestCameraPermission();
-                if (!hasPermission) {
-                  return;
-                }
-              }
+  const handleProofSelected = asset => {
+    setPaymentProof({
+      uri: asset.uri,
+      type: asset.type || 'image/jpeg',
+      fileName: asset.fileName || `payment_proof_${Date.now()}.jpg`,
+    });
+    setProofModalVisible(false);
+    Toast.show({
+      type: 'success',
+      position: 'top',
+      text1: 'Image Selected',
+      text2: 'Payment proof image has been selected.',
+    });
+  };
 
-              launchCamera(
-                {
-                  mediaType: 'photo',
-                  quality: 0.8,
-                  saveToPhotos: true,
-                },
-                (response) => {
-                  if (response.didCancel) {
-                    return;
-                  }
-                  if (response.errorCode) {
-                    let errorMessage = 'Failed to open camera.';
-                    if (response.errorCode === 'permission') {
-                      errorMessage = 'Camera permission is required. Please grant permission in your device settings.';
-                    } else if (response.errorMessage) {
-                      errorMessage = response.errorMessage;
-                    }
-                    Toast.show({
-                      type: 'error',
-                      position: 'top',
-                      text1: 'Camera Error',
-                      text2: errorMessage,
-                    });
-                    return;
-                  }
-                  if (response.assets && response.assets[0]) {
-                    const asset = response.assets[0];
-                    setPaymentProof({
-                      uri: asset.uri,
-                      type: asset.type || 'image/jpeg',
-                      fileName: asset.fileName || `payment_proof_${Date.now()}.jpg`,
-                    });
-                    Toast.show({
-                      type: 'success',
-                      position: 'top',
-                      text1: 'Image Selected',
-                      text2: 'Payment proof image has been selected.',
-                    });
-                  }
-                }
-              );
-            } catch (error) {
-              console.error('Error launching camera:', error);
-              Toast.show({
-                type: 'error',
-                position: 'top',
-                text1: 'Camera Error',
-                text2: 'Failed to open camera. Please try again.',
-              });
+  const openCamera = async () => {
+    try {
+      if (Platform.OS === 'android') {
+        const hasPermission = await requestCameraPermission();
+        if (!hasPermission) {
+          return;
+        }
+      }
+
+      launchCamera(
+        {
+          mediaType: 'photo',
+          quality: 0.8,
+          saveToPhotos: true,
+        },
+        response => {
+          if (response.didCancel) {
+            return;
+          }
+          if (response.errorCode) {
+            let errorMessage = 'Failed to open camera.';
+            if (response.errorCode === 'permission') {
+              errorMessage = 'Camera permission is required. Please grant permission in your device settings.';
+            } else if (response.errorMessage) {
+              errorMessage = response.errorMessage;
             }
-          },
+            Toast.show({
+              type: 'error',
+              position: 'top',
+              text1: 'Camera Error',
+              text2: errorMessage,
+            });
+            return;
+          }
+          if (response.assets && response.assets[0]) {
+            handleProofSelected(response.assets[0]);
+          }
         },
-        {
-          text: 'Gallery',
-          onPress: () => {
-            launchImageLibrary(
-              {
-                mediaType: 'photo',
-                quality: 0.8,
-              },
-              (response) => {
-                if (response.didCancel) {
-                  return;
-                }
-                if (response.errorCode) {
-                  Toast.show({
-                    type: 'error',
-                    position: 'top',
-                    text1: 'Gallery Error',
-                    text2: response.errorMessage || 'Failed to open gallery.',
-                  });
-                  return;
-                }
-                if (response.assets && response.assets[0]) {
-                  const asset = response.assets[0];
-                  setPaymentProof({
-                    uri: asset.uri,
-                    type: asset.type || 'image/jpeg',
-                    fileName: asset.fileName || `payment_proof_${Date.now()}.jpg`,
-                  });
-                  Toast.show({
-                    type: 'success',
-                    position: 'top',
-                    text1: 'Image Selected',
-                    text2: 'Payment proof image has been selected.',
-                  });
-                }
-              }
-            );
-          },
-        },
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-      ]
+      );
+    } catch (error) {
+      console.error('Error launching camera:', error);
+      Toast.show({
+        type: 'error',
+        position: 'top',
+        text1: 'Camera Error',
+        text2: 'Failed to open camera. Please try again.',
+      });
+    }
+  };
+
+  const openGallery = () => {
+    launchImageLibrary(
+      {
+        mediaType: 'photo',
+        quality: 0.8,
+      },
+      response => {
+        if (response.didCancel) {
+          return;
+        }
+        if (response.errorCode) {
+          Toast.show({
+            type: 'error',
+            position: 'top',
+            text1: 'Gallery Error',
+            text2: response.errorMessage || 'Failed to open gallery.',
+          });
+          return;
+        }
+        if (response.assets && response.assets[0]) {
+          handleProofSelected(response.assets[0]);
+        }
+      },
     );
+  };
+
+  const selectImage = () => {
+    setProofModalVisible(true);
   };
 
   const formatCurrency = (value) => {
@@ -894,7 +869,7 @@ export default function MakePayment() {
       disabled={pendingPayment}
     >
       <View style={styles.optionIcon}>
-        <Icon name={mode.icon} size={24} color={paymentMode === mode.id ? '#FFFFFF' : '#3B82F6'} />
+        <Icon name={mode.icon} size={20} color={colors.ink} />
       </View>
       <View style={styles.optionContent}>
         <Text style={[
@@ -929,7 +904,7 @@ export default function MakePayment() {
       disabled={pendingPayment}
     >
       <View style={styles.optionIcon}>
-        <Icon name={type.icon} size={24} color={paymentType === type.id ? '#FFFFFF' : '#10B981'} />
+        <Icon name={type.icon} size={20} color={colors.ink} />
       </View>
       <View style={styles.optionContent}>
         <Text style={[
@@ -1064,7 +1039,9 @@ export default function MakePayment() {
         {/* Amount Input */}
         <View style={[styles.section, pendingPayment && styles.disabledSection]}>
           <Text style={styles.sectionTitle}>Payment Amount</Text>
+          <Text style={styles.sectionSubtitle}>Confirm how much you're paying now</Text>
           <View style={styles.inputContainer}>
+            <Text style={styles.amountLabel}>Amount to pay</Text>
             <Text style={styles.currencySymbol}>₹</Text>
             <TextInput
               style={styles.amountInput}
@@ -1175,6 +1152,104 @@ export default function MakePayment() {
           )}
         </TouchableOpacity>
       </ScrollView>
+      <Modal
+        visible={proofModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setProofModalVisible(false)}
+      >
+        <View style={styles.proofModalOverlay}>
+          <View style={styles.proofModalCard}>
+            <Text style={styles.proofModalTitle}>Upload Payment Proof</Text>
+            <Text style={styles.proofModalMessage}>
+              Choose an option to upload payment proof.
+            </Text>
+
+            <View style={styles.proofOptionRow}>
+              <TouchableOpacity
+                style={styles.proofOptionButton}
+                onPress={openCamera}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="camera-outline" size={22} color="#0B4A40" />
+                <Text style={styles.proofOptionText}>Camera</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.proofOptionButton}
+                onPress={openGallery}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="image-outline" size={22} color="#0B4A40" />
+                <Text style={styles.proofOptionText}>Gallery</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.proofModalActions}>
+              <TouchableOpacity
+                style={styles.proofCancelButton}
+                onPress={() => setProofModalVisible(false)}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.proofCancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={confirmPaymentModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setConfirmPaymentModalVisible(false)}
+      >
+        <View style={styles.confirmModalOverlay}>
+          <View style={styles.confirmModalCard}>
+            <Text style={styles.confirmModalTitle}>Confirm Payment</Text>
+            <Text style={styles.confirmModalMessage}>
+              Are you sure you want to submit this payment?
+            </Text>
+
+            <View style={styles.confirmSummaryBox}>
+              <View style={styles.confirmSummaryRow}>
+                <Text style={styles.confirmSummaryLabel}>Amount</Text>
+                <Text style={styles.confirmSummaryValue}>Rs {amount}</Text>
+              </View>
+              <View style={styles.confirmSummaryRow}>
+                <Text style={styles.confirmSummaryLabel}>Mode</Text>
+                <Text style={styles.confirmSummaryValue}>{paymentMode || 'N/A'}</Text>
+              </View>
+              <View style={styles.confirmSummaryRow}>
+                <Text style={styles.confirmSummaryLabel}>Type</Text>
+                <Text style={styles.confirmSummaryValue}>{paymentType || 'N/A'}</Text>
+              </View>
+            </View>
+
+            <View style={styles.confirmActionRow}>
+              <TouchableOpacity
+                style={styles.confirmCancelButton}
+                onPress={() => setConfirmPaymentModalVisible(false)}
+                activeOpacity={0.85}
+                disabled={loading}
+              >
+                <Text style={styles.confirmCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.confirmSubmitButton, loading && styles.confirmSubmitButtonDisabled]}
+                onPress={() => {
+                  setConfirmPaymentModalVisible(false);
+                  submitPayment();
+                }}
+                activeOpacity={0.85}
+                disabled={loading}
+              >
+                <Text style={styles.confirmSubmitText}>Confirm</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1182,7 +1257,7 @@ export default function MakePayment() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F3F4F6',
   },
   scrollView: {
     flex: 1,
@@ -1192,22 +1267,17 @@ const styles = StyleSheet.create({
     paddingBottom: m(100),
   },
   summaryCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(16),
-    padding: m(20),
+    backgroundColor: colors.surface,
+    borderRadius: m(20),
+    padding: m(16),
     marginBottom: m(16),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+    borderColor: colors.borderLight,
   },
   summaryTitle: {
     fontSize: m(18),
-    fontWeight: '700',
-    color: '#111827',
+    fontFamily: FontFamily.primaryBold,
+    color: colors.ink,
     marginBottom: m(16),
   },
   summaryDetails: {
@@ -1221,128 +1291,169 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: m(12),
-    color: '#6B7280',
+    color: colors.textSecondary,
+    fontFamily: FontFamily.bodyRegular,
     marginBottom: m(4),
   },
   summaryValue: {
     fontSize: m(16),
-    fontWeight: '700',
-    color: '#111827',
+    fontFamily: FontFamily.primaryExtraBold,
+    color: colors.ink,
   },
   summaryDivider: {
     width: 1,
     height: m(40),
-    backgroundColor: '#E5E7EB',
+    backgroundColor: colors.border,
     marginHorizontal: m(12),
   },
   section: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(16),
-    padding: m(20),
+    backgroundColor: colors.surface,
+    borderRadius: m(20),
+    padding: m(16),
     marginBottom: m(16),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+    borderColor: colors.borderLight,
   },
   sectionTitle: {
-    fontSize: m(18),
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: m(8),
+    fontSize: m(16),
+    lineHeight: m(22),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.ink,
+    marginBottom: m(4),
   },
   sectionSubtitle: {
-    fontSize: m(14),
-    color: '#6B7280',
+    fontSize: m(12),
+    lineHeight: m(17),
+    color: colors.textSecondary,
+    fontFamily: FontFamily.bodyRegular,
     marginBottom: m(16),
   },
   optionsGrid: {
-    gap: m(12),
+    gap: m(10),
   },
   optionCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: m(16),
-    borderRadius: m(12),
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#F9FAFB',
+    minHeight: m(74),
+    paddingVertical: m(12),
+    paddingHorizontal: m(14),
+    borderRadius: m(16),
+    borderWidth: 1,
+    borderColor: '#F4F1EA',
+    backgroundColor: '#F8F7F3',
   },
   selectedOptionCard: {
-    borderColor: '#3B82F6',
-    backgroundColor: '#3B82F6',
+    borderColor: '#0E6F8A',
+    backgroundColor: '#BFE5F7',
   },
   optionIcon: {
-    width: m(48),
-    height: m(48),
-    borderRadius: m(24),
-    backgroundColor: '#FFFFFF',
+    width: m(38),
+    height: m(38),
+    borderRadius: m(12),
+    backgroundColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: m(16),
+    marginRight: m(12),
   },
   optionContent: {
     flex: 1,
   },
   optionTitle: {
-    fontSize: m(16),
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: m(4),
+    fontSize: m(13),
+    lineHeight: m(18),
+    fontFamily: FontFamily.primarySemiBold,
+    color: colors.ink,
+    marginBottom: m(3),
   },
   optionDescription: {
-    fontSize: m(14),
-    color: '#6B7280',
+    fontSize: m(11),
+    lineHeight: m(16),
+    fontFamily: FontFamily.bodyRegular,
+    color: colors.textSecondary,
   },
   selectedText: {
-    color: '#FFFFFF',
+    color: colors.ink,
   },
   checkmark: {
-    width: m(24),
-    height: m(24),
-    borderRadius: m(12),
-    backgroundColor: '#10B981',
+    width: m(22),
+    height: m(22),
+    borderRadius: m(11),
+    backgroundColor: '#2FB36F',
     justifyContent: 'center',
     alignItems: 'center',
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: m(12),
-    paddingHorizontal: m(16),
-    backgroundColor: '#F9FAFB',
+    justifyContent: 'space-between',
+    position: 'relative',
+    borderWidth: 0,
+    borderRadius: m(14),
+    paddingTop: m(28),
+    paddingBottom: m(12),
+    paddingHorizontal: m(14),
+    backgroundColor: '#F8F7F3',
+  },
+  amountLabel: {
+    position: 'absolute',
+    top: m(11),
+    left: m(14),
+    fontSize: m(10),
+    lineHeight: m(14),
+    color: colors.ink,
+    fontFamily: FontFamily.primaryBold,
+    textTransform: 'uppercase',
+    marginBottom: m(2),
   },
   currencySymbol: {
     fontSize: m(18),
-    fontWeight: '600',
-    color: '#111827',
-    marginRight: m(8),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.ink,
   },
   amountInput: {
     flex: 1,
-    fontSize: m(16),
-    color: '#111827',
-    paddingVertical: m(12),
+    fontSize: m(18),
+    fontFamily: FontFamily.primaryExtraBold,
+    color: colors.ink,
+    paddingVertical: 0,
+    marginLeft: m(2),
+  },
+  amountFieldGroup: {
+    flex: 1,
+  },
+  amountEntryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  amountPill: {
+    borderRadius: m(999),
+    backgroundColor: '#D9F3E6',
+    paddingHorizontal: m(12),
+    paddingVertical: m(5),
+    marginLeft: m(10),
+  },
+  amountPillText: {
+    fontSize: m(10),
+    lineHeight: m(14),
+    color: '#0B4A40',
+    fontFamily: FontFamily.primaryBold,
   },
   helperText: {
     fontSize: m(12),
-    color: '#6B7280',
+    fontFamily: FontFamily.bodyRegular,
+    color: colors.textSecondary,
     marginTop: m(8),
     fontStyle: 'italic',
   },
   notesInput: {
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: m(12),
-    padding: m(16),
-    fontSize: m(16),
-    color: '#111827',
-    backgroundColor: '#F9FAFB',
+    borderColor: colors.borderLight,
+    borderRadius: m(14),
+    padding: m(14),
+    fontSize: m(15),
+    fontFamily: FontFamily.bodyRegular,
+    color: colors.ink,
+    backgroundColor: '#F8F7F3',
     textAlignVertical: 'top',
     minHeight: m(80),
   },
@@ -1350,26 +1461,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: m(16),
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
+    padding: m(14),
+    borderWidth: 1,
+    borderColor: colors.border,
     borderStyle: 'dashed',
-    borderRadius: m(12),
-    backgroundColor: '#F9FAFB',
+    borderRadius: m(16),
+    backgroundColor: '#F8F7F3',
     gap: m(8),
   },
   uploadText: {
-    fontSize: m(16),
-    color: '#6B7280',
-    fontWeight: '500',
+    fontSize: m(14),
+    color: colors.ink,
+    fontFamily: FontFamily.primarySemiBold,
   },
   proofPreview: {
     marginTop: m(12),
     padding: m(12),
-    backgroundColor: '#F0F9FF',
-    borderRadius: m(8),
+    backgroundColor: colors.skySoft,
+    borderRadius: m(14),
     borderWidth: 1,
-    borderColor: '#E0F2FE',
+    borderColor: colors.borderLight,
   },
   proofImageContainer: {
     position: 'relative',
@@ -1378,7 +1489,7 @@ const styles = StyleSheet.create({
   proofImage: {
     width: '100%',
     height: m(150),
-    borderRadius: m(8),
+    borderRadius: m(12),
   },
   removeProofButton: {
     position: 'absolute',
@@ -1387,7 +1498,7 @@ const styles = StyleSheet.create({
     width: m(32),
     height: m(32),
     borderRadius: m(16),
-    backgroundColor: '#EF4444',
+    backgroundColor: colors.error,
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 3,
@@ -1397,80 +1508,244 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
   },
   proofName: {
+    fontSize: m(12),
+    lineHeight: m(17),
+    color: colors.skyText,
+    fontFamily: FontFamily.bodyMedium,
+  },
+  proofModalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(35, 42, 37, 0.68)',
+    padding: m(24),
+  },
+  proofModalCard: {
+    width: '100%',
+    maxWidth: m(330),
+    padding: m(20),
+    backgroundColor: '#FFFFFF',
+    borderRadius: m(24),
+    shadowColor: '#101510',
+    shadowOffset: { width: 0, height: m(10) },
+    shadowOpacity: 0.22,
+    shadowRadius: m(20),
+    elevation: 12,
+  },
+  proofModalTitle: {
+    fontSize: m(20),
+    lineHeight: m(26),
+    fontFamily: FontFamily.primaryExtraBold,
+    color: '#19211C',
+    marginBottom: m(8),
+  },
+  proofModalMessage: {
     fontSize: m(14),
-    color: '#0369A1',
-    fontWeight: '500',
+    lineHeight: m(20),
+    color: '#5F6963',
+    fontFamily: FontFamily.bodyRegular,
+    marginBottom: m(18),
+  },
+  proofOptionRow: {
+    flexDirection: 'row',
+    gap: m(12),
+    marginBottom: m(12),
+  },
+  proofOptionButton: {
+    flex: 1,
+    minHeight: m(68),
+    borderRadius: m(14),
+    backgroundColor: '#F7EBD8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: m(5),
+  },
+  proofOptionText: {
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryBold,
+    color: '#19211C',
+  },
+  proofModalActions: {
+    flexDirection: 'row',
+  },
+  proofCancelButton: {
+    flex: 1,
+    minHeight: m(46),
+    borderRadius: m(12),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F8F7F3',
+    borderWidth: 1,
+    borderColor: '#E7E2DA',
+  },
+  proofCancelText: {
+    fontSize: m(14),
+    fontFamily: FontFamily.primaryBold,
+    color: '#1D261F',
+  },
+  confirmModalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(35, 42, 37, 0.68)',
+    padding: m(24),
+  },
+  confirmModalCard: {
+    width: '100%',
+    maxWidth: m(330),
+    padding: m(20),
+    backgroundColor: '#FFFFFF',
+    borderRadius: m(24),
+    shadowColor: '#101510',
+    shadowOffset: { width: 0, height: m(10) },
+    shadowOpacity: 0.22,
+    shadowRadius: m(20),
+    elevation: 12,
+  },
+  confirmModalTitle: {
+    fontSize: m(20),
+    lineHeight: m(26),
+    fontFamily: FontFamily.primaryExtraBold,
+    color: '#19211C',
+    marginBottom: m(8),
+  },
+  confirmModalMessage: {
+    fontSize: m(14),
+    lineHeight: m(20),
+    color: '#5F6963',
+    fontFamily: FontFamily.bodyRegular,
+    marginBottom: m(16),
+  },
+  confirmSummaryBox: {
+    backgroundColor: '#F8F7F3',
+    borderRadius: m(14),
+    borderWidth: 1,
+    borderColor: '#E7E2DA',
+    padding: m(12),
+    marginBottom: m(16),
+    gap: m(8),
+  },
+  confirmSummaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: m(12),
+  },
+  confirmSummaryLabel: {
+    fontSize: m(12),
+    color: '#5F6963',
+    fontFamily: FontFamily.bodyMedium,
+  },
+  confirmSummaryValue: {
+    flex: 1,
+    textAlign: 'right',
+    fontSize: m(13),
+    color: '#19211C',
+    fontFamily: FontFamily.primaryBold,
+    textTransform: 'capitalize',
+  },
+  confirmActionRow: {
+    flexDirection: 'row',
+    gap: m(12),
+  },
+  confirmCancelButton: {
+    flex: 1,
+    minHeight: m(46),
+    borderRadius: m(12),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F8F7F3',
+    borderWidth: 1,
+    borderColor: '#E7E2DA',
+  },
+  confirmCancelText: {
+    fontSize: m(14),
+    fontFamily: FontFamily.primaryBold,
+    color: '#1D261F',
+  },
+  confirmSubmitButton: {
+    flex: 1,
+    minHeight: m(46),
+    borderRadius: m(12),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#0B4A40',
+  },
+  confirmSubmitButtonDisabled: {
+    opacity: 0.55,
+  },
+  confirmSubmitText: {
+    fontSize: m(14),
+    fontFamily: FontFamily.primaryBold,
+    color: '#FFFFFF',
   },
   submitButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#10B981',
+    backgroundColor: '#0B5A4C',
     padding: m(16),
-    borderRadius: m(12),
+    borderRadius: m(16),
     gap: m(8),
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
   disabledButton: {
-    backgroundColor: '#9CA3AF',
+    backgroundColor: colors.textMuted,
   },
   submitButtonText: {
-    fontSize: m(18),
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontSize: m(16),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
   },
   infoCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: '#EFF6FF',
-    borderRadius: m(12),
-    padding: m(16),
+    backgroundColor: colors.skySoft,
+    borderRadius: m(16),
+    padding: m(14),
     borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderColor: colors.borderLight,
     gap: m(12),
   },
   infoContent: {
     flex: 1,
   },
   infoTitle: {
-    fontSize: m(16),
-    fontWeight: '600',
-    color: '#1E40AF',
-    marginBottom: m(8),
+    fontSize: m(14),
+    lineHeight: m(19),
+    fontFamily: FontFamily.primarySemiBold,
+    color: colors.ink,
+    marginBottom: m(6),
   },
   infoText: {
-    fontSize: m(14),
-    color: '#1E40AF',
-    lineHeight: m(20),
+    fontSize: m(12),
+    fontFamily: FontFamily.bodyRegular,
+    color: colors.textSecondary,
+    lineHeight: m(17),
   },
   pendingCheckCard: {
-    backgroundColor: '#FFFBF5',
-    borderRadius: m(12),
-    padding: m(16),
+    backgroundColor: colors.butterSoft,
+    borderRadius: m(16),
+    padding: m(14),
     marginBottom: m(16),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: m(12),
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: colors.butter,
   },
   pendingCheckText: {
-    fontSize: m(14),
-    color: '#92400E',
-    fontWeight: '500',
+    fontSize: m(13),
+    color: colors.ink,
+    fontFamily: FontFamily.bodyMedium,
   },
   pendingPaymentCard: {
-    backgroundColor: '#FFF7ED',
-    borderRadius: m(12),
-    padding: m(20),
+    backgroundColor: colors.butterSoft,
+    borderRadius: m(18),
+    padding: m(16),
     marginBottom: m(16),
-    borderWidth: 2,
-    borderColor: '#F59E0B',
+    borderWidth: 1,
+    borderColor: colors.butter,
   },
   pendingPaymentHeader: {
     flexDirection: 'row',
@@ -1479,19 +1754,21 @@ const styles = StyleSheet.create({
     marginBottom: m(12),
   },
   pendingPaymentTitle: {
-    fontSize: m(18),
-    fontWeight: '700',
-    color: '#92400E',
+    fontSize: m(16),
+    lineHeight: m(22),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.ink,
   },
   pendingPaymentMessage: {
-    fontSize: m(14),
-    color: '#92400E',
-    lineHeight: m(20),
+    fontSize: m(12),
+    fontFamily: FontFamily.bodyRegular,
+    color: colors.inkSoft,
+    lineHeight: m(18),
     marginBottom: m(16),
   },
   pendingPaymentDetails: {
     backgroundColor: '#FFFFFF',
-    borderRadius: m(8),
+    borderRadius: m(12),
     padding: m(12),
     gap: m(8),
   },
@@ -1501,14 +1778,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   pendingDetailLabel: {
-    fontSize: m(14),
-    color: '#6B7280',
-    fontWeight: '500',
+    fontSize: m(12),
+    color: colors.textSecondary,
+    fontFamily: FontFamily.bodyMedium,
   },
   pendingDetailValue: {
-    fontSize: m(14),
-    color: '#111827',
-    fontWeight: '600',
+    fontSize: m(12),
+    color: colors.ink,
+    fontFamily: FontFamily.primarySemiBold,
   },
   disabledSection: {
     opacity: 0.6,

@@ -1,7 +1,16 @@
 import { useState, useEffect } from 'react';
 import { Modal, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { m } from 'walstar-rn-responsive';
 
-const PromptBox = ({ visible, message, onConfirm, onCancel }) => {
+const PromptBox = ({
+  visible,
+  title = 'Confirm Action',
+  message,
+  confirmText = 'Confirm',
+  cancelText = 'Cancel',
+  onConfirm,
+  onCancel,
+}) => {
   const [clicked, setClicked] = useState(null);
 
   useEffect(() => {
@@ -29,6 +38,7 @@ const PromptBox = ({ visible, message, onConfirm, onCancel }) => {
       onRequestClose={onCancel}>
       <View style={styles.modalBackground}>
         <View style={styles.modalContainer}>
+          <Text style={styles.modalTitle}>{title}</Text>
           <Text style={styles.modalMessage}>{message}</Text>
           <View style={styles.buttonContainer}>
             <TouchableOpacity
@@ -43,7 +53,7 @@ const PromptBox = ({ visible, message, onConfirm, onCancel }) => {
                   styles.cancelButtonText,
                   clicked === 'cancel' && styles.cancelButtonTextActive,
                 ]}>
-                Cancel
+                {cancelText}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -58,7 +68,7 @@ const PromptBox = ({ visible, message, onConfirm, onCancel }) => {
                   styles.confirmButtonText,
                   clicked === 'confirm' && styles.confirmButtonTextActive,
                 ]}>
-                Confirm
+                {confirmText}
               </Text>
             </TouchableOpacity>
           </View>
@@ -73,41 +83,50 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(35, 42, 37, 0.68)',
+    padding: m(24),
   },
   modalContainer: {
-    width: 300,
-    padding: 24,
+    width: '100%',
+    maxWidth: m(356),
+    padding: m(24),
     backgroundColor: '#FFF',
-    borderRadius: 12,
-    alignItems: 'center',
-    shadowColor: '#000',
+    borderRadius: m(24),
+    alignItems: 'flex-start',
+    shadowColor: '#101510',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: m(10),
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOpacity: 0.22,
+    shadowRadius: m(20),
+    elevation: 12,
+  },
+  modalTitle: {
+    fontSize: m(22),
+    lineHeight: m(28),
+    fontWeight: '800',
+    color: '#19211C',
+    marginBottom: m(8),
   },
   modalMessage: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 24,
-    textAlign: 'center',
-    color: '#333',
-    lineHeight: 22,
+    fontSize: m(15),
+    fontWeight: '400',
+    marginBottom: m(28),
+    color: '#5F6963',
+    lineHeight: m(22),
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
-    gap: 12,
+    gap: m(12),
   },
   button: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
+    minHeight: m(54),
+    paddingVertical: m(13),
+    borderRadius: m(14),
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -115,31 +134,31 @@ const styles = StyleSheet.create({
   },
   // Cancel button styles
   cancelButton: {
-    backgroundColor: '#f5f5f5',
-    borderColor: '#ddd',
+    backgroundColor: '#F8F7F3',
+    borderColor: '#E7E2DA',
   },
   cancelButtonActive: {
-    backgroundColor: '#e0e0e0',
-    borderColor: '#ccc',
+    backgroundColor: '#EFECE6',
+    borderColor: '#DCD5CA',
   },
   cancelButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#666',
+    fontSize: m(15),
+    fontWeight: '800',
+    color: '#1D261F',
   },
   cancelButtonTextActive: {
-    color: '#444',
+    color: '#1D261F',
   },
   // Confirm button styles
   confirmButton: {
-    backgroundColor: '#ff8800ff',
+    backgroundColor: '#0B4A40',
   },
   confirmButtonActive: {
-    backgroundColor: '#ff8800ff',
+    backgroundColor: '#073B33',
   },
   confirmButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: m(15),
+    fontWeight: '800',
     color: '#FFF',
   },
   confirmButtonTextActive: {

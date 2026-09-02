@@ -19,6 +19,7 @@ import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
 import { updateUser } from '../../../Redux/Slices/authslice';
 import useFetchUserFromStorage from '../../../Redux/hooks/useFetchUserFromStorage';
+import { FontFamily } from '../../../constants';
 
 const EditProfile = ({ navigation }) => {
   const dispatch = useDispatch();
@@ -324,7 +325,7 @@ const styles = StyleSheet.create({
   },
   infoCardTitle: {
     fontSize: m(18),
-    fontWeight: '700',
+    fontFamily: FontFamily.primaryBold,
     color: '#111827',
   },
   fieldsContainer: {
@@ -353,20 +354,20 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: m(13),
     color: '#6B7280',
-    fontWeight: '600',
+    fontFamily: FontFamily.primarySemiBold,
     marginBottom: m(6),
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   fieldValue: {
     fontSize: m(16),
-    fontWeight: '600',
+    fontFamily: FontFamily.bodySemiBold,
     color: '#111827',
     lineHeight: m(22),
   },
   fieldInput: {
     fontSize: m(16),
-    fontWeight: '600',
+    fontFamily: FontFamily.bodySemiBold,
     color: '#111827',
     borderBottomWidth: 1.5,
     borderBottomColor: '#3B82F6',
@@ -394,13 +395,13 @@ const styles = StyleSheet.create({
   },
   countryCodeText: {
     fontSize: m(16),
-    fontWeight: '600',
+    fontFamily: FontFamily.bodySemiBold,
     color: '#111827',
   },
   phoneInput: {
     flex: 1,
     fontSize: m(16),
-    fontWeight: '600',
+    fontFamily: FontFamily.bodySemiBold,
     color: '#111827',
     paddingVertical: m(6),
     paddingHorizontal: 0,
@@ -442,7 +443,7 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: '#FFFFFF',
     fontSize: m(16),
-    fontWeight: '700',
+    fontFamily: FontFamily.primaryBold,
   },
   cancelEditButton: {
     flexDirection: 'row',
@@ -464,7 +465,7 @@ const styles = StyleSheet.create({
   cancelEditText: {
     color: '#6B7280',
     fontSize: m(16),
-    fontWeight: '600',
+    fontFamily: FontFamily.primarySemiBold,
   },
 });
 

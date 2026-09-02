@@ -212,7 +212,7 @@ export default function BorrowerAnalyticsScreen() {
 
   return (
     <View style={styles.container}>
-      <Header title="Analytics" showBackButton />
+      <Header title="Analytics" />
 
       <ScrollView
         contentContainerStyle={styles.content}

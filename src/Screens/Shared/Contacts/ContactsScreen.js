@@ -18,7 +18,7 @@ import SubscriptionRestriction from '../../../Components/SubscriptionRestriction
 import { useSubscription } from '../../../hooks/useSubscription';
 import { lenderLoanAPI } from '../../../Services/lenderLoanService';
 import { m } from 'walstar-rn-responsive';
-import { FontFamily, FontSizes } from '../../../constants';
+import { colors, FontFamily, FontSizes } from '../../../constants';
 
 const ContactsScreen = ({ navigation }) => {
   const dispatch = useDispatch();
@@ -146,13 +146,14 @@ const ContactsScreen = ({ navigation }) => {
   const renderBorrowerCard = (borrower, index) => {
     const initials = getInitials(borrower.name);
     const phoneNumber = borrower.mobile_No || '';
+    const cardTint = index % 2 === 0 ? colors.skySoft : colors.mintSoft;
 
     return (
       <View key={index} style={styles.borrowerCard}>
         <View style={styles.borrowerContent}>
           {/* Avatar */}
           <View style={styles.avatarContainer}>
-            <View style={styles.avatar}>
+            <View style={[styles.avatar, { backgroundColor: cardTint }]}>
               <Text style={styles.avatarText}>{initials}</Text>
             </View>
           </View>
@@ -171,16 +172,16 @@ const ContactsScreen = ({ navigation }) => {
             {phoneNumber && (
               <>
                 <TouchableOpacity
-                  style={styles.actionButton}
+                  style={[styles.actionButton, styles.callButton]}
                   onPress={() => handleCall(phoneNumber)}
                   activeOpacity={0.7}>
-                  <Icon name="phone" size={18} color="#27ae60" />
+                  <Icon name="phone" size={18} color={colors.success} />
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={styles.actionButton}
+                  style={[styles.actionButton, styles.messageButton]}
                   onPress={() => handleMessage(phoneNumber)}
                   activeOpacity={0.7}>
-                  <Icon name="message-circle" size={18} color="#3498db" />
+                  <Icon name="message-circle" size={18} color={colors.info} />
                 </TouchableOpacity>
               </>
             )}
@@ -217,28 +218,30 @@ const ContactsScreen = ({ navigation }) => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#ff6700']}
-            tintColor="#ff6700"
+            colors={[colors.ink]}
+            tintColor={colors.ink}
             enabled={isLender ? (planLoading || hasActivePlan) : true}
           />
         }>
         {/* Header Section */}
         <View style={styles.headerSection}>
           <View style={styles.headerIconContainer}>
-            <Icon name="users" size={32} color="#ff6700" />
+            <Icon name="users" size={26} color={colors.ink} />
           </View>
-          <Text style={styles.headerTitle}>Borrower Contacts</Text>
-          <Text style={styles.headerSubtitle}>
-            {borrowers.length > 0
-              ? `${borrowers.length} ${borrowers.length === 1 ? 'contact' : 'contacts'} available`
-              : 'No contacts available'}
-          </Text>
+          <View style={styles.headerTextBlock}>
+            <Text style={styles.headerTitle}>Borrower Contacts</Text>
+            <Text style={styles.headerSubtitle}>
+              {borrowers.length > 0
+                ? `${borrowers.length} ${borrowers.length === 1 ? 'contact' : 'contacts'} available`
+                : 'No contacts available'}
+            </Text>
+          </View>
         </View>
 
         {/* Error State */}
         {error && (
           <View style={styles.errorContainer}>
-            <Icon name="alert-circle" size={48} color="#e74c3c" />
+            <Icon name="alert-circle" size={42} color={colors.error} />
             <Text style={styles.errorTitle}>Error</Text>
             <Text style={styles.errorText}>{error}</Text>
             <TouchableOpacity
@@ -254,7 +257,7 @@ const ContactsScreen = ({ navigation }) => {
         {/* Empty State */}
         {!error && borrowers.length === 0 && (
           <View style={styles.emptyContainer}>
-            <Icon name="user-x" size={64} color="#bdc3c7" />
+            <Icon name="user-x" size={56} color={colors.textMuted} />
             <Text style={styles.emptyTitle}>No Contacts Found</Text>
             <Text style={styles.emptyText}>
               There are no borrower contacts available at the moment.
@@ -284,102 +287,101 @@ const ContactsScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#F3F4F6',
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: m(80),
+    padding: m(16),
+    paddingBottom: m(100),
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#F3F4F6',
   },
   loadingText: {
     marginTop: m(16),
     fontSize: FontSizes.base,
-    color: '#666',
-    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+    fontFamily: FontFamily.bodyRegular,
   },
   headerSection: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: m(24),
-    paddingHorizontal: m(20),
-    backgroundColor: '#fff',
-    marginHorizontal: m(16),
-    marginTop: m(20),
+    padding: m(16),
+    backgroundColor: colors.navyFaint,
     borderRadius: m(20),
-    borderWidth: 0.4,
-    borderColor: 'lightgrey',
+    borderWidth: 1,
+    borderColor: colors.navyBorder,
+    marginBottom: m(16),
   },
   headerIconContainer: {
-    width: m(64),
-    height: m(64),
-    borderRadius: m(32),
-    backgroundColor: '#FFF3E0',
+    width: m(52),
+    height: m(52),
+    borderRadius: m(16),
+    backgroundColor: colors.mint,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: m(12),
+    marginRight: m(12),
+  },
+  headerTextBlock: {
+    flex: 1,
   },
   headerTitle: {
-    fontSize: FontSizes['2xl'],
-    fontFamily: FontFamily.secondaryBold,
-    color: '#2c3e50',
-    marginBottom: m(6),
+    fontSize: m(20),
+    lineHeight: m(26),
+    fontFamily: FontFamily.primaryExtraBold,
+    color: colors.ink,
+    marginBottom: m(4),
   },
   headerSubtitle: {
-    fontSize: FontSizes.sm,
-    color: '#7f8c8d',
-    fontFamily: FontFamily.primaryRegular,
+    fontSize: m(12),
+    lineHeight: m(17),
+    color: colors.textSecondary,
+    fontFamily: FontFamily.bodyRegular,
   },
   contactsList: {
-    paddingHorizontal: m(16),
-    marginTop: m(16),
+    gap: m(12),
   },
   borrowerCard: {
-    backgroundColor: '#fff',
-    borderRadius: m(16),
-    marginBottom: m(12),
-    padding: m(16),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-    borderWidth: 0.4,
-    borderColor: '#e0e0e0',
+    backgroundColor: colors.surface,
+    borderRadius: m(18),
+    padding: m(14),
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
   borrowerContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   avatarContainer: {
-    marginRight: m(16),
+    marginRight: m(12),
   },
   avatar: {
-    width: m(56),
-    height: m(56),
-    borderRadius: m(28),
-    backgroundColor: '#ff6700',
+    width: m(48),
+    height: m(48),
+    borderRadius: m(15),
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
-    color: '#fff',
-    fontSize: FontSizes.lg,
-    fontFamily: FontFamily.secondaryBold,
+    color: colors.ink,
+    fontSize: m(16),
+    lineHeight: m(22),
+    fontFamily: FontFamily.primaryExtraBold,
   },
   borrowerInfo: {
     flex: 1,
   },
   borrowerName: {
-    fontSize: FontSizes.lg,
-    fontFamily: FontFamily.secondaryBold,
-    color: '#2c3e50',
-    marginBottom: m(6),
+    fontSize: m(15),
+    lineHeight: m(20),
+    fontFamily: FontFamily.primarySemiBold,
+    color: colors.ink,
+    marginBottom: m(5),
   },
   phoneContainer: {
     flexDirection: 'row',
@@ -387,51 +389,57 @@ const styles = StyleSheet.create({
     gap: m(6),
   },
   phoneNumber: {
-    fontSize: FontSizes.base,
-    color: '#7f8c8d',
-    fontFamily: FontFamily.primaryRegular,
+    fontSize: m(12),
+    lineHeight: m(17),
+    color: colors.textSecondary,
+    fontFamily: FontFamily.bodyRegular,
   },
   actionButtons: {
     flexDirection: 'row',
     gap: m(8),
   },
   actionButton: {
-    width: m(40),
-    height: m(40),
-    borderRadius: m(20),
-    backgroundColor: '#f0f0f0',
+    width: m(38),
+    height: m(38),
+    borderRadius: m(13),
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  callButton: {
+    backgroundColor: colors.mintSoft,
+  },
+  messageButton: {
+    backgroundColor: colors.skySoft,
   },
   errorContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: m(40),
-    marginHorizontal: m(16),
-    marginTop: m(20),
-    backgroundColor: '#fff',
+    padding: m(34),
+    backgroundColor: colors.surface,
     borderRadius: m(20),
-    borderWidth: 0.4,
-    borderColor: 'lightgrey',
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
   errorTitle: {
-    fontSize: FontSizes.xl,
-    fontFamily: FontFamily.secondaryBold,
-    color: '#e74c3c',
+    fontSize: m(18),
+    lineHeight: m(24),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.error,
     marginTop: m(16),
     marginBottom: m(8),
   },
   errorText: {
-    fontSize: FontSizes.base,
-    color: '#7f8c8d',
-    fontFamily: FontFamily.primaryRegular,
+    fontSize: m(13),
+    lineHeight: m(19),
+    color: colors.textSecondary,
+    fontFamily: FontFamily.bodyRegular,
     textAlign: 'center',
     marginBottom: m(24),
   },
   retryButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ff6700',
+    backgroundColor: colors.ink,
     paddingHorizontal: m(24),
     paddingVertical: m(12),
     borderRadius: m(12),
@@ -439,33 +447,32 @@ const styles = StyleSheet.create({
   },
   retryButtonText: {
     color: '#fff',
-    fontSize: FontSizes.base,
-    fontFamily: FontFamily.secondaryBold,
+    fontSize: m(14),
+    fontFamily: FontFamily.primarySemiBold,
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: m(60),
-    marginHorizontal: m(16),
-    marginTop: m(20),
-    backgroundColor: '#fff',
+    padding: m(42),
+    backgroundColor: colors.surface,
     borderRadius: m(20),
-    borderWidth: 0.4,
-    borderColor: 'lightgrey',
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
   emptyTitle: {
-    fontSize: FontSizes.xl,
-    fontFamily: FontFamily.secondaryBold,
-    color: '#2c3e50',
-    marginTop: m(20),
+    fontSize: m(18),
+    lineHeight: m(24),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.ink,
+    marginTop: m(18),
     marginBottom: m(8),
   },
   emptyText: {
-    fontSize: FontSizes.base,
-    color: '#7f8c8d',
-    fontFamily: FontFamily.primaryRegular,
+    fontSize: m(13),
+    color: colors.textSecondary,
+    fontFamily: FontFamily.bodyRegular,
     textAlign: 'center',
-    lineHeight: m(22),
+    lineHeight: m(19),
   },
 });
 

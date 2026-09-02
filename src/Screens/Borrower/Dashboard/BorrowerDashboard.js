@@ -9,6 +9,9 @@ import {
   RefreshControl,
   Animated,
   Easing,
+  StatusBar,
+  Platform,
+  BackHandler,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
@@ -16,10 +19,10 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import { useSelector, useDispatch } from 'react-redux';
 import { m } from 'walstar-rn-responsive';
-import Header from '../../../Components/Header';
 import { getBorrowerLoans, clearLoans } from '../../../Redux/Slices/borrowerLoanSlice';
 import { FontFamily, FontSizes, colors } from '../../../constants';
 import borrowerLoanAPI from '../../../Services/borrowerLoanService';
+import PromptBox from '../../PromptBox/Prompt';
 
 const formatCurrency = value => {
   if (!value) return '0';
@@ -35,6 +38,7 @@ export default function BorrowerDashboard() {
 
   const [refreshing, setRefreshing] = useState(false);
   const [pendingLoanOffers, setPendingLoanOffers] = useState([]);
+  const [exitPromptVisible, setExitPromptVisible] = useState(false);
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -69,6 +73,8 @@ export default function BorrowerDashboard() {
   // Animation for notification
   useEffect(() => {
     if (pendingLoanOffers.length > 0) {
+      notificationFadeAnim.setValue(0);
+      notificationSlideAnim.setValue(50);
       Animated.parallel([
         Animated.timing(notificationFadeAnim, {
           toValue: 1,
@@ -82,7 +88,7 @@ export default function BorrowerDashboard() {
         }),
       ]).start();
     }
-  }, [notificationFadeAnim, notificationSlideAnim, pendingLoanOffers.length]);
+  }, [notificationFadeAnim, notificationSlideAnim, pendingLoanOffers]);
 
   // Fetch pending loan offers
   const fetchPendingLoanOffers = useCallback(async () => {
@@ -142,7 +148,21 @@ export default function BorrowerDashboard() {
         }),
       ]).start();
 
+      const onBackPress = () => {
+        if (Platform.OS === 'android') {
+          setExitPromptVisible(true);
+          return true;
+        }
+        return false;
+      };
+
+      const backHandler = BackHandler.addEventListener(
+        'hardwareBackPress',
+        onBackPress,
+      );
+
       return () => {
+        backHandler.remove();
         dispatch(clearLoans());
       };
     }, [
@@ -189,7 +209,7 @@ export default function BorrowerDashboard() {
       id: 3,
       title: 'Analytics',
       icon: 'bar-chart-2',
-      screen: 'BorrowerAnalyticsScreen',
+      screen: 'History',
       description: 'View insights',
       tint: colors.butter,
     },
@@ -288,7 +308,34 @@ export default function BorrowerDashboard() {
 
   return (
     <View style={styles.container}>
-      <Header title="Dashboard" />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor="transparent"
+        translucent
+      />
+
+      {/* Green Greeting Header */}
+      <LinearGradient
+        colors={[colors.navyDark, colors.navy]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.topHeader}>
+        <View style={styles.topHeaderRow}>
+          <Text style={styles.greetingText} numberOfLines={1}>
+            Hello, {user?.userName || 'User'} 👋
+          </Text>
+          <TouchableOpacity
+            style={styles.avatarContainer}
+            onPress={() => navigation.navigate('ProfileDetails')}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>
+                {(user?.userName || 'U').charAt(0).toUpperCase()}
+              </Text>
+            </View>
+            <View style={styles.onlineIndicator} />
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
 
       <ScrollView
         style={styles.scrollView}
@@ -312,20 +359,6 @@ export default function BorrowerDashboard() {
               transform: [{ translateY: slideUpAnim }],
             },
           ]}>
-          <View style={styles.heroTopRow}>
-            <Text style={styles.greetingSmall}>Hello, {user?.userName || 'User'} 👋</Text>
-            <TouchableOpacity
-              style={styles.avatarContainer}
-              onPress={() => navigation.navigate('ProfileDetails')}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>
-                  {(user?.userName || 'U').charAt(0).toUpperCase()}
-                </Text>
-              </View>
-              <View style={styles.onlineIndicator} />
-            </TouchableOpacity>
-          </View>
-
           <Text style={styles.heroTitle}>Manage Your{'\n'}Loans Easily</Text>
           <Text style={styles.heroSubtitle}>
             Currently you have {loans.length} loan{loans.length !== 1 ? 's' : ''}
@@ -544,6 +577,18 @@ export default function BorrowerDashboard() {
           </View>
         )}
       </ScrollView>
+      <PromptBox
+        visible={exitPromptVisible}
+        title="Exit App"
+        message="Do you want to exit the app?"
+        confirmText="Exit App"
+        cancelText="Cancel"
+        onConfirm={() => {
+          setExitPromptVisible(false);
+          BackHandler.exitApp();
+        }}
+        onCancel={() => setExitPromptVisible(false)}
+      />
     </View>
   );
 }
@@ -551,48 +596,63 @@ export default function BorrowerDashboard() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.offWhite,
+    backgroundColor: colors.white,
   },
   scrollView: {
     flex: 1,
+    marginTop: -m(24),
+    zIndex: 2,
+    elevation: 2,
   },
   scrollContent: {
     paddingBottom: m(100),
   },
 
+  // TOP GREEN HEADER STYLES
+  topHeader: {
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || m(24)) + m(16) : m(54),
+    paddingBottom: m(36),
+    paddingHorizontal: m(20),
+    borderBottomLeftRadius: m(32),
+    borderBottomRightRadius: m(32),
+  },
+  topHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  greetingText: {
+    flex: 1,
+    marginRight: m(12),
+    fontSize: m(18),
+    lineHeight: m(24),
+    color: colors.white,
+    fontFamily: FontFamily.primaryBold,
+  },
+
   // HERO SECTION STYLES
   heroCard: {
-    marginHorizontal: m(16),
-    marginTop: m(20),
-    backgroundColor: colors.surface,
-    borderRadius: m(24),
-    padding: m(20),
+    marginHorizontal: m(18),
+    marginTop: 0,
+    backgroundColor: colors.white,
+    borderRadius: m(22),
+    paddingHorizontal: m(18),
+    paddingTop: m(18),
+    paddingBottom: m(16),
   },
   welcomeText: {
     flex: 1,
   },
-  heroTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: m(18),
-  },
-  greetingSmall: {
-    fontSize: m(13),
-    lineHeight: m(18),
-    color: colors.textSecondary,
-    fontFamily: FontFamily.bodyRegular,
-  },
   heroTitle: {
-    fontSize: m(26),
-    lineHeight: m(32),
+    fontSize: m(22),
+    lineHeight: m(27),
     fontFamily: FontFamily.primaryExtraBold,
     color: colors.ink,
     marginBottom: m(6),
   },
   heroSubtitle: {
-    fontSize: m(13),
-    lineHeight: m(18),
+    fontSize: m(12),
+    lineHeight: m(17),
     color: colors.textSecondary,
     fontFamily: FontFamily.bodyRegular,
     marginBottom: m(20),
@@ -602,9 +662,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   heroTile: {
-    width: '48%',
-    borderRadius: m(18),
-    padding: m(14),
+    width: '47%',
+    borderRadius: m(14),
+    paddingHorizontal: m(14),
+    paddingTop: m(16),
+    paddingBottom: m(14),
+    minHeight: m(108),
   },
   heroTileIcon: {
     width: m(30),
@@ -613,17 +676,17 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: m(10),
+    marginBottom: m(18),
   },
   heroTileLabel: {
-    fontSize: m(11),
+    fontSize: m(10),
     color: colors.inkSoft,
-    fontFamily: FontFamily.bodyMedium,
-    marginBottom: m(4),
+    fontFamily: FontFamily.primarySemiBold,
+    marginBottom: m(5),
   },
   heroTileValue: {
     fontSize: m(16),
-    lineHeight: m(20),
+    lineHeight: m(21),
     color: colors.ink,
     fontFamily: FontFamily.primaryExtraBold,
   },
@@ -636,7 +699,7 @@ const styles = StyleSheet.create({
     borderRadius: m(24),
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.ink,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
   },
   avatarText: {
     color: colors.white,

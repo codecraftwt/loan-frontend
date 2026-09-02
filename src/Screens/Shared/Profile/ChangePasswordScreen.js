@@ -16,6 +16,7 @@ import Toast from 'react-native-toast-message';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
 import { userAPI } from '../../../Services/userService';
+import { FontFamily } from '../../../constants';
 
 const ChangePasswordScreen = ({ navigation }) => {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -404,13 +405,14 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontSize: m(22),
-    fontWeight: '800',
+    fontFamily: FontFamily.primaryExtraBold,
     color: '#111827',
     letterSpacing: 0.3,
     marginBottom: m(6),
   },
   heroSubtitle: {
     fontSize: m(13),
+    fontFamily: FontFamily.bodyRegular,
     color: '#6B7280',
     textAlign: 'center',
     lineHeight: m(20),
@@ -443,7 +445,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: m(15),
-    fontWeight: '700',
+    fontFamily: FontFamily.primaryBold,
     color: '#374151',
     letterSpacing: 0.2,
   },
@@ -480,7 +482,7 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: m(11),
     color: '#9CA3AF',
-    fontWeight: '700',
+    fontFamily: FontFamily.primaryBold,
     marginBottom: m(6),
     textTransform: 'uppercase',
     letterSpacing: 1,
@@ -497,7 +499,7 @@ const styles = StyleSheet.create({
   fieldInput: {
     flex: 1,
     fontSize: m(15),
-    fontWeight: '600',
+    fontFamily: FontFamily.bodySemiBold,
     color: '#111827',
     paddingVertical: Platform.OS === 'ios' ? m(10) : m(8),
   },
@@ -537,7 +539,7 @@ const styles = StyleSheet.create({
   },
   strengthLabel: {
     fontSize: m(11),
-    fontWeight: '700',
+    fontFamily: FontFamily.primaryBold,
     letterSpacing: 0.5,
     minWidth: m(44),
     textAlign: 'right',
@@ -554,7 +556,7 @@ const styles = StyleSheet.create({
   mismatchText: {
     fontSize: m(12),
     color: '#EF4444',
-    fontWeight: '500',
+    fontFamily: FontFamily.bodyMedium,
   },
 
   /* ── Tips Card ── */
@@ -574,7 +576,7 @@ const styles = StyleSheet.create({
   },
   tipsTitle: {
     fontSize: m(13),
-    fontWeight: '700',
+    fontFamily: FontFamily.primaryBold,
     color: '#6366F1',
     letterSpacing: 0.3,
   },
@@ -593,7 +595,7 @@ const styles = StyleSheet.create({
   },
   tipText: {
     fontSize: m(12),
-    fontWeight: '500',
+    fontFamily: FontFamily.bodyMedium,
   },
 
   /* ── Action Buttons ── */
@@ -625,7 +627,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: '#FFFFFF',
     fontSize: m(16),
-    fontWeight: '700',
+    fontFamily: FontFamily.primaryBold,
     letterSpacing: 0.3,
   },
   secondaryButton: {
@@ -645,7 +647,7 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     color: '#6B7280',
     fontSize: m(15),
-    fontWeight: '600',
+    fontFamily: FontFamily.primarySemiBold,
   },
 });
 

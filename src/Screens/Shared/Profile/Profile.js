@@ -378,7 +378,10 @@ export default function Profile() {
 
       <PromptBox
         visible={isPromptVisible}
+        title="Logout"
         message="Are you sure you want to logout?"
+        confirmText="Logout"
+        cancelText="Cancel"
         onConfirm={handleConfirmLogout}
         onCancel={handleCancelLogout}
       />
