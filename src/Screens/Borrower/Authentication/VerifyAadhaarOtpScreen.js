@@ -18,8 +18,42 @@ import { m } from 'walstar-rn-responsive';
 import { FontFamily, FontSizes } from '../../../constants';
 import aadhaarKycAPI from '../../../Services/aadhaarKycService';
 
+const BRAND_NAVY = '#172340';
+const BRAND_TEAL = '#118A6B';
+const BRAND_SOFT = '#EAF7F2';
+const BRAND_BORDER = '#BDE5D8';
+
+const ProgressTracker = () => (
+  <View style={styles.progressContainer}>
+    {[1, 2, 3, 4].map(step => (
+      <View key={step} style={styles.progressStepWrap}>
+        <View
+          style={[
+            styles.progressStep,
+            step === 1 && styles.progressStepComplete,
+            step === 2 && styles.progressStepActive,
+          ]}>
+          {step === 1 ? (
+            <Ionicons name="checkmark" size={m(16)} color="#FFFFFF" />
+          ) : (
+            <Text style={styles.progressStepText}>{step}</Text>
+          )}
+        </View>
+        {step < 4 ? (
+          <View
+            style={[
+              styles.progressLine,
+              step === 1 && styles.progressLineActive,
+            ]}
+          />
+        ) : null}
+      </View>
+    ))}
+  </View>
+);
+
 export default function VerifyAadhaarOtpScreen({ navigation, route }) {
-  const { aadhaarNumber, transactionId } = route.params || {};
+  const { aadhaarNumber, transactionId, userData } = route.params || {};
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
@@ -63,6 +97,7 @@ export default function VerifyAadhaarOtpScreen({ navigation, route }) {
       navigation.replace('AadhaarKycSuccessScreen', {
         aadhaarNumber,
         kycData: response?.kycData || response?.data,
+        userData,
       });
     } catch (apiError) {
       Toast.show({
@@ -114,25 +149,39 @@ export default function VerifyAadhaarOtpScreen({ navigation, route }) {
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <StatusBar barStyle="light-content" backgroundColor="#ff6700" />
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}>
+      <StatusBar barStyle="light-content" backgroundColor={BRAND_NAVY} />
+      <View style={styles.fixedTop}>
         <View style={styles.headerContent}>
           <Text style={styles.appName}>LoanHub</Text>
           <Text style={styles.tagline}>Aadhaar eKYC Verification</Text>
         </View>
 
+        <ProgressTracker />
+      </View>
+
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}>
         <View style={styles.formCard}>
+          <View style={styles.otpNotice}>
+            <Ionicons name="checkmark" size={m(18)} color={BRAND_TEAL} />
+            <View style={styles.otpNoticeTextWrap}>
+              <Text style={styles.otpNoticeTitle}>OTP sent</Text>
+              <Text style={styles.otpNoticeText}>
+                Test OTP is 123456 for this verification.
+              </Text>
+            </View>
+          </View>
+
           <View style={styles.iconCircle}>
-            <Ionicons name="keypad-outline" size={m(40)} color="#ff6700" />
+            <Ionicons name="lock-closed-outline" size={m(40)} color={BRAND_TEAL} />
           </View>
 
           <Text style={styles.title}>Verify OTP</Text>
           <Text style={styles.subtitle}>
-            Enter the OTP sent to your registered mobile number for {maskedAadhaar} to proceed with verification
+            Enter the 6-digit code sent to {maskedAadhaar}
           </Text>
 
           <View style={styles.inputGroup}>
@@ -141,14 +190,14 @@ export default function VerifyAadhaarOtpScreen({ navigation, route }) {
               <Ionicons
                 name="lock-closed-outline"
                 size={20}
-                color={error ? '#FF4444' : '#ff7900'}
+                color={error ? '#FF4444' : BRAND_TEAL}
                 style={styles.inputIcon}
               />
               <TextInput
                 style={styles.input}
                 value={otp}
                 onChangeText={handleOtpChange}
-                placeholder="Enter OTP"
+                placeholder="E n t e r   O T P"
                 placeholderTextColor="#999"
                 keyboardType="number-pad"
                 maxLength={6}
@@ -163,7 +212,7 @@ export default function VerifyAadhaarOtpScreen({ navigation, route }) {
             onPress={handleVerifyOtp}
             disabled={isVerifying}>
             <LinearGradient
-              colors={['#ff6700', '#ff7900', '#ff8500']}
+              colors={[BRAND_NAVY, BRAND_TEAL]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.primaryButtonGradient}>
@@ -183,10 +232,10 @@ export default function VerifyAadhaarOtpScreen({ navigation, route }) {
             onPress={handleResendOtp}
             disabled={isResending || isVerifying}>
             {isResending ? (
-              <ActivityIndicator color="#ff6700" />
+              <ActivityIndicator color={BRAND_TEAL} />
             ) : (
               <>
-                <Ionicons name="refresh-outline" size={18} color="#ff6700" />
+                <Ionicons name="refresh-outline" size={18} color={BRAND_TEAL} />
                 <Text style={styles.secondaryButtonText}>Resend OTP</Text>
               </>
             )}
@@ -200,18 +249,22 @@ export default function VerifyAadhaarOtpScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ff6700',
+    backgroundColor: BRAND_TEAL,
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#ff6700',
+    backgroundColor: BRAND_TEAL,
   },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: m(20),
-    paddingTop: Platform.OS === 'ios' ? m(52) : m(32),
+    paddingTop: 0,
     paddingBottom: m(40),
-    backgroundColor: '#ff6700',
+    backgroundColor: BRAND_TEAL,
+  },
+  fixedTop: {
+    paddingHorizontal: m(20),
+    paddingTop: Platform.OS === 'ios' ? m(52) : m(32),
   },
   headerContent: {
     alignItems: 'center',
@@ -233,23 +286,51 @@ const styles = StyleSheet.create({
     borderRadius: m(20),
     padding: m(24),
     borderWidth: 1,
-    borderColor: '#FFEDD5',
+    borderColor: BRAND_BORDER,
     elevation: 8,
-    shadowColor: '#ff6700',
+    shadowColor: BRAND_TEAL,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
+  },
+  otpNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: BRAND_SOFT,
+    borderWidth: 1,
+    borderLeftWidth: 3,
+    borderColor: BRAND_BORDER,
+    borderLeftColor: BRAND_TEAL,
+    borderRadius: m(8),
+    padding: m(12),
+    marginBottom: m(20),
+    gap: m(10),
+  },
+  otpNoticeTextWrap: {
+    flex: 1,
+  },
+  otpNoticeTitle: {
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.primarySemiBold,
+    color: '#0E1B34',
+    marginBottom: m(2),
+  },
+  otpNoticeText: {
+    fontSize: FontSizes.xs,
+    fontFamily: FontFamily.primaryRegular,
+    color: '#314057',
+    lineHeight: m(17),
   },
   iconCircle: {
     width: m(80),
     height: m(80),
     borderRadius: m(40),
-    backgroundColor: '#FFF9F0',
+    backgroundColor: BRAND_SOFT,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
     borderWidth: 2,
-    borderColor: '#FFEDD5',
+    borderColor: BRAND_BORDER,
     marginBottom: m(16),
   },
   title: {
@@ -279,10 +360,10 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF9F0',
+    backgroundColor: BRAND_SOFT,
     borderRadius: m(12),
     borderWidth: 1,
-    borderColor: '#FFEDD5',
+    borderColor: BRAND_BORDER,
     paddingHorizontal: m(16),
     height: m(56),
   },
@@ -309,7 +390,7 @@ const styles = StyleSheet.create({
     borderRadius: m(12),
     overflow: 'hidden',
     elevation: 4,
-    shadowColor: '#ff6700',
+    shadowColor: BRAND_TEAL,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
@@ -340,6 +421,46 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     fontSize: FontSizes.base,
     fontFamily: FontFamily.primarySemiBold,
-    color: '#ff6700',
+    color: BRAND_TEAL,
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: m(6),
+    marginBottom: m(18),
+  },
+  progressStepWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  progressStep: {
+    width: m(30),
+    height: m(30),
+    borderRadius: m(15),
+    backgroundColor: '#516178',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  progressStepComplete: {
+    backgroundColor: BRAND_TEAL,
+  },
+  progressStepActive: {
+    backgroundColor: BRAND_TEAL,
+    borderWidth: 3,
+    borderColor: '#46B89D',
+  },
+  progressStepText: {
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.primarySemiBold,
+    color: '#FFFFFF',
+  },
+  progressLine: {
+    width: m(42),
+    height: 2,
+    backgroundColor: '#516178',
+  },
+  progressLineActive: {
+    backgroundColor: BRAND_TEAL,
   },
 });

@@ -1,22 +1,32 @@
-import axiosInstance from '../Utils/AxiosInstance';
+const STATIC_AADHAAR_OTP = '123456';
 
 export const aadhaarKycAPI = {
 
   sendOtp: async ({ aadhaarNumber, consentAccepted }) => {
-    const response = await axiosInstance.post('borrower/ekyc/aadhaar/send-otp', {
-      aadhaarNumber,
+    return {
+      success: true,
+      message: 'OTP sent successfully.',
+      mockOtp: STATIC_AADHAAR_OTP,
+      transactionId: `static-${aadhaarNumber}`,
       consentAccepted,
-    });
-    return response.data;
+    };
   }, 
 
   verifyOtp: async ({ aadhaarNumber, otp, transactionId }) => {
-    const response = await axiosInstance.post('borrower/ekyc/aadhaar/verify-otp', {
-      aadhaarNumber,
-      otp,
+    if (otp !== STATIC_AADHAAR_OTP) {
+      throw new Error('Invalid OTP. Use 123456 for testing.');
+    }
+
+    return {
+      success: true,
+      verified: true,
+      status: 'success',
       transactionId,
-    });
-    return response.data;
+      kycData: {
+        aadhaarNumber,
+        name: 'Rohan Sharma',
+      },
+    };
   },
 };
 

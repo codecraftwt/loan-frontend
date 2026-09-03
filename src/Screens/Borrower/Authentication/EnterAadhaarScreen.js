@@ -18,7 +18,42 @@ import { m } from 'walstar-rn-responsive';
 import { FontFamily, FontSizes } from '../../../constants';
 import aadhaarKycAPI from '../../../Services/aadhaarKycService';
 
+const BRAND_NAVY = '#172340';
+const BRAND_TEAL = '#118A6B';
+const BRAND_SOFT = '#EAF7F2';
+const BRAND_BORDER = '#BDE5D8';
+
+const ProgressTracker = () => (
+  <View style={styles.progressContainer}>
+    {[1, 2, 3, 4].map(step => (
+      <View key={step} style={styles.progressStepWrap}>
+        <View
+          style={[
+            styles.progressStep,
+            step === 1 && styles.progressStepComplete,
+            step === 2 && styles.progressStepActive,
+          ]}>
+          {step === 1 ? (
+            <Ionicons name="checkmark" size={m(16)} color="#FFFFFF" />
+          ) : (
+            <Text style={styles.progressStepText}>{step}</Text>
+          )}
+        </View>
+        {step < 4 ? (
+          <View
+            style={[
+              styles.progressLine,
+              step === 1 && styles.progressLineActive,
+            ]}
+          />
+        ) : null}
+      </View>
+    ))}
+  </View>
+);
+
 export default function EnterAadhaarScreen({ navigation, route }) {
+  const { userData } = route.params || {};
   const [aadhaarNumber, setAadhaarNumber] = useState(route?.params?.aadhaarNumber || '');
   const [error, setError] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -54,6 +89,7 @@ export default function EnterAadhaarScreen({ navigation, route }) {
       navigation.navigate('VerifyAadhaarOtpScreen', {
         aadhaarNumber,
         transactionId: response?.transactionId || response?.txnId,
+        userData,
       });
     } catch (apiError) {
       Toast.show({
@@ -73,25 +109,29 @@ export default function EnterAadhaarScreen({ navigation, route }) {
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <StatusBar barStyle="light-content" backgroundColor="#ff6700" />
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}>
+      <StatusBar barStyle="light-content" backgroundColor={BRAND_NAVY} />
+      <View style={styles.fixedTop}>
         <View style={styles.headerContent}>
           <Text style={styles.appName}>LoanHub</Text>
           <Text style={styles.tagline}>Aadhaar eKYC Verification</Text>
         </View>
 
+        <ProgressTracker />
+      </View>
+
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}>
         <View style={styles.formCard}>
           <View style={styles.iconCircle}>
-            <Ionicons name="id-card-outline" size={m(40)} color="#ff6700" />
+            <Ionicons name="finger-print-outline" size={m(40)} color={BRAND_TEAL} />
           </View>
 
           <Text style={styles.title}>Enter Aadhaar Number</Text>
           <Text style={styles.subtitle}>
-           We will send an OTP for verification
+            We'll send a one-time password to verify it's you
           </Text>
 
           <View style={styles.inputGroup}>
@@ -100,7 +140,7 @@ export default function EnterAadhaarScreen({ navigation, route }) {
               <Ionicons
                 name="finger-print-outline"
                 size={20}
-                color={error ? '#FF4444' : '#ff7900'}
+                color={error ? '#FF4444' : BRAND_TEAL}
                 style={styles.inputIcon}
               />
               <TextInput
@@ -124,7 +164,7 @@ export default function EnterAadhaarScreen({ navigation, route }) {
             onPress={handleSendOtp}
             disabled={isSending}>
             <LinearGradient
-              colors={['#ff6700', '#ff7900', '#ff8500']}
+              colors={[BRAND_NAVY, BRAND_TEAL]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.primaryButtonGradient}>
@@ -147,18 +187,22 @@ export default function EnterAadhaarScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ff6700',
+    backgroundColor: BRAND_TEAL,
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#ff6700',
+    backgroundColor: BRAND_TEAL,
   },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: m(20),
-    paddingTop: Platform.OS === 'ios' ? m(52) : m(32),
+    paddingTop: 0,
     paddingBottom: m(40),
-    backgroundColor: '#ff6700',
+    backgroundColor: BRAND_TEAL,
+  },
+  fixedTop: {
+    paddingHorizontal: m(20),
+    paddingTop: Platform.OS === 'ios' ? m(52) : m(32),
   },
   headerContent: {
     alignItems: 'center',
@@ -180,9 +224,9 @@ const styles = StyleSheet.create({
     borderRadius: m(20),
     padding: m(24),
     borderWidth: 1,
-    borderColor: '#FFEDD5',
+    borderColor: BRAND_BORDER,
     elevation: 8,
-    shadowColor: '#ff6700',
+    shadowColor: BRAND_TEAL,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
@@ -191,12 +235,12 @@ const styles = StyleSheet.create({
     width: m(80),
     height: m(80),
     borderRadius: m(40),
-    backgroundColor: '#FFF9F0',
+    backgroundColor: BRAND_SOFT,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
     borderWidth: 2,
-    borderColor: '#FFEDD5',
+    borderColor: BRAND_BORDER,
     marginBottom: m(16),
   },
   title: {
@@ -226,10 +270,10 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF9F0',
+    backgroundColor: BRAND_SOFT,
     borderRadius: m(12),
     borderWidth: 1,
-    borderColor: '#FFEDD5',
+    borderColor: BRAND_BORDER,
     paddingHorizontal: m(16),
     height: m(56),
   },
@@ -256,7 +300,7 @@ const styles = StyleSheet.create({
     borderRadius: m(12),
     overflow: 'hidden',
     elevation: 4,
-    shadowColor: '#ff6700',
+    shadowColor: BRAND_TEAL,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
@@ -270,10 +314,51 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: m(8),
+    backgroundColor: BRAND_TEAL,
   },
   primaryButtonText: {
     fontSize: FontSizes.md,
     fontFamily: FontFamily.primarySemiBold,
     color: '#FFFFFF',
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: m(6),
+    marginBottom: m(18),
+  },
+  progressStepWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  progressStep: {
+    width: m(30),
+    height: m(30),
+    borderRadius: m(15),
+    backgroundColor: '#516178',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  progressStepComplete: {
+    backgroundColor: BRAND_TEAL,
+  },
+  progressStepActive: {
+    backgroundColor: BRAND_TEAL,
+    borderWidth: 3,
+    borderColor: '#46B89D',
+  },
+  progressStepText: {
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.primarySemiBold,
+    color: '#FFFFFF',
+  },
+  progressLine: {
+    width: m(42),
+    height: 2,
+    backgroundColor: '#516178',
+  },
+  progressLineActive: {
+    backgroundColor: BRAND_TEAL,
   },
 });

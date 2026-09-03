@@ -14,9 +14,43 @@ import LinearGradient from 'react-native-linear-gradient';
 import { m } from 'walstar-rn-responsive';
 import { FontFamily, FontSizes } from '../../../constants';
 
+const BRAND_NAVY = '#172340';
+const BRAND_TEAL = '#118A6B';
+const BRAND_SOFT = '#EAF7F2';
+const BRAND_BORDER = '#BDE5D8';
+
+const ProgressTracker = () => (
+  <View style={styles.progressContainer}>
+    {[1, 2, 3, 4].map(step => (
+      <View key={step} style={styles.progressStepWrap}>
+        <View
+          style={[
+            styles.progressStep,
+            step === 1 && styles.progressStepComplete,
+            step === 2 && styles.progressStepActive,
+          ]}>
+          {step === 1 ? (
+            <Ionicons name="checkmark" size={m(16)} color="#FFFFFF" />
+          ) : (
+            <Text style={styles.progressStepText}>{step}</Text>
+          )}
+        </View>
+        {step < 4 ? (
+          <View
+            style={[
+              styles.progressLine,
+              step === 1 && styles.progressLineActive,
+            ]}
+          />
+        ) : null}
+      </View>
+    ))}
+  </View>
+);
+
 export default function ConsentScreen({ navigation, route }) {
   const [agreed, setAgreed] = useState(false);
-  const { source } = route.params || {};
+  const { source, userData } = route.params || {};
 
    const handleContinue = () => {
      if (!agreed) {
@@ -25,6 +59,7 @@ export default function ConsentScreen({ navigation, route }) {
      navigation.navigate('EnterAadhaarScreen', {
        aadhaarNumber: route?.params?.aadhaarNumber,
        source,
+       userData,
      });
    };
 
@@ -33,13 +68,9 @@ export default function ConsentScreen({ navigation, route }) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}>
-      <StatusBar barStyle="light-content" backgroundColor="#ff6700" />
+      <StatusBar barStyle="light-content" backgroundColor={BRAND_NAVY} />
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled">
+      <View style={styles.fixedTop}>
         <View style={styles.headerContent}>
           <View style={styles.logoContainer}>
             <Text style={styles.appName}>LoanHub</Text>
@@ -47,19 +78,30 @@ export default function ConsentScreen({ navigation, route }) {
           <Text style={styles.tagline}>Smart Loan Management</Text>
         </View>
 
+        <ProgressTracker />
+      </View>
+
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled">
         <View style={styles.formCard}>
           <View style={styles.iconContainer}>
             <View style={styles.iconCircle}>
-              <Ionicons name="finger-print-outline" size={m(40)} color="#ff6700" />
+              <Ionicons name="shield-checkmark-outline" size={m(40)} color={BRAND_TEAL} />
             </View>
           </View>
 
           <Text style={styles.title}>Verify Your Identity with Aadhaar</Text>
+          <Text style={styles.subtitle}>
+            This is required to complete your KYC as per RBI guidelines
+          </Text>
 
           <View style={styles.detailsContainer}>
             <View style={styles.detailItem}>
               <View style={styles.detailIconContainer}>
-                <Ionicons name="shield-checkmark-outline" size={m(20)} color="#ff6700" />
+                <Ionicons name="shield-checkmark-outline" size={m(20)} color={BRAND_TEAL} />
               </View>
               <View style={styles.detailTextContainer}>
                 <Text style={styles.detailText}>
@@ -70,29 +112,29 @@ export default function ConsentScreen({ navigation, route }) {
 
             <View style={styles.detailItem}>
               <View style={styles.detailIconContainer}>
-                <Ionicons name="call-outline" size={m(20)} color="#ff6700" />
+                <Ionicons name="call-outline" size={m(20)} color={BRAND_TEAL} />
               </View>
               <View style={styles.detailTextContainer}>
                 <Text style={styles.detailText}>
-                  An OTP will be sent to your Aadhaar-linked mobile number.
+                  An OTP will be sent to your Aadhaar-linked mobile number to confirm it's you.
                 </Text>
               </View>
             </View>
 
             <View style={styles.detailItem}>
               <View style={styles.detailIconContainer}>
-                <Ionicons name="lock-closed-outline" size={m(20)} color="#ff6700" />
+                <Ionicons name="lock-closed-outline" size={m(20)} color={BRAND_TEAL} />
               </View>
               <View style={styles.detailTextContainer}>
                 <Text style={styles.detailText}>
-                  Your Aadhaar data will be encrypted and stored securely.
+                  Your Aadhaar data is encrypted in transit and never stored in full.
                 </Text>
               </View>
             </View>
 
             <View style={styles.detailItem}>
               <View style={styles.detailIconContainer}>
-                <Ionicons name="refresh-outline" size={m(20)} color="#ff6700" />
+                <Ionicons name="refresh-outline" size={m(20)} color={BRAND_TEAL} />
               </View>
               <View style={styles.detailTextContainer}>
                 <Text style={styles.detailText}>
@@ -126,11 +168,11 @@ export default function ConsentScreen({ navigation, route }) {
             onPress={handleContinue}
             disabled={!agreed}>
             <LinearGradient
-              colors={agreed ? ['#ff6700', '#ff7900', '#ff8500'] : ['#cccccc', '#b3b3b3']}
+              colors={agreed ? [BRAND_NAVY, BRAND_TEAL] : ['#C8D8D3', '#8FCAB8']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.continueButtonGradient}>
-              <Text style={styles.continueButtonText}>Continue</Text>
+              <Text style={styles.continueButtonText}>Continue with Aadhaar</Text>
               <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
             </LinearGradient>
           </TouchableOpacity>
@@ -150,18 +192,22 @@ export default function ConsentScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ff6700',
+    backgroundColor: BRAND_TEAL,
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#ff6700',
+    backgroundColor: BRAND_TEAL,
   },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: m(20),
-    paddingTop: m(20),
+    paddingTop: 0,
     paddingBottom: m(40),
-    backgroundColor: '#ff6700',
+    backgroundColor: BRAND_TEAL,
+  },
+  fixedTop: {
+    paddingHorizontal: m(20),
+    paddingTop: m(20),
   },
   headerContent: {
     alignItems: 'center',
@@ -194,9 +240,9 @@ const styles = StyleSheet.create({
     padding: m(24),
     marginTop: m(10),
     borderWidth: 1,
-    borderColor: '#FFEDD5',
+    borderColor: BRAND_BORDER,
     elevation: 8,
-    shadowColor: '#ff6700',
+    shadowColor: BRAND_TEAL,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
@@ -209,17 +255,25 @@ const styles = StyleSheet.create({
     width: m(80),
     height: m(80),
     borderRadius: m(40),
-    backgroundColor: '#FFF9F0',
+    backgroundColor: BRAND_SOFT,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#FFEDD5',
+    borderColor: BRAND_BORDER,
   },
   title: {
     fontSize: FontSizes['2xl'],
     fontFamily: FontFamily.secondaryBold,
     color: '#333',
     textAlign: 'center',
+    marginBottom: m(8),
+  },
+  subtitle: {
+    fontSize: FontSizes.base,
+    fontFamily: FontFamily.primaryRegular,
+    color: '#5E687E',
+    textAlign: 'center',
+    lineHeight: m(22),
     marginBottom: m(20),
   },
   detailsContainer: {
@@ -234,7 +288,7 @@ const styles = StyleSheet.create({
     width: m(36),
     height: m(36),
     borderRadius: m(18),
-    backgroundColor: '#FFF9F0',
+    backgroundColor: BRAND_SOFT,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: m(12),
@@ -272,8 +326,8 @@ const styles = StyleSheet.create({
     marginTop: m(2),
   },
   checkboxChecked: {
-    backgroundColor: '#ff6700',
-    borderColor: '#ff6700',
+    backgroundColor: BRAND_TEAL,
+    borderColor: BRAND_TEAL,
   },
   checkboxText: {
     flex: 1,
@@ -286,7 +340,7 @@ const styles = StyleSheet.create({
     borderRadius: m(12),
     overflow: 'hidden',
     elevation: 4,
-    shadowColor: '#ff6700',
+    shadowColor: BRAND_TEAL,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
@@ -322,5 +376,45 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.xs,
     fontFamily: FontFamily.primaryRegular,
     color: '#999',
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: m(6),
+    marginBottom: m(18),
+  },
+  progressStepWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  progressStep: {
+    width: m(30),
+    height: m(30),
+    borderRadius: m(15),
+    backgroundColor: '#516178',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  progressStepComplete: {
+    backgroundColor: BRAND_TEAL,
+  },
+  progressStepActive: {
+    backgroundColor: BRAND_TEAL,
+    borderWidth: 3,
+    borderColor: '#46B89D',
+  },
+  progressStepText: {
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.primarySemiBold,
+    color: '#FFFFFF',
+  },
+  progressLine: {
+    width: m(42),
+    height: 2,
+    backgroundColor: '#516178',
+  },
+  progressLineActive: {
+    backgroundColor: BRAND_TEAL,
   },
 });

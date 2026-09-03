@@ -14,28 +14,26 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
-import { useDispatch, useSelector } from 'react-redux';
-import { registerUser } from '../../Redux/Slices/authslice';
+import { useSelector } from 'react-redux';
 import Toast from 'react-native-toast-message';
 import { m } from 'walstar-rn-responsive';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import { FontFamily, FontSizes, colors } from '../../constants';
-import bcrypt from 'react-native-bcrypt';
+import instance from '../../Utils/AxiosInstance';
 
-const GRADIENT_INDIGO = '#23305c';
-const GRADIENT_TEAL = '#1b6b5c';
-const GRADIENT_SOFT = '#E1F3EA';
+const GRADIENT_INDIGO = '#172340';
+const GRADIENT_TEAL = '#118A6B';
+const GRADIENT_SOFT = '#EAF7F2';
 
 export default function Register({ navigation }) {
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 4;
+  const totalSteps = 1;
   const pinInputs = useRef([]);
   const confirmPinInputs = useRef([]);
 
   // Step 1: Basic Info
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [address, setAddress] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -59,7 +57,6 @@ export default function Register({ navigation }) {
   // Error states
   const [nameError, setNameError] = useState('');
   const [emailError, setEmailError] = useState('');
-  const [addressError, setAddressError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
   const [aadharError, setAadharError] = useState('');
@@ -69,7 +66,10 @@ export default function Register({ navigation }) {
   const [, setErrors] = useState({});
 
   const { isLoading } = useSelector(state => state.auth || {});
-  const dispatch = useDispatch();
+  const hasMinLength = password.length >= 8;
+  const hasMixedCase = /[A-Z]/.test(password) && /[a-z]/.test(password);
+  const hasNumberAndSymbol =
+    /[0-9]/.test(password) && /[^A-Za-z0-9]/.test(password);
 
   const requestCameraPermission = async () => {
     if (Platform.OS !== 'android') {
@@ -105,11 +105,6 @@ export default function Register({ navigation }) {
     const modifiedText = text.charAt(0).toLowerCase() + text.slice(1);
     setEmail(modifiedText);
     setEmailError('');
-  };
-
-  const handleAddressChange = text => {
-    setAddress(text);
-    setAddressError('');
   };
 
   const handlePasswordChange = text => {
@@ -231,13 +226,25 @@ export default function Register({ navigation }) {
       }
     }
 
-    if (!address || address.trim().length < 1) {
-      temp.address = 'Address is required.';
+    if (!mobileNumber || mobileNumber.length !== 10) {
+      temp.mobileNumber = 'Mobile must be 10 digits.';
+      valid = false;
+    } else if (!/^[6-9]/.test(mobileNumber)) {
+      temp.mobileNumber = 'Mobile must start with 6-9.';
       valid = false;
     }
 
-    if (!password || password.length < 6) {
-      temp.password = 'Password must be at least 6 characters.';
+    if (!password) {
+      temp.password = 'Password is required.';
+      valid = false;
+    } else if (!hasMinLength) {
+      temp.password = 'Password must be at least 8 characters.';
+      valid = false;
+    } else if (!hasMixedCase) {
+      temp.password = 'Password must include uppercase & lowercase letters.';
+      valid = false;
+    } else if (!hasNumberAndSymbol) {
+      temp.password = 'Password must include numbers and symbols.';
       valid = false;
     }
 
@@ -252,7 +259,7 @@ export default function Register({ navigation }) {
     setErrors(temp);
     setNameError(temp.name || '');
     setEmailError(temp.email || '');
-    setAddressError(temp.address || '');
+    setMobileError(temp.mobileNumber || '');
     setPasswordError(temp.password || '');
     setConfirmPasswordError(temp.confirmPassword || '');
     return valid;
@@ -353,72 +360,62 @@ export default function Register({ navigation }) {
 
   const handleRegister = async () => {
     const step1Valid = validateStep1();
-    const step2Valid = validateStep2();
-    const pinValid = validatePin();
 
-    if (!step1Valid || !step2Valid || !pinValid) {
+    if (!step1Valid) {
       Toast.show({
         type: 'error',
         position: 'top',
-        text1: 'Please complete all steps correctly.',
+        text1: 'Please complete account details correctly.',
       });
       return;
     }
 
     try {
-      const pinString = pin.join('');
-      const salt = bcrypt.genSaltSync(10);
-      const hashedPin = bcrypt.hashSync(pinString, salt);
-      const formData = new FormData();
-
-      formData.append('userName', name);
-      formData.append('email', email);
-      formData.append('address', address);
-      formData.append('password', password);
-      formData.append('confirmPassword', confirmPassword);
-      formData.append('aadharCardNo', aadharNumber);
-      formData.append('mobileNo', mobileNumber);
-      formData.append('roleId', roleId.toString());
-      formData.append('pinHash', hashedPin);
-      formData.append('pinCreatedAt', new Date().toISOString());
-
-      if (panCardNumber && panCardNumber.length === 10) {
-        formData.append('panCardNumber', panCardNumber);
-      }
-
-      if (profileImage) {
-        formData.append('profileImage', {
-          uri: profileImage.uri,
-          type: profileImage.type || 'image/jpeg',
-          name: profileImage.fileName || 'profile.jpg',
-        });
-      }
-
-      await dispatch(registerUser(formData)).unwrap();
-
-      Toast.show({
-        type: 'success',
-        position: 'top',
-        text1: 'Account created successfully!',
+      await instance.post('auth/check-signup', {
+        email,
+        mobileNo: mobileNumber,
       });
 
-      if (roleId === 2) {
-        navigation.replace('ConsentScreen', {
-          source: 'register',
-          aadhaarNumber: aadharNumber,
-        });
-        return;
-      }
-
-      navigation.replace('Login');
+      navigation.navigate('ConsentScreen', {
+        source: 'register',
+        userData: {
+          name,
+          email,
+          password,
+          confirmPassword,
+          roleId,
+          mobileNumber,
+          panCardNumber,
+          profileImage,
+        },
+      });
     } catch (error) {
       const errorMessage =
+        error?.response?.data?.message ||
         (typeof error === 'string' ? error : null) ||
         error?.message ||
         (error?.missingFields
           ? `Missing fields: ${error.missingFields.join(', ')}`
           : null) ||
         'Registration failed. Please try again.';
+
+      const normalizedError = errorMessage.toLowerCase();
+      if (normalizedError.includes('mobile')) {
+        setMobileError(errorMessage);
+        setCurrentStep(1);
+      } else if (
+        normalizedError.includes('aadhar') ||
+        normalizedError.includes('aadhaar')
+      ) {
+        setAadharError(errorMessage);
+        setCurrentStep(2);
+      } else if (normalizedError.includes('pan')) {
+        setPanCardError(errorMessage);
+        setCurrentStep(2);
+      } else if (normalizedError.includes('email')) {
+        setEmailError(errorMessage);
+        setCurrentStep(1);
+      }
 
       Toast.show({
         type: 'error',
@@ -430,8 +427,8 @@ export default function Register({ navigation }) {
 
   const renderStep1 = () => (
     <>
-      <Text style={styles.stepTitle}>Basic Information</Text>
-      <Text style={styles.stepSubtitle}>Enter your personal details</Text>
+      <Text style={styles.stepTitle}>Create Your Account</Text>
+      <Text style={styles.stepSubtitle}>Let's get you started in a few quick steps</Text>
 
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>Full Name</Text>
@@ -479,26 +476,43 @@ export default function Register({ navigation }) {
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Address</Text>
+        <Text style={styles.inputLabel}>Mobile Number</Text>
         <View
-          style={[styles.inputContainer, addressError ? styles.inputError : {}]}
+          style={[
+            styles.inputContainer,
+            mobileError ? styles.inputError : {},
+            mobileNumber.length === 10 && !mobileError
+              ? styles.inputSuccess
+              : {},
+          ]}
         >
           <Ionicons
-            name="location-outline"
+            name="call-outline"
             size={20}
-            color={addressError ? colors.error : GRADIENT_TEAL}
+            color={
+              mobileError
+                ? colors.error
+                : mobileNumber.length === 10 && !mobileError
+                ? colors.success
+                : GRADIENT_TEAL
+            }
             style={styles.inputIcon}
           />
           <TextInput
             style={styles.input}
-            placeholder="Enter your full address"
+            placeholder="Enter 10 digit mobile number"
+            keyboardType="phone-pad"
             placeholderTextColor="#999"
-            value={address}
-            onChangeText={handleAddressChange}
+            value={mobileNumber}
+            onChangeText={handleMobileChange}
+            maxLength={10}
           />
+          {mobileNumber.length === 10 && !mobileError ? (
+            <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+          ) : null}
         </View>
-        {addressError ? (
-          <Text style={styles.errorText}>{addressError}</Text>
+        {mobileError ? (
+          <Text style={styles.errorText}>{mobileError}</Text>
         ) : null}
       </View>
 
@@ -538,6 +552,33 @@ export default function Register({ navigation }) {
         {passwordError ? (
           <Text style={styles.errorText}>{passwordError}</Text>
         ) : null}
+
+        {password.length > 0 ? (
+          <View style={styles.passwordTips}>
+            {[
+              { label: 'At least 8 characters', met: hasMinLength },
+              { label: 'Uppercase & lowercase letters', met: hasMixedCase },
+              { label: 'Numbers and symbols', met: hasNumberAndSymbol },
+            ].map(tip => (
+              <View key={tip.label} style={styles.passwordTipItem}>
+                <View
+                  style={[
+                    styles.passwordTipDot,
+                    tip.met && styles.passwordTipDotMet,
+                  ]}
+                />
+                <Text
+                  style={[
+                    styles.passwordTipText,
+                    tip.met && styles.passwordTipTextMet,
+                  ]}
+                >
+                  {tip.label}
+                </Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
       </View>
 
       <View style={styles.inputGroup}>
@@ -576,6 +617,54 @@ export default function Register({ navigation }) {
         {confirmPasswordError ? (
           <Text style={styles.errorText}>{confirmPasswordError}</Text>
         ) : null}
+      </View>
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.inputLabel}>Account Type</Text>
+        <View style={styles.roleContainer}>
+          <TouchableOpacity
+            style={[
+              styles.roleOption,
+              roleId === 1 && styles.roleOptionSelected,
+            ]}
+            onPress={() => setRoleId(1)}
+          >
+            <Ionicons
+              name={roleId === 1 ? 'radio-button-on' : 'radio-button-off'}
+              size={20}
+              color={roleId === 1 ? GRADIENT_TEAL : '#B8C8C2'}
+            />
+            <Text
+              style={[
+                styles.roleOptionText,
+                roleId === 1 && styles.roleOptionTextSelected,
+              ]}
+            >
+              Lender
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.roleOption,
+              roleId === 2 && styles.roleOptionSelected,
+            ]}
+            onPress={() => setRoleId(2)}
+          >
+            <Ionicons
+              name={roleId === 2 ? 'radio-button-on' : 'radio-button-off'}
+              size={20}
+              color={roleId === 2 ? GRADIENT_TEAL : '#B8C8C2'}
+            />
+            <Text
+              style={[
+                styles.roleOptionText,
+                roleId === 2 && styles.roleOptionTextSelected,
+              ]}
+            >
+              Borrower
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </>
   );
@@ -718,73 +807,6 @@ export default function Register({ navigation }) {
         {panCardError ? (
           <Text style={styles.errorText}>{panCardError}</Text>
         ) : null}
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Account Type *</Text>
-        <View style={styles.roleContainer}>
-          {/* <TouchableOpacity
-            style={[
-              styles.roleOption,
-              roleId === 0 && styles.roleOptionSelected,
-            ]}
-            onPress={() => setRoleId(0)}>
-            <Ionicons
-              name={roleId === 0 ? 'radio-button-on' : 'radio-button-off'}
-              size={20}
-              color={roleId === 0 ? GRADIENT_TEAL : '#999'}
-            />
-            <Text
-              style={[
-                styles.roleOptionText,
-                roleId === 0 && styles.roleOptionTextSelected,
-              ]}>
-              Admin
-            </Text>
-          </TouchableOpacity> */}
-          <TouchableOpacity
-            style={[
-              styles.roleOption,
-              roleId === 1 && styles.roleOptionSelected,
-            ]}
-            onPress={() => setRoleId(1)}
-          >
-            <Ionicons
-              name={roleId === 1 ? 'radio-button-on' : 'radio-button-off'}
-              size={20}
-              color={roleId === 1 ? GRADIENT_TEAL : '#999'}
-            />
-            <Text
-              style={[
-                styles.roleOptionText,
-                roleId === 1 && styles.roleOptionTextSelected,
-              ]}
-            >
-              Lender
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.roleOption,
-              roleId === 2 && styles.roleOptionSelected,
-            ]}
-            onPress={() => setRoleId(2)}
-          >
-            <Ionicons
-              name={roleId === 2 ? 'radio-button-on' : 'radio-button-off'}
-              size={20}
-              color={roleId === 2 ? GRADIENT_TEAL : '#999'}
-            />
-            <Text
-              style={[
-                styles.roleOptionText,
-                roleId === 2 && styles.roleOptionTextSelected,
-              ]}
-            >
-              Borrower
-            </Text>
-          </TouchableOpacity>
-        </View>
       </View>
     </>
   );
@@ -1023,12 +1045,7 @@ export default function Register({ navigation }) {
         end={{ x: 1, y: 1 }}
         style={styles.gradientContainer}
       >
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
+        <View style={styles.fixedTop}>
           <View style={styles.gradientHeader}>
             <View style={styles.headerContent}>
               <View style={styles.logoContainer}>
@@ -1038,7 +1055,6 @@ export default function Register({ navigation }) {
             </View>
           </View>
 
-          {/* Progress Indicator */}
           <View style={styles.progressContainer}>
             {[1, 2, 3, 4].map(step => (
               <View key={step} style={styles.progressStepContainer}>
@@ -1054,7 +1070,7 @@ export default function Register({ navigation }) {
                     <Text style={styles.progressStepText}>{step}</Text>
                   )}
                 </View>
-                {step < totalSteps && (
+                {step < 4 && (
                   <View
                     style={[
                       styles.progressLine,
@@ -1065,7 +1081,14 @@ export default function Register({ navigation }) {
               </View>
             ))}
           </View>
+        </View>
 
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           {/* Form Card */}
           <View style={styles.formCard}>
             {currentStep === 1 && renderStep1()}
@@ -1186,6 +1209,9 @@ const styles = StyleSheet.create({
   },
   gradientContainer: {
     flex: 1,
+  },
+  fixedTop: {
+    paddingBottom: m(8),
   },
   gradientHeader: {
     paddingTop: Platform.OS === 'ios' ? m(50) : m(38),
@@ -1375,6 +1401,32 @@ const styles = StyleSheet.create({
     color: colors.error,
     marginTop: m(4),
     marginLeft: m(4),
+  },
+  passwordTips: {
+    marginTop: m(10),
+    gap: m(6),
+  },
+  passwordTipItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(8),
+  },
+  passwordTipDot: {
+    width: m(7),
+    height: m(7),
+    borderRadius: m(3.5),
+    backgroundColor: '#D1D5DB',
+  },
+  passwordTipDotMet: {
+    backgroundColor: colors.success,
+  },
+  passwordTipText: {
+    fontSize: FontSizes.sm,
+    fontFamily: FontFamily.bodyRegular,
+    color: '#6B7280',
+  },
+  passwordTipTextMet: {
+    color: colors.success,
   },
   confirmLabel: {
     marginTop: m(20),
