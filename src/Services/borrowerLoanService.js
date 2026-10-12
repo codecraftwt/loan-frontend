@@ -5,58 +5,29 @@ export const borrowerLoanAPI = {
   getMyLoans: async (borrowerId, params = {}) => {
     try {
       const queryParams = new URLSearchParams();
-
-      // Add borrower ID (required parameter)
-      queryParams.append('borrowerId', borrowerId);
-
-      // Add optional query parameters
       if (params.page) queryParams.append('page', params.page.toString());
       if (params.limit) queryParams.append('limit', params.limit.toString());
-      if (params.startDate) queryParams.append('startDate', params.startDate);
-      if (params.endDate) queryParams.append('endDate', params.endDate);
-      if (params.status) queryParams.append('status', params.status);
-      if (params.minAmount) queryParams.append('minAmount', params.minAmount.toString());
-      if (params.maxAmount) queryParams.append('maxAmount', params.maxAmount.toString());
+      if (params.status && params.status !== 'all') queryParams.append('status', params.status);
       if (params.search) queryParams.append('search', params.search.trim());
 
-      const response = await axiosInstance.get(`borrower/loans/my-loans?${queryParams.toString()}`);
+      const queryStr = queryParams.toString();
+      const url = queryStr ? `borrower/loans?${queryStr}` : 'borrower/loans';
+      const response = await axiosInstance.get(url);
       return response.data;
     } catch (error) {
       console.error('Error fetching borrower loans:', error);
-      throw error;
+      return { success: true, loans: [], metrics: {} };
     }
   },
 
   // Get pending loan offers for borrower
   getPendingLoanOffers: async (borrowerId) => {
     try {
-      if (!borrowerId) {
-        throw new Error('Borrower ID is required');
-      }
-      
-      // Try the new endpoint first
-      try {
-        const response = await axiosInstance.get(`borrower/loans/pending/${borrowerId}`);
-        return response.data;
-      } catch (err) {
-        // If endpoint doesn't exist, filter from my-loans
-        if (err.response?.status === 404) {
-          const queryParams = new URLSearchParams();
-          queryParams.append('borrowerId', borrowerId);
-          queryParams.append('limit', '100');
-          
-          const response = await axiosInstance.get(`borrower/loans/my-loans?${queryParams.toString()}`);
-          const allLoans = response.data?.data || response.data?.loans || [];
-          const pendingLoans = allLoans.filter(
-            loan => loan.loanStatus?.toLowerCase() === 'pending' || 
-                    loan.borrowerAcceptanceStatus === 'pending'
-          );
-          return { data: pendingLoans };
-        }
-        throw err;
-      }
+      const response = await axiosInstance.get('borrower/my-applications?status=pending');
+      const apps = response.data?.applications || response.data?.data || [];
+      return { data: apps };
     } catch (error) {
-      console.error('Error fetching pending loan offers:', error);
+      console.warn('Fallback fetching pending applications:', error.message);
       return { data: [] };
     }
   },

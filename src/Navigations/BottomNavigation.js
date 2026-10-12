@@ -9,6 +9,11 @@ import { FontFamily, FontSizes, colors } from '../constants';
 // import Fonts from '../constants/fonts';
 
 // Lender screens
+import LenderDashboard from '../Screens/Lender/Dashboard/LenderDashboard';
+import LenderIncomingRequests from '../Screens/Lender/Requests/LenderIncomingRequests';
+import LenderLoansPortfolio from '../Screens/Lender/Loans/LenderLoansPortfolio';
+import LenderAvailableBorrowers from '../Screens/Lender/Borrowers/LenderAvailableBorrowers';
+import LenderSubscriptionScreen from '../Screens/Lender/Subscription/LenderSubscriptionScreen';
 import Home from '../Screens/Lender/Dashboard/Home';
 import Outward from '../Screens/Shared/Loans/Outward';
 import Inward from '../Screens/Shared/Loans/Inward';
@@ -21,6 +26,10 @@ import LenderList from '../Screens/Admin/Lenders/LenderList';
 
 // Borrower screens
 import BorrowerDashboard from '../Screens/Borrower/Dashboard/BorrowerDashboard';
+import BorrowerExploreLenders from '../Screens/Borrower/Lenders/BorrowerExploreLenders';
+import BorrowerApply from '../Screens/Borrower/Applications/BorrowerApply';
+import BorrowerApplications from '../Screens/Borrower/Applications/BorrowerApplications';
+import BorrowerLoansPortfolio from '../Screens/Borrower/Loans/BorrowerLoansPortfolio';
 import MyLoans from '../Screens/Borrower/Loans/MyLoans';
 import BorrowerAnalyticsScreen from '../Screens/Borrower/Analytics/BorrowerAnalyticsScreen';
 
@@ -60,8 +69,8 @@ export default function BottomNavigation() {
     headerShown: false,
     tabBarHideOnKeyboard: true,
     tabBarShowLabel: true,
-    tabBarActiveTintColor: colors.ink,
-    tabBarInactiveTintColor: colors.ink,
+    tabBarActiveTintColor: colors.navy,
+    tabBarInactiveTintColor: colors.textSecondary,
     tabBarLabelStyle: styles.tabBarLabel,
     tabBarIconStyle: styles.tabBarIcon,
     tabBarItemStyle: styles.tabBarItem,
@@ -134,7 +143,7 @@ export default function BottomNavigation() {
     );
   }
 
-  // Borrower Dashboard (roleId === 2)
+  // Borrower Dashboard (roleId === 2) - Streamlined commercial flows matching webapp
   if (roleId === 2) {
     return (
       <View style={styles.container}>
@@ -146,36 +155,45 @@ export default function BottomNavigation() {
             name="BorrowerHome"
             component={BorrowerDashboard}
             options={{
-              tabBarLabel: 'Home',
+              tabBarLabel: 'Dashboard',
               tabBarIcon: ({ color, size, focused }) =>
                 renderIcon('home', color, size, focused),
             }}
           />
           <Tab.Screen
-            name="MyLoans"
-            component={MyLoans}
+            name="BorrowerExploreLenders"
+            component={BorrowerExploreLenders}
             options={{
-              tabBarLabel: 'My Loans',
+              tabBarLabel: 'Explore',
               tabBarIcon: ({ color, size, focused }) =>
-                renderIcon('file-text', color, size, focused),
+                renderIcon('search', color, size, focused),
             }}
           />
           <Tab.Screen
-            name="History"
-            component={BorrowerAnalyticsScreen}
+            name="BorrowerApply"
+            component={BorrowerApply}
             options={{
-              tabBarLabel: 'Analytics',
+              tabBarLabel: 'Apply',
               tabBarIcon: ({ color, size, focused }) =>
-                renderIcon('bar-chart-2', color, size, focused),
+                renderIcon('send', color, size, focused),
             }}
           />
           <Tab.Screen
-            name="Profile"
-            component={Profile}
+            name="BorrowerApplications"
+            component={BorrowerApplications}
             options={{
-              tabBarLabel: 'Profile',
+              tabBarLabel: 'Applications',
               tabBarIcon: ({ color, size, focused }) =>
-                renderIcon('user', color, size, focused),
+                renderIcon('inbox', color, size, focused),
+            }}
+          />
+          <Tab.Screen
+            name="BorrowerLoansPortfolio"
+            component={BorrowerLoansPortfolio}
+            options={{
+              tabBarLabel: 'Loans & EMI',
+              tabBarIcon: ({ color, size, focused }) =>
+                renderIcon('credit-card', color, size, focused),
             }}
           />
         </Tab.Navigator>
@@ -183,44 +201,53 @@ export default function BottomNavigation() {
     );
   }
 
-  // Lender Dashboard (roleId === 1) - Default/Current Dashboard
+  // Lender Dashboard (roleId === 1) - Modern 5-tab institutional workflow matching webapp
   return (
     <View style={styles.container}>
-      <Tab.Navigator initialRouteName="Home" screenOptions={tabScreenOptions}>
+      <Tab.Navigator initialRouteName="LenderHome" screenOptions={tabScreenOptions}>
         <Tab.Screen
-          name="Home"
-          component={Home}
+          name="LenderHome"
+          component={LenderDashboard}
           options={{
-            tabBarLabel: 'Home',
+            tabBarLabel: 'Dashboard',
             tabBarIcon: ({ color, size, focused }) =>
               renderIcon('home', color, size, focused),
           }}
         />
         <Tab.Screen
-          name="Borrowers"
-          component={Outward}
+          name="LenderRequests"
+          component={LenderIncomingRequests}
+          options={{
+            tabBarLabel: 'Requests',
+            tabBarIcon: ({ color, size, focused }) =>
+              renderIcon('inbox', color, size, focused),
+          }}
+        />
+        <Tab.Screen
+          name="LenderLoans"
+          component={LenderLoansPortfolio}
+          options={{
+            tabBarLabel: 'Loans',
+            tabBarIcon: ({ color, size, focused }) =>
+              renderIcon('credit-card', color, size, focused),
+          }}
+        />
+        <Tab.Screen
+          name="LenderBorrowers"
+          component={LenderAvailableBorrowers}
           options={{
             tabBarLabel: 'Borrowers',
             tabBarIcon: ({ color, size, focused }) =>
-              renderIcon('arrow-up-circle', color, size, focused),
+              renderIcon('users', color, size, focused),
           }}
         />
         <Tab.Screen
-          name="My Loans"
-          component={Inward}
+          name="LenderSubscription"
+          component={LenderSubscriptionScreen}
           options={{
-            tabBarLabel: 'My Loans',
+            tabBarLabel: 'Plan',
             tabBarIcon: ({ color, size, focused }) =>
-              renderIcon('arrow-down-circle', color, size, focused),
-          }}
-        />
-        <Tab.Screen
-          name="Profile"
-          component={Profile}
-          options={{
-            tabBarLabel: 'Profile',
-            tabBarIcon: ({ color, size, focused }) =>
-              renderIcon('user', color, size, focused),
+              renderIcon('star', color, size, focused),
           }}
         />
       </Tab.Navigator>

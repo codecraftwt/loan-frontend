@@ -5,1079 +5,896 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Modal,
-  Image,
+  ActivityIndicator,
+  SafeAreaView,
+  StatusBar,
+  Alert,
+  Linking,
 } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/Feather';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import moment from 'moment';
+import Feather from 'react-native-vector-icons/Feather';
 import { m } from 'walstar-rn-responsive';
-import Header from '../../../Components/Header';
-import borrowerLoanAPI from '../../../Services/borrowerLoanService';
-import Toast from 'react-native-toast-message';
-import { useSelector } from 'react-redux';
-import { baseurl } from '../../../Utils/API';
-import { colors, FontFamily } from '../../../constants';
+import { colors } from '../../../constants';
+import borrowerFlowService from '../../../Services/borrowerFlowService';
 
 export default function BorrowerLoanDetails() {
-  // Navigation & Route
   const navigation = useNavigation();
   const route = useRoute();
-  const { loan } = route.params;
-  const user = useSelector(state => state.auth.user);
+  const loanId = route.params?.id || route.params?.loan?._id;
 
-  // State Management
-  const [loanDetails, setLoanDetails] = useState(loan);
-  const [paymentHistory, setPaymentHistory] = useState([]);
-  const [installmentDetails, setInstallmentDetails] = useState(null);
-  const [hasPendingPayment, setHasPendingPayment] = useState(false);
-  const [showAllPayments, setShowAllPayments] = useState(false);
-  const [proofViewerVisible, setProofViewerVisible] = useState(false);
-  const [selectedProofUrl, setSelectedProofUrl] = useState(null);
+  const [loan, setLoan] = useState(route.params?.loan || null);
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(!route.params?.loan);
+  const [activeTab, setActiveTab] = useState('schedule'); // 'schedule' | 'payments'
+  const [copiedOtp, setCopiedOtp] = useState(false);
 
-  // API Functions
-  const fetchPaymentHistory = useCallback(async () => {
+  const fetchLoanDetails = useCallback(async () => {
+    if (!loanId) return;
     try {
-      if (!loan?._id) {
-        throw new Error('Loan ID is required');
+      setLoading(true);
+      const res = await borrowerFlowService.getLoanById(loanId);
+      if (res?.success && res.loan) {
+        setLoan(res.loan);
+        if (res.summary) {
+          setSummary(res.summary);
+        }
       }
-      
-      const borrowerId = user?._id || loan.borrowerId || loan.borrower?._id;
-      if (!borrowerId) {
-        throw new Error('Borrower ID is required');
-      }
-      
-      const response = await borrowerLoanAPI.getPaymentHistory(loan._id, borrowerId);
-      const paymentData = response || {};
-      
-      // Extract payments array - API returns payments in paymentHistory.allPayments
-      const payments = paymentData.paymentHistory?.allPayments || paymentData.payments || [];
-      setPaymentHistory(payments);
-      
-      // Check for pending payments
-      const pending = payments.find(
-        payment => payment.paymentStatus?.toLowerCase() === 'pending'
-      );
-      setHasPendingPayment(!!pending);
-      
-      // Extract installmentDetails (null for one-time loans)
-      setInstallmentDetails(paymentData.installmentDetails || null);
-      
-      // Calculate totalPaid from confirmed payments if loanSummary doesn't have it
-      let calculatedTotalPaid = 0;
-      if (payments.length > 0) {
-        calculatedTotalPaid = payments
-          .filter(p => p.paymentStatus?.toLowerCase() === 'confirmed' || p.paymentStatus?.toLowerCase() === 'paid')
-          .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
-      }
-      
-      // Update loan details with latest totals from API (loanSummary structure)
-      if (paymentData.loanSummary) {
-        const loanSummary = paymentData.loanSummary;
-        
-        // Try multiple possible field names for totalPaid - API uses totalPaidAmount
-        const totalPaidValue = 
-          loanSummary.totalPaidAmount ??
-          loanSummary.totalPaid ?? 
-          loanSummary.currentPaidAmount ?? 
-          loanSummary.paidAmount ?? 
-          calculatedTotalPaid;
-        
-        // Try multiple possible field names for remainingAmount
-        const remainingAmountValue = 
-          loanSummary.remainingAmount ?? 
-          loanSummary.currentRemainingAmount ?? 
-          loanSummary.remaining ?? 
-          (typeof loan.amount === 'number' ? loan.amount : parseFloat(loan.amount) || 0) - totalPaidValue;
-        
-        setLoanDetails(prev => ({
-          ...prev,
-          totalPaid: typeof totalPaidValue === 'number' 
-            ? totalPaidValue 
-            : parseFloat(totalPaidValue) || 0,
-          remainingAmount: typeof remainingAmountValue === 'number'
-            ? remainingAmountValue
-            : parseFloat(remainingAmountValue) || 0,
-          paymentStatus: loanSummary.paymentStatus || loanSummary.loanStatus || prev.paymentStatus,
-          paymentType: loanSummary.loanType || loanSummary.paymentType || prev.paymentType,
-        }));
-      } else if (calculatedTotalPaid > 0) {
-        // If loanSummary doesn't exist but we have payments, use calculated values
-        setLoanDetails(prev => ({
-          ...prev,
-          totalPaid: calculatedTotalPaid,
-          remainingAmount: Math.max(0, (typeof prev.amount === 'number' ? prev.amount : parseFloat(prev.amount) || 0) - calculatedTotalPaid),
-        }));
-      }
-    } catch (error) {
-      console.error('Error fetching payment history:', error);
-      
-      const errorMessage = error.response?.data?.message 
-        || error.response?.data?.error 
-        || error.message 
-        || 'Failed to fetch payment history';
-      
-      Toast.show({
-        type: 'error',
-        position: 'top',
-        text1: 'Error',
-        text2: errorMessage,
-      });
+    } catch (err) {
+      console.error('Error fetching loan details:', err);
+    } finally {
+      setLoading(false);
     }
-  }, [loan, user?._id]);
-
-  // Effects
-  useEffect(() => {
-    fetchPaymentHistory();
-  }, [fetchPaymentHistory]);
+  }, [loanId]);
 
   useFocusEffect(
-    React.useCallback(() => {
-      fetchPaymentHistory();
-    }, [fetchPaymentHistory])
+    useCallback(() => {
+      fetchLoanDetails();
+    }, [fetchLoanDetails])
   );
 
-  // Utility Functions
-  const getStatusColor = (status) => {
-    switch (status?.toLowerCase()) {
-      case 'paid':
-      case 'confirmed': return colors.success;
-      case 'part paid': return colors.goldDark;
-      case 'pending': return colors.textSecondary;
-      case 'rejected': return colors.error;
-      case 'overdue': return colors.error;
-      default: return colors.textSecondary;
+  const formatINR = (val) => {
+    if (!val) return '₹0';
+    const num = Number(val);
+    if (num >= 10000000) return `₹${(num / 10000000).toFixed(2)} Cr`;
+    if (num >= 100000) return `₹${(num / 100000).toFixed(2)} Lakh`;
+    return `₹${num.toLocaleString('en-IN')}`;
+  };
+
+  const formatDate = (iso) => {
+    if (!iso) return 'N/A';
+    return new Date(iso).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+  };
+
+  const copyOtpToClipboard = (otp) => {
+    setCopiedOtp(true);
+    Alert.alert(
+      'Disbursal Verification OTP',
+      `Your 6-digit Disbursal Code is:\n\n${otp}\n\nShare this code with your lender to execute funds transfer.`,
+      [{ text: 'OK', onPress: () => setCopiedOtp(false) }]
+    );
+  };
+
+  const openLenderChat = (mobileNo) => {
+    if (!mobileNo) {
+      Alert.alert('Contact', 'Lender phone number is not listed.');
+      return;
     }
+    const cleanNumber = mobileNo.replace(/\D/g, '');
+    const url = `whatsapp://send?phone=91${cleanNumber}`;
+    Linking.canOpenURL(url)
+      .then((supported) => {
+        if (supported) {
+          Linking.openURL(url);
+        } else {
+          Linking.openURL(`tel:${cleanNumber}`);
+        }
+      })
+      .catch(() => Linking.openURL(`tel:${cleanNumber}`));
   };
 
-  const getStatusIcon = (status) => {
-    switch (status?.toLowerCase()) {
-      case 'paid':
-      case 'confirmed': return 'check-circle';
-      case 'part paid':
-      case 'pending': return 'clock';
-      case 'rejected':
-      case 'overdue': return 'x-circle';
-      default: return 'circle';
-    }
-  };
+  if (loading && !loan) {
+    return (
+      <SafeAreaView style={[styles.container, styles.center]}>
+        <ActivityIndicator size="large" color="#2563EB" />
+        <Text style={styles.loadingText}>Loading facility parameters...</Text>
+      </SafeAreaView>
+    );
+  }
 
-  const formatCurrency = (amount) => {
-    const numAmount = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
-    return `₹${numAmount.toLocaleString('en-IN')}`;
-  };
+  if (!loan) {
+    return (
+      <SafeAreaView style={[styles.container, styles.center]}>
+        <Feather name="alert-circle" size={m(40)} color="#94A3B8" />
+        <Text style={styles.errorTitle}>Loan Record Not Found</Text>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <Text style={styles.backBtnText}>Return to Loans</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
 
-  const calculateProgress = () => {
-    const totalAmount = typeof loanDetails.amount === 'number' 
-      ? loanDetails.amount 
-      : parseFloat(loanDetails.amount) || 0;
-    const totalPaid = typeof loanDetails.totalPaid === 'number'
-      ? loanDetails.totalPaid
-      : parseFloat(loanDetails.totalPaid) || 0;
-    return totalAmount > 0 ? (totalPaid / totalAmount) * 100 : 0;
-  };
+  const lender = loan.lenderId || {};
+  const totalRepayable = Number(loan.totalRepaymentExpected || loan.amount || 0);
+  const totalPaid = Number(loan.totalPaid || 0);
+  const paidPercent =
+    totalRepayable > 0 ? Math.min(100, Math.round((totalPaid / totalRepayable) * 100)) : 0;
 
-  const isLoanExpired = () => {
-    if (!loanDetails.loanEndDate) return false;
-    const endDate = moment(loanDetails.loanEndDate);
-    const today = moment();
-    return endDate.isBefore(today, 'day');
-  };
-
-  // Get proof URL - Cloudinary URLs are already full URLs
-  const getProofUrl = (proof) => {
-    if (!proof) return null;
-    
-    // If it's already a full URL (starts with http:// or https://), return as is
-    if (proof.startsWith('http://') || proof.startsWith('https://')) {
-      return proof;
-    }
-    
-    // If it's a relative path, construct full URL (unlikely for Cloudinary, but handle it)
-    let baseUrl = baseurl.replace('/api', '').replace(/\/$/, '');
-    
-    let proofPath = proof;
-    if (proofPath.startsWith('/')) {
-      proofPath = proofPath.substring(1);
-    }
-    
-    const fullUrl = `${baseUrl}/${proofPath}`;
-    return fullUrl;
-  };
-
-  // Handle viewing loan proof
-  const handleViewProof = () => {
-    const proofUrl = getProofUrl(loanDetails.proof);
-    if (proofUrl) {
-      setSelectedProofUrl(proofUrl);
-      setProofViewerVisible(true);
-    } else {
-      Toast.show({
-        type: 'error',
-        position: 'top',
-        text1: 'Error',
-        text2: 'Loan proof image not available',
-      });
-    }
-  };
-
-  // Navigation Handlers
-  const handleMakePayment = () => {
-    navigation.navigate('MakePayment', { loan: loanDetails });
-  };
-
-  const handleOpenPaymentHistoryScreen = () => {
-    navigation.navigate('PaymentHistory', { loan: loanDetails, paymentHistory });
-  };
-
-  // Render Components
-  const DetailItem = ({ icon, label, value, isStatus = false }) => (
-    <View style={styles.detailItem}>
-      <View style={styles.detailIconContainer}>
-        <Icon name={icon} size={20} color={colors.ink} />
-      </View>
-      <View style={styles.lenderDetails}>
-        <Text style={styles.detailLabel}>{label}</Text>
-        {isStatus ? (
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(value) + '20' }]}>
-            <Icon name={getStatusIcon(value)} size={14} color={getStatusColor(value)} />
-            <Text style={[styles.statusText, { color: getStatusColor(value) }]}>
-              {value?.charAt(0).toUpperCase() + value?.slice(1)}
-            </Text>
-          </View>
-        ) : (
-          <Text style={styles.detailValue}>{value}</Text>
-        )}
-      </View>
-    </View>
-  );
-
-  const PaymentHistoryItem = ({ item }) => (
-    <View style={styles.paymentHistoryItem}>
-      <View style={styles.paymentHeader}>
-        <View style={styles.lenderDetails}>
-          <Text style={styles.paymentAmountText}>{formatCurrency(item.amount)}</Text>
-          <Text style={styles.paymentMode}>
-            {item.paymentMode?.charAt(0).toUpperCase() + item.paymentMode?.slice(1) || 'N/A'}
-            {item.installmentLabel && ` • ${item.installmentLabel}`}
-            {!item.installmentLabel && item.installmentNumber && ` • Installment ${item.installmentNumber}`}
-          </Text>
-        </View>
-        <View style={[styles.paymentStatusBadge, { backgroundColor: getStatusColor(item.paymentStatus) + '20' }]}>
-          <Icon name={getStatusIcon(item.paymentStatus)} size={12} color={getStatusColor(item.paymentStatus)} />
-          <Text style={[styles.paymentStatusText, { color: getStatusColor(item.paymentStatus) }]}>
-            {item.paymentStatus?.charAt(0).toUpperCase() + item.paymentStatus?.slice(1)}
-          </Text>
-        </View>
-      </View>
-      <View style={styles.paymentDetails}>
-        <Text style={styles.paymentDate}>
-          {moment(item.paymentDate).format('DD MMM YYYY, hh:mm A')}
-        </Text>
-        {item.confirmedAt && (
-          <Text style={styles.confirmedDate}>
-            Confirmed: {moment(item.confirmedAt).format('DD MMM YYYY, hh:mm A')}
-          </Text>
-        )}
-      </View>
-    </View>
-  );
+  const isPendingOtp =
+    loan.disbursalVerification?.otp && !loan.disbursalVerification?.isVerified;
 
   return (
-    <View style={styles.container}>
-      <Header title="Loan Details" showBackButton />
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Loan Overview Card */}
-        <View style={styles.overviewCard}>
-          <View style={styles.overviewHeader}>
-            <Text style={styles.overviewTitle}>Loan Overview</Text>
-            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(loanDetails.paymentStatus) + '20' }]}>
-              <Icon name={getStatusIcon(loanDetails.paymentStatus)} size={16} color={getStatusColor(loanDetails.paymentStatus)} />
-              <Text style={[styles.statusText, { color: getStatusColor(loanDetails.paymentStatus) }]}>
-                {loanDetails.paymentStatus?.charAt(0).toUpperCase() + loanDetails.paymentStatus?.slice(1)}
+      {/* Top Header */}
+      <View style={styles.topHeader}>
+        <TouchableOpacity style={styles.backIcon} onPress={() => navigation.goBack()}>
+          <Feather name="arrow-left" size={m(22)} color="#0F172A" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle} numberOfLines={1}>
+          {loan.purpose || loan.dealName || 'Credit Facility'}
+        </Text>
+        {lender.mobileNo ? (
+          <TouchableOpacity
+            style={styles.chatIconBtn}
+            onPress={() => openLenderChat(lender.mobileNo)}
+          >
+            <Feather name="message-square" size={m(18)} color="#16A34A" />
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: m(22) }} />
+        )}
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Hero Facility Overview Card */}
+        <View style={styles.heroCard}>
+          <View style={styles.heroTopRow}>
+            <View style={styles.lenderIcon}>
+              <Feather name="shield" size={m(18)} color="#2563EB" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.facilityTitle}>
+                {loan.purpose || loan.dealName || 'Commercial Line'}
+              </Text>
+              <Text style={styles.lenderSub}>
+                Sanctioned by: <Text style={styles.boldText}>{lender.companyName || lender.userName}</Text>
+              </Text>
+            </View>
+            <View style={styles.statusBadge}>
+              <Text style={styles.statusBadgeText}>
+                {loan.status === 'active' ? 'Active' : 'Closed'}
               </Text>
             </View>
           </View>
 
-          <View style={styles.amountOverview}>
-            <View style={styles.amountItem}>
-              <Text style={styles.amountLabel}>Total Amount</Text>
-              <Text style={styles.amountValue}>{formatCurrency(loanDetails.amount)}</Text>
+          {/* 6 Macro Metrics Grid */}
+          <View style={styles.metricsGrid}>
+            <View style={styles.metricItem}>
+              <Text style={styles.mLabel}>Principal</Text>
+              <Text style={[styles.mVal, { color: '#2563EB' }]}>{formatINR(loan.amount)}</Text>
             </View>
-            <View style={styles.amountDivider} />
-            <View style={styles.amountItem}>
-              <Text style={styles.amountLabel}>Paid</Text>
-              <Text style={[styles.amountValue, { color: colors.success }]}>
-                {formatCurrency(loanDetails.totalPaid)}
-              </Text>
+            <View style={styles.metricItem}>
+              <Text style={styles.mLabel}>Monthly EMI</Text>
+              <Text style={styles.mVal}>{formatINR(loan.monthlyEmi)}</Text>
             </View>
-            <View style={styles.amountDivider} />
-            <View style={styles.amountItem}>
-              <Text style={styles.amountLabel}>Remaining</Text>
-              <Text style={[styles.amountValue, { color: colors.error }]}>
-                {formatCurrency(loanDetails.remainingAmount)}
+            <View style={styles.metricItem}>
+              <Text style={styles.mLabel}>Interest Rate</Text>
+              <Text style={styles.mVal}>{loan.interestRate || 12}% APR</Text>
+            </View>
+            <View style={styles.metricItem}>
+              <Text style={styles.mLabel}>Total Expected</Text>
+              <Text style={styles.mVal}>{formatINR(totalRepayable)}</Text>
+            </View>
+            <View style={styles.metricItem}>
+              <Text style={styles.mLabel}>Total Repaid</Text>
+              <Text style={[styles.mVal, { color: '#16A34A' }]}>{formatINR(totalPaid)}</Text>
+            </View>
+            <View style={styles.metricItem}>
+              <Text style={styles.mLabel}>Remaining</Text>
+              <Text style={[styles.mVal, { color: '#4F46E5' }]}>
+                {formatINR(loan.remainingAmount)}
               </Text>
             </View>
           </View>
 
-          <View style={styles.progressContainer}>
-            <View style={styles.progressBar}>
-              <View
-                style={[
-                  styles.progressFill,
-                  {
-                    width: `${calculateProgress()}%`,
-                    backgroundColor: getStatusColor(loanDetails.paymentStatus),
-                  },
-                ]}
-              />
+          {/* Repayment Progress Bar */}
+          <View style={styles.progressSection}>
+            <View style={styles.progressTextRow}>
+              <Text style={styles.progressDesc}>
+                {summary?.paidInstallments || 0} of {summary?.totalInstallments || loan.tenureMonths || 0} Paid ({summary?.remainingInstallments || 0} remaining)
+              </Text>
+              <Text style={styles.progressPercent}>{paidPercent}% Cleared</Text>
             </View>
-            <Text style={styles.progressText}>
-              {calculateProgress().toFixed(1)}% Paid
+            <View style={styles.progressBarBg}>
+              <View style={[styles.progressBarFill, { width: `${paidPercent}%` }]} />
+            </View>
+          </View>
+
+          {/* Pledged Security info */}
+          {loan.pledgedSecurity ? (
+            <View style={styles.securityBox}>
+              <Feather name="shield" size={m(12)} color="#D97706" />
+              <Text style={styles.securityText}>Pledged Collateral: {loan.pledgedSecurity}</Text>
+            </View>
+          ) : null}
+        </View>
+
+        {/* Disbursal OTP Code Box (if not yet verified) */}
+        {isPendingOtp ? (
+          <View style={styles.otpCard}>
+            <View style={styles.otpHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: m(6) }}>
+                <Feather name="lock" size={m(14)} color="#D97706" />
+                <Text style={styles.otpTitle}>DISBURSAL VERIFICATION CODE</Text>
+              </View>
+              <Text style={styles.actionReqBadge}>Action Required</Text>
+            </View>
+            <Text style={styles.otpDesc}>
+              Share this 6-digit code with <Text style={styles.boldText}>{lender.companyName || lender.userName}</Text> to verify agreement and release funds.
             </Text>
-          </View>
-        </View>
-
-        {/* Lender Information */}
-        <View style={styles.infoCard}>
-          <Text style={styles.cardTitle}>Lender Information</Text>
-          <View style={styles.lenderInfo}>
-            <View style={styles.lenderAvatar}>
-              <Text style={styles.avatarText}>
-                {loanDetails.lenderId?.userName?.charAt(0)?.toUpperCase() || 'L'}
-              </Text>
-            </View>
-            <View style={styles.lenderDetails}>
-              <Text style={styles.lenderName}>{loanDetails.lenderId?.userName || 'N/A'}</Text>
-              <Text style={styles.lenderContact}>{loanDetails.lenderId?.mobileNo || 'N/A'}</Text>
+            <View style={styles.otpCodeRow}>
+              <Text style={styles.otpCodeText}>{loan.disbursalVerification.otp}</Text>
+              <TouchableOpacity
+                style={styles.copyOtpBtn}
+                onPress={() => copyOtpToClipboard(loan.disbursalVerification.otp)}
+              >
+                <Feather name="copy" size={m(14)} color="#D97706" />
+                <Text style={styles.copyOtpBtnText}>View / Copy</Text>
+              </TouchableOpacity>
             </View>
           </View>
-        </View>
+        ) : null}
 
-        {/* Loan Details */}
-        <View style={styles.infoCard}>
-          <Text style={styles.cardTitle}>Loan Information</Text>
-          <View style={styles.detailsGrid}>
-            <DetailItem
-              icon="dollar-sign"
-              label="Loan Amount"
-              value={formatCurrency(loanDetails.amount)}
+        {/* Dual Tab Switcher: Schedule vs Payments */}
+        <View style={styles.tabSwitcher}>
+          <TouchableOpacity
+            style={[styles.switcherBtn, activeTab === 'schedule' && styles.activeSwitcherBtn]}
+            onPress={() => setActiveTab('schedule')}
+          >
+            <Feather
+              name="calendar"
+              size={m(13)}
+              color={activeTab === 'schedule' ? colors.white : '#64748B'}
             />
-            <DetailItem
-              icon="check-circle"
-              label="Total Paid"
-              value={formatCurrency(loanDetails.totalPaid)}
-            />
-            <DetailItem
-              icon="clock"
-              label="Remaining Amount"
-              value={formatCurrency(loanDetails.remainingAmount)}
-            />
-            <DetailItem
-              icon="calendar"
-              label="End Date"
-              value={loanDetails.loanEndDate ? moment(loanDetails.loanEndDate).format('DD MMM YYYY') : 'N/A'}
-            />
-            <DetailItem
-              icon="credit-card"
-              label="Payment Status"
-              value={loanDetails.paymentStatus}
-              isStatus
-            />
-            {loanDetails.paymentType && (
-              <DetailItem
-                icon="repeat"
-                label="Payment Type"
-                value={loanDetails.paymentType === 'installment' ? 'Installment' : 'One-time'}
-              />
-            )}
-          </View>
-        </View>
-
-        {/* Loan Proof Section - Only show if proof exists */}
-        {loanDetails.proof && (
-          <View style={styles.infoCard}>
-            <Text style={styles.cardTitle}>Loan Proof</Text>
-            <TouchableOpacity
-              style={styles.proofCard}
-              onPress={handleViewProof}
-              activeOpacity={0.8}>
-              <View style={styles.proofIconContainer}>
-                <Icon name="file-image" size={24} color={colors.ink} />
-              </View>
-              <View style={styles.lenderDetails}>
-                <Text style={styles.proofTitle}>Loan Proof Available</Text>
-                <Text style={styles.proofSubtext}>Tap to view proof document</Text>
-              </View>
-              <Icon name="chevron-right" size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Installment Details */}
-        {installmentDetails && (
-          <View style={styles.infoCard}>
-            <Text style={styles.cardTitle}>Installment Details</Text>
-            <View style={styles.installmentContainer}>
-              <View style={styles.installmentRow}>
-                <Icon name="check-circle" size={20} color={colors.success} />
-                <View style={styles.installmentContent}>
-                  <Text style={styles.installmentLabel}>Installments Paid</Text>
-                  <Text style={styles.installmentValue}>
-                    {installmentDetails.paidInstallments ?? installmentDetails.totalInstallmentsPaid ?? 0} Installment{(installmentDetails.paidInstallments ?? installmentDetails.totalInstallmentsPaid ?? 0) !== 1 ? 's' : ''}
-                  </Text>
-                </View>
-              </View>
-              {installmentDetails.nextDueDate && (
-                <View style={styles.installmentRow}>
-                  <Icon name="calendar" size={20} color={colors.ink} />
-                  <View style={styles.installmentContent}>
-                    <Text style={styles.installmentLabel}>Next Due Date</Text>
-                    <Text style={styles.installmentValue}>
-                      {moment(installmentDetails.nextDueDate).format('DD MMM YYYY')}
-                    </Text>
-                  </View>
-                </View>
-              )}
-              {installmentDetails.frequency && (
-                <View style={styles.installmentRow}>
-                  <Icon name="repeat" size={20} color={colors.textSecondary} />
-                  <View style={styles.installmentContent}>
-                    <Text style={styles.installmentLabel}>Frequency</Text>
-                    <Text style={styles.installmentValue}>
-                      {installmentDetails.frequency.charAt(0).toUpperCase() + installmentDetails.frequency.slice(1)}
-                    </Text>
-                  </View>
-                </View>
-              )}
-            </View>
-          </View>
-        )}
-
-        {/* Payment History */}
-        <View style={styles.infoCard}>
-          <View style={styles.cardHeader}>
-            <View>
-              <Text style={styles.cardTitle}>Payment History</Text>
-              <Text style={styles.cardSubtitle}>
-                {paymentHistory.length} payment{paymentHistory.length !== 1 ? 's' : ''}
-              </Text>
-            </View>
-            {paymentHistory.length > 3 && (
-              <View style={styles.historyHeaderActions}>
-                <TouchableOpacity
-                  style={styles.inlineHistoryButton}
-                  onPress={() => setShowAllPayments(prev => !prev)}
-                  activeOpacity={0.7}>
-                  <Text style={styles.viewAllText}>
-                    {showAllPayments ? 'Less' : 'All'}
-                  </Text>
-                  <Icon
-                    name={showAllPayments ? 'chevron-up' : 'chevron-down'}
-                    size={16}
-                    color={colors.ink}
-                  />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.openHistoryButton}
-                  onPress={handleOpenPaymentHistoryScreen}
-                  activeOpacity={0.7}>
-                  <Icon name="external-link" size={15} color={colors.ink} />
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-
-          {paymentHistory.length > 0 ? (
-            paymentHistory
-              .slice(0, showAllPayments ? paymentHistory.length : 3)
-              .map((payment) => (
-                <PaymentHistoryItem key={payment._id} item={payment} />
-              ))
-          ) : (
-            <View style={styles.emptyPaymentsState}>
-              <Ionicons name="receipt-outline" size={34} color={colors.textMuted} />
-              <Text style={styles.emptyPaymentsTitle}>No payments yet</Text>
-              <Text style={styles.emptyPaymentsText}>
-                Your submitted payments will appear here.
-              </Text>
-            </View>
-          )}
-        </View>
-
-        {/* Action Buttons */}
-        <View style={styles.actionsContainer}>
-          {loanDetails.paymentStatus !== 'paid' && loanDetails.remainingAmount > 0 && (
-            <TouchableOpacity
+            <Text
               style={[
-                styles.actionButton, 
-                styles.primaryButton,
-                (hasPendingPayment || isLoanExpired()) && styles.disabledButton
+                styles.switcherBtnText,
+                activeTab === 'schedule' && styles.activeSwitcherBtnText,
               ]}
-              onPress={handleMakePayment}
-              disabled={hasPendingPayment || isLoanExpired()}
             >
-              <Ionicons name="cash-outline" size={20} color={colors.ink} />
-              <Text style={styles.primaryButtonText}>
-                {isLoanExpired() 
-                  ? 'Loan Expired' 
-                  : hasPendingPayment 
-                    ? 'Payment Pending' 
-                    : 'Make Payment'}
-              </Text>
-            </TouchableOpacity>
-          )}
-          {hasPendingPayment && (
-            <View style={styles.pendingPaymentBanner}>
-              <Icon name="clock" size={16} color={colors.goldDarker} />
-              <Text style={styles.pendingPaymentBannerText}>
-                You have a pending payment. Please wait for lender confirmation.
-              </Text>
-            </View>
-          )}
-          {isLoanExpired() && !hasPendingPayment && (
-            <View style={styles.expiredLoanBanner}>
-              <Icon name="alert-circle" size={16} color={colors.error} />
-              <Text style={styles.expiredLoanBannerText}>
-                The loan end date has passed. Please contact your lender to extend the loan before making a payment.
-              </Text>
-            </View>
-          )}
-          
+              Amortization Matrix ({loan.installments?.length || 0})
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.switcherBtn, activeTab === 'payments' && styles.activeSwitcherBtn]}
+            onPress={() => setActiveTab('payments')}
+          >
+            <Feather
+              name="file-text"
+              size={m(13)}
+              color={activeTab === 'payments' ? colors.white : '#64748B'}
+            />
+            <Text
+              style={[
+                styles.switcherBtnText,
+                activeTab === 'payments' && styles.activeSwitcherBtnText,
+              ]}
+            >
+              Payment Ledger ({loan.payments?.length || 0})
+            </Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            Loan created {moment(loanDetails.createdAt).fromNow()}
-          </Text>
-        </View>
+        {/* TAB 1: Amortization / EMI Schedule List */}
+        {activeTab === 'schedule' ? (
+          <View style={styles.tabContent}>
+            {loan.installments && loan.installments.length > 0 ? (
+              loan.installments.map((inst) => {
+                const isPaid = inst.status === 'paid';
+                const isOverdue = inst.status === 'overdue';
+
+                return (
+                  <View
+                    key={inst.installmentNumber}
+                    style={[
+                      styles.installmentCard,
+                      isPaid && styles.paidInstCard,
+                      isOverdue && styles.overdueInstCard,
+                    ]}
+                  >
+                    <View style={styles.instCardTop}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: m(8) }}>
+                        <View style={styles.instNumBadge}>
+                          <Text style={styles.instNumText}>#{inst.installmentNumber}</Text>
+                        </View>
+                        <View>
+                          <Text style={styles.instDueDate}>Due {formatDate(inst.dueDate)}</Text>
+                          <Text style={styles.instClosingBal}>
+                            Closing Bal: {formatINR(inst.remainingPrincipal)}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View
+                        style={[
+                          styles.instStatusBadge,
+                          isPaid && { backgroundColor: '#DCFCE7' },
+                          isOverdue && { backgroundColor: '#FEE2E2' },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.instStatusText,
+                            isPaid && { color: '#16A34A' },
+                            isOverdue && { color: '#DC2626' },
+                          ]}
+                        >
+                          {isPaid ? 'PAID' : isOverdue ? 'OVERDUE' : 'UPCOMING'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.instBreakdownRow}>
+                      <View>
+                        <Text style={styles.instBLabel}>Monthly EMI</Text>
+                        <Text style={styles.instBVal}>{formatINR(inst.emiAmount)}</Text>
+                      </View>
+                      <View>
+                        <Text style={styles.instBLabel}>Principal</Text>
+                        <Text style={[styles.instBVal, { color: '#2563EB' }]}>
+                          {formatINR(inst.principalComponent)}
+                        </Text>
+                      </View>
+                      <View>
+                        <Text style={styles.instBLabel}>Interest</Text>
+                        <Text style={styles.instBVal}>
+                          {formatINR(inst.interestComponent)}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {isPaid ? (
+                      <View style={styles.paidInfoRow}>
+                        <Feather name="check-circle" size={m(11)} color="#16A34A" />
+                        <Text style={styles.paidInfoText}>
+                          Settled on {formatDate(inst.paidAt)}{' '}
+                          {inst.paymentRef ? `· Ref: ${inst.paymentRef}` : ''}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+                );
+              })
+            ) : (
+              <View style={styles.emptyBox}>
+                <Text style={styles.emptyBoxText}>No installment schedule generated.</Text>
+              </View>
+            )}
+          </View>
+        ) : (
+          /* TAB 2: Payment Verification Ledger */
+          <View style={styles.tabContent}>
+            {loan.payments && loan.payments.length > 0 ? (
+              loan.payments.map((p, idx) => (
+                <View key={idx} style={styles.paymentCard}>
+                  <View style={styles.paymentCardHeader}>
+                    <View>
+                      <Text style={styles.paymentDateText}>
+                        {formatDate(p.paymentDate || p.createdAt)}
+                      </Text>
+                      <Text style={styles.paymentModeText}>
+                        Mode: {p.paymentMode || 'Bank Transfer'}
+                      </Text>
+                    </View>
+                    <Text style={styles.paymentAmountText}>{formatINR(p.amount)}</Text>
+                  </View>
+
+                  <View style={styles.paymentDetailsRow}>
+                    <Text style={styles.paymentRefText}>
+                      UTR / Ref: <Text style={{ fontFamily: 'monospace' }}>{p.paymentReference || 'N/A'}</Text>
+                    </Text>
+                    <View style={styles.verifiedTag}>
+                      <Feather name="check" size={m(10)} color="#16A34A" />
+                      <Text style={styles.verifiedTagText}>Acknowledged</Text>
+                    </View>
+                  </View>
+
+                  {p.notes ? (
+                    <Text style={styles.paymentNotesText}>Note: {p.notes}</Text>
+                  ) : null}
+                </View>
+              ))
+            ) : (
+              <View style={styles.emptyBox}>
+                <Feather name="receipt" size={m(32)} color="#94A3B8" />
+                <Text style={styles.emptyBoxTitle}>No Payments Recorded Yet</Text>
+                <Text style={styles.emptyBoxSub}>
+                  When monthly repayments are made and acknowledged by your lender, they will appear in this ledger.
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
       </ScrollView>
 
-      {/* Loan Proof Image Viewer */}
-      <Modal
-        visible={proofViewerVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => {
-          setProofViewerVisible(false);
-          setSelectedProofUrl(null);
-        }}>
-        <View style={styles.proofViewerOverlay}>
-          <View style={styles.proofViewerHeader}>
-            <Text style={styles.proofViewerHeaderText}>Loan Proof</Text>
-            <TouchableOpacity
-              onPress={() => {
-                setProofViewerVisible(false);
-                setSelectedProofUrl(null);
-              }}
-              style={styles.proofViewerCloseButton}>
-              <Icon name="x" size={24} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
-          <ScrollView
-            contentContainerStyle={styles.proofViewerScrollContent}
-            maximumZoomScale={3}
-            minimumZoomScale={1}
-            showsVerticalScrollIndicator={false}
-            showsHorizontalScrollIndicator={false}>
-            {selectedProofUrl && (
-              <Image
-                source={{ uri: selectedProofUrl }}
-                style={styles.proofViewerImage}
-                resizeMode="contain"
-                onError={(error) => {
-                  console.error('Image load error:', error);
-                  console.error('Failed URL:', selectedProofUrl);
-                  Toast.show({
-                    type: 'error',
-                    position: 'top',
-                    text1: 'Error Loading Image',
-                    text2: 'Failed to load loan proof image. Please check the URL.',
-                    visibilityTime: 4000,
-                  });
-                }}
-              />
-            )}
-          </ScrollView>
-        </View>
-      </Modal>
-    </View>
+      {/* Bottom Sticky Action Bar: Make Repayment */}
+      <View style={styles.bottomBar}>
+        <TouchableOpacity
+          style={styles.payBtn}
+          onPress={() => navigation.navigate('MakePayment', { loan })}
+        >
+          <Feather name="credit-card" size={m(16)} color={colors.white} />
+          <Text style={styles.payBtnText}>Make EMI Repayment</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  // Container
   container: {
     flex: 1,
-    backgroundColor: colors.offWhite,
+    backgroundColor: '#F8FAFC',
   },
-  scrollView: {
+  center: {
     flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: m(20),
+  },
+  loadingText: {
+    fontSize: m(13),
+    color: '#64748B',
+    marginTop: m(10),
+  },
+  errorTitle: {
+    fontSize: m(15),
+    fontWeight: '700',
+    color: '#0F172A',
+    marginTop: m(10),
+  },
+  backBtn: {
+    marginTop: m(12),
+    backgroundColor: '#2563EB',
+    paddingHorizontal: m(16),
+    paddingVertical: m(8),
+    borderRadius: m(8),
+  },
+  backBtnText: {
+    color: colors.white,
+    fontWeight: '600',
+  },
+  topHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: m(16),
+    paddingVertical: m(14),
+    backgroundColor: colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  headerTitle: {
+    fontSize: m(15),
+    fontWeight: '700',
+    color: '#0F172A',
+    flex: 1,
+    marginHorizontal: m(10),
+  },
+  backIcon: {
+    padding: m(4),
+  },
+  chatIconBtn: {
+    padding: m(4),
   },
   scrollContent: {
     padding: m(16),
-    paddingBottom: m(100),
+    gap: m(14),
+    paddingBottom: m(90),
   },
-
-  // Overview Card
-  overviewCard: {
-    backgroundColor: colors.surface,
-    borderRadius: m(20),
-    padding: m(20),
-    marginBottom: m(16),
+  heroCard: {
+    backgroundColor: colors.white,
+    borderRadius: m(16),
+    padding: m(16),
     borderWidth: 1,
-    borderColor: colors.borderLight,
-    elevation: 2,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+    borderColor: '#E2E8F0',
+    gap: m(12),
   },
-  overviewHeader: {
+  heroTopRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: m(20),
+    gap: m(10),
   },
-  overviewTitle: {
-    fontSize: m(18),
-    fontFamily: FontFamily.primarySemiBold,
-    color: colors.ink,
+  lenderIcon: {
+    width: m(36),
+    height: m(36),
+    borderRadius: m(10),
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  facilityTitle: {
+    fontSize: m(15),
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  lenderSub: {
+    fontSize: m(11),
+    color: '#64748B',
+    marginTop: m(2),
+  },
+  boldText: {
+    fontWeight: '700',
+    color: '#0F172A',
   },
   statusBadge: {
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: m(8),
+    paddingVertical: m(3),
+    borderRadius: m(6),
+  },
+  statusBadgeText: {
+    fontSize: m(10),
+    fontWeight: '700',
+    color: '#16A34A',
+  },
+  metricsGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    backgroundColor: '#F8FAFC',
+    borderRadius: m(12),
+    padding: m(10),
+    gap: m(8),
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  metricItem: {
+    width: '31%',
     alignItems: 'center',
-    paddingHorizontal: m(12),
-    paddingVertical: m(6),
-    borderRadius: m(20),
-    gap: m(6),
   },
-  statusText: {
+  mLabel: {
+    fontSize: m(9),
+    color: '#64748B',
+    textTransform: 'uppercase',
+  },
+  mVal: {
     fontSize: m(12),
-    fontFamily: FontFamily.bodySemiBold,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginTop: m(2),
+    fontFamily: 'monospace',
   },
-  amountOverview: {
+  progressSection: {
+    gap: m(4),
+  },
+  progressTextRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: m(20),
   },
-  amountItem: {
-    flex: 1,
-    alignItems: 'center',
+  progressDesc: {
+    fontSize: m(11),
+    color: '#64748B',
   },
-  amountLabel: {
-    fontSize: m(12),
-    color: colors.textSecondary,
-    marginBottom: m(4),
+  progressPercent: {
+    fontSize: m(11),
+    fontWeight: '700',
+    color: '#16A34A',
+    fontFamily: 'monospace',
   },
-  amountValue: {
-    fontSize: m(16),
-    fontFamily: FontFamily.primaryExtraBold,
-    color: colors.ink,
-  },
-  amountDivider: {
-    width: 1,
-    height: m(40),
-    backgroundColor: colors.border,
-    marginHorizontal: m(12),
-  },
-  progressContainer: {
-    alignItems: 'center',
-  },
-  progressBar: {
-    width: '100%',
-    height: m(8),
-    backgroundColor: colors.borderLight,
-    borderRadius: m(4),
-    marginBottom: m(8),
+  progressBarBg: {
+    height: m(6),
+    backgroundColor: '#E2E8F0',
+    borderRadius: m(3),
     overflow: 'hidden',
   },
-  progressFill: {
+  progressBarFill: {
     height: '100%',
-    borderRadius: m(4),
+    backgroundColor: '#16A34A',
   },
-  progressText: {
-    fontSize: m(12),
-    color: colors.textSecondary,
-  },
-
-  // Info Card
-  infoCard: {
-    backgroundColor: colors.surface,
-    borderRadius: m(20),
-    padding: m(20),
-    marginBottom: m(16),
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    elevation: 2,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: m(10),
-  },
-  cardTitle: {
-    fontSize: m(18),
-    fontFamily: FontFamily.primarySemiBold,
-    color: colors.ink,
-    marginBottom: m(16),
-  },
-  cardSubtitle: {
-    marginTop: m(-10),
-    marginBottom: m(12),
-    fontSize: m(12),
-    color: colors.textSecondary,
-  },
-  historyHeaderActions: {
+  securityBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(8),
-  },
-  inlineHistoryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(4),
-    paddingHorizontal: m(10),
-    paddingVertical: m(6),
-    borderRadius: m(8),
-    backgroundColor: colors.skySoft,
-  },
-  openHistoryButton: {
-    width: m(34),
-    height: m(34),
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: m(8),
-    backgroundColor: colors.skySoft,
-  },
-  viewAllText: {
-    fontSize: m(14),
-    color: colors.ink,
-    fontFamily: FontFamily.bodySemiBold,
-  },
-
-  // Lender Info
-  lenderInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  lenderAvatar: {
-    width: m(50),
-    height: m(50),
-    borderRadius: m(25),
-    backgroundColor: colors.ink,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: m(16),
-  },
-  avatarText: {
-    fontSize: m(20),
-    fontFamily: FontFamily.bodySemiBold,
-    color: colors.white,
-  },
-  lenderDetails: {
-    flex: 1,
-  },
-  lenderName: {
-    fontSize: m(16),
-    fontFamily: FontFamily.bodySemiBold,
-    color: colors.ink,
-    marginBottom: m(4),
-  },
-  lenderContact: {
-    fontSize: m(14),
-    color: colors.textSecondary,
-  },
-
-  // Details Grid
-  detailsGrid: {
-    gap: m(9),
-  },
-  detailItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.offWhite,
-    borderRadius: m(12),
-    padding: m(10.2),
-  },
-  detailIconContainer: {
-    width: m(40),
-    height: m(40),
-    borderRadius: m(10),
-    backgroundColor: colors.skySoft,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: m(12),
-  },
-  // detailContent: {
-  //   flex: 1,
-  // },
-  detailLabel: {
-    fontSize: m(12),
-    color: colors.textSecondary,
-    marginBottom: m(2),
-  },
-  detailValue: {
-    fontSize: m(14),
-    fontFamily: FontFamily.bodyMedium,
-    color: colors.textPrimary,
-  },
-  
-  // Payment History Item
-  paymentHistoryItem: {
-    backgroundColor: colors.skySoft,
-    borderRadius: m(12),
-    padding: m(12),
-    marginBottom: m(8),
-  },
-  paymentHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: m(8),
-  },
-  // paymentAmount: {
-  //   flex: 1,
-  // },
-  paymentAmountText: {
-    fontSize: m(16),
-    fontFamily: FontFamily.primaryBold,
-    color: colors.ink,
-    marginBottom: m(2),
-  },
-  paymentMode: {
-    fontSize: m(12),
-    color: colors.textSecondary,
-  },
-  paymentStatusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    gap: m(6),
+    backgroundColor: '#FEF3C7',
     paddingHorizontal: m(8),
     paddingVertical: m(4),
-    borderRadius: m(12),
-    gap: m(4),
+    borderRadius: m(6),
   },
-  paymentStatusText: {
-    fontSize: m(10),
-    fontFamily: FontFamily.bodySemiBold,
+  securityText: {
+    fontSize: m(11),
+    color: '#92400E',
+    fontWeight: '600',
   },
-  paymentDetails: {
-    gap: m(2),
-  },
-  paymentDate: {
-    fontSize: m(12),
-    color: colors.textSecondary,
-  },
-  confirmedDate: {
-    fontSize: m(12),
-    color: colors.success,
-  },
-  emptyPaymentsState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.offWhite,
-    borderRadius: m(12),
-    paddingVertical: m(24),
-    paddingHorizontal: m(16),
+  otpCard: {
+    backgroundColor: '#FFFBEB',
+    borderRadius: m(14),
+    padding: m(14),
     borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  emptyPaymentsTitle: {
-    marginTop: m(10),
-    fontSize: m(15),
-    fontFamily: FontFamily.primarySemiBold,
-    color: colors.ink,
-  },
-  emptyPaymentsText: {
-    marginTop: m(4),
-    fontSize: m(12),
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-
-  // Installment Details
-  installmentContainer: {
-    gap: m(16),
-  },
-  installmentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(12),
-  },
-  installmentContent: {
-    flex: 1,
-  },
-  installmentLabel: {
-    fontSize: m(12),
-    color: colors.textSecondary,
-    marginBottom: m(4),
-  },
-  installmentValue: {
-    fontSize: m(16),
-    fontFamily: FontFamily.bodySemiBold,
-    color: colors.ink,
-  },
-  
-  // Actions
-  actionsContainer: {
-    gap: m(12),
-    marginBottom: m(16),
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: m(16),
-    borderRadius: m(16),
+    borderColor: '#FDE68A',
     gap: m(8),
-    elevation: 2,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
-  primaryButton: {
-    backgroundColor: colors.butter,
-  },
-  secondaryButton: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  primaryButtonText: {
-    fontSize: m(16),
-    fontFamily: FontFamily.bodySemiBold,
-    color: colors.ink,
-  },
-  secondaryButtonText: {
-    fontSize: m(16),
-    fontFamily: FontFamily.bodySemiBold,
-    color: colors.ink,
-  },
-  disabledButton: {
-    backgroundColor: colors.textMuted,
-    opacity: 0.6,
-  },
-  pendingPaymentBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.butterSoft,
-    borderRadius: m(12),
-    padding: m(12),
-    gap: m(8),
-    borderWidth: 1,
-    borderColor: colors.butter,
-  },
-  pendingPaymentBannerText: {
-    fontSize: m(14),
-    color: colors.goldDarker,
-    fontFamily: FontFamily.bodyMedium,
-    flex: 1,
-  },
-  expiredLoanBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.error + '15',
-    borderRadius: m(12),
-    padding: m(12),
-    gap: m(8),
-    borderWidth: 1,
-    borderColor: colors.error + '40',
-  },
-  expiredLoanBannerText: {
-    fontSize: m(14),
-    color: colors.error,
-    fontFamily: FontFamily.bodyMedium,
-    flex: 1,
-  },
-
-  // Footer
-  footer: {
-    alignItems: 'center',
-    padding: m(16),
-  },
-  footerText: {
-    fontSize: m(12),
-    color: colors.textMuted,
-  },
-
-  // Loan Proof Styles
-  proofCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.offWhite,
-    borderRadius: m(12),
-    padding: m(16),
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  proofIconContainer: {
-    width: m(48),
-    height: m(48),
-    borderRadius: m(12),
-    backgroundColor: colors.skySoft,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: m(12),
-  },
-  // proofTextContainer: {
-  //   flex: 1,
-  // },
-  proofTitle: {
-    fontSize: m(16),
-    fontFamily: FontFamily.bodySemiBold,
-    color: colors.ink,
-    marginBottom: m(4),
-  },
-  proofSubtext: {
-    fontSize: m(14),
-    color: colors.textSecondary,
-  },
-
-  // Proof Viewer Modal Styles
-  proofViewerOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.95)',
-  },
-  proofViewerHeader: {
+  otpHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: m(16),
-    paddingTop: m(40),
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
-  proofViewerHeaderText: {
+  otpTitle: {
+    fontSize: m(10),
+    fontWeight: '800',
+    color: '#D97706',
+  },
+  actionReqBadge: {
+    fontSize: m(9),
+    fontWeight: '700',
+    color: '#92400E',
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: m(6),
+    paddingVertical: m(2),
+    borderRadius: m(4),
+  },
+  otpDesc: {
+    fontSize: m(11),
+    color: '#78350F',
+    lineHeight: m(16),
+  },
+  otpCodeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    paddingHorizontal: m(12),
+    paddingVertical: m(8),
+    borderRadius: m(10),
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  otpCodeText: {
     fontSize: m(18),
-    fontFamily: FontFamily.bodySemiBold,
-    color: colors.white,
+    fontWeight: '900',
+    color: '#0F172A',
+    letterSpacing: 4,
+    fontFamily: 'monospace',
   },
-  proofViewerCloseButton: {
+  copyOtpBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(4),
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: m(8),
+    paddingVertical: m(4),
+    borderRadius: m(6),
+  },
+  copyOtpBtnText: {
+    fontSize: m(11),
+    fontWeight: '700',
+    color: '#D97706',
+  },
+  tabSwitcher: {
+    flexDirection: 'row',
+    backgroundColor: colors.white,
+    borderRadius: m(12),
+    padding: m(3),
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: m(4),
+  },
+  switcherBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: m(6),
+    paddingVertical: m(8),
+    borderRadius: m(8),
+  },
+  activeSwitcherBtn: {
+    backgroundColor: '#0F172A',
+  },
+  switcherBtnText: {
+    fontSize: m(11),
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  activeSwitcherBtnText: {
+    color: colors.white,
+    fontWeight: '700',
+  },
+  tabContent: {
+    gap: m(10),
+  },
+  installmentCard: {
+    backgroundColor: colors.white,
+    borderRadius: m(12),
+    padding: m(12),
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: m(8),
+  },
+  paidInstCard: {
+    borderLeftWidth: 3,
+    borderLeftColor: '#16A34A',
+  },
+  overdueInstCard: {
+    borderLeftWidth: 3,
+    borderLeftColor: '#DC2626',
+    backgroundColor: '#FEF2F2',
+  },
+  instCardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  instNumBadge: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: m(6),
+    paddingVertical: m(2),
+    borderRadius: m(4),
+  },
+  instNumText: {
+    fontSize: m(11),
+    fontWeight: '700',
+    color: '#475569',
+  },
+  instDueDate: {
+    fontSize: m(12),
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  instClosingBal: {
+    fontSize: m(10),
+    color: '#94A3B8',
+  },
+  instStatusBadge: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: m(6),
+    paddingVertical: m(2),
+    borderRadius: m(4),
+  },
+  instStatusText: {
+    fontSize: m(9),
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  instBreakdownRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: '#F8FAFC',
+    borderRadius: m(8),
     padding: m(8),
   },
-  proofViewerScrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: m(20),
+  instBLabel: {
+    fontSize: m(9),
+    color: '#64748B',
   },
-  proofViewerImage: {
-    width: '100%',
-    height: m(500),
-    borderRadius: m(8),
+  instBVal: {
+    fontSize: m(11),
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'monospace',
+    marginTop: m(1),
+  },
+  paidInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(4),
+  },
+  paidInfoText: {
+    fontSize: m(10),
+    color: '#16A34A',
+    fontWeight: '600',
+  },
+  paymentCard: {
+    backgroundColor: colors.white,
+    borderRadius: m(12),
+    padding: m(12),
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: m(6),
+  },
+  paymentCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  paymentDateText: {
+    fontSize: m(12),
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  paymentModeText: {
+    fontSize: m(10),
+    color: '#64748B',
+    marginTop: m(1),
+  },
+  paymentAmountText: {
+    fontSize: m(14),
+    fontWeight: '800',
+    color: '#16A34A',
+    fontFamily: 'monospace',
+  },
+  paymentDetailsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  paymentRefText: {
+    fontSize: m(10),
+    color: '#64748B',
+  },
+  verifiedTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(2),
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: m(6),
+    paddingVertical: m(2),
+    borderRadius: m(4),
+  },
+  verifiedTagText: {
+    fontSize: m(9),
+    fontWeight: '700',
+    color: '#16A34A',
+  },
+  paymentNotesText: {
+    fontSize: m(10),
+    color: '#94A3B8',
+    fontStyle: 'italic',
+  },
+  emptyBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: m(40),
+    gap: m(6),
+    backgroundColor: colors.white,
+    borderRadius: m(12),
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  emptyBoxTitle: {
+    fontSize: m(13),
+    fontWeight: '700',
+    color: '#0F172A',
+    marginTop: m(4),
+  },
+  emptyBoxSub: {
+    fontSize: m(11),
+    color: '#64748B',
+    textAlign: 'center',
+    paddingHorizontal: m(20),
+  },
+  emptyBoxText: {
+    fontSize: m(12),
+    color: '#64748B',
+  },
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: colors.white,
+    paddingHorizontal: m(16),
+    paddingVertical: m(12),
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+  payBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: m(8),
+    backgroundColor: '#2563EB',
+    paddingVertical: m(12),
+    borderRadius: m(12),
+  },
+  payBtnText: {
+    fontSize: m(14),
+    fontWeight: '700',
+    color: colors.white,
   },
 });

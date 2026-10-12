@@ -2,24 +2,8 @@
   "migIndex": 1,
   "data": [
     {
-      "path": "src/Assets/fonts/Inter18pt-Bold.ttf",
-      "sha1": "001ec1ea9a5f752d3248769c174b6fc030ab7dab"
-    },
-    {
-      "path": "src/Assets/fonts/Inter18pt-MediumItalic.ttf",
-      "sha1": "be7237b6cdcd5738007a1fb702309e23bdfd7125"
-    },
-    {
-      "path": "src/Assets/fonts/Inter18pt-Regular.ttf",
-      "sha1": "bd1976c1f019853ab6143ef1246e25aa66fd990e"
-    },
-    {
-      "path": "src/Assets/fonts/Inter18pt-SemiBold.ttf",
-      "sha1": "f3e44abd6661d5b861e66db22f4f79a6c466cd00"
-    },
-    {
-      "path": "src/Assets/fonts/Inter24pt-ExtraBold.ttf",
-      "sha1": "e4d712ef0e61b3104b2327fe127d95d281a49308"
+      "path": "src/Assets/fonts/Intrepid.ttf",
+      "sha1": "afc9af066c398f5e7e36d8ceb7c4b1f11647c1aa"
     },
     {
       "path": "src/Assets/fonts/Montserrat-Bold.ttf",
@@ -36,14 +20,6 @@
     {
       "path": "src/Assets/fonts/Poppins-Bold.ttf",
       "sha1": "875cf0cecd647bcf22e79d633d868c1b1ec98dfa"
-    },
-    {
-      "path": "src/Assets/fonts/Poppins-ExtraBold.ttf",
-      "sha1": "4b5c0750f073abd576413a0898d3b95adaf199c8"
-    },
-    {
-      "path": "src/Assets/fonts/Poppins-Medium.ttf",
-      "sha1": "283f21b44efbdbf276ba802be2d949a36bbc4233"
     },
     {
       "path": "src/Assets/fonts/Poppins-Regular.ttf",

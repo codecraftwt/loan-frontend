@@ -52,8 +52,26 @@ import BorrowerLoanDetails from '../Screens/Borrower/Loans/BorrowerLoanDetails';
 import MakePayment from '../Screens/Borrower/Loans/MakePayment';
 import PaymentHistory from '../Screens/Borrower/Loans/PaymentHistory';
 import PendingLoanOffersScreen from '../Screens/Borrower/Loans/PendingLoanOffersScreen';
+import BorrowerExploreLenders from '../Screens/Borrower/Lenders/BorrowerExploreLenders';
+import BorrowerLenderDetails from '../Screens/Borrower/Lenders/BorrowerLenderDetails';
+import BorrowerApply from '../Screens/Borrower/Applications/BorrowerApply';
+import BorrowerApplications from '../Screens/Borrower/Applications/BorrowerApplications';
+import BorrowerLoansPortfolio from '../Screens/Borrower/Loans/BorrowerLoansPortfolio';
+import BorrowerProfileScreen from '../Screens/Borrower/Profile/BorrowerProfileScreen';
+import BorrowerSecurityScreen from '../Screens/Borrower/Security/BorrowerSecurityScreen';
 // Lender Payment Screens
 import PendingPayments from '../Screens/Lender/Payments/PendingPayments';
+// Lender Modern Flow Screens
+import LenderDashboard from '../Screens/Lender/Dashboard/LenderDashboard';
+import LenderIncomingRequests from '../Screens/Lender/Requests/LenderIncomingRequests';
+import LenderRequestDetails from '../Screens/Lender/Requests/LenderRequestDetails';
+import LenderLoansPortfolio from '../Screens/Lender/Loans/LenderLoansPortfolio';
+import LenderLoanDetails from '../Screens/Lender/Loans/LenderLoanDetails';
+import LenderAvailableBorrowers from '../Screens/Lender/Borrowers/LenderAvailableBorrowers';
+import LenderBorrowerDetails from '../Screens/Lender/Borrowers/LenderBorrowerDetails';
+import LenderSubscriptionScreen from '../Screens/Lender/Subscription/LenderSubscriptionScreen';
+import LenderProfileScreen from '../Screens/Lender/Profile/LenderProfileScreen';
+import LenderSettingsScreen from '../Screens/Lender/Settings/LenderSettingsScreen';
 
 const Navigation = () => {
   const Stack = createNativeStackNavigator();
@@ -116,16 +134,35 @@ const Navigation = () => {
       <Stack.Screen name="LenderList" component={LenderList} />
       <Stack.Screen name="LenderDetailsScreen" component={LenderDetailsScreen} />
 
-      {/* Borrower Loan Screens */}
+      {/* Borrower Screens */}
       <Stack.Screen name="MyLoans" component={MyLoans} />
       <Stack.Screen name="BorrowerLoanDetails" component={BorrowerLoanDetails} />
       <Stack.Screen name="MakePayment" component={MakePayment} />
       <Stack.Screen name="PaymentHistory" component={PaymentHistory} />
       <Stack.Screen name="PendingLoanOffers" component={PendingLoanOffersScreen} />
+      <Stack.Screen name="BorrowerExploreLenders" component={BorrowerExploreLenders} />
+      <Stack.Screen name="BorrowerLenderDetails" component={BorrowerLenderDetails} />
+      <Stack.Screen name="BorrowerApply" component={BorrowerApply} />
+      <Stack.Screen name="BorrowerApplications" component={BorrowerApplications} />
+      <Stack.Screen name="BorrowerLoansPortfolio" component={BorrowerLoansPortfolio} />
+      <Stack.Screen name="BorrowerProfileScreen" component={BorrowerProfileScreen} />
+      <Stack.Screen name="BorrowerSecurityScreen" component={BorrowerSecurityScreen} />
 
       {/* Other Borrower screens */}
       <Stack.Screen name="BorrowerLoanHistoryScreen" component={BorrowerLoanHistoryScreen} />
       <Stack.Screen name="BorrowerDetailsScreen" component={BorrowerDetailsScreen} />
+
+      {/* Modern Lender Flow Screens */}
+      <Stack.Screen name="LenderDashboard" component={LenderDashboard} />
+      <Stack.Screen name="LenderIncomingRequests" component={LenderIncomingRequests} />
+      <Stack.Screen name="LenderRequestDetails" component={LenderRequestDetails} />
+      <Stack.Screen name="LenderLoansPortfolio" component={LenderLoansPortfolio} />
+      <Stack.Screen name="LenderLoanDetails" component={LenderLoanDetails} />
+      <Stack.Screen name="LenderAvailableBorrowers" component={LenderAvailableBorrowers} />
+      <Stack.Screen name="LenderBorrowerDetails" component={LenderBorrowerDetails} />
+      <Stack.Screen name="LenderSubscriptionScreen" component={LenderSubscriptionScreen} />
+      <Stack.Screen name="LenderProfileScreen" component={LenderProfileScreen} />
+      <Stack.Screen name="LenderSettingsScreen" component={LenderSettingsScreen} />
 
     </Stack.Navigator>
   );

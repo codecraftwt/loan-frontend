@@ -1,1259 +1,670 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  FlatList,
   RefreshControl,
   Animated,
-  Easing,
   StatusBar,
-  Platform,
-  BackHandler,
+  SafeAreaView,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/Feather';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import LinearGradient from 'react-native-linear-gradient';
-import { useSelector, useDispatch } from 'react-redux';
+import Feather from 'react-native-vector-icons/Feather';
+import { useSelector } from 'react-redux';
 import { m } from 'walstar-rn-responsive';
-import { getBorrowerLoans, clearLoans } from '../../../Redux/Slices/borrowerLoanSlice';
-import { FontFamily, FontSizes, colors } from '../../../constants';
-import borrowerLoanAPI from '../../../Services/borrowerLoanService';
-import PromptBox from '../../PromptBox/Prompt';
-
-const formatCurrency = value => {
-  if (!value) return '0';
-  const num = Number(value) || 0;
-  return num.toLocaleString('en-IN', { maximumFractionDigits: 0 });
-};
+import { FontFamily, colors } from '../../../constants';
+import borrowerFlowService from '../../../Services/borrowerFlowService';
 
 export default function BorrowerDashboard() {
   const navigation = useNavigation();
-  const dispatch = useDispatch();
   const user = useSelector(state => state.auth.user);
-  const { loans, summary } = useSelector(state => state.borrowerLoans);
 
+  const [stats, setStats] = useState({
+    totalApplications: 0,
+    pendingApplications: 0,
+    acceptedApplications: 0,
+    autoRejectedApplications: 0,
+    rejectedApplications: 0,
+    totalLendersAvailable: 0,
+    latestAccepted: null,
+  });
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [pendingLoanOffers, setPendingLoanOffers] = useState([]);
-  const [exitPromptVisible, setExitPromptVisible] = useState(false);
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideUpAnim = useRef(new Animated.Value(50)).current;
-  const scaleAnim = useRef(new Animated.Value(0.9)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const notificationFadeAnim = useRef(new Animated.Value(0)).current;
-  const notificationSlideAnim = useRef(new Animated.Value(50)).current;
 
-  // Pulse animation for cards
-  useEffect(() => {
-    const pulse = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.02,
-          duration: 2000,
-          easing: Easing.ease,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 2000,
-          easing: Easing.ease,
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-    pulse.start();
-    return () => pulse.stop();
-  }, [pulseAnim]);
-
-  // Animation for notification
-  useEffect(() => {
-    if (pendingLoanOffers.length > 0) {
-      notificationFadeAnim.setValue(0);
-      notificationSlideAnim.setValue(50);
-      Animated.parallel([
-        Animated.timing(notificationFadeAnim, {
-          toValue: 1,
-          duration: 500,
-          useNativeDriver: true,
-        }),
-        Animated.timing(notificationSlideAnim, {
-          toValue: 0,
-          duration: 500,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [notificationFadeAnim, notificationSlideAnim, pendingLoanOffers]);
-
-  // Fetch pending loan offers
-  const fetchPendingLoanOffers = useCallback(async () => {
+  const fetchDashboardStats = useCallback(async () => {
     try {
-      const response = await borrowerLoanAPI.getPendingLoanOffers(user?._id);
-      const offers =
-        Array.isArray(response)
-          ? response
-          : Array.isArray(response?.data)
-            ? response.data
-            : Array.isArray(response?.data?.loans)
-              ? response.data.loans
-              : Array.isArray(response?.loans)
-                ? response.loans
-                : [];
-
-      setPendingLoanOffers(offers);
-    } catch (error) {
-      console.error('Error fetching pending loan offers:', error);
+      setLoading(true);
+      const res = await borrowerFlowService.getDashboardStats();
+      if (res?.success && res.stats) {
+        setStats(res.stats);
+      }
+    } catch (err) {
+      console.error('Error fetching borrower dashboard stats:', err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-  }, [user?._id]);
-
-  const handleReviewLoanOffers = () => {
-    navigation.navigate('PendingLoanOffers');
-  };
+  }, []);
 
   useFocusEffect(
-    React.useCallback(() => {
-      if (user?._id) {
-        dispatch(getBorrowerLoans({ borrowerId: user._id }));
-        fetchPendingLoanOffers();
-      }
-
-      // Reset animations
+    useCallback(() => {
+      fetchDashboardStats();
       fadeAnim.setValue(0);
-      slideUpAnim.setValue(50);
-      scaleAnim.setValue(0.9);
-
-      // Staggered animations
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideUpAnim, {
-          toValue: 0,
-          duration: 800,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.timing(scaleAnim, {
-          toValue: 1,
-          duration: 800,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-      ]).start();
-
-      const onBackPress = () => {
-        if (Platform.OS === 'android') {
-          setExitPromptVisible(true);
-          return true;
-        }
-        return false;
-      };
-
-      const backHandler = BackHandler.addEventListener(
-        'hardwareBackPress',
-        onBackPress,
-      );
-
-      return () => {
-        backHandler.remove();
-        dispatch(clearLoans());
-      };
-    }, [
-      dispatch,
-      fadeAnim,
-      scaleAnim,
-      slideUpAnim,
-      user?._id,
-      fetchPendingLoanOffers,
-    ]),
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }).start();
+    }, [fetchDashboardStats, fadeAnim])
   );
 
-  const onRefresh = async () => {
+  const onRefresh = () => {
     setRefreshing(true);
-    if (user?._id) {
-      await Promise.all([
-        dispatch(getBorrowerLoans({ borrowerId: user._id })),
-        fetchPendingLoanOffers(),
-      ]);
-    }
-    setRefreshing(false);
+    fetchDashboardStats();
   };
 
-  const myLoans = loans.slice(0, 2);
-
-  const quickActions = [
-    {
-      id: 1,
-      title: 'My Loans',
-      icon: 'file-text',
-      screen: 'MyLoans',
-      description: 'View all loans',
-      tint: colors.sky,
-    },
-    {
-      id: 2,
-      title: 'History',
-      icon: 'clock',
-      screen: 'BorrowerLoanHistoryScreen',
-      description: 'Payment history',
-      tint: colors.mint,
-    },
-    {
-      id: 3,
-      title: 'Analytics',
-      icon: 'bar-chart-2',
-      screen: 'History',
-      description: 'View insights',
-      tint: colors.butter,
-    },
-    {
-      id: 5,
-      title: 'Activity',
-      icon: 'activity',
-      screen: 'BorrowerRecentActivity',
-      description: 'Recent updates',
-      tint: colors.offWhite,
-    },
-  ];
-
-  const totalActiveLoans = summary.activeLoans || 0;
-  const totalLoanAmount = summary.totalAmountBorrowed || 0;
-  const totalRemaining = loans
-    .filter(loan => loan.paymentStatus !== 'paid')
-    .reduce((sum, loan) => sum + (loan.remainingAmount || 0), 0);
-  const totalPaid = loans.reduce((sum, loan) => sum + (loan.totalPaid || 0), 0);
-
-  // Calculate completion rate
-  const completionRate = totalLoanAmount > 0
-    ? Math.min((totalPaid / totalLoanAmount) * 100, 100)
-    : 0;
-
-  const renderMyLoan = ({ item, index }) => {
-    const cardTint = index % 2 === 0 ? colors.sky : colors.mint;
-    return (
-      <TouchableOpacity
-        style={[styles.loanCard, { backgroundColor: cardTint }]}
-        onPress={() => navigation.navigate('BorrowerLoanDetails', { loan: item })}
-        activeOpacity={0.85}>
-        <View style={styles.loanCardHeader}>
-          <View style={styles.loanCardLeft}>
-            <View style={styles.lenderAvatar}>
-              <Text style={styles.lenderAvatarText}>
-                {(item.lenderId?.userName || 'L').charAt(0).toUpperCase()}
-              </Text>
-            </View>
-            <View style={styles.welcomeText}>
-              <Text style={styles.loanLenderName} numberOfLines={1}>
-                {item.lenderId?.userName || 'Unknown Lender'}
-              </Text>
-              <Text style={styles.loanAmountText}>
-                ₹{formatCurrency(item.amount)}
-              </Text>
-            </View>
-          </View>
-          <View style={styles.statusBadge}>
-            <Text style={styles.statusBadgeText}>
-              {item.paymentStatus?.charAt(0).toUpperCase() + item.paymentStatus?.slice(1)}
-            </Text>
-          </View>
-        </View>
-
-        {/* Progress Section */}
-        <View style={styles.loanProgressSection}>
-          <View style={styles.progressBarContainer}>
-            <View style={styles.progressBarBg}>
-              <Animated.View
-                style={[
-                  styles.progressBarFill,
-                  {
-                    width: item.amount > 0 ? `${((item.totalPaid || 0) / item.amount) * 100}%` : '0%',
-                  },
-                ]}
-              />
-            </View>
-          </View>
-          <View style={styles.progressLabels}>
-            <Text style={styles.progressLabelText}>
-              Paid: ₹{formatCurrency(item.totalPaid || 0)}
-            </Text>
-            <Text style={styles.progressLabelText}>
-              Remaining: ₹{formatCurrency(item.remainingAmount || item.amount)}
-            </Text>
-          </View>
-        </View>
-
-        {/* Footer */}
-        <View style={styles.loanCardFooter}>
-          <View style={styles.loanFooterItem}>
-            <Icon name="calendar" size={14} color={colors.inkSoft} />
-            <Text style={styles.loanFooterText}>
-              Due: {item.loanEndDate ? new Date(item.loanEndDate).toLocaleDateString() : 'N/A'}
-            </Text>
-          </View>
-          <View style={styles.viewDetailsBtn}>
-            <Text style={styles.viewDetailsText}>Details</Text>
-            <Icon name="chevron-right" size={14} color={colors.white} />
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
+  const formatINR = (val) => {
+    if (!val) return '₹0';
+    const num = Number(val);
+    if (num >= 10000000) return `₹${(num / 10000000).toFixed(2)} Cr`;
+    if (num >= 100000) return `₹${(num / 100000).toFixed(2)} Lakh`;
+    return `₹${num.toLocaleString('en-IN')}`;
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor="transparent"
-        translucent
-      />
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#0F172A" />
 
-      {/* Green Greeting Header */}
-      <LinearGradient
-        colors={[colors.navyDark, colors.navy]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.topHeader}>
-        <View style={styles.topHeaderRow}>
-          <Text style={styles.greetingText} numberOfLines={1}>
-            Hello, {user?.userName || 'User'} 👋
-          </Text>
-          <TouchableOpacity
-            style={styles.avatarContainer}
-            onPress={() => navigation.navigate('ProfileDetails')}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {(user?.userName || 'U').charAt(0).toUpperCase()}
+      {/* Top Header / Greeting Bar */}
+      <View style={styles.topNav}>
+        <View style={styles.userInfo}>
+          <View style={styles.userAvatar}>
+            <Text style={styles.avatarText}>
+              {user?.userName ? user.userName.charAt(0).toUpperCase() : 'B'}
+            </Text>
+          </View>
+          <View>
+            <View style={styles.roleRow}>
+              <Text style={styles.greetingTitle}>
+                {user?.userName || 'Borrower'}
               </Text>
+              <View style={styles.roleTag}>
+                <Text style={styles.roleTagText}>BORROWER</Text>
+              </View>
             </View>
-            <View style={styles.onlineIndicator} />
-          </TouchableOpacity>
+            <Text style={styles.subGreeting}>Commercial Capital Workspace</Text>
+          </View>
         </View>
-      </LinearGradient>
+
+        <TouchableOpacity
+          style={styles.profileBtn}
+          onPress={() => navigation.navigate('BorrowerProfileScreen')}
+        >
+          <Feather name="user" size={m(18)} color={colors.white} />
+        </TouchableOpacity>
+      </View>
 
       <ScrollView
-        style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[colors.ink]}
-            tintColor={colors.ink}
-          />
-        }>
-
-        {/* Welcome Section */}
-        <Animated.View
-          style={[
-            styles.heroCard,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideUpAnim }],
-            },
-          ]}>
-          <Text style={styles.heroTitle}>Manage Your{'\n'}Loans Easily</Text>
-          <Text style={styles.heroSubtitle}>
-            Currently you have {loans.length} loan{loans.length !== 1 ? 's' : ''}
-          </Text>
-
-          <View style={styles.heroTilesRow}>
-            <View style={[styles.heroTile, { backgroundColor: colors.mint }]}>
-              <View style={styles.heroTileIcon}>
-                <Icon name="dollar-sign" size={16} color={colors.ink} />
-              </View>
-              <Text style={styles.heroTileLabel}>Total Borrowed</Text>
-              <Text style={styles.heroTileValue}>₹{formatCurrency(totalLoanAmount)}</Text>
-            </View>
-            <View style={[styles.heroTile, { backgroundColor: colors.sky }]}>
-              <View style={styles.heroTileIcon}>
-                <Icon name="clock" size={16} color={colors.ink} />
-              </View>
-              <Text style={styles.heroTileLabel}>Remaining</Text>
-              <Text style={styles.heroTileValue}>₹{formatCurrency(totalRemaining)}</Text>
-            </View>
-          </View>
-        </Animated.View>
-
-        {/* Loan Offer Notification - Opens Review Modal */}
-        {pendingLoanOffers.length > 0 && (
-          <Animated.View
-            style={[
-              styles.loanOfferNotificationCard,
-              {
-                opacity: notificationFadeAnim,
-                transform: [{ translateY: notificationSlideAnim }],
-              },
-            ]}>
-            <TouchableOpacity
-              onPress={handleReviewLoanOffers}
-              activeOpacity={0.8}>
-              <LinearGradient
-                colors={[colors.ink, colors.inkSoft]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.loanOfferNotificationGradient}>
-                <View style={styles.loanOfferNotificationContent}>
-                  <View style={styles.loanOfferNotificationIcon}>
-                    <Ionicons name="notifications" size={24} color={colors.white} />
-                    <View style={styles.loanOfferBadge}>
-                      <Text style={styles.loanOfferBadgeText}>
-                        {pendingLoanOffers.length > 9 ? '9+' : pendingLoanOffers.length}
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={styles.loanOfferNotificationText}>
-                    <Text style={styles.loanOfferNotificationTitle}>
-                      New Loan Offer{pendingLoanOffers.length !== 1 ? 's' : ''}
-                    </Text>
-                    <Text style={styles.loanOfferNotificationSubtitle} numberOfLines={2}>
-                      {pendingLoanOffers.length === 1
-                        ? `${pendingLoanOffers[0]?.lenderName || pendingLoanOffers[0]?.lenderId?.userName || 'A lender'} offered Rs ${formatCurrency(pendingLoanOffers[0]?.amount)}. Tap to review details`
-                        : `You have ${pendingLoanOffers.length} pending loan offers. Tap to review details`}
-                    </Text>
-                  </View>
-                  <Icon name="chevron-right" size={24} color={colors.white} />
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
-          </Animated.View>
-        )}
-
-        {/* Quick Actions */}
-        <View style={styles.actionsSection}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.actionsGrid}>
-            {quickActions.map((action) => (
-              <TouchableOpacity
-                key={action.id}
-                style={[styles.actionItem, { backgroundColor: action.tint }]}
-                activeOpacity={0.7}
-                onPress={() => {
-                  if (action.screen === 'PendingLoanOffers') {
-                    handleReviewLoanOffers();
-                  } else if (action.screen === 'BorrowerLoanHistoryScreen' && user?._id) {
-                    navigation.navigate(action.screen, { borrowerId: user._id });
-                  } else {
-                    navigation.navigate(action.screen);
-                  }
-                }}>
-                <View style={styles.actionContent}>
-                  <View style={styles.actionTextContent}>
-                    <Text style={styles.actionText}>{action.title}</Text>
-                    <Text style={styles.actionDescription}>{action.description}</Text>
-                  </View>
-                  <View style={styles.actionIconWrapper}>
-                    <View style={styles.actionIcon}>
-                      <Icon name={action.icon} size={19} color={colors.ink} />
-                    </View>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Stats Overview */}
-        <View style={styles.statsSection}>
-          <Text style={styles.sectionTitle}>Loan Overview</Text>
-          <View style={styles.statsGrid}>
-            {[
-              {
-                icon: 'file-text',
-                value: totalActiveLoans,
-                label: 'Active',
-                tint: colors.sky,
-              },
-              {
-                icon: 'trending-up',
-                value: `₹${(totalLoanAmount / 1000).toFixed(0)}K`,
-                label: 'Borrowed',
-                tint: colors.mint,
-              },
-              {
-                icon: 'check-circle',
-                value: `₹${(totalPaid / 1000).toFixed(0)}K`,
-                label: 'Paid',
-                tint: colors.butter,
-              },
-              {
-                icon: 'clock',
-                value: `₹${(totalRemaining / 1000).toFixed(0)}K`,
-                label: 'Remaining',
-                tint: colors.offWhite,
-              },
-            ].map((stat) => (
-              <View key={stat.label} style={styles.statItem}>
-                <View style={[styles.statIcon, { backgroundColor: stat.tint }]}>
-                  <Text style={styles.statValue}>
-                    {stat.value}
-                  </Text>
-                </View>
-                <Text style={styles.statLabel}>{stat.label}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Progress Card */}
-        <Animated.View
-          style={[
-            styles.progressCard,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideUpAnim }],
-            },
-          ]}>
-          <View style={styles.progressTopRow}>
-            <View style={styles.welcomeText}>
-              <Text style={styles.progressTitle}>Repayment Progress</Text>
-              <Text style={styles.progressText}>
-                ₹{formatCurrency(totalPaid)} of ₹{formatCurrency(totalLoanAmount)} paid
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.navy} />}
+      >
+        <Animated.View style={{ opacity: fadeAnim }}>
+          {/* Hero Banner */}
+          <View style={styles.heroBanner}>
+            <View style={styles.heroTextContainer}>
+              <Text style={styles.heroTitle}>Commercial Financing</Text>
+              <Text style={styles.heroSubtitle}>
+                Apply to verified institutional lenders, receive instant terms, and manage amortized facilities.
               </Text>
             </View>
-            <View style={styles.progressPercentPill}>
-              <Text style={styles.progressPercentText}>{Math.round(completionRate)}%</Text>
-            </View>
+
+            <TouchableOpacity
+              style={styles.heroBtn}
+              onPress={() => navigation.navigate('BorrowerExploreLenders')}
+            >
+              <Feather name="search" size={m(14)} color={colors.white} />
+              <Text style={styles.heroBtnText}>Explore Lenders & Apply</Text>
+            </TouchableOpacity>
           </View>
 
-          {/* Progress Bar */}
-          <View style={styles.progressBarWrapper}>
-            <View style={styles.progressBarMain}>
-              <Animated.View
-                style={[
-                  styles.progressFill,
-                  { width: `${completionRate}%` },
-                ]}
-              />
+          {/* Accepted Deal Banner (if active deal exists) */}
+          {stats.latestAccepted ? (
+            <View style={styles.acceptedBanner}>
+              <View style={styles.acceptedBannerHeader}>
+                <View style={styles.acceptedIconBadge}>
+                  <Feather name="check-circle" size={m(18)} color="#16A34A" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.acceptedBannerTitle}>
+                    {formatINR(stats.latestAccepted.amount)} Facility Accepted!
+                  </Text>
+                  <Text style={styles.acceptedLenderName}>
+                    By {stats.latestAccepted.lenderId?.companyName || stats.latestAccepted.lenderId?.userName || 'Institutional Lender'}
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={styles.acceptedBannerDesc}>
+                Purpose: <Text style={styles.boldText}>{stats.latestAccepted.purpose}</Text> · Tenure: <Text style={styles.boldText}>{stats.latestAccepted.tenureMonths} Months</Text>. Other pending applications were auto-closed.
+              </Text>
+
+              <View style={styles.acceptedFooter}>
+                <View style={styles.lenderContactBox}>
+                  <Text style={styles.contactLabel}>Lender Contact</Text>
+                  <Text style={styles.contactVal}>
+                    {stats.latestAccepted.lenderId?.mobileNo || 'Contact via portal'}
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.viewDealBtn}
+                  onPress={() => navigation.navigate('BorrowerApplications')}
+                >
+                  <Text style={styles.viewDealBtnText}>View Deal</Text>
+                  <Feather name="arrow-right" size={m(13)} color={colors.white} />
+                </TouchableOpacity>
+              </View>
             </View>
-            <View style={styles.progressBarLabels}>
-              <Text style={styles.progressLabel}>0%</Text>
-              <Text style={styles.progressLabel}>100%</Text>
-            </View>
+          ) : null}
+
+          {/* 4 Summary KPI Metric Cards */}
+          <Text style={styles.sectionHeader}>Financing Portfolio Overview</Text>
+          <View style={styles.kpiGrid}>
+            {/* KPI 1: Pending */}
+            <TouchableOpacity
+              style={[styles.kpiCard, styles.kpiBorderAmber]}
+              onPress={() => navigation.navigate('BorrowerApplications')}
+            >
+              <View style={styles.kpiCardTop}>
+                <Text style={[styles.kpiTag, { color: '#D97706' }]}>PENDING REVIEW</Text>
+                <View style={[styles.kpiIconWrapper, { backgroundColor: '#FEF3C7' }]}>
+                  <Feather name="clock" size={m(14)} color="#D97706" />
+                </View>
+              </View>
+              <Text style={styles.kpiValue}>{stats.pendingApplications}</Text>
+              <Text style={styles.kpiSub}>With selected lenders</Text>
+            </TouchableOpacity>
+
+            {/* KPI 2: Accepted */}
+            <TouchableOpacity
+              style={[styles.kpiCard, styles.kpiBorderEmerald]}
+              onPress={() => navigation.navigate('BorrowerApplications')}
+            >
+              <View style={styles.kpiCardTop}>
+                <Text style={[styles.kpiTag, { color: '#16A34A' }]}>ACCEPTED DEALS</Text>
+                <View style={[styles.kpiIconWrapper, { backgroundColor: '#DCFCE7' }]}>
+                  <Feather name="check-circle" size={m(14)} color="#16A34A" />
+                </View>
+              </View>
+              <Text style={styles.kpiValue}>{stats.acceptedApplications}</Text>
+              <Text style={styles.kpiSub}>Sanctioned loans</Text>
+            </TouchableOpacity>
+
+            {/* KPI 3: Auto-Closed */}
+            <TouchableOpacity
+              style={[styles.kpiCard, styles.kpiBorderSlate]}
+              onPress={() => navigation.navigate('BorrowerApplications')}
+            >
+              <View style={styles.kpiCardTop}>
+                <Text style={[styles.kpiTag, { color: '#64748B' }]}>AUTO-CLOSED</Text>
+                <View style={[styles.kpiIconWrapper, { backgroundColor: '#F1F5F9' }]}>
+                  <Feather name="x-circle" size={m(14)} color="#64748B" />
+                </View>
+              </View>
+              <Text style={styles.kpiValue}>{stats.autoRejectedApplications}</Text>
+              <Text style={styles.kpiSub}>Closed on acceptance</Text>
+            </TouchableOpacity>
+
+            {/* KPI 4: Active Lenders */}
+            <TouchableOpacity
+              style={[styles.kpiCard, styles.kpiBorderBlue]}
+              onPress={() => navigation.navigate('BorrowerExploreLenders')}
+            >
+              <View style={styles.kpiCardTop}>
+                <Text style={[styles.kpiTag, { color: '#2563EB' }]}>ACTIVE LENDERS</Text>
+                <View style={[styles.kpiIconWrapper, { backgroundColor: '#DBEAFE' }]}>
+                  <Feather name="users" size={m(14)} color="#2563EB" />
+                </View>
+              </View>
+              <Text style={styles.kpiValue}>{stats.totalLendersAvailable}</Text>
+              <Text style={styles.kpiSub}>Ready to finance</Text>
+            </TouchableOpacity>
           </View>
 
-          <View style={styles.progressStats}>
-            <View style={styles.statRow}>
-              <View style={[styles.statDot, { backgroundColor: colors.butterDark }]} />
-              <Text style={styles.statText}>Paid ({loans.filter(l => l.paymentStatus === 'paid').length})</Text>
+          {/* Quick Action Shortcuts */}
+          <Text style={styles.sectionHeader}>Quick Actions</Text>
+          <View style={styles.actionsGrid}>
+            <TouchableOpacity
+              style={styles.actionItem}
+              onPress={() => navigation.navigate('BorrowerExploreLenders')}
+            >
+              <View style={[styles.actionIconBox, { backgroundColor: '#E0F2FE' }]}>
+                <Feather name="search" size={m(20)} color="#0284C7" />
+              </View>
+              <Text style={styles.actionTitle}>Explore Lenders</Text>
+              <Text style={styles.actionDesc}>Compare rates & terms</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionItem}
+              onPress={() => navigation.navigate('BorrowerApply')}
+            >
+              <View style={[styles.actionIconBox, { backgroundColor: '#DCFCE7' }]}>
+                <Feather name="send" size={m(20)} color="#16A34A" />
+              </View>
+              <Text style={styles.actionTitle}>Apply for Loan</Text>
+              <Text style={styles.actionDesc}>Submit to up to 8 lenders</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionItem}
+              onPress={() => navigation.navigate('BorrowerApplications')}
+            >
+              <View style={[styles.actionIconBox, { backgroundColor: '#FEF3C7' }]}>
+                <Feather name="inbox" size={m(20)} color="#D97706" />
+              </View>
+              <Text style={styles.actionTitle}>My Applications</Text>
+              <Text style={styles.actionDesc}>Track status ({stats.totalApplications})</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionItem}
+              onPress={() => navigation.navigate('BorrowerLoansPortfolio')}
+            >
+              <View style={[styles.actionIconBox, { backgroundColor: '#F3E8FF' }]}>
+                <Feather name="credit-card" size={m(20)} color="#9333EA" />
+              </View>
+              <Text style={styles.actionTitle}>Loans & EMI</Text>
+              <Text style={styles.actionDesc}>Repayment schedule</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* 3 Step Financing Guide Card */}
+          <View style={styles.guideCard}>
+            <View style={styles.guideCardHeader}>
+              <Text style={styles.guideBadge}>HOW IT WORKS</Text>
+              <Text style={styles.guideTitle}>Apply to Multiple Lenders with Zero Friction</Text>
             </View>
-            <View style={styles.statRow}>
-              <View style={[styles.statDot, { backgroundColor: colors.border }]} />
-              <Text style={styles.statText}>Pending ({totalActiveLoans})</Text>
+
+            <View style={styles.stepsList}>
+              <View style={styles.stepItem}>
+                <View style={styles.stepNumberBadge}>
+                  <Text style={styles.stepNumberText}>1</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.stepTitle}>Explore & Select</Text>
+                  <Text style={styles.stepDesc}>Browse verified institutions and their loan limits.</Text>
+                </View>
+              </View>
+
+              <View style={styles.stepItem}>
+                <View style={styles.stepNumberBadge}>
+                  <Text style={styles.stepNumberText}>2</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.stepTitle}>Apply to up to 8 Lenders</Text>
+                  <Text style={styles.stepDesc}>Submit one unified application with custom EMI calculator.</Text>
+                </View>
+              </View>
+
+              <View style={styles.stepItem}>
+                <View style={styles.stepNumberBadge}>
+                  <Text style={styles.stepNumberText}>3</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.stepTitle}>First Acceptance Wins</Text>
+                  <Text style={styles.stepDesc}>When a lender accepts, other offers automatically close to prevent over-leverage.</Text>
+                </View>
+              </View>
             </View>
           </View>
         </Animated.View>
-
-        {/* My Loans */}
-        {myLoans.length > 0 && (
-          <View style={styles.loansSection}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleContainer}>
-                <Text style={styles.sectionTitle}>My Loans</Text>
-                <View style={styles.loanCountBadge}>
-                  <Text style={styles.loanCountText}>{loans.length}</Text>
-                </View>
-              </View>
-              <TouchableOpacity
-                style={styles.seeAllButton}
-                onPress={() => navigation.navigate('MyLoans')}>
-                <Text style={styles.seeAllText}>View All</Text>
-                <Icon name="chevron-right" size={14} color={colors.white} />
-              </TouchableOpacity>
-            </View>
-            <FlatList
-              data={myLoans}
-              renderItem={renderMyLoan}
-              keyExtractor={item => item._id}
-              scrollEnabled={false}
-            />
-          </View>
-        )}
       </ScrollView>
-      <PromptBox
-        visible={exitPromptVisible}
-        title="Exit App"
-        message="Do you want to exit the app?"
-        confirmText="Exit App"
-        cancelText="Cancel"
-        onConfirm={() => {
-          setExitPromptVisible(false);
-          BackHandler.exitApp();
-        }}
-        onCancel={() => setExitPromptVisible(false)}
-      />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: '#F8FAFC',
   },
-  scrollView: {
-    flex: 1,
-    marginTop: -m(24),
-    zIndex: 2,
-    elevation: 2,
-  },
-  scrollContent: {
-    paddingBottom: m(100),
-  },
-
-  // TOP GREEN HEADER STYLES
-  topHeader: {
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || m(24)) + m(16) : m(54),
-    paddingBottom: m(36),
-    paddingHorizontal: m(20),
-    borderBottomLeftRadius: m(32),
-    borderBottomRightRadius: m(32),
-  },
-  topHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  greetingText: {
-    flex: 1,
-    marginRight: m(12),
-    fontSize: m(18),
-    lineHeight: m(24),
-    color: colors.white,
-    fontFamily: FontFamily.primaryBold,
-  },
-
-  // HERO SECTION STYLES
-  heroCard: {
-    marginHorizontal: m(18),
-    marginTop: 0,
-    backgroundColor: colors.white,
-    borderRadius: m(22),
-    paddingHorizontal: m(18),
-    paddingTop: m(18),
+  topNav: {
+    backgroundColor: '#0F172A',
+    paddingHorizontal: m(16),
+    paddingTop: m(12),
     paddingBottom: m(16),
-  },
-  welcomeText: {
-    flex: 1,
-  },
-  heroTitle: {
-    fontSize: m(22),
-    lineHeight: m(27),
-    fontFamily: FontFamily.primaryExtraBold,
-    color: colors.ink,
-    marginBottom: m(6),
-  },
-  heroSubtitle: {
-    fontSize: m(12),
-    lineHeight: m(17),
-    color: colors.textSecondary,
-    fontFamily: FontFamily.bodyRegular,
-    marginBottom: m(20),
-  },
-  heroTilesRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
   },
-  heroTile: {
-    width: '47%',
-    borderRadius: m(14),
-    paddingHorizontal: m(14),
-    paddingTop: m(16),
-    paddingBottom: m(14),
-    minHeight: m(108),
-  },
-  heroTileIcon: {
-    width: m(30),
-    height: m(30),
-    borderRadius: m(15),
-    backgroundColor: colors.white,
-    justifyContent: 'center',
+  userInfo: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: m(18),
+    gap: m(10),
   },
-  heroTileLabel: {
-    fontSize: m(10),
-    color: colors.inkSoft,
-    fontFamily: FontFamily.primarySemiBold,
-    marginBottom: m(5),
-  },
-  heroTileValue: {
-    fontSize: m(16),
-    lineHeight: m(21),
-    color: colors.ink,
-    fontFamily: FontFamily.primaryExtraBold,
-  },
-  avatarContainer: {
-    position: 'relative',
-  },
-  avatar: {
-    width: m(48),
-    height: m(48),
-    borderRadius: m(24),
-    justifyContent: 'center',
+  userAvatar: {
+    width: m(40),
+    height: m(40),
+    borderRadius: m(12),
+    backgroundColor: '#1E293B',
+    borderWidth: 1,
+    borderColor: '#334155',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    justifyContent: 'center',
   },
   avatarText: {
-    color: colors.white,
-    fontSize: FontSizes.lg,
-    fontFamily: FontFamily.secondaryBold,
-  },
-  onlineIndicator: {
-    position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: m(12),
-    height: m(12),
-    borderRadius: m(6),
-    backgroundColor: colors.success,
-    borderWidth: 2,
-    borderColor: colors.white,
-  },
-
-  // Loan Offer Notification Card
-  loanOfferNotificationCard: {
-    marginHorizontal: m(16),
-    marginBottom: m(16),
-    borderRadius: m(16),
-    overflow: 'hidden',
-    elevation: 4,
-    shadowColor: colors.navyDark,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    marginVertical:14
-  },
-  loanOfferNotificationGradient: {
-    borderRadius: m(16),
-    padding: m(16),
-  },
-  loanOfferNotificationContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  loanOfferNotificationIcon: {
-    position: 'relative',
-    marginRight: m(12),
-  },
-  loanOfferBadge: {
-    position: 'absolute',
-    top: -m(6),
-    right: -m(6),
-    backgroundColor: colors.error,
-    borderRadius: m(10),
-    minWidth: m(20),
-    height: m(20),
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: m(4),
-    borderWidth: 2,
-    borderColor: colors.white,
-  },
-  loanOfferBadgeText: {
-    color: colors.white,
-    fontSize: m(10),
-    fontWeight: '700',
-  },
-  loanOfferNotificationText: {
-    flex: 1,
-  },
-  loanOfferNotificationTitle: {
     fontSize: m(16),
     fontWeight: '700',
-    color: colors.white,
-    marginBottom: m(4),
+    color: '#38BDF8',
   },
-  loanOfferNotificationSubtitle: {
-    fontSize: m(12),
-    color: colors.white,
-    opacity: 0.9,
-  },
-  // ============================================
-  // QUICK ACTIONS SECTION STYLES
-  // ============================================
-  actionsSection: {
-    paddingHorizontal: m(16),
-    marginTop: m(14),
-    marginBottom: m(16),
-  },
-  sectionTitle: {
-    fontSize: m(16),
-    lineHeight: m(22),
-    fontFamily: FontFamily.primarySemiBold,
-    color: colors.ink,
-    marginBottom: m(16),
-  },
-  actionsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-  },
-  actionItem: {
-    width: '48%',
-    marginBottom: m(16),
-    padding: m(18),
-    borderRadius: m(20),
-    position: 'relative',
-    overflow: 'hidden',
-    minHeight: m(120),
-  },
-  actionContent: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  actionTextContent: {
-    flex: 1,
-    paddingRight: m(10),
-  },
-  actionText: {
-    fontSize: m(15),
-    lineHeight: m(20),
-    color: colors.ink,
-    fontFamily: FontFamily.primarySemiBold,
-    marginBottom: m(3),
-  },
-  actionDescription: {
-    fontSize: m(12),
-    color: colors.inkSoft,
-    fontFamily: FontFamily.bodyRegular,
-    lineHeight: m(16),
-    marginBottom: 10,
-  },
-  actionIconWrapper: {
-    position: 'absolute',
-    bottom: m(-8),
-    right: m(-8),
-  },
-  actionIcon: {
-    width: m(48),
-    height: m(48),
-    borderRadius: m(16),
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.white,
-  },
-
-  // ============================================
-  // STATS SECTION STYLES
-  // ============================================
-  statsSection: {
-    paddingHorizontal: m(16),
-    marginBottom: m(16),
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-  },
-  statItem: {
-    alignItems: 'center',
-    width: '23%',
-    marginBottom: m(16),
-  },
-  statIcon: {
-    width: m(60),
-    height: m(60),
-    borderRadius: m(20),
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: m(8),
-  },
-  statValue: {
-    fontSize: FontSizes.lg,
-    color: colors.ink,
-    fontFamily: FontFamily.primaryExtraBold,
-  },
-  statLabel: {
-    fontSize: m(10),
-    lineHeight: m(14),
-    color: colors.ink,
-    fontFamily: FontFamily.bodyMedium,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    textAlign: 'center',
-  },
-
-  // ============================================
-  // PROGRESS CARD STYLES
-  // ============================================
-  progressCard: {
-    marginHorizontal: m(16),
-    marginBottom: m(20),
-    borderRadius: m(24),
-    padding: m(20),
-    backgroundColor: colors.surface,
-  },
-  progressTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: m(16),
-  },
-  progressPercentPill: {
-    backgroundColor: colors.sky,
-    borderRadius: m(20),
-    paddingHorizontal: m(14),
-    paddingVertical: m(8),
-  },
-  progressPercentText: {
-    fontSize: FontSizes.base,
-    fontFamily: FontFamily.primaryExtraBold,
-    color: colors.skyText,
-  },
-  progressTitle: {
-    fontSize: FontSizes.lg,
-    fontFamily: FontFamily.primarySemiBold,
-    color: colors.ink,
-    marginBottom: m(4),
-  },
-  progressText: {
-    fontSize: FontSizes.sm,
-    color: colors.textSecondary,
-    fontFamily: FontFamily.primaryRegular,
-  },
-  progressStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: m(14),
-  },
-  statRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statDot: {
-    width: m(8),
-    height: m(8),
-    borderRadius: m(4),
-    marginRight: m(6),
-  },
-  statText: {
-    fontSize: FontSizes.xs,
-    color: colors.textSecondary,
-    fontFamily: FontFamily.primaryRegular,
-  },
-  progressBarWrapper: {
-    marginTop: m(4),
-  },
-  progressBarMain: {
-    height: m(12),
-    backgroundColor: colors.borderLight,
-    borderRadius: m(6),
-    overflow: 'hidden',
-    marginBottom: m(6),
-    position: 'relative',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: colors.butterDark,
-    borderRadius: m(6),
-  },
-  progressBarLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  progressLabel: {
-    fontSize: FontSizes.xs,
-    color: colors.textMuted,
-    fontFamily: FontFamily.primaryRegular,
-  },
-
-  // MY LOANS SECTION STYLES
-  loansSection: {
-    paddingHorizontal: m(16),
-    marginBottom: m(16),
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: m(16),
-  },
-  sectionTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  loanCountBadge: {
-    backgroundColor: colors.butter,
-    borderRadius: m(10),
-    paddingHorizontal: m(8),
-    paddingVertical: m(2),
-    marginLeft: m(8),
-    marginBottom: m(12),
-  },
-  loanCountText: {
-    fontSize: FontSizes.xs,
-    color: colors.ink,
-    fontFamily: FontFamily.primaryBold,
-  },
-  seeAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.ink,
-    paddingHorizontal: m(12),
-    paddingVertical: m(6),
-    borderRadius: m(20),
-  },
-  seeAllText: {
-    fontSize: FontSizes.sm,
-    color: colors.white,
-    fontFamily: FontFamily.primarySemiBold,
-    marginRight: m(4),
-  },
-  loanCard: {
-    borderRadius: m(22),
-    padding: m(18),
-    marginBottom: m(12),
-  },
-  loanCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: m(16),
-  },
-  loanCardLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  lenderAvatar: {
-    width: m(44),
-    height: m(44),
-    borderRadius: m(22),
-    backgroundColor: colors.white,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: m(12),
-  },
-  lenderAvatarText: {
-    fontSize: FontSizes.lg,
-    color: colors.ink,
-    fontFamily: FontFamily.primaryBold,
-  },
-  loanLenderName: {
-    fontSize: FontSizes.base,
-    fontFamily: FontFamily.primarySemiBold,
-    color: colors.inkSoft,
-    marginBottom: m(2),
-  },
-  loanAmountText: {
-    fontSize: FontSizes.lg,
-    fontFamily: FontFamily.primaryBold,
-    color: colors.ink,
-  },
-  statusBadge: {
-    paddingHorizontal: m(12),
-    paddingVertical: m(6),
-    borderRadius: m(20),
-    backgroundColor: colors.ink,
-  },
-  statusBadgeText: {
-    fontSize: FontSizes.xs,
-    fontFamily: FontFamily.primarySemiBold,
-    textTransform: 'uppercase',
-    color: colors.white,
-  },
-  loanProgressSection: {
-    marginBottom: m(14),
-  },
-  progressBarContainer: {
-    marginBottom: m(8),
-  },
-  progressBarBg: {
-    height: m(8),
-    backgroundColor: 'rgba(255, 255, 255, 0.6)',
-    borderRadius: m(4),
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: m(4),
-    backgroundColor: colors.ink,
-  },
-  progressLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  progressLabelText: {
-    fontSize: FontSizes.xs,
-    color: colors.inkSoft,
-    fontFamily: FontFamily.primaryRegular,
-  },
-  loanCardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: m(14),
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0, 0, 0, 0.08)',
-  },
-  loanFooterItem: {
+  roleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: m(6),
   },
-  loanFooterText: {
-    fontSize: FontSizes.sm,
-    color: colors.inkSoft,
-    fontFamily: FontFamily.primaryRegular,
-  },
-  viewDetailsBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(4),
-    backgroundColor: colors.ink,
-    paddingHorizontal: m(12),
-    paddingVertical: m(6),
-    borderRadius: m(20),
-  },
-  viewDetailsText: {
-    fontSize: FontSizes.sm,
+  greetingTitle: {
+    fontSize: m(15),
+    fontWeight: '700',
     color: colors.white,
-    fontFamily: FontFamily.primarySemiBold,
   },
-
-  // ACTIVITY SECTION STYLES
-  activitySection: {
-    paddingHorizontal: m(16),
-    marginBottom: m(24),
-  },
-  activityIndicator: {
-    width: m(8),
-    height: m(8),
+  roleTag: {
+    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+    paddingHorizontal: m(6),
+    paddingVertical: m(2),
     borderRadius: m(4),
-    backgroundColor: colors.gold,
-    marginLeft: m(8),
-    marginBottom: m(10),
+    borderWidth: 1,
+    borderColor: 'rgba(99, 102, 241, 0.4)',
   },
-  activityItem: {
-    flexDirection: 'row',
-    backgroundColor: colors.surface,
-    borderRadius: m(20),
-    marginBottom: m(12),
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 6,
-    borderLeftWidth: m(4),
-    borderLeftColor: 'transparent',
-    overflow: 'hidden',
+  roleTagText: {
+    fontSize: m(9),
+    fontWeight: '700',
+    color: '#A5B4FC',
   },
-  timeline: {
-    width: m(40),
+  subGreeting: {
+    fontSize: m(11),
+    color: '#94A3B8',
+    marginTop: m(1),
+  },
+  profileBtn: {
+    width: m(36),
+    height: m(36),
+    borderRadius: m(10),
+    backgroundColor: '#1E293B',
     alignItems: 'center',
-    paddingTop: m(20),
+    justifyContent: 'center',
   },
-  timelineDot: {
-    width: m(12),
-    height: m(12),
-    borderRadius: m(6),
-    zIndex: 2,
+  scrollContent: {
+    padding: m(16),
+    gap: m(16),
+    paddingBottom: m(90),
   },
-  timelineLine: {
-    width: m(2),
+  heroBanner: {
+    backgroundColor: '#0F172A',
+    borderRadius: m(18),
+    padding: m(18),
+    borderWidth: 1,
+    borderColor: '#1E293B',
+  },
+  heroTextContainer: {
+    marginBottom: m(14),
+  },
+  heroTitle: {
+    fontSize: m(18),
+    fontWeight: '800',
+    color: colors.white,
+  },
+  heroSubtitle: {
+    fontSize: m(12),
+    color: '#94A3B8',
+    marginTop: m(4),
+    lineHeight: m(17),
+  },
+  heroBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: m(8),
+    backgroundColor: '#2563EB',
+    paddingVertical: m(10),
+    paddingHorizontal: m(16),
+    borderRadius: m(12),
+    alignSelf: 'flex-start',
+  },
+  heroBtnText: {
+    fontSize: m(13),
+    fontWeight: '700',
+    color: colors.white,
+  },
+  acceptedBanner: {
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    borderRadius: m(16),
+    padding: m(16),
+  },
+  acceptedBannerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(10),
+  },
+  acceptedIconBadge: {
+    width: m(34),
+    height: m(34),
+    borderRadius: m(10),
+    backgroundColor: '#DCFCE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  acceptedBannerTitle: {
+    fontSize: m(15),
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  acceptedLenderName: {
+    fontSize: m(12),
+    fontWeight: '700',
+    color: '#16A34A',
+  },
+  acceptedBannerDesc: {
+    fontSize: m(12),
+    color: '#475569',
+    marginTop: m(8),
+    lineHeight: m(17),
+  },
+  boldText: {
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  acceptedFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: m(12),
+    paddingTop: m(10),
+    borderTopWidth: 1,
+    borderTopColor: '#DCFCE7',
+  },
+  lenderContactBox: {
     flex: 1,
-    backgroundColor: '#e0e0e0',
+  },
+  contactLabel: {
+    fontSize: m(9),
+    textTransform: 'uppercase',
+    fontWeight: '700',
+    color: '#94A3B8',
+  },
+  contactVal: {
+    fontSize: m(12),
+    fontWeight: '700',
+    color: '#0F172A',
+    marginTop: m(2),
+  },
+  viewDealBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(6),
+    backgroundColor: '#16A34A',
+    paddingHorizontal: m(14),
+    paddingVertical: m(8),
+    borderRadius: m(10),
+  },
+  viewDealBtnText: {
+    fontSize: m(12),
+    fontWeight: '700',
+    color: colors.white,
+  },
+  sectionHeader: {
+    fontSize: m(14),
+    fontWeight: '700',
+    color: '#0F172A',
     marginTop: m(4),
   },
-  activityContent: {
-    flex: 1,
-    padding: m(16),
-    paddingLeft: m(8),
-  },
-  activityHeader: {
+  kpiGrid: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: m(12),
+    flexWrap: 'wrap',
+    gap: m(10),
   },
-  activityIcon: {
-    width: m(40),
-    height: m(40),
-    borderRadius: m(12),
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: m(12),
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  activityTitle: {
-    fontSize: FontSizes.md,
-    fontFamily: FontFamily.primarySemiBold,
-    color: colors.navy,
-    marginBottom: m(2),
-  },
-  activityDescription: {
-    fontSize: FontSizes.sm,
-    color: '#7f8c8d',
-    fontFamily: FontFamily.primaryRegular,
-  },
-  activityAmountContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    paddingHorizontal: m(12),
-    paddingVertical: m(6),
-    borderRadius: m(12),
+  kpiCard: {
+    width: '48%',
+    backgroundColor: colors.white,
+    borderRadius: m(14),
+    padding: m(14),
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
+    borderColor: '#E2E8F0',
   },
-  activityAmount: {
-    fontSize: FontSizes.base,
-    fontFamily: FontFamily.primaryBold,
+  kpiBorderAmber: {
+    borderLeftWidth: 3,
+    borderLeftColor: '#F59E0B',
   },
-  activityFooter: {
+  kpiBorderEmerald: {
+    borderLeftWidth: 3,
+    borderLeftColor: '#10B981',
+  },
+  kpiBorderSlate: {
+    borderLeftWidth: 3,
+    borderLeftColor: '#64748B',
+  },
+  kpiBorderBlue: {
+    borderLeftWidth: 3,
+    borderLeftColor: '#3B82F6',
+  },
+  kpiCardTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  timeContainer: {
+  kpiTag: {
+    fontSize: m(9),
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  kpiIconWrapper: {
+    width: m(24),
+    height: m(24),
+    borderRadius: m(6),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  kpiValue: {
+    fontSize: m(22),
+    fontWeight: '800',
+    color: '#0F172A',
+    marginTop: m(8),
+  },
+  kpiSub: {
+    fontSize: m(11),
+    color: '#94A3B8',
+    marginTop: m(2),
+  },
+  actionsGrid: {
     flexDirection: 'row',
-    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: m(10),
   },
-  activityTime: {
-    fontSize: FontSizes.xs,
-    color: '#7f8c8d',
-    fontFamily: FontFamily.primaryRegular,
-    marginLeft: m(4),
+  actionItem: {
+    width: '48%',
+    backgroundColor: colors.white,
+    borderRadius: m(14),
+    padding: m(14),
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: m(6),
   },
-
-  // LOADING & EMPTY STATES
-  loadingContainer: {
-    padding: m(30),
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: m(16),
-  },
-  loadingText: {
-    marginTop: m(10),
-    fontSize: FontSizes.sm,
-    color: colors.textSecondary,
-    fontFamily: FontFamily.primaryRegular,
-  },
-  emptyContainer: {
-    padding: m(40),
+  actionIconBox: {
+    width: m(38),
+    height: m(38),
+    borderRadius: m(10),
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: m(16),
   },
-  emptyText: {
-    marginTop: m(12),
-    fontSize: FontSizes.base,
-    color: colors.textMuted,
-    fontFamily: FontFamily.primaryRegular,
+  actionTitle: {
+    fontSize: m(13),
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  actionDesc: {
+    fontSize: m(10),
+    color: '#64748B',
+  },
+  guideCard: {
+    backgroundColor: colors.white,
+    borderRadius: m(16),
+    padding: m(16),
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  guideCardHeader: {
+    marginBottom: m(12),
+  },
+  guideBadge: {
+    fontSize: m(9),
+    fontWeight: '700',
+    color: '#2563EB',
+    textTransform: 'uppercase',
+  },
+  guideTitle: {
+    fontSize: m(14),
+    fontWeight: '700',
+    color: '#0F172A',
+    marginTop: m(2),
+  },
+  stepsList: {
+    gap: m(12),
+  },
+  stepItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: m(10),
+  },
+  stepNumberBadge: {
+    width: m(24),
+    height: m(24),
+    borderRadius: m(12),
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepNumberText: {
+    fontSize: m(11),
+    fontWeight: '700',
+    color: '#2563EB',
+  },
+  stepTitle: {
+    fontSize: m(12),
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  stepDesc: {
+    fontSize: m(11),
+    color: '#64748B',
+    marginTop: m(2),
+    lineHeight: m(15),
   },
 });
-
