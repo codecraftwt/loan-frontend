@@ -3,6 +3,7 @@ import {StatusBar} from 'react-native';
 import Navigation from './src/Navigations/Navigations';
 import {PaperProvider} from 'react-native-paper';
 import {NavigationContainer} from '@react-navigation/native';
+import {SafeAreaProvider} from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import {toastConfig} from './src/Utils/toastConfig';
 import {Provider, useSelector, useDispatch} from 'react-redux';
@@ -103,7 +104,9 @@ export default function App() {
   return (
     <Provider store={store}>
       <PaperProvider>
-        <AppContent />
+        <SafeAreaProvider>
+          <AppContent />
+        </SafeAreaProvider>
       </PaperProvider>
     </Provider>
   );

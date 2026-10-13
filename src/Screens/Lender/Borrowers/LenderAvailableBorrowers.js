@@ -12,6 +12,7 @@ import {
   TextInput,
   Linking,
   Alert,
+  Platform,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
@@ -345,7 +346,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: m(16),
-    paddingTop: m(16),
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || m(24)) + m(8) : m(16),
     paddingBottom: m(10),
   },
   title: {

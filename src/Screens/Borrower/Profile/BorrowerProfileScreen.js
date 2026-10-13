@@ -10,12 +10,16 @@ import {
   SafeAreaView,
   StatusBar,
   Alert,
+  Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
+import { useDispatch } from 'react-redux';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { m } from 'walstar-rn-responsive';
 import { colors } from '../../../constants';
 import borrowerFlowService from '../../../Services/borrowerFlowService';
+import { logout } from '../../../Redux/Slices/authslice';
 
 const BUSINESS_TYPES = [
   'Private Limited Company',
@@ -34,9 +38,32 @@ const EMPLOYMENT_TYPES = [
 
 export default function BorrowerProfileScreen() {
   const navigation = useNavigation();
+  const dispatch = useDispatch();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeSection, setActiveSection] = useState('all'); // 'all' | 'personal' | 'business' | 'address'
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out from Borrower Workspace?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            dispatch(logout());
+            await AsyncStorage.clear();
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'Login' }],
+            });
+          },
+        },
+      ]
+    );
+  };
 
   const [profile, setProfile] = useState({
     userName: '',
@@ -512,6 +539,27 @@ export default function BorrowerProfileScreen() {
               </>
             )}
           </TouchableOpacity>
+
+          {/* Security & Password Link */}
+          <TouchableOpacity
+            style={styles.securityBtn}
+            onPress={() => navigation.navigate('BorrowerSecurityScreen')}
+            activeOpacity={0.8}
+          >
+            <Feather name="lock" size={m(15)} color="#2563EB" />
+            <Text style={styles.securityBtnText}>Security & Change Password</Text>
+            <Feather name="chevron-right" size={m(15)} color="#94A3B8" />
+          </TouchableOpacity>
+
+          {/* Sign Out Button */}
+          <TouchableOpacity
+            style={styles.logoutBtn}
+            onPress={handleLogout}
+            activeOpacity={0.8}
+          >
+            <Feather name="log-out" size={m(16)} color="#DC2626" />
+            <Text style={styles.logoutBtnText}>Sign Out of Borrower Portal</Text>
+          </TouchableOpacity>
         </ScrollView>
       )}
     </SafeAreaView>
@@ -533,7 +581,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: m(16),
-    paddingVertical: m(14),
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || m(24)) + m(10) : m(14),
+    paddingBottom: m(14),
     backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
@@ -725,5 +774,40 @@ const styles = StyleSheet.create({
     fontSize: m(15),
     fontWeight: '700',
     color: colors.white,
+  },
+  securityBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    borderRadius: m(14),
+    paddingVertical: m(14),
+    paddingHorizontal: m(16),
+    marginTop: m(12),
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: m(10),
+  },
+  securityBtnText: {
+    flex: 1,
+    fontSize: m(13),
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  logoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FEE2E2',
+    borderRadius: m(14),
+    paddingVertical: m(14),
+    marginTop: m(12),
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    gap: m(8),
+  },
+  logoutBtnText: {
+    fontSize: m(14),
+    fontWeight: '700',
+    color: '#DC2626',
   },
 });

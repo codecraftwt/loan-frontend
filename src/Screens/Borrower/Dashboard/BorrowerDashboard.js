@@ -10,16 +10,21 @@ import {
   StatusBar,
   SafeAreaView,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Alert } from 'react-native';
 import { m } from 'walstar-rn-responsive';
 import { FontFamily, colors } from '../../../constants';
 import borrowerFlowService from '../../../Services/borrowerFlowService';
+import { logout } from '../../../Redux/Slices/authslice';
 
 export default function BorrowerDashboard() {
   const navigation = useNavigation();
+  const dispatch = useDispatch();
   const user = useSelector(state => state.auth.user);
 
   const [stats, setStats] = useState({
@@ -69,6 +74,28 @@ export default function BorrowerDashboard() {
     fetchDashboardStats();
   };
 
+  const handleLogout = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out from Borrower Workspace?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            dispatch(logout());
+            await AsyncStorage.clear();
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'Login' }],
+            });
+          },
+        },
+      ]
+    );
+  };
+
   const formatINR = (val) => {
     if (!val) return '₹0';
     const num = Number(val);
@@ -102,12 +129,21 @@ export default function BorrowerDashboard() {
           </View>
         </View>
 
-        <TouchableOpacity
-          style={styles.profileBtn}
-          onPress={() => navigation.navigate('BorrowerProfileScreen')}
-        >
-          <Feather name="user" size={m(18)} color={colors.white} />
-        </TouchableOpacity>
+        <View style={styles.topNavActions}>
+          <TouchableOpacity
+            style={styles.profileBtn}
+            onPress={() => navigation.navigate('BorrowerProfileScreen')}
+          >
+            <Feather name="user" size={m(18)} color={colors.white} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.logoutNavBtn}
+            onPress={handleLogout}
+          >
+            <Feather name="log-out" size={m(17)} color="#F87171" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -338,7 +374,7 @@ const styles = StyleSheet.create({
   topNav: {
     backgroundColor: '#0F172A',
     paddingHorizontal: m(16),
-    paddingTop: m(12),
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || m(24)) + m(8) : m(12),
     paddingBottom: m(16),
     flexDirection: 'row',
     alignItems: 'center',
@@ -392,11 +428,26 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     marginTop: m(1),
   },
+  topNavActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(8),
+  },
   profileBtn: {
     width: m(36),
     height: m(36),
     borderRadius: m(10),
     backgroundColor: '#1E293B',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoutNavBtn: {
+    width: m(36),
+    height: m(36),
+    borderRadius: m(10),
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
     alignItems: 'center',
     justifyContent: 'center',
   },

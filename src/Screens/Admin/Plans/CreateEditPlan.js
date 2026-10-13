@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,12 +8,11 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Switch,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { Picker } from '@react-native-picker/picker';
 import { useDispatch, useSelector } from 'react-redux';
 import Icon from 'react-native-vector-icons/Feather';
-import LinearGradient from 'react-native-linear-gradient';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
 import {
@@ -22,13 +21,44 @@ import {
   clearErrors,
 } from '../../../Redux/Slices/adminPlanSlice';
 
-// Duration options for plan selection
-const DURATION_OPTIONS = [
-  { label: '1 month', value: '1 month' },
-  { label: '2 months', value: '2 months' },
-  { label: '3 months', value: '3 months' },
-  { label: '6 months', value: '6 months' },
-  { label: '1 year', value: '1 year' },
+// Duration presets directly matching web app Plan.jsx
+const DURATION_PRESETS = [
+  {
+    label: '1 Month',
+    duration: '1 month',
+    days: 30,
+    tag: 'Standard Monthly',
+    price: 1999,
+    monthly: 1999,
+    tier: 'starter',
+  },
+  {
+    label: '3 Months',
+    duration: '3 months',
+    days: 90,
+    tag: 'Quarterly Saver • Save 16%',
+    price: 4999,
+    monthly: 1666,
+    tier: 'pro',
+  },
+  {
+    label: '6 Months',
+    duration: '6 months',
+    days: 180,
+    tag: 'Most Popular • Save 25%',
+    price: 8999,
+    monthly: 1499,
+    tier: 'pro',
+  },
+  {
+    label: '1 Year',
+    duration: '1 year',
+    days: 365,
+    tag: 'Best Value • Save 37%',
+    price: 14999,
+    monthly: 1249,
+    tier: 'enterprise',
+  },
 ];
 
 export default function CreateEditPlan() {
@@ -36,298 +66,297 @@ export default function CreateEditPlan() {
   const route = useRoute();
   const dispatch = useDispatch();
   const { creating, updating, createError, updateError } = useSelector(
-    state => state.adminPlans,
+    state => state.adminPlans
   );
 
   const { plan, mode } = route.params || {};
   const isEditMode = mode === 'edit' && plan;
 
-  // Form state
-  const [planName, setPlanName] = useState('');
+  // Form State
+  const [planName, setPlanName] = useState('1 Month Plan');
   const [duration, setDuration] = useState('1 month');
-  const [priceMonthly, setPriceMonthly] = useState('');
-  const [description, setDescription] = useState('');
-  const [razorpayPlanId, setRazorpayPlanId] = useState('');
-  const [advancedAnalytics, setAdvancedAnalytics] = useState(false);
-  const [prioritySupport, setPrioritySupport] = useState(false);
+  const [durationDays, setDurationDays] = useState(30);
+  const [price, setPrice] = useState('1999');
+  const [priceMonthly, setPriceMonthly] = useState('1999');
+  const [tag, setTag] = useState('Standard Monthly');
+  const [tier, setTier] = useState('starter');
+  const [description, setDescription] = useState(
+    'Full unrestricted platform access for 30 days. All underwriting and borrower services included.'
+  );
   const [isActive, setIsActive] = useState(true);
 
-  // Initialize form with plan data in edit mode
+  // Initialize form in edit mode
   useEffect(() => {
     if (isEditMode && plan) {
+      const days =
+        plan.durationDays ||
+        (plan.duration === '1 year'
+          ? 365
+          : plan.duration === '6 months'
+          ? 180
+          : plan.duration === '3 months'
+          ? 90
+          : 30);
+      const packPrice = plan.price || plan.priceMonthly || 1999;
+      const monthlyRate = plan.priceMonthly || Math.round(packPrice / (days / 30));
+
       setPlanName(plan.planName || '');
       setDuration(plan.duration || '1 month');
-      setPriceMonthly(plan.priceMonthly?.toString() || '');
+      setDurationDays(days);
+      setPrice(String(packPrice));
+      setPriceMonthly(String(monthlyRate));
+      setTag(plan.tag || '');
+      setTier(plan.tier || 'starter');
       setDescription(plan.description || '');
-      setRazorpayPlanId(plan.razorpayPlanId || '');
-      setAdvancedAnalytics(plan.planFeatures?.advancedAnalytics ?? false);
-      setPrioritySupport(plan.planFeatures?.prioritySupport ?? false);
       setIsActive(plan.isActive !== undefined ? plan.isActive : true);
     }
   }, [isEditMode, plan]);
 
-  // Handle errors
-  useEffect(() => {
-    if (createError) {
-      Alert.alert('Error', createError);
-      dispatch(clearErrors());
-    }
-    if (updateError) {
-      Alert.alert('Error', updateError);
-      dispatch(clearErrors());
-    }
-  }, [createError, updateError, dispatch]);
+  // Handle Preset Select
+  const handleSelectPreset = preset => {
+    setPlanName(`${preset.label} Plan`);
+    setDuration(preset.duration);
+    setDurationDays(preset.days);
+    setPrice(String(preset.price));
+    setPriceMonthly(String(preset.monthly));
+    setTag(preset.tag);
+    setTier(preset.tier);
+    setDescription(
+      `${preset.days} days uninterrupted access. All platform services and borrower underwriting features included.`
+    );
+  };
 
-  // Form validation
-  const validateForm = useCallback(() => {
+  // Form Validation
+  const validate = () => {
     if (!planName.trim()) {
-      Alert.alert('Error', 'Plan name is required');
+      Alert.alert('Validation Error', 'Plan Name is required.');
       return false;
     }
-    if (!duration) {
-      Alert.alert('Error', 'Duration is required');
-      return false;
-    }
-    const price = parseFloat(priceMonthly);
-    if (!priceMonthly || isNaN(price) || price <= 0) {
-      Alert.alert('Error', 'Valid monthly price is required');
+    const numPrice = Number(price);
+    if (!price || isNaN(numPrice) || numPrice <= 0) {
+      Alert.alert('Validation Error', 'Please enter a valid price amount.');
       return false;
     }
     return true;
-  }, [planName, duration, priceMonthly]);
+  };
 
-  // Handle form submission
-  const handleSubmit = useCallback(async () => {
-    if (!validateForm()) return;
+  // Submit Handler
+  const handleSubmit = async () => {
+    if (!validate()) return;
 
-    const planData = {
+    const payload = {
       planName: planName.trim(),
       duration,
-      priceMonthly: parseFloat(priceMonthly),
-      description: description.trim() || undefined,
-      razorpayPlanId: razorpayPlanId.trim() || undefined,
-      planFeatures: {
-        advancedAnalytics,
-        prioritySupport,
-      },
+      durationDays: Number(durationDays),
+      price: Number(price),
+      priceMonthly: Number(priceMonthly) || Number(price),
+      tag: tag.trim(),
+      tier,
+      description: description.trim(),
+      allServicesIncluded: true,
       isActive,
     };
 
     if (isEditMode) {
       const result = await dispatch(
-        updatePlan({ planId: plan._id, planData }),
+        updatePlan({ planId: plan._id, planData: payload })
       );
       if (updatePlan.fulfilled.match(result)) {
         Alert.alert('Success', 'Plan updated successfully!', [
-          {
-            text: 'OK',
-            onPress: () => navigation.goBack(),
-          },
+          { text: 'OK', onPress: () => navigation.goBack() },
         ]);
+      } else {
+        Alert.alert('Error', updateError || 'Failed to update plan.');
       }
     } else {
-      const result = await dispatch(createPlan(planData));
+      const result = await dispatch(createPlan(payload));
       if (createPlan.fulfilled.match(result)) {
         Alert.alert('Success', 'Plan created successfully!', [
-          {
-            text: 'OK',
-            onPress: () => navigation.goBack(),
-          },
+          { text: 'OK', onPress: () => navigation.goBack() },
         ]);
+      } else {
+        Alert.alert('Error', createError || 'Failed to create plan.');
       }
     }
-  }, [
-    validateForm,
-    planName,
-    duration,
-    priceMonthly,
-    description,
-    razorpayPlanId,
-    advancedAnalytics,
-    prioritySupport,
-    isActive,
-    isEditMode,
-    plan,
-    dispatch,
-    navigation,
-  ]);
+  };
 
-  // Toggle component renderer
-  const renderToggle = useCallback(
-    (label, value, onToggle) => (
-      <TouchableOpacity
-        style={styles.toggleContainer}
-        onPress={onToggle}
-        activeOpacity={0.7}>
-        <Text style={styles.toggleLabel}>{label}</Text>
-        <View
-          style={[
-            styles.toggleSwitch,
-            value ? styles.toggleSwitchActive : styles.toggleSwitchInactive,
-          ]}>
-          <View
-            style={[
-              styles.toggleThumb,
-              value ? styles.toggleThumbActive : styles.toggleThumbInactive,
-            ]}
-          />
-        </View>
-      </TouchableOpacity>
-    ),
-    [],
-  );
-
-  // Memoized submit button text
-  const submitButtonText = useMemo(() => {
-    if (creating || updating) return 'Processing...';
-    return isEditMode ? 'Update Plan' : 'Create Plan';
-  }, [creating, updating, isEditMode]);
-
-  const isLoading = creating || updating;
+  const isSaving = creating || updating;
 
   return (
     <View style={styles.container}>
       <Header
-        title={isEditMode ? 'Edit Plan' : 'Create Plan'}
+        title={isEditMode ? 'Configure SaaS Plan' : 'Create Pricing Plan'}
         showBackButton
       />
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
-        <View style={styles.formCard}>
-          <Text style={styles.formTitle}>
-            {isEditMode ? 'Edit Plan Details' : 'Create New Plan'}
-          </Text>
-          {!isEditMode && (
-            <Text style={styles.formSubtitle}>
-              Fill in the details to create a new subscription plan
-            </Text>
-          )}
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Plan Name *</Text>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Presets Strip */}
+        <Text style={styles.sectionHeading}>Duration & Pricing Presets</Text>
+        <View style={styles.presetRow}>
+          {DURATION_PRESETS.map((p, idx) => (
+            <TouchableOpacity
+              key={idx}
+              style={[
+                styles.presetCard,
+                duration === p.duration && styles.activePresetCard,
+              ]}
+              activeOpacity={0.8}
+              onPress={() => handleSelectPreset(p)}
+            >
+              <Text
+                style={[
+                  styles.presetLabel,
+                  duration === p.duration && styles.activePresetLabel,
+                ]}
+              >
+                {p.label}
+              </Text>
+              <Text
+                style={[
+                  styles.presetPrice,
+                  duration === p.duration && styles.activePresetPrice,
+                ]}
+              >
+                ₹{p.price}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Form Card */}
+        <View style={styles.formCard}>
+          {/* Plan Name */}
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>Plan Name *</Text>
             <TextInput
               style={styles.input}
+              placeholder="e.g. 1 Month Starter Plan"
+              placeholderTextColor="#94a3b8"
               value={planName}
               onChangeText={setPlanName}
-              placeholder="e.g., Premium Plan - 1 Month"
-              placeholderTextColor="#999"
-              editable={!isLoading}
             />
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Duration *</Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={duration}
-                onValueChange={setDuration}
-                style={styles.picker}
-                dropdownIconColor="#666"
-                enabled={!isLoading}>
-                {DURATION_OPTIONS.map(option => (
-                  <Picker.Item
-                    key={option.value}
-                    label={option.label}
-                    value={option.value}
-                  />
-                ))}
-              </Picker>
+          {/* Tag / Tier Badge */}
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>Marketing Tag / Badge</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. Most Popular • Save 25%"
+              placeholderTextColor="#94a3b8"
+              value={tag}
+              onChangeText={setTag}
+            />
+          </View>
+
+          {/* Pricing Row */}
+          <View style={styles.twoColRow}>
+            <View style={[styles.fieldGroup, { flex: 1 }]}>
+              <Text style={styles.fieldLabel}>Pack Price (₹) *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="1999"
+                placeholderTextColor="#94a3b8"
+                keyboardType="numeric"
+                value={price}
+                onChangeText={v => {
+                  setPrice(v);
+                  const days = Number(durationDays) || 30;
+                  setPriceMonthly(String(Math.round(Number(v) / (days / 30))));
+                }}
+              />
+            </View>
+
+            <View style={[styles.fieldGroup, { flex: 1 }]}>
+              <Text style={styles.fieldLabel}>Monthly Rate (₹)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="1999"
+                placeholderTextColor="#94a3b8"
+                keyboardType="numeric"
+                value={priceMonthly}
+                onChangeText={setPriceMonthly}
+              />
             </View>
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Monthly Price (₹) *</Text>
-            <TextInput
-              style={styles.input}
-              value={priceMonthly}
-              onChangeText={setPriceMonthly}
-              keyboardType="decimal-pad"
-              placeholder="e.g., 999.00"
-              placeholderTextColor="#999"
-              editable={!isLoading}
-            />
+          {/* Duration Days */}
+          <View style={styles.twoColRow}>
+            <View style={[styles.fieldGroup, { flex: 1 }]}>
+              <Text style={styles.fieldLabel}>Duration Label</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="1 month"
+                placeholderTextColor="#94a3b8"
+                value={duration}
+                onChangeText={setDuration}
+              />
+            </View>
+            <View style={[styles.fieldGroup, { flex: 1 }]}>
+              <Text style={styles.fieldLabel}>Days of Validity</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="30"
+                placeholderTextColor="#94a3b8"
+                keyboardType="numeric"
+                value={String(durationDays)}
+                onChangeText={v => setDurationDays(Number(v) || 30)}
+              />
+            </View>
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Description</Text>
+          {/* Description */}
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>Plan Description</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
+              placeholder="Outline what features and access are included..."
+              placeholderTextColor="#94a3b8"
+              multiline
+              numberOfLines={3}
               value={description}
               onChangeText={setDescription}
-              placeholder="Enter plan description..."
-              multiline
-              numberOfLines={4}
-              placeholderTextColor="#999"
-              editable={!isLoading}
             />
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Razorpay Plan ID (Optional)</Text>
-            <TextInput
-              style={styles.input}
-              value={razorpayPlanId}
-              onChangeText={setRazorpayPlanId}
-              placeholder="e.g., plan_123"
-              placeholderTextColor="#999"
-              editable={!isLoading}
-            />
-          </View>
-
-          <View style={styles.featuresSection}>
-            <Text style={styles.sectionLabel}>Plan Features</Text>
-            <View style={styles.featuresNote}>
-              <Icon name="info" size={16} color="#666" />
-              <Text style={styles.featuresNoteText}>
-                All plans include unlimited loans
+          {/* Active Status Switch */}
+          <View style={styles.switchRow}>
+            <View style={styles.switchInfo}>
+              <Text style={styles.switchTitle}>Publish & Activate Plan</Text>
+              <Text style={styles.switchSub}>
+                Lenders can view and subscribe to this tier.
               </Text>
             </View>
-            {renderToggle(
-              'Advanced Analytics',
-              advancedAnalytics,
-              () => setAdvancedAnalytics(!advancedAnalytics),
-            )}
-            {renderToggle(
-              'Priority Support',
-              prioritySupport,
-              () => setPrioritySupport(!prioritySupport),
-            )}
+            <Switch
+              value={isActive}
+              onValueChange={setIsActive}
+              trackColor={{ false: '#cbd5e1', true: '#93c5fd' }}
+              thumbColor={isActive ? '#2563eb' : '#f8fafc'}
+            />
           </View>
-
-          <View style={styles.inputGroup}>
-            {renderToggle('Active Status', isActive, () =>
-              setIsActive(!isActive),
-            )}
-          </View>
-
-          <TouchableOpacity
-            style={[
-              styles.submitButton,
-              isLoading && styles.submitButtonDisabled,
-            ]}
-            onPress={handleSubmit}
-            disabled={isLoading}
-            activeOpacity={0.8}>
-            <LinearGradient
-              colors={['#ff6700', '#ff7900']}
-              style={styles.submitGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}>
-              {isLoading ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Icon
-                  name={isEditMode ? 'save' : 'check'}
-                  size={20}
-                  color="#FFFFFF"
-                />
-              )}
-              <Text style={styles.submitButtonText}>{submitButtonText}</Text>
-            </LinearGradient>
-          </TouchableOpacity>
         </View>
+
+        {/* Submit Button */}
+        <TouchableOpacity
+          style={[styles.submitButton, isSaving && styles.submitButtonDisabled]}
+          activeOpacity={0.85}
+          disabled={isSaving}
+          onPress={handleSubmit}
+        >
+          {isSaving ? (
+            <ActivityIndicator size="small" color="#ffffff" />
+          ) : (
+            <>
+              <Icon name="check" size={16} color="#ffffff" />
+              <Text style={styles.submitButtonText}>
+                {isEditMode ? 'Update Plan Configuration' : 'Create & Publish Plan'}
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -336,154 +365,132 @@ export default function CreateEditPlan() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f8f8',
-  },
-  scrollView: {
-    flex: 1,
+    backgroundColor: '#f8fafc',
   },
   scrollContent: {
-    padding: m(20),
-    paddingBottom: m(100),
+    padding: m(16),
+    paddingBottom: m(80),
+  },
+  sectionHeading: {
+    fontSize: m(13),
+    fontWeight: '700',
+    color: '#475569',
+    marginBottom: m(10),
+    marginLeft: m(2),
+  },
+  presetRow: {
+    flexDirection: 'row',
+    gap: m(8),
+    marginBottom: m(16),
+  },
+  presetCard: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+    borderRadius: m(10),
+    paddingVertical: m(10),
+    paddingHorizontal: m(6),
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  activePresetCard: {
+    backgroundColor: '#eff6ff',
+    borderColor: '#2563eb',
+  },
+  presetLabel: {
+    fontSize: m(11),
+    fontWeight: '700',
+    color: '#334155',
+  },
+  activePresetLabel: {
+    color: '#1d4ed8',
+  },
+  presetPrice: {
+    fontSize: m(11),
+    color: '#64748b',
+    marginTop: m(2),
+  },
+  activePresetPrice: {
+    color: '#2563eb',
+    fontWeight: '700',
   },
   formCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(16),
-    padding: m(24),
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    backgroundColor: '#ffffff',
+    borderRadius: m(14),
+    padding: m(16),
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginBottom: m(16),
   },
-  formTitle: {
-    fontSize: m(24),
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: m(8),
-    letterSpacing: 0.3,
+  fieldGroup: {
+    marginBottom: m(14),
   },
-  formSubtitle: {
-    fontSize: m(14),
-    color: '#666',
-    marginBottom: m(24),
-    lineHeight: m(20),
-  },
-  inputGroup: {
-    marginBottom: m(20),
-  },
-  label: {
-    fontSize: m(14),
+  fieldLabel: {
+    fontSize: m(12),
     fontWeight: '600',
-    color: '#333',
-    marginBottom: m(8),
+    color: '#334155',
+    marginBottom: m(6),
   },
   input: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: m(12),
-    padding: m(16),
-    fontSize: m(16),
-    color: '#333',
+    backgroundColor: '#f8fafc',
+    borderRadius: m(10),
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  pickerContainer: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: m(12),
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    overflow: 'hidden',
-  },
-  picker: {
-    color: '#333',
+    borderColor: '#e2e8f0',
+    paddingHorizontal: m(12),
+    paddingVertical: m(10),
+    fontSize: m(13),
+    color: '#0f172a',
   },
   textArea: {
-    height: m(100),
+    height: m(75),
     textAlignVertical: 'top',
   },
-  featuresSection: {
-    marginBottom: m(20),
-  },
-  sectionLabel: {
-    fontSize: m(14),
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: m(12),
-  },
-  featuresNote: {
+  twoColRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(6),
-    marginBottom: m(12),
-    padding: m(10),
-    backgroundColor: '#F5F5F5',
-    borderRadius: m(8),
+    gap: m(10),
   },
-  featuresNoteText: {
-    fontSize: m(12),
-    color: '#666',
-    flex: 1,
-  },
-  toggleContainer: {
+  switchRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: m(12),
+    paddingTop: m(10),
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
   },
-  toggleLabel: {
-    fontSize: m(14),
-    fontWeight: '500',
-    color: '#333',
+  switchInfo: {
     flex: 1,
+    marginRight: m(12),
   },
-  toggleSwitch: {
-    width: m(50),
-    height: m(28),
-    borderRadius: m(14),
-    justifyContent: 'center',
-    padding: m(2),
+  switchTitle: {
+    fontSize: m(13),
+    fontWeight: '700',
+    color: '#0f172a',
   },
-  toggleSwitchActive: {
-    backgroundColor: '#4CAF50',
-  },
-  toggleSwitchInactive: {
-    backgroundColor: '#E0E0E0',
-  },
-  toggleThumb: {
-    width: m(24),
-    height: m(24),
-    borderRadius: m(12),
-    backgroundColor: '#FFFFFF',
-  },
-  toggleThumbActive: {
-    alignSelf: 'flex-end',
-  },
-  toggleThumbInactive: {
-    alignSelf: 'flex-start',
+  switchSub: {
+    fontSize: m(11),
+    color: '#64748b',
+    marginTop: m(2),
   },
   submitButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2563eb',
+    paddingVertical: m(14),
     borderRadius: m(12),
-    overflow: 'hidden',
-    marginTop: m(8),
-    elevation: 4,
-    shadowColor: '#ff6700',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
+    gap: m(8),
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 3,
   },
   submitButtonDisabled: {
     opacity: 0.6,
   },
-  submitGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: m(16),
-    gap: m(8),
-  },
   submitButtonText: {
-    fontSize: m(16),
-    fontWeight: '600',
-    color: '#FFFFFF',
-    letterSpacing: 0.3,
+    fontSize: m(14),
+    fontWeight: '700',
+    color: '#ffffff',
   },
 });

@@ -44,6 +44,11 @@ import PlanDetailsScreen from '../Screens/Admin/Plans/PlanDetailsScreen';
 import Revenue from '../Screens/Admin/Revenue/Revenue';
 import LenderList from '../Screens/Admin/Lenders/LenderList';
 import LenderDetailsScreen from '../Screens/Admin/Lenders/LenderDetailsScreen';
+import AdminBorrowerList from '../Screens/Admin/Borrowers/AdminBorrowerList';
+import AdminBorrowerDetailsScreen from '../Screens/Admin/Borrowers/AdminBorrowerDetailsScreen';
+import AdminLenderSubscriptionHistory from '../Screens/Admin/Lenders/AdminLenderSubscriptionHistory';
+import AdminProfileScreen from '../Screens/Admin/Profile/AdminProfileScreen';
+import AdminActivityDetailsScreen from '../Screens/Admin/Activities/AdminActivityDetailsScreen';
 import BorrowerLoanHistoryScreen from '../Screens/Shared/Borrowers/BorrowerLoanHistoryScreen';
 import AgreementScreen from '../Screens/PromptBox/AgreementScreen';
 // Borrower Loan Screens
@@ -133,6 +138,11 @@ const Navigation = () => {
       <Stack.Screen name="Revenue" component={Revenue} />
       <Stack.Screen name="LenderList" component={LenderList} />
       <Stack.Screen name="LenderDetailsScreen" component={LenderDetailsScreen} />
+      <Stack.Screen name="AdminBorrowerList" component={AdminBorrowerList} />
+      <Stack.Screen name="AdminBorrowerDetailsScreen" component={AdminBorrowerDetailsScreen} />
+      <Stack.Screen name="AdminLenderSubscriptionHistory" component={AdminLenderSubscriptionHistory} />
+      <Stack.Screen name="AdminProfileScreen" component={AdminProfileScreen} />
+      <Stack.Screen name="AdminActivityDetailsScreen" component={AdminActivityDetailsScreen} />
 
       {/* Borrower Screens */}
       <Stack.Screen name="MyLoans" component={MyLoans} />

@@ -10,6 +10,7 @@ import {
   StatusBar,
   ScrollView,
   Alert,
+  Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
@@ -364,7 +365,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: m(16),
-    paddingVertical: m(14),
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || m(24)) + m(10) : m(14),
+    paddingBottom: m(14),
     backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',

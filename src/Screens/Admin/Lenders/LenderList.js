@@ -3,13 +3,11 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   FlatList,
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
   RefreshControl,
-  Modal,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { m } from 'walstar-rn-responsive';
@@ -19,14 +17,10 @@ import Header from '../../../Components/Header';
 import {
   getLendersWithPlans,
   setFilters,
-  setLimit,
-  resetFilters,
 } from '../../../Redux/Slices/adminLendersSlice';
 
 /**
  * Format currency value to Indian Rupee format
- * @param {number} value - The amount to format
- * @returns {string} Formatted currency string
  */
 const formatCurrency = value => {
   if (!value) return '₹0';
@@ -36,8 +30,6 @@ const formatCurrency = value => {
 
 /**
  * Format date string to readable format
- * @param {string} dateString - ISO date string
- * @returns {string} Formatted date string
  */
 const formatDate = dateString => {
   if (!dateString) return 'N/A';
@@ -52,489 +44,282 @@ const formatDate = dateString => {
   }
 };
 
-// Plan status filter options
-const PLAN_STATUS_OPTIONS = ['all', 'active', 'expired'];
-
 export default function LenderList() {
   const dispatch = useDispatch();
-  const { lenders, loading, error, pagination, filters, limit } = useSelector(
+  const navigation = useNavigation();
+  const { lenders, loading, error, filters } = useSelector(
     state => state.adminLenders,
   );
-  const navigation = useNavigation();
+
   const [searchQuery, setSearchQuery] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
+  const [selectedStatusTab, setSelectedStatusTab] = useState('all');
   const [refreshing, setRefreshing] = useState(false);
-  // Temporary filter state for modal
-  const [tempFilters, setTempFilters] = useState({
-    planStatus: filters.planStatus,
-    sortBy: filters.sortBy,
-    sortOrder: filters.sortOrder,
-  });
-  const [tempLimit, setTempLimit] = useState(limit);
 
-  const loadLenders = useCallback(
-    async (customFilters = null, customPage = null) => {
-      const activeFilters = customFilters || filters;
-      const params = {
-        page: customPage || pagination.currentPage,
-        limit: limit,
-        ...activeFilters,
-      };
-      await dispatch(getLendersWithPlans(params));
-    },
-    [dispatch, filters, pagination.currentPage, limit],
-  );
-
-  // Debounced search
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchQuery !== filters.search) {
-        const newFilters = { ...filters, search: searchQuery };
-        dispatch(setFilters({ search: searchQuery }));
-        dispatch(getLendersWithPlans({ ...newFilters, page: 1, limit }));
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery]);
+  // Fetch lenders on load
+  const loadData = useCallback(() => {
+    dispatch(
+      getLendersWithPlans({
+        search: searchQuery,
+        planStatus: selectedStatusTab,
+        limit: 100,
+      })
+    );
+  }, [dispatch, searchQuery, selectedStatusTab]);
 
   useEffect(() => {
-    loadLenders();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.planStatus, filters.sortBy, filters.sortOrder, limit]);
+    loadData();
+  }, [loadData]);
 
-  // Handle refresh
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadLenders();
+    await dispatch(
+      getLendersWithPlans({
+        search: searchQuery,
+        planStatus: selectedStatusTab,
+        limit: 100,
+      })
+    );
     setRefreshing(false);
-  }, [loadLenders]);
+  }, [dispatch, searchQuery, selectedStatusTab]);
 
-  // Handle temporary filter changes
-  const handleTempFilterChange = useCallback((key, value) => {
-    setTempFilters(prev => ({ ...prev, [key]: value }));
-  }, []);
+  // Filter lenders locally as well for instantaneous responsive search
+  const filteredLenders = useMemo(() => {
+    return lenders.filter(item => {
+      const lender = item.lender || item;
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        (lender.userName || lender.name || '').toLowerCase().includes(q) ||
+        (lender.email || '').toLowerCase().includes(q) ||
+        (lender.mobileNo || lender.phone || '').toString().toLowerCase().includes(q);
 
-  // Handle filter application
-  const handleApplyFilters = useCallback(() => {
-    dispatch(setFilters(tempFilters));
-    dispatch(setLimit(tempLimit));
-    setShowFilters(false);
-    // Reset to page 1 when filters change
-    dispatch(getLendersWithPlans({ ...tempFilters, limit: tempLimit, page: 1 }));
-  }, [dispatch, tempFilters, tempLimit]);
+      if (!matchesSearch) return false;
 
-  // Handle filter clearing
-  const handleClearFilters = useCallback(() => {
-    dispatch(resetFilters());
-    dispatch(setLimit(10));
-    setTempFilters({
-      planStatus: 'all',
-      sortBy: 'planPurchaseDate',
-      sortOrder: 'desc',
+      const isPlanActive = Boolean(item.planPurchaseDetails?.isPlanActive);
+      if (selectedStatusTab === 'active') return isPlanActive;
+      if (selectedStatusTab === 'expired') return !isPlanActive;
+      return true;
     });
-    setTempLimit(10);
-    setShowFilters(false);
-    dispatch(getLendersWithPlans({
-      planStatus: 'all',
-      sortBy: 'planPurchaseDate',
-      sortOrder: 'desc',
-      search: filters.search,
-      limit: 10,
-      page: 1
-    }));
-  }, [dispatch, filters.search]);
+  }, [lenders, searchQuery, selectedStatusTab]);
 
-  // Handle clearing all filters including search
-  const handleClearAllFilters = useCallback(() => {
-    dispatch(resetFilters());
-    dispatch(setLimit(10));
-    setSearchQuery('');
-    setTempFilters({
-      planStatus: 'all',
-      sortBy: 'planPurchaseDate',
-      sortOrder: 'desc',
-    });
-    setTempLimit(10);
-    dispatch(getLendersWithPlans({
-      planStatus: 'all',
-      sortBy: 'planPurchaseDate',
-      sortOrder: 'desc',
-      search: '',
-      limit: 10,
-      page: 1
-    }));
-  }, [dispatch]);
+  // Statistics
+  const totalLenders = lenders.length;
+  const activeCount = lenders.filter(
+    l => Boolean(l.planPurchaseDetails?.isPlanActive)
+  ).length;
+  const expiredCount = totalLenders - activeCount;
 
-  // Update temp filters when modal opens
-  useEffect(() => {
-    if (showFilters) {
-      setTempFilters({
-        planStatus: filters.planStatus,
-        sortBy: filters.sortBy,
-        sortOrder: filters.sortOrder,
-      });
-      setTempLimit(limit);
-    }
-  }, [showFilters, filters, limit]);
+  const renderLenderItem = ({ item }) => {
+    const lender = item.lender || item;
+    const plan = item.currentPlan || {};
+    const planDetails = item.planPurchaseDetails || {};
+    const isPlanActive = Boolean(planDetails.isPlanActive);
 
-  // Handle navigation to lender details
-  const handleViewDetails = useCallback(
-    lender => {
-      navigation.navigate('LenderDetailsScreen', {
-        lenderData: lender,
-      });
-    },
-    [navigation],
-  );
+    const initials = (lender.userName || lender.name || 'LN')
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
 
-  // Memoized lender statistics
-  const lenderStats = useMemo(() => {
-    const activeLenders = lenders.filter(
-      l => l.planPurchaseDetails?.planStatus === 'active',
-    );
-    const expiredLenders = lenders.filter(
-      l => l.planPurchaseDetails?.planStatus === 'expired',
-    );
-    return { activeLenders, expiredLenders };
-  }, [lenders]);
-
-  // Check if filters are active
-  const hasActiveFilters = useMemo(() => {
     return (
-      filters.planStatus !== 'all' ||
-      filters.sortBy !== 'planPurchaseDate' ||
-      filters.sortOrder !== 'desc' ||
-      limit !== 10 ||
-      searchQuery.length > 0
-    );
-  }, [filters, limit, searchQuery]);
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{initials}</Text>
+          </View>
+          <View style={styles.headerInfo}>
+            <View style={styles.nameRow}>
+              <Text style={styles.lenderName} numberOfLines={1}>
+                {lender.userName || lender.name || 'Institutional Lender'}
+              </Text>
+              <View
+                style={[
+                  styles.statusBadge,
+                  isPlanActive ? styles.activeBadge : styles.expiredBadge,
+                ]}
+              >
+                <View
+                  style={[
+                    styles.statusDot,
+                    { backgroundColor: isPlanActive ? '#16a34a' : '#dc2626' },
+                  ]}
+                />
+                <Text
+                  style={[
+                    styles.statusText,
+                    isPlanActive ? styles.activeText : styles.expiredText,
+                  ]}
+                >
+                  {isPlanActive ? 'Active Plan' : 'Expired / Free'}
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.contactText}>
+              {lender.email || 'No email'} • {lender.mobileNo || lender.phone || 'No phone'}
+            </Text>
+          </View>
+        </View>
 
-  // Render lender item
-  const renderLenderItem = useCallback(
-    ({ item }) => {
-      const lender = item.lender || {};
-      const plan = item.currentPlan || {};
-      const planDetails = item.planPurchaseDetails || {};
-      const planStatus = planDetails.planStatus || 'expired';
-      const isPlanActive = planDetails.isPlanActive || false;
-
-      return (
-        <View style={styles.lenderCard}>
-          <View style={styles.lenderHeader}>
-            <View style={styles.lenderAvatar}>
-              {lender.profileImage ? (
-                <Text style={styles.avatarText}>IMG</Text>
-              ) : (
-                <Text style={styles.avatarText}>
-                  {lender.userName
-                    ?.split(' ')
-                    .map(n => n[0])
-                    .join('')
-                    .toUpperCase()
-                    .substring(0, 2) || 'L'}
+        {/* Current Plan Details */}
+        {plan.planName ? (
+          <View style={styles.planBox}>
+            <View style={styles.planHeader}>
+              <Icon name="package" size={14} color="#2563eb" />
+              <Text style={styles.planTitle}>{plan.planName}</Text>
+              <Text style={styles.planPrice}>
+                {formatCurrency(plan.priceMonthly || plan.price)}/{plan.duration || 'month'}
+              </Text>
+            </View>
+            <View style={styles.planMetaRow}>
+              <Text style={styles.planMetaText}>
+                Expires: {formatDate(planDetails.planExpiryDate)}
+              </Text>
+              {isPlanActive && planDetails.remainingDays !== undefined && (
+                <Text style={styles.remainingText}>
+                  {planDetails.remainingDays} days left
                 </Text>
               )}
             </View>
-            <View style={styles.lenderInfo}>
-              <Text style={styles.lenderName}>{lender.userName || 'N/A'}</Text>
-              <Text style={styles.lenderEmail}>{lender.email || 'N/A'}</Text>
-              <Text style={styles.lenderMobile}>
-                {lender.mobileNo || 'N/A'}
-              </Text>
-            </View>
-            <View
-              style={[
-                styles.statusBadge,
-                {
-                  backgroundColor: isPlanActive ? '#E8F5E9' : '#FFEBEE',
-                },
-              ]}>
-              <Text
-                style={[
-                  styles.statusText,
-                  { color: isPlanActive ? '#4CAF50' : '#F44336' },
-                ]}>
-                {planStatus === 'active' ? 'Active Plan' : 'Expired'}
-              </Text>
-            </View>
           </View>
+        ) : null}
 
-          {/* Plan Details Section */}
-          {plan.planName && (
-            <View style={styles.planSection}>
-              <View style={styles.planHeader}>
-                <Icon name="package" size={16} color="#ff6700" />
-                <Text style={styles.planTitle}>Current Plan</Text>
-              </View>
-              <View style={styles.planDetails}>
-                <View style={styles.planRow}>
-                  <Text style={styles.planLabel}>Plan:</Text>
-                  <Text style={styles.planValue}>{plan.planName}</Text>
-                </View>
-                <View style={styles.planRow}>
-                  <Text style={styles.planLabel}>Price:</Text>
-                  <Text style={styles.planValue}>
-                    {formatCurrency(plan.priceMonthly)}/{plan.duration}
-                  </Text>
-                </View>
-                {planDetails.planPurchaseDate && (
-                  <View style={styles.planRow}>
-                    <Text style={styles.planLabel}>Purchased:</Text>
-                    <Text style={styles.planValue}>
-                      {formatDate(planDetails.planPurchaseDate)}
-                    </Text>
-                  </View>
-                )}
-                {planDetails.planExpiryDate && (
-                  <View style={styles.planRow}>
-                    <Text style={styles.planLabel}>Expires:</Text>
-                    <Text
-                      style={[
-                        styles.planValue,
-                        !isPlanActive && styles.expiredText,
-                      ]}>
-                      {formatDate(planDetails.planExpiryDate)}
-                    </Text>
-                  </View>
-                )}
-                {isPlanActive && planDetails.remainingDays !== undefined && (
-                  <View style={styles.planRow}>
-                    <Text style={styles.planLabel}>Remaining:</Text>
-                    <Text style={[styles.planValue, styles.remainingDays]}>
-                      {planDetails.remainingDays} days
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </View>
-          )}
+        <View style={styles.divider} />
 
-          <View style={styles.lenderFooter}>
-            <Text style={styles.joinDate}>
-              Joined: {formatDate(lender.createdAt)}
-            </Text>
-            <TouchableOpacity
-              style={styles.viewButton}
-              onPress={() => handleViewDetails(item)}>
-              <Text style={styles.viewButtonText}>View Details</Text>
-              <Icon name="chevron-right" size={16} color="#ff6700" />
-            </TouchableOpacity>
-          </View>
-        </View>
-      );
-    }, [handleViewDetails]);
-
-  // Memoized key extractor
-  const keyExtractor = useCallback(
-    item => item.lender?._id || `lender-${Math.random()}`,
-    [],
-  );
-
-  // Render filter modal
-  const renderFilterModal = useCallback(
-    () => (
-      <Modal
-        visible={showFilters}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowFilters(false)}>
-        <View style={styles.modalOverlay}>
+        {/* Actions Row */}
+        <View style={styles.cardActions}>
           <TouchableOpacity
-            style={StyleSheet.absoluteFill}
-            activeOpacity={1}
-            onPress={() => setShowFilters(false)}
-          />
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Filters</Text>
-              <TouchableOpacity onPress={() => setShowFilters(false)}>
-                <Icon name="x" size={24} color="#333" />
-              </TouchableOpacity>
-            </View>
+            style={styles.actionBtnOutline}
+            activeOpacity={0.8}
+            onPress={() =>
+              navigation.navigate('AdminLenderSubscriptionHistory', {
+                lenderId: lender._id || lender.id,
+                lenderName: lender.userName || lender.name || 'Institutional Lender',
+              })
+            }
+          >
+            <Icon name="clock" size={13} color="#2563eb" />
+            <Text style={styles.actionBtnOutlineText}>Ledger</Text>
+          </TouchableOpacity>
 
-            <ScrollView
-              style={styles.modalBody}
-              contentContainerStyle={styles.modalBodyContent}
-              showsVerticalScrollIndicator={true}
-              nestedScrollEnabled={true}>
-              {/* Plan Status Filter */}
-              <View style={styles.filterSection}>
-                <View style={styles.filterSectionHeader}>
-                  <Icon name="filter" size={18} color="#ff6700" />
-                  <Text style={styles.filterLabel}>Plan Status</Text>
-                </View>
-                <View style={styles.filterOptionsContainer}>
-                  {PLAN_STATUS_OPTIONS.map(status => (
-                    <TouchableOpacity
-                      key={status}
-                      style={[
-                        styles.filterOption,
-                        tempFilters.planStatus === status && styles.filterOptionActive,
-                      ]}
-                      onPress={() => handleTempFilterChange('planStatus', status)}>
-                      <View style={styles.filterOptionContent}>
-                        <View style={[
-                          styles.radioButton,
-                          tempFilters.planStatus === status && styles.radioButtonActive
-                        ]}>
-                          {tempFilters.planStatus === status && (
-                            <View style={styles.radioButtonInner} />
-                          )}
-                        </View>
-                        <Text
-                          style={[
-                            styles.filterOptionText,
-                            tempFilters.planStatus === status &&
-                            styles.filterOptionTextActive,
-                          ]}>
-                          {status === 'all' ? 'All Plans' : status.charAt(0).toUpperCase() + status.slice(1)}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-            </ScrollView>
-
-            {/* Modal Footer with Buttons */}
-            <View style={styles.modalFooter}>
-              <TouchableOpacity
-                style={styles.clearButton}
-                onPress={handleClearFilters}>
-                <Icon name="x-circle" size={18} color="#666" />
-                <Text style={styles.clearButtonText}>Clear</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.applyButton}
-                onPress={handleApplyFilters}>
-                <Text style={styles.applyButtonText}>Apply Filters</Text>
-                <Icon name="check" size={18} color="#FFFFFF" />
-              </TouchableOpacity>
-            </View>
-          </View>
+          <TouchableOpacity
+            style={styles.actionBtnSolid}
+            activeOpacity={0.8}
+            onPress={() =>
+              navigation.navigate('LenderDetailsScreen', {
+                lenderData: item,
+              })
+            }
+          >
+            <Text style={styles.actionBtnSolidText}>View Details</Text>
+            <Icon name="chevron-right" size={14} color="#ffffff" />
+          </TouchableOpacity>
         </View>
-      </Modal>
-    ),
-    [showFilters, tempFilters, handleApplyFilters, handleClearFilters, handleTempFilterChange],
-  );
+      </View>
+    );
+  };
 
   return (
     <View style={styles.container}>
-      <Header title="Lenders with Plans" />
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }>
-        {/* Search and Filter Bar */}
-        <View style={styles.searchContainer}>
-          <Icon name="search" size={20} color="#666" style={styles.searchIcon} />
+      <Header title="Lending Institutions" />
+
+      {/* Top Search & Filter Bar */}
+      <View style={styles.filterSection}>
+        <View style={styles.searchBar}>
+          <Icon name="search" size={18} color="#64748b" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search by name, email, or mobile"
+            placeholder="Search by lender name, email, phone..."
+            placeholderTextColor="#94a3b8"
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholderTextColor="#999"
+            returnKeyType="search"
           />
-          {searchQuery.length > 0 && (
+          {searchQuery ? (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Icon name="x" size={20} color="#666" />
+              <Icon name="x" size={18} color="#94a3b8" />
             </TouchableOpacity>
-          )}
-          <TouchableOpacity
-            style={styles.filterButton}
-            onPress={() => setShowFilters(true)}>
-            <Icon name="filter" size={20} color="#ff6700" />
-            {hasActiveFilters && <View style={styles.filterBadge} />}
-          </TouchableOpacity>
+          ) : null}
         </View>
 
-        {/* Active Filters Indicator */}
-        {hasActiveFilters && (
-          <View style={styles.activeFiltersContainer}>
-            <View style={styles.activeFiltersContent}>
-              <Icon name="filter" size={16} color="#ff6700" />
-              <Text style={styles.activeFiltersText}>Filters Active</Text>
-              <TouchableOpacity
-                style={styles.clearAllFiltersButton}
-                onPress={handleClearAllFilters}>
-                <Icon name="x" size={14} color="#ff6700" />
-                <Text style={styles.clearAllFiltersText}>Clear All</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        {/* Summary */}
-        <View style={styles.summaryCard}>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Total Lenders</Text>
-            <Text style={styles.summaryValue}>
-              {pagination.totalDocuments || 0}
-            </Text>
-          </View>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Active Plans</Text>
-            <Text style={[styles.summaryValue, styles.activePlansText]}>
-              {lenderStats.activeLenders.length}
-            </Text>
-          </View>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Expired Plans</Text>
-            <Text style={[styles.summaryValue, styles.expiredPlansText]}>
-              {lenderStats.expiredLenders.length}
-            </Text>
-          </View>
-        </View>
-
-        {/* Loading State */}
-        {loading && lenders.length === 0 && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#ff6700" />
-            <Text style={styles.loadingText}>Loading lenders...</Text>
-          </View>
-        )}
-
-        {/* Error State */}
-        {error && lenders.length === 0 && (
-          <View style={styles.errorContainer}>
-            <Icon name="alert-circle" size={48} color="#F44336" />
-            <Text style={styles.errorText}>{error}</Text>
+        {/* Instant Filter Tabs */}
+        <View style={styles.tabRow}>
+          {[
+            { id: 'all', label: 'All Plans' },
+            { id: 'active', label: 'Active Plans' },
+            { id: 'expired', label: 'Expired / Inactive' },
+          ].map(tab => (
             <TouchableOpacity
-              style={styles.retryButton}
-              onPress={() => loadLenders()}>
-              <Text style={styles.retryButtonText}>Retry</Text>
+              key={tab.id}
+              style={[
+                styles.tabBtn,
+                selectedStatusTab === tab.id && styles.activeTabBtn,
+              ]}
+              onPress={() => setSelectedStatusTab(tab.id)}
+            >
+              <Text
+                style={[
+                  styles.tabBtnText,
+                  selectedStatusTab === tab.id && styles.activeTabBtnText,
+                ]}
+              >
+                {tab.label}
+              </Text>
             </TouchableOpacity>
-          </View>
-        )}
+          ))}
+        </View>
+      </View>
 
-        {/* Lender List */}
-        {!loading && !error && (
-          <FlatList
-            data={lenders}
-            renderItem={renderLenderItem}
-            keyExtractor={keyExtractor}
-            scrollEnabled={false}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Icon name="users" size={48} color="#CCC" />
-                <Text style={styles.emptyText}>No lenders found</Text>
-                {filters.search && (
-                  <Text style={styles.emptySubtext}>
-                    Try adjusting your search or filters
-                  </Text>
-                )}
-              </View>
-            }
-          />
-        )}
+      {/* KPI Metrics Strip */}
+      <View style={styles.statsStrip}>
+        <View style={styles.statItem}>
+          <Text style={styles.statNumber}>{totalLenders}</Text>
+          <Text style={styles.statLabel}>Total Lenders</Text>
+        </View>
+        <View style={styles.statItem}>
+          <Text style={[styles.statNumber, { color: '#16a34a' }]}>{activeCount}</Text>
+          <Text style={styles.statLabel}>Active Plans</Text>
+        </View>
+        <View style={styles.statItem}>
+          <Text style={[styles.statNumber, { color: '#64748b' }]}>{expiredCount}</Text>
+          <Text style={styles.statLabel}>Expired / Free</Text>
+        </View>
+      </View>
 
-      </ScrollView>
-
-      {renderFilterModal()}
+      {/* List */}
+      {loading && !refreshing && lenders.length === 0 ? (
+        <View style={styles.centerBox}>
+          <ActivityIndicator size="large" color="#2563eb" />
+          <Text style={styles.loadingText}>Loading institutional lenders...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={filteredLenders}
+          renderItem={renderLenderItem}
+          keyExtractor={(item, index) =>
+            item.lender?._id || item._id || String(index)
+          }
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={['#2563eb']}
+            />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyBox}>
+              <Icon name="briefcase" size={44} color="#cbd5e1" />
+              <Text style={styles.emptyTitle}>No Lenders Found</Text>
+              <Text style={styles.emptySubtitle}>
+                {searchQuery
+                  ? 'No lenders matched your search criteria.'
+                  : 'Registered institutional lenders will appear here.'}
+              </Text>
+            </View>
+          }
+        />
+      )}
     </View>
   );
 }
@@ -542,418 +327,275 @@ export default function LenderList() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: '#f8fafc',
   },
-  scrollView: {
-    flex: 1,
+  filterSection: {
+    paddingHorizontal: m(16),
+    paddingTop: m(12),
+    paddingBottom: m(8),
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
   },
-  scrollContent: {
-    padding: m(20),
-    paddingBottom: m(100),
-  },
-  searchContainer: {
+  searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(12),
-    paddingHorizontal: m(16),
-    paddingVertical: m(12),
-    marginBottom: m(16),
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    backgroundColor: '#f1f5f9',
+    borderRadius: m(10),
+    paddingHorizontal: m(12),
+    height: m(42),
   },
   searchIcon: {
-    marginRight: m(12),
+    marginRight: m(8),
   },
   searchInput: {
     flex: 1,
-    fontSize: m(16),
-    color: '#333',
+    fontSize: m(13),
+    color: '#0f172a',
+    paddingVertical: 0,
   },
-  filterButton: {
-    marginLeft: m(12),
-    position: 'relative',
-  },
-  filterBadge: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#ff6700',
-  },
-  summaryCard: {
+  tabRow: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(12),
-    padding: m(16),
-    marginBottom: m(16),
-    justifyContent: 'space-around',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    gap: m(8),
+    marginTop: m(10),
   },
-  summaryItem: {
-    alignItems: 'center',
+  tabBtn: {
+    paddingHorizontal: m(12),
+    paddingVertical: m(6),
+    borderRadius: m(20),
+    backgroundColor: '#f1f5f9',
   },
-  summaryLabel: {
+  activeTabBtn: {
+    backgroundColor: '#2563eb',
+  },
+  tabBtnText: {
     fontSize: m(12),
-    color: '#666',
-    marginBottom: m(4),
-  },
-  summaryValue: {
-    fontSize: m(18),
-    fontWeight: '700',
-    color: '#ff6700',
-  },
-  activePlansText: {
-    color: '#4CAF50',
-  },
-  expiredPlansText: {
-    color: '#F44336',
-  },
-  loadingContainer: {
-    padding: m(40),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingText: {
-    marginTop: m(12),
-    fontSize: m(16),
-    color: '#666',
-  },
-  errorContainer: {
-    padding: m(40),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  errorText: {
-    marginTop: m(12),
-    fontSize: m(16),
-    color: '#F44336',
-    textAlign: 'center',
-  },
-  retryButton: {
-    marginTop: m(16),
-    paddingHorizontal: m(24),
-    paddingVertical: m(12),
-    backgroundColor: '#ff6700',
-    borderRadius: m(8),
-  },
-  retryButtonText: {
-    color: '#FFFFFF',
     fontWeight: '600',
+    color: '#64748b',
   },
-  lenderCard: {
-    backgroundColor: '#FFFFFF',
+  activeTabBtnText: {
+    color: '#ffffff',
+  },
+  statsStrip: {
+    flexDirection: 'row',
+    backgroundColor: '#ffffff',
+    marginHorizontal: m(16),
+    marginTop: m(12),
+    paddingVertical: m(12),
+    paddingHorizontal: m(16),
     borderRadius: m(12),
-    padding: m(16),
-    marginBottom: m(12),
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    justifyContent: 'space-around',
   },
-  lenderHeader: {
+  statItem: {
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: m(16),
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+  statLabel: {
+    fontSize: m(11),
+    color: '#64748b',
+    marginTop: m(2),
+  },
+  listContent: {
+    padding: m(16),
+    paddingBottom: m(80),
+  },
+  card: {
+    backgroundColor: '#ffffff',
+    borderRadius: m(14),
+    padding: m(14),
+    marginBottom: m(12),
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: m(16),
   },
-  lenderAvatar: {
-    width: m(50),
-    height: m(50),
-    borderRadius: m(25),
-    backgroundColor: '#ff6700',
+  avatar: {
+    width: m(44),
+    height: m(44),
+    borderRadius: m(22),
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: m(12),
   },
   avatarText: {
-    fontSize: m(18),
+    fontSize: m(15),
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#1d4ed8',
   },
-  lenderInfo: {
+  headerInfo: {
     flex: 1,
   },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   lenderName: {
-    fontSize: m(16),
+    fontSize: m(14),
     fontWeight: '700',
-    color: '#333',
-    marginBottom: m(4),
-  },
-  lenderEmail: {
-    fontSize: m(12),
-    color: '#666',
-    marginBottom: m(2),
-  },
-  lenderMobile: {
-    fontSize: m(12),
-    color: '#666',
+    color: '#0f172a',
+    flex: 1,
+    marginRight: m(8),
   },
   statusBadge: {
-    paddingHorizontal: m(12),
-    paddingVertical: m(6),
-    borderRadius: m(12),
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: m(7),
+    paddingVertical: m(3),
+    borderRadius: m(6),
+    gap: m(4),
+  },
+  activeBadge: {
+    backgroundColor: '#f0fdf4',
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+  },
+  expiredBadge: {
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+  },
+  statusDot: {
+    width: m(6),
+    height: m(6),
+    borderRadius: m(3),
   },
   statusText: {
-    fontSize: m(12),
-    fontWeight: '600',
+    fontSize: m(10),
+    fontWeight: '700',
   },
-  planSection: {
-    backgroundColor: '#FFF3E0',
+  activeText: {
+    color: '#15803d',
+  },
+  expiredText: {
+    color: '#b91c1c',
+  },
+  contactText: {
+    fontSize: m(11),
+    color: '#64748b',
+    marginTop: m(2),
+  },
+  planBox: {
+    backgroundColor: '#f8fafc',
     borderRadius: m(8),
-    padding: m(12),
-    marginBottom: m(12),
-    borderLeftWidth: 3,
-    borderLeftColor: '#ff6700',
+    padding: m(10),
+    marginTop: m(10),
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   planHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: m(8),
+    justifyContent: 'space-between',
   },
   planTitle: {
-    fontSize: m(14),
-    fontWeight: '700',
-    color: '#333',
-    marginLeft: m(8),
-  },
-  planDetails: {
-    gap: m(4),
-  },
-  planRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: m(4),
-  },
-  planLabel: {
     fontSize: m(12),
-    color: '#666',
-  },
-  planValue: {
-    fontSize: m(12),
-    fontWeight: '600',
-    color: '#333',
-  },
-  expiredText: {
-    color: '#F44336',
-  },
-  remainingDays: {
-    color: '#4CAF50',
     fontWeight: '700',
+    color: '#1e293b',
+    flex: 1,
+    marginLeft: m(6),
   },
-  lenderFooter: {
+  planPrice: {
+    fontSize: m(12),
+    fontWeight: '700',
+    color: '#2563eb',
+  },
+  planMetaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  joinDate: {
-    fontSize: m(12),
-    color: '#666',
-  },
-  viewButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(4),
-  },
-  viewButtonText: {
-    fontSize: m(14),
-    fontWeight: '600',
-    color: '#ff6700',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: m(40),
-  },
-  emptyText: {
-    fontSize: m(16),
-    color: '#999',
-    marginTop: m(12),
-  },
-  emptySubtext: {
-    fontSize: m(14),
-    color: '#999',
     marginTop: m(4),
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+  planMetaText: {
+    fontSize: m(11),
+    color: '#64748b',
   },
-  modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: m(20),
-    borderTopRightRadius: m(20),
-    maxHeight: '85%',
-    width: '100%',
-    paddingHorizontal: m(20),
-    paddingTop: m(20),
-    paddingBottom: m(10),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: m(20),
-    paddingBottom: m(16),
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  modalTitle: {
-    fontSize: m(20),
-    fontWeight: '700',
-    color: '#333',
-  },
-  modalBody: {
-    width: '100%',
-    flexGrow: 1,
-  },
-  modalBodyContent: {
-    paddingBottom: m(10),
-  },
-  activeFiltersContainer: {
-    backgroundColor: '#FFF3E0',
-    borderRadius: m(12),
-    padding: m(12),
-    marginBottom: m(16),
-    borderWidth: 1,
-    borderColor: '#ff6700',
-  },
-  activeFiltersContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  activeFiltersText: {
-    flex: 1,
-    fontSize: m(14),
+  remainingText: {
+    fontSize: m(11),
     fontWeight: '600',
-    color: '#ff6700',
-    marginLeft: m(8),
+    color: '#16a34a',
   },
-  clearAllFiltersButton: {
+  divider: {
+    height: 1,
+    backgroundColor: '#f1f5f9',
+    marginVertical: m(10),
+  },
+  cardActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: m(8),
+  },
+  actionBtnOutline: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: m(12),
     paddingVertical: m(6),
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(8),
+    borderRadius: m(6),
     borderWidth: 1,
-    borderColor: '#ff6700',
+    borderColor: '#bfdbfe',
+    backgroundColor: '#eff6ff',
     gap: m(4),
   },
-  clearAllFiltersText: {
+  actionBtnOutlineText: {
+    fontSize: m(11),
+    fontWeight: '700',
+    color: '#1d4ed8',
+  },
+  actionBtnSolid: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: m(12),
+    paddingVertical: m(6),
+    borderRadius: m(6),
+    backgroundColor: '#2563eb',
+    gap: m(4),
+  },
+  actionBtnSolidText: {
+    fontSize: m(11),
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  centerBox: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: m(8),
+    fontSize: m(13),
+    color: '#64748b',
+  },
+  emptyBox: {
+    alignItems: 'center',
+    paddingVertical: m(60),
+  },
+  emptyTitle: {
+    fontSize: m(15),
+    fontWeight: '700',
+    color: '#475569',
+    marginTop: m(10),
+  },
+  emptySubtitle: {
     fontSize: m(12),
-    fontWeight: '600',
-    color: '#ff6700',
-  },
-  filterSection: {
-    marginBottom: m(24),
-  },
-  filterSectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: m(12),
-    gap: m(8),
-  },
-  filterLabel: {
-    fontSize: m(16),
-    fontWeight: '700',
-    color: '#333',
-  },
-  filterOptionsContainer: {
-    gap: m(8),
-  },
-  filterOption: {
-    padding: m(14),
-    backgroundColor: '#F8F8F8',
-    borderRadius: m(12),
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  filterOptionActive: {
-    backgroundColor: '#FFF3E0',
-    borderWidth: 2,
-    borderColor: '#ff6700',
-  },
-  filterOptionContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(12),
-  },
-  radioButton: {
-    width: m(20),
-    height: m(20),
-    borderRadius: m(10),
-    borderWidth: 2,
-    borderColor: '#CCC',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  radioButtonActive: {
-    borderColor: '#ff6700',
-  },
-  radioButtonInner: {
-    width: m(10),
-    height: m(10),
-    borderRadius: m(5),
-    backgroundColor: '#ff6700',
-  },
-  filterOptionText: {
-    fontSize: m(14),
-    color: '#666',
-    flex: 1,
-  },
-  filterOptionTextActive: {
-    color: '#ff6700',
-    fontWeight: '600',
-  },
-  modalFooter: {
-    flexDirection: 'row',
-    paddingTop: m(16),
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-    gap: m(12),
-  },
-  clearButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: m(14),
-    backgroundColor: '#F5F5F5',
-    borderRadius: m(12),
-    gap: m(8),
-  },
-  clearButtonText: {
-    fontSize: m(16),
-    fontWeight: '600',
-    color: '#666',
-  },
-  applyButton: {
-    flex: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: m(14),
-    backgroundColor: '#ff6700',
-    borderRadius: m(12),
-    gap: m(8),
-  },
-  applyButtonText: {
-    fontSize: m(16),
-    fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#94a3b8',
+    textAlign: 'center',
+    marginTop: m(4),
+    paddingHorizontal: m(30),
   },
 });

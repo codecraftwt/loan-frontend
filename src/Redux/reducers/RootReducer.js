@@ -12,6 +12,7 @@ import adminRevenueReducer from '../Slices/adminRevenueSlice';
 import adminActivitiesReducer from '../Slices/adminActivitiesSlice';
 import lenderActivitiesReducer from '../Slices/lenderActivitiesSlice';
 import borrowerActivitiesReducer from '../Slices/borrowerActivitiesSlice';
+import adminBorrowersReducer from '../Slices/adminBorrowersSlice';
 
 const rootReducer = combineReducers({
     auth: authReducer,
@@ -23,6 +24,7 @@ const rootReducer = combineReducers({
     adminPlans: adminPlanReducer,
     planPurchase: planPurchaseReducer,
     adminLenders: adminLendersReducer,
+    adminBorrowers: adminBorrowersReducer,
     adminRevenue: adminRevenueReducer,
     adminActivities: adminActivitiesReducer,
     lenderActivities: lenderActivitiesReducer,

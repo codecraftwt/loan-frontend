@@ -13,6 +13,7 @@ import {
   Modal,
   TextInput,
   Alert,
+  Platform,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
@@ -645,6 +646,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: m(16),
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || m(24)) + m(8) : m(16),
     paddingBottom: m(100),
   },
   header: {

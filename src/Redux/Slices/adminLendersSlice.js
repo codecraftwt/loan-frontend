@@ -3,8 +3,14 @@ import { adminAPI } from '../../Services/adminService';
 
 const initialState = {
   lenders: [],
+  selectedLender: null,
+  subscriptionHistory: [],
   loading: false,
+  detailsLoading: false,
+  historyLoading: false,
   error: null,
+  detailsError: null,
+  historyError: null,
   pagination: {
     currentPage: 1,
     totalPages: 1,
@@ -47,6 +53,49 @@ export const getLendersWithPlans = createAsyncThunk(
   }
 );
 
+// Get single lender details
+export const getLenderDetails = createAsyncThunk(
+  'adminLenders/getLenderDetails',
+  async (lenderId, { rejectWithValue }) => {
+    try {
+      const response = await adminAPI.getLenderDetails(lenderId);
+      if (response.success && response.data?.length) {
+        return response.data[0];
+      }
+      return response.data || null;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message ||
+          error.message ||
+          'Failed to fetch lender details'
+      );
+    }
+  }
+);
+
+// Get lender subscription history
+export const getLenderSubscriptionHistory = createAsyncThunk(
+  'adminLenders/getLenderSubscriptionHistory',
+  async (lenderId, { rejectWithValue }) => {
+    try {
+      const response = await adminAPI.getLenderSubscriptionHistory(lenderId);
+      if (response.success) {
+        return response.data || [];
+      } else {
+        return rejectWithValue(
+          response.message || 'Failed to fetch subscription history'
+        );
+      }
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message ||
+          error.message ||
+          'Failed to fetch subscription history'
+      );
+    }
+  }
+);
+
 const adminLendersSlice = createSlice({
   name: 'adminLenders',
   initialState,
@@ -69,6 +118,18 @@ const adminLendersSlice = createSlice({
     // Clear errors
     clearErrors: (state) => {
       state.error = null;
+      state.detailsError = null;
+      state.historyError = null;
+    },
+
+    clearSelectedLender: (state) => {
+      state.selectedLender = null;
+      state.detailsError = null;
+    },
+
+    clearSubscriptionHistory: (state) => {
+      state.subscriptionHistory = [];
+      state.historyError = null;
     },
     
     // Reset state
@@ -92,6 +153,35 @@ const adminLendersSlice = createSlice({
         state.error = action.payload;
         state.lenders = [];
         state.pagination = initialState.pagination;
+      })
+      // Get lender details
+      .addCase(getLenderDetails.pending, state => {
+        state.detailsLoading = true;
+        state.detailsError = null;
+      })
+      .addCase(getLenderDetails.fulfilled, (state, action) => {
+        state.detailsLoading = false;
+        state.selectedLender = action.payload;
+        state.detailsError = null;
+      })
+      .addCase(getLenderDetails.rejected, (state, action) => {
+        state.detailsLoading = false;
+        state.detailsError = action.payload;
+      })
+      // Get lender subscription history
+      .addCase(getLenderSubscriptionHistory.pending, state => {
+        state.historyLoading = true;
+        state.historyError = null;
+      })
+      .addCase(getLenderSubscriptionHistory.fulfilled, (state, action) => {
+        state.historyLoading = false;
+        state.subscriptionHistory = action.payload;
+        state.historyError = null;
+      })
+      .addCase(getLenderSubscriptionHistory.rejected, (state, action) => {
+        state.historyLoading = false;
+        state.historyError = action.payload;
+        state.subscriptionHistory = [];
       });
   },
 });
@@ -101,6 +191,8 @@ export const {
   resetFilters,
   setLimit,
   clearErrors,
+  clearSelectedLender,
+  clearSubscriptionHistory,
   resetAdminLenders,
 } = adminLendersSlice.actions;
 

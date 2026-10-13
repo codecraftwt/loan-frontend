@@ -5,9 +5,8 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  FlatList,
   ActivityIndicator,
-  Image,
+  RefreshControl,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
@@ -20,13 +19,27 @@ import { getAdminRecentActivities } from '../../../Redux/Slices/adminActivitiesS
 
 /**
  * Format currency value to Indian Rupee format
- * @param {number} value - The amount to format
- * @returns {string} Formatted currency string
  */
 const formatCurrency = value => {
   if (!value) return '₹0';
   const num = Number(value) || 0;
   return `₹${num.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+};
+
+/**
+ * Format relative time
+ */
+const formatRelativeTime = dateStr => {
+  if (!dateStr) return 'Just now';
+  try {
+    const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
+  } catch {
+    return 'Recently';
+  }
 };
 
 export default function AdminDashboard() {
@@ -42,340 +55,312 @@ export default function AdminDashboard() {
     state => state.adminActivities,
   );
 
-  // State for avatar image error handling
-  const [avatarError, setAvatarError] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Fetch data on component mount
-  useEffect(() => {
+  // Fetch data
+  const fetchData = useCallback(() => {
     dispatch(getRevenueStatistics({ groupBy: 'all' }));
-    dispatch(getAdminRecentActivities({ limit: 10 }));
+    dispatch(getAdminRecentActivities({ limit: 8 }));
   }, [dispatch]);
 
-  // Reset avatar error when profile image changes
   useEffect(() => {
-    setAvatarError(false);
-  }, [user?.profileImage]);
+    fetchData();
+  }, [fetchData]);
 
-  // Memoized revenue calculations
-  const revenueSummary = useMemo(() => {
-    const summary = revenueData?.summary || {};
-    const revenueByMonth = revenueData?.revenueByMonth || [];
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    Promise.all([
+      dispatch(getRevenueStatistics({ groupBy: 'all' })),
+      dispatch(getAdminRecentActivities({ limit: 8 })),
+    ]).finally(() => setRefreshing(false));
+  }, [dispatch]);
 
-    // Calculate growth rate (compare last 2 months if available)
-    const calculateGrowthRate = () => {
-      if (revenueByMonth.length < 2) return null;
-      const lastMonth = revenueByMonth[revenueByMonth.length - 1]?.totalRevenue || 0;
-      const prevMonth = revenueByMonth[revenueByMonth.length - 2]?.totalRevenue || 0;
-      if (prevMonth === 0) return null;
-      const growth = ((lastMonth - prevMonth) / prevMonth) * 100;
-      return growth > 0 ? `+${growth.toFixed(1)}%` : `${growth.toFixed(1)}%`;
-    };
-
+  // Memoized revenue summary
+  const summary = useMemo(() => {
+    const s = revenueData?.summary || {};
     return {
-      totalRevenue: summary.totalRevenue || 0,
-      avgRevenue: summary.averageRevenuePerPurchase || 0,
-      totalPurchases: summary.totalPurchases || 0,
-      activePlans: summary.activePlansCount || 0,
-      growthRate: calculateGrowthRate(),
+      totalRevenue: s.totalRevenue || 0,
+      totalPurchases: s.totalPurchases || 0,
+      avgRevenue: s.averageRevenuePerPurchase || 0,
+      activePlans: s.activePlansCount || 0,
     };
   }, [revenueData]);
 
-  // Quick actions configuration
-  const quickActions = useMemo(
-    () => [
-      {
-        id: 1,
-        title: 'Add Plan',
-        icon: 'plus-circle',
-        screen: 'CreateEditPlan',
-        gradient: ['#96CEB4', '#AEDCC1'],
-        iconBg: 'rgba(255, 255, 255, 0.22)',
-      },
-      {
-        id: 2,
-        title: 'Lender List',
-        icon: 'users',
-        screen: 'Lenders',
-        gradient: ['#FF6B6B', '#FF8E8E'],
-        iconBg: 'rgba(255, 255, 255, 0.22)',
-      },
-    ],
-    [],
-  );
-
-  /**
-   * Get activity icon and colors based on activity type
-   * @param {string} type - Activity type
-   * @returns {Object} Icon configuration with name, color, and background
-   */
-  const getActivityIcon = useCallback((type) => {
-    const iconMap = {
-      subscription_purchased: {
-        name: 'shopping-cart',
-        color: '#4CAF50',
-        bg: 'rgba(76, 175, 80, 0.15)',
-      },
-      plan_updated: {
-        name: 'edit',
-        color: '#2196F3',
-        bg: 'rgba(33, 150, 243, 0.15)',
-      },
-      plan_created: {
-        name: 'plus-circle',
-        color: '#FF9800',
-        bg: 'rgba(255, 152, 0, 0.15)',
-      },
-    };
-
-    return iconMap[type] || {
-      name: 'activity',
-      color: '#666',
-      bg: 'rgba(102, 102, 102, 0.15)',
-    };
+  // Activity type icon configuration
+  const getActivityConfig = useCallback((type) => {
+    switch (type) {
+      case 'subscription_purchased':
+        return { icon: 'shopping-cart', color: '#16a34a', bg: '#dcfce7', label: 'Subscription' };
+      case 'plan_updated':
+        return { icon: 'edit-3', color: '#2563eb', bg: '#dbeafe', label: 'Plan Updated' };
+      case 'plan_created':
+        return { icon: 'plus-circle', color: '#7c3aed', bg: '#ede9fe', label: 'Plan Created' };
+      case 'lender_registered':
+        return { icon: 'user-plus', color: '#0284c7', bg: '#e0f2fe', label: 'New Lender' };
+      default:
+        return { icon: 'activity', color: '#0284c7', bg: '#e0f2fe', label: 'System Event' };
+    }
   }, []);
 
-  /**
-   * Render quick action card
-   */
-  const renderQuickAction = useCallback(
-    ({ item, index }) => (
-      <TouchableOpacity
-        style={[
-          styles.actionCard,
-          index % 2 === 0 ? { marginRight: m(8) } : { marginLeft: m(8) },
-        ]}
-        onPress={() => navigation.navigate(item.screen)}
-        activeOpacity={0.9}>
-        <LinearGradient
-          colors={item.gradient}
-          style={styles.actionGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}>
-          <View style={[styles.actionIconContainer, { backgroundColor: item.iconBg }]}>
-            <Icon name={item.icon} size={28} color="#FFFFFF" />
-          </View>
-          <Text style={styles.actionTitle}>{item.title}</Text>
-          <View style={styles.actionArrow}>
-            <Icon name="arrow-right" size={16} color="#FFFFFF" />
-          </View>
-        </LinearGradient>
-      </TouchableOpacity>
-    ),
-    [navigation],
-  );
-
-  // Render activity item
-
-  const renderActivityItem = useCallback(
-    ({ item }) => {
-      const iconInfo = getActivityIcon(item.type);
-      return (
-        <View style={styles.activityItem}>
-          <View style={[styles.activityIcon, { backgroundColor: iconInfo.bg }]}>
-            <Icon name={iconInfo.name} size={18} color={iconInfo.color} />
-          </View>
-          <View style={styles.activityContent}>
-            <View style={styles.activityHeader}>
-              <Text style={styles.activityTitle} numberOfLines={1}>
-                {item.shortMessage || item.type}
-              </Text>
-              <Text style={styles.activityTime}>{item.relativeTime || 'N/A'}</Text>
-            </View>
-            <Text style={styles.activityDescription} numberOfLines={2}>
-              {item.message || ''}
-            </Text>
-          </View>
-        </View>
-      );
-    },
-    [getActivityIcon],
-  );
-
-
-  // Get user avatar - fallback to icon if no image or image fails to load
-  const renderAvatar = useCallback(() => {
-    if (user?.profileImage && !avatarError) {
-      return (
-        <Image
-          source={{ uri: user.profileImage }}
-          style={styles.avatarImage}
-          resizeMode="cover"
-          onError={() => {
-            setAvatarError(true);
-          }}
-        />
-      );
-    }
-    return (
-      <View style={styles.avatarPlaceholder}>
-        <Icon name="user" size={24} color="#FFFFFF" />
-      </View>
-    );
-  }, [user?.profileImage, avatarError]);
+  const displayName = user?.name || user?.userName || 'Admin';
 
   return (
     <View style={styles.container}>
-      <Header title="Admin Dashboard" />
+      <Header title="System Console" />
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
-        {/* Welcome Section */}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563eb']} />
+        }
+      >
+        {/* Enterprise Hero Banner */}
         <LinearGradient
-          colors={['#1a1a2e', '#16213e', '#0f3460']}
-          style={styles.welcomeSection}
+          colors={['#090d16', '#0f172a', '#1e293b']}
           start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}>
-          <View style={styles.welcomeContent}>
-            <View style={styles.welcomeTextContainer}>
-              <Text style={styles.welcomeText}>Welcome back,</Text>
-              <Text style={styles.userName}>{user?.userName || 'Admin'}</Text>
+          end={{ x: 1, y: 1 }}
+          style={styles.heroBanner}
+        >
+          <View style={styles.heroBadgeRow}>
+            <View style={styles.consoleBadge}>
+              <View style={styles.pulseDot} />
+              <Text style={styles.consoleBadgeText}>Admin Console</Text>
             </View>
-            <View style={styles.avatarContainer}>{renderAvatar()}</View>
+            <Text style={styles.enterpriseTag}>LoanHub Enterprise</Text>
           </View>
-          <Text style={styles.welcomeSubtitle}>Manage your Subscriptions</Text>
+
+          <Text style={styles.heroTitle}>System Dashboard</Text>
+          <Text style={styles.heroSubtitle}>
+            Welcome back, {displayName}. Oversee institutional lenders, borrower KYC dossiers, and SaaS revenues.
+          </Text>
+
+          {/* Banner Quick Actions */}
+          <View style={styles.heroActionsRow}>
+            <TouchableOpacity
+              style={styles.heroPrimaryBtn}
+              activeOpacity={0.85}
+              onPress={() => navigation.navigate('LenderList')}
+            >
+              <Icon name="users" size={14} color="#ffffff" />
+              <Text style={styles.heroPrimaryBtnText}>Manage Lenders</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.heroSecondaryBtn}
+              activeOpacity={0.85}
+              onPress={() => navigation.navigate('Revenue')}
+            >
+              <Icon name="trending-up" size={14} color="#e2e8f0" />
+              <Text style={styles.heroSecondaryBtnText}>Revenue Reports</Text>
+            </TouchableOpacity>
+          </View>
         </LinearGradient>
 
-        {/* Quick Actions */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Quick Actions</Text>
-            <TouchableOpacity>
-              <Text style={styles.sectionSubtitle}>Manage everything</Text>
-            </TouchableOpacity>
+        {/* KPI Stats Grid */}
+        <View style={styles.kpiGrid}>
+          {/* Total Revenue */}
+          <View style={styles.kpiCard}>
+            <View style={styles.kpiHeader}>
+              <Text style={styles.kpiLabel}>TOTAL SAAS REVENUE</Text>
+              <View style={[styles.kpiIconBox, { backgroundColor: '#eff6ff' }]}>
+                <Icon name="trending-up" size={16} color="#2563eb" />
+              </View>
+            </View>
+            <Text style={styles.kpiValue} numberOfLines={1}>
+              {formatCurrency(summary.totalRevenue)}
+            </Text>
           </View>
-          <FlatList
-            data={quickActions}
-            renderItem={renderQuickAction}
-            keyExtractor={item => item.id.toString()}
-            numColumns={2}
-            scrollEnabled={false}
-            contentContainerStyle={styles.actionsGrid}
-          />
+
+          {/* Total Subscriptions */}
+          <View style={styles.kpiCard}>
+            <View style={styles.kpiHeader}>
+              <Text style={styles.kpiLabel}>TOTAL SUBSCRIPTIONS</Text>
+              <View style={[styles.kpiIconBox, { backgroundColor: '#f0fdf4' }]}>
+                <Icon name="shopping-cart" size={16} color="#16a34a" />
+              </View>
+            </View>
+            <Text style={styles.kpiValue} numberOfLines={1}>
+              {summary.totalPurchases.toLocaleString('en-IN')}
+            </Text>
+          </View>
+
+          {/* Average Deal Size */}
+          <View style={styles.kpiCard}>
+            <View style={styles.kpiHeader}>
+              <Text style={styles.kpiLabel}>AVERAGE DEAL SIZE</Text>
+              <View style={[styles.kpiIconBox, { backgroundColor: '#faf5ff' }]}>
+                <Icon name="dollar-sign" size={16} color="#7c3aed" />
+              </View>
+            </View>
+            <Text style={styles.kpiValue} numberOfLines={1}>
+              {formatCurrency(Math.round(summary.avgRevenue))}
+            </Text>
+          </View>
+
+          {/* Active Plans */}
+          <View style={styles.kpiCard}>
+            <View style={styles.kpiHeader}>
+              <Text style={styles.kpiLabel}>ACTIVE PLANS</Text>
+              <View style={[styles.kpiIconBox, { backgroundColor: '#ecfeff' }]}>
+                <Icon name="check-circle" size={16} color="#0891b2" />
+              </View>
+            </View>
+            <Text style={styles.kpiValue} numberOfLines={1}>
+              {summary.activePlans.toLocaleString('en-IN')}
+            </Text>
+          </View>
         </View>
 
-        {/* Revenue Overview */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Revenue Overview</Text>
+        {/* Core Management Hub Cards */}
+        <Text style={styles.sectionHeading}>Management Directory</Text>
+
+        <View style={styles.hubGrid}>
+          {/* Card 1: Lending Institutions */}
+          <View style={styles.hubCard}>
+            <View style={[styles.hubIconBox, { backgroundColor: '#eff6ff' }]}>
+              <Icon name="users" size={20} color="#2563eb" />
+            </View>
+            <Text style={styles.hubTitle}>Lending Institutions</Text>
+            <Text style={styles.hubDesc}>
+              Oversee registered private lending firms, inspect active subscriptions, and view lender portfolios.
+            </Text>
             <TouchableOpacity
-              style={styles.viewAllButton}
-              onPress={() => navigation.navigate('Revenue')}
-              activeOpacity={0.7}>
-              <Text style={styles.viewAllText}>View Details</Text>
-              <Icon name="chevron-right" size={16} color="#667eea" />
+              style={[styles.hubButton, { backgroundColor: '#eff6ff', borderColor: '#bfdbfe' }]}
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate('LenderList')}
+            >
+              <Text style={[styles.hubButtonText, { color: '#1d4ed8' }]}>View All Lenders</Text>
+              <Icon name="arrow-right" size={14} color="#1d4ed8" />
             </TouchableOpacity>
           </View>
-          {revenueLoading ? (
-            <View style={[styles.revenueCard, styles.loadingCard]}>
-              <ActivityIndicator size="large" color="#ff6700" />
-              <Text style={styles.loadingText}>Loading revenue data...</Text>
+
+          {/* Card 2: Borrowers Directory */}
+          <View style={styles.hubCard}>
+            <View style={[styles.hubIconBox, { backgroundColor: '#eef2ff' }]}>
+              <Icon name="shield" size={20} color="#4f46e5" />
+            </View>
+            <Text style={styles.hubTitle}>Borrowers Directory</Text>
+            <Text style={styles.hubDesc}>
+              Inspect registered borrowers, verified DigiLocker KYC credentials, and platform credit exposure.
+            </Text>
+            <TouchableOpacity
+              style={[styles.hubButton, { backgroundColor: '#eef2ff', borderColor: '#c7d2fe' }]}
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate('AdminBorrowerList')}
+            >
+              <Text style={[styles.hubButtonText, { color: '#4338ca' }]}>View All Borrowers</Text>
+              <Icon name="arrow-right" size={14} color="#4338ca" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Card 3: Subscription Tiers & Pricing */}
+          <View style={styles.hubCard}>
+            <View style={[styles.hubIconBox, { backgroundColor: '#f0fdfa' }]}>
+              <Icon name="layers" size={20} color="#0d9488" />
+            </View>
+            <Text style={styles.hubTitle}>Subscription Tiers & Pricing</Text>
+            <Text style={styles.hubDesc}>
+              Create, configure, and manage SaaS pricing plans, deal capacity quotas, and AI review credits.
+            </Text>
+            <TouchableOpacity
+              style={[styles.hubButton, { backgroundColor: '#f0fdfa', borderColor: '#99f6e4' }]}
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate('PlansList')}
+            >
+              <Text style={[styles.hubButtonText, { color: '#0f766e' }]}>Manage Plans</Text>
+              <Icon name="arrow-right" size={14} color="#0f766e" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Card 4: Financial Revenue Analytics */}
+          <View style={styles.hubCard}>
+            <View style={[styles.hubIconBox, { backgroundColor: '#ecfdf5' }]}>
+              <Icon name="trending-up" size={20} color="#059669" />
+            </View>
+            <Text style={styles.hubTitle}>Financial Revenue Analytics</Text>
+            <Text style={styles.hubDesc}>
+              Analyze platform billing breakdowns, monthly growth trajectories, and download auditor-ready ledger reports.
+            </Text>
+            <TouchableOpacity
+              style={[styles.hubButton, { backgroundColor: '#ecfdf5', borderColor: '#a7f3d0' }]}
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate('Revenue')}
+            >
+              <Text style={[styles.hubButtonText, { color: '#047857' }]}>Open Analytics</Text>
+              <Icon name="arrow-right" size={14} color="#047857" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Platform Audit & Subscription Events */}
+        <View style={styles.auditSection}>
+          <View style={styles.auditHeader}>
+            <View style={styles.auditHeaderLeft}>
+              <View style={styles.auditTitleRow}>
+                <Icon name="activity" size={16} color="#2563eb" />
+                <Text style={styles.auditTitle}>Platform Audit & Subscription Events</Text>
+              </View>
+              <Text style={styles.auditSubtitle}>
+                Live updates across plan upgrades, lender registrations, and system configurations.
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.viewLogsBtn}
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate('AdminActivityDetailsScreen')}
+            >
+              <Text style={styles.viewLogsText}>View All Logs</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Activity List */}
+          {activitiesLoading && recentActivities.length === 0 ? (
+            <View style={styles.activityLoadingBox}>
+              <ActivityIndicator size="small" color="#2563eb" />
+              <Text style={styles.activityLoadingText}>Loading audit events...</Text>
+            </View>
+          ) : recentActivities.length > 0 ? (
+            <View style={styles.activityList}>
+              {recentActivities.slice(0, 6).map((item, idx) => {
+                const config = getActivityConfig(item.type || item.action);
+                const title = item.shortMessage || item.title || item.type || 'Platform Event';
+                const desc = item.message || item.description || item.details || 'Event logged successfully.';
+                const timeStr = item.relativeTime || formatRelativeTime(item.createdAt || item.timestamp);
+
+                return (
+                  <View
+                    key={item._id || item.id || idx}
+                    style={[
+                      styles.activityRow,
+                      idx < recentActivities.length - 1 && styles.activityRowBorder,
+                    ]}
+                  >
+                    <View style={[styles.activityIconCircle, { backgroundColor: config.bg }]}>
+                      <Icon name={config.icon} size={15} color={config.color} />
+                    </View>
+                    <View style={styles.activityBody}>
+                      <View style={styles.activityMetaRow}>
+                        <Text style={styles.activityItemTitle} numberOfLines={1}>
+                          {title}
+                        </Text>
+                        <Text style={styles.activityItemTime}>{timeStr}</Text>
+                      </View>
+                      <Text style={styles.activityItemDesc} numberOfLines={2}>
+                        {desc}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
             </View>
           ) : (
-            <LinearGradient
-              colors={['#f8f9ff', '#ffffff']}
-              style={styles.revenueCard}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}>
-              <View style={styles.revenueHeader}>
-                <View style={styles.container1}>
-                  <View style={styles.labelContainer}>
-                    <Text style={styles.revenueTotalLabel}>Total Revenue</Text>
-                    <Text style={styles.revenueTotalAmount}>
-                      {formatCurrency(revenueSummary.totalRevenue)}
-                    </Text>
-                  </View>
-                  <Icon name="trending-up" size={30} color="orange" style={styles.icon} />
-                </View>
-
-                {revenueSummary.growthRate && (
-                  <View
-                    style={[
-                      styles.growthBadge,
-                      revenueSummary.growthRate.startsWith('-') &&
-                      styles.growthBadgeNegative,
-                    ]}>
-                    <Icon
-                      name={
-                        revenueSummary.growthRate.startsWith('+')
-                          ? 'trending-up'
-                          : 'trending-down'
-                      }
-                      size={14}
-                      color={
-                        revenueSummary.growthRate.startsWith('+')
-                          ? '#4CAF50'
-                          : '#F44336'
-                      }
-                    />
-                    <Text
-                      style={[
-                        styles.growthText,
-                        revenueSummary.growthRate.startsWith('-') &&
-                        styles.growthTextNegative,
-                      ]}>
-                      {revenueSummary.growthRate}
-                    </Text>
-                  </View>
-                )}
-              </View>
-              <View style={styles.revenueDetails}>
-                <View style={styles.revenueDetailItem}>
-                  <Text style={styles.revenueDetailLabel}>Total Purchases</Text>
-                  <Text style={styles.revenueDetailValue}>
-                    {revenueSummary.totalPurchases}
-                  </Text>
-                </View>
-                <View style={styles.revenueDivider} />
-                <View style={styles.revenueDetailItem}>
-                  <Text style={styles.revenueDetailLabel}>Avg. Per Purchase</Text>
-                  <Text style={styles.revenueDetailValue}>
-                    {formatCurrency(revenueSummary.avgRevenue)}
-                  </Text>
-                </View>
-                <View style={styles.revenueDivider} />
-                <View style={styles.revenueDetailItem}>
-                  <Text style={styles.revenueDetailLabel}>Active Plans</Text>
-                  <Text style={[styles.revenueDetailValue, styles.activePlansText]}>
-                    {revenueSummary.activePlans}
-                  </Text>
-                </View>
-              </View>
-            </LinearGradient>
+            <View style={styles.emptyActivityBox}>
+              <Icon name="check-circle" size={32} color="#cbd5e1" />
+              <Text style={styles.emptyActivityText}>No recent activity recorded yet.</Text>
+            </View>
           )}
-        </View>
-
-        {/* Recent Activity */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Activity</Text>
-            <TouchableOpacity activeOpacity={0.7}>
-              <Text style={styles.viewAllText}>See All</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.activityCard}>
-            {activitiesLoading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="small" color="#ff6700" />
-                <Text style={styles.loadingText}>Loading activities...</Text>
-              </View>
-            ) : recentActivities.length > 0 ? (
-              <FlatList
-                data={recentActivities}
-                renderItem={renderActivityItem}
-                keyExtractor={(item, index) =>
-                  item._id || item.id || `activity-${index}`
-                }
-                scrollEnabled={false}
-                ItemSeparatorComponent={() => <View style={styles.separator} />}
-              />
-            ) : (
-              <View style={styles.emptyContainer}>
-                <Icon name="inbox" size={48} color="#cbd5e1" />
-                <Text style={styles.emptyText}>No recent activities</Text>
-              </View>
-            )}
-          </View>
         </View>
       </ScrollView>
     </View>
@@ -391,321 +376,318 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: m(120),
+    padding: m(16),
+    paddingBottom: m(90),
   },
-  // Welcome Section Styles
-  welcomeSection: {
-    padding: m(24),
-    marginHorizontal: m(16),
-    marginTop: m(16),
-    borderRadius: m(20),
-    elevation: 8,
-    shadowColor: '#667eea',
+  heroBanner: {
+    borderRadius: m(16),
+    padding: m(18),
+    marginBottom: m(16),
+    borderWidth: 1,
+    borderColor: '#1e293b',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  welcomeContent: {
+  heroBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: m(10),
+  },
+  consoleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(37, 99, 235, 0.2)',
+    paddingHorizontal: m(8),
+    paddingVertical: m(3),
+    borderRadius: m(12),
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.4)',
+    gap: m(5),
+  },
+  pulseDot: {
+    width: m(6),
+    height: m(6),
+    borderRadius: m(3),
+    backgroundColor: '#60a5fa',
+  },
+  consoleBadgeText: {
+    fontSize: m(10),
+    fontWeight: '700',
+    color: '#93c5fd',
+    letterSpacing: 0.3,
+  },
+  enterpriseTag: {
+    fontSize: m(11),
+    fontWeight: '600',
+    color: '#94a3b8',
+  },
+  heroTitle: {
+    fontSize: m(20),
+    fontWeight: '800',
+    color: '#ffffff',
+    letterSpacing: -0.3,
+    marginBottom: m(4),
+  },
+  heroSubtitle: {
+    fontSize: m(12),
+    color: '#cbd5e1',
+    lineHeight: m(17),
+    marginBottom: m(14),
+  },
+  heroActionsRow: {
+    flexDirection: 'row',
+    gap: m(10),
+  },
+  heroPrimaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2563eb',
+    paddingHorizontal: m(14),
+    paddingVertical: m(8),
+    borderRadius: m(8),
+    gap: m(6),
+  },
+  heroPrimaryBtnText: {
+    fontSize: m(12),
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  heroSecondaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.18)',
+    paddingHorizontal: m(14),
+    paddingVertical: m(8),
+    borderRadius: m(8),
+    gap: m(6),
+  },
+  heroSecondaryBtnText: {
+    fontSize: m(12),
+    fontWeight: '600',
+    color: '#e2e8f0',
+  },
+  kpiGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: m(10),
+    marginBottom: m(18),
+  },
+  kpiCard: {
+    width: '48.5%',
+    backgroundColor: '#ffffff',
+    borderRadius: m(12),
+    padding: m(12),
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  kpiHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: m(8),
   },
-  welcomeTextContainer: {
-    flex: 1,
-  },
-  welcomeText: {
-    fontSize: m(14),
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontFamily: 'System',
-    fontWeight: '500',
-  },
-  userName: {
-    fontSize: m(24),
-    fontWeight: '800',
-    color: '#FFFFFF',
-    marginTop: m(2),
-    letterSpacing: 0.5,
-  },
-  welcomeSubtitle: {
-    fontSize: m(13),
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontFamily: 'System',
-    fontWeight: '400',
-  },
-  avatarContainer: {
-    width: m(55),
-    height: m(55),
-    borderRadius: m(28),
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    overflow: 'hidden',
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: m(28),
-  },
-  avatarPlaceholder: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  // Section Styles
-  section: {
-    paddingHorizontal: m(16),
-    marginTop: m(24),
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: m(16),
-  },
-  sectionTitle: {
-    fontSize: m(18),
+  kpiLabel: {
+    fontSize: m(10),
     fontWeight: '700',
-    color: '#1e293b',
-    fontFamily: 'System',
-    letterSpacing: 0.3,
-  },
-  sectionSubtitle: {
-    fontSize: m(13),
     color: '#64748b',
-    fontWeight: '500',
-  },
-  // Quick Actions Styles
-  actionsGrid: {
-    gap: m(16),
-  },
-  actionCard: {
-    flex: 1,
-    height: m(120),
-    borderRadius: m(20),
-    overflow: 'hidden',
-    elevation: 4,
-    shadowColor: '#000000ff',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-  },
-  actionGradient: {
-    flex: 1,
-    padding: m(20),
-    justifyContent: 'space-between',
-  },
-  actionIconContainer: {
-    width: m(48),
-    height: m(48),
-    borderRadius: m(12),
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: m(12),
-  },
-  actionTitle: {
-    fontSize: m(15),
-    fontWeight: '700',
-    color: '#FFFFFF',
-    fontFamily: 'System',
     letterSpacing: 0.3,
+    flex: 1,
   },
-  actionArrow: {
-    position: 'absolute',
-    bottom: m(16),
-    right: m(16),
+  kpiIconBox: {
     width: m(28),
     height: m(28),
-    borderRadius: m(14),
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: m(6),
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft: m(4),
   },
-  // Revenue Card Styles
-  revenueCard: {
-    borderRadius: m(20),
-    padding: m(20),
-    elevation: 4,
+  kpiValue: {
+    fontSize: m(18),
+    fontWeight: '800',
+    color: '#0f172a',
+    letterSpacing: -0.3,
+  },
+  sectionHeading: {
+    fontSize: m(14),
+    fontWeight: '700',
+    color: '#334155',
+    marginBottom: m(10),
+    marginLeft: m(2),
+  },
+  hubGrid: {
+    gap: m(12),
+    marginBottom: m(20),
+  },
+  hubCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: m(14),
+    padding: m(16),
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    borderWidth: m(1),
-    borderColor: 'rgba(0, 0, 0, 0.05)',
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  revenueHeader: {
+  hubIconBox: {
+    width: m(40),
+    height: m(40),
+    borderRadius: m(10),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: m(10),
+  },
+  hubTitle: {
+    fontSize: m(15),
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: m(4),
+  },
+  hubDesc: {
+    fontSize: m(12),
+    color: '#64748b',
+    lineHeight: m(17),
+    marginBottom: m(12),
+  },
+  hubButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: m(8),
+    paddingHorizontal: m(12),
+    borderRadius: m(8),
+    borderWidth: 1,
+    gap: m(6),
+    alignSelf: 'flex-start',
+  },
+  hubButtonText: {
+    fontSize: m(12),
+    fontWeight: '700',
+  },
+  auditSection: {
+    backgroundColor: '#ffffff',
+    borderRadius: m(14),
+    padding: m(16),
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginBottom: m(16),
+  },
+  auditHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: m(20),
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+    paddingBottom: m(12),
+    marginBottom: m(10),
   },
-  container1: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  labelContainer: {
-    flexDirection: 'column',
+  auditHeaderLeft: {
+    flex: 1,
     marginRight: m(10),
   },
-  revenueTotalLabel: {
+  auditTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(6),
+  },
+  auditTitle: {
     fontSize: m(13),
-    color: '#64748b',
-    fontWeight: '500',
-    marginBottom: m(4),
-    letterSpacing: 0.2,
-  },
-  revenueTotalAmount: {
-    fontSize: m(28),
-    fontWeight: '800',
-    color: '#1e293b',
-    fontFamily: 'System',
-    letterSpacing: 0.5,
-  },
-  growthBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-    paddingHorizontal: m(10),
-    paddingVertical: m(6),
-    borderRadius: m(20),
-  },
-  growthBadgeNegative: {
-    backgroundColor: 'rgba(244, 67, 54, 0.1)',
-  },
-  growthText: {
-    fontSize: m(12),
-    color: '#4CAF50',
     fontWeight: '700',
-    marginLeft: m(4),
+    color: '#0f172a',
   },
-  growthTextNegative: {
-    color: '#F44336',
-  },
-  revenueDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  revenueDetailItem: {
-    flex: 1,
-  },
-  revenueDetailLabel: {
-    fontSize: m(12),
+  auditSubtitle: {
+    fontSize: m(11),
     color: '#94a3b8',
-    fontWeight: '500',
-    marginBottom: m(4),
-    letterSpacing: 0.2,
+    marginTop: m(2),
+    lineHeight: m(15),
   },
-  revenueDetailValue: {
-    fontSize: m(16),
+  viewLogsBtn: {
+    paddingHorizontal: m(10),
+    paddingVertical: m(5),
+    borderRadius: m(6),
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+  },
+  viewLogsText: {
+    fontSize: m(11),
     fontWeight: '700',
-    color: '#1e293b',
+    color: '#1d4ed8',
   },
-  activePlansText: {
-    color: '#4CAF50',
+  activityList: {
+    gap: m(2),
   },
-  revenueDivider: {
-    width: 1,
-    height: m(40),
-    backgroundColor: '#e2e8f0',
-    marginHorizontal: m(20),
-  },
-  // Activity Card Styles
-  activityCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(20),
-    padding: m(4),
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-  },
-  activityItem: {
+  activityRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    padding: m(16),
+    paddingVertical: m(10),
+    alignItems: 'flex-start',
   },
-  activityIcon: {
-    width: m(40),
-    height: m(40),
-    borderRadius: m(12),
+  activityRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#f8fafc',
+  },
+  activityIconCircle: {
+    width: m(32),
+    height: m(32),
+    borderRadius: m(16),
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: m(16),
+    marginRight: m(10),
+    marginTop: m(2),
   },
-  activityContent: {
+  activityBody: {
     flex: 1,
   },
-  activityHeader: {
+  activityMetaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: m(4),
   },
-  activityTitle: {
-    fontSize: m(15),
-    fontWeight: '600',
-    color: '#1e293b',
+  activityItemTitle: {
+    fontSize: m(12),
+    fontWeight: '700',
+    color: '#0f172a',
     flex: 1,
-    marginRight: m(8),
   },
-  activityTime: {
+  activityItemTime: {
+    fontSize: m(10),
+    color: '#94a3b8',
+    marginLeft: m(6),
+  },
+  activityItemDesc: {
+    fontSize: m(11),
+    color: '#64748b',
+    marginTop: m(2),
+    lineHeight: m(15),
+  },
+  activityLoadingBox: {
+    paddingVertical: m(24),
+    alignItems: 'center',
+    gap: m(8),
+  },
+  activityLoadingText: {
+    fontSize: m(12),
+    color: '#64748b',
+  },
+  emptyActivityBox: {
+    paddingVertical: m(24),
+    alignItems: 'center',
+    gap: m(6),
+  },
+  emptyActivityText: {
     fontSize: m(12),
     color: '#94a3b8',
-    fontWeight: '500',
-  },
-  activityDescription: {
-    fontSize: m(13),
-    color: '#64748b',
-    lineHeight: m(18),
-  },
-  separator: {
-    height: 1,
-    backgroundColor: '#f1f5f9',
-    marginHorizontal: m(16),
-  },
-  // Common Styles
-  viewAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(4),
-  },
-  viewAllText: {
-    fontSize: m(13),
-    color: '#667eea',
-    fontWeight: '600',
-  },
-  loadingCard: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: m(40),
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(20),
-  },
-  loadingContainer: {
-    padding: m(20),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingText: {
-    marginTop: m(12),
-    fontSize: m(14),
-    color: '#666',
-    textAlign: 'center',
-  },
-  emptyContainer: {
-    padding: m(40),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyText: {
-    fontSize: m(14),
-    color: '#94a3b8',
-    marginTop: m(12),
-    fontWeight: '500',
   },
 });

@@ -10,6 +10,7 @@ import {
   SafeAreaView,
   StatusBar,
   TextInput,
+  Platform,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
@@ -358,7 +359,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: m(16),
-    paddingTop: m(14),
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || m(24)) + m(8) : m(14),
     paddingBottom: m(8),
   },
   headerTitle: {

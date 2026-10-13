@@ -23,6 +23,8 @@ import AdminDashboard from '../Screens/Admin/Dashboard/AdminDashboard';
 import PlansList from '../Screens/Admin/Plans/PlansList';
 import Revenue from '../Screens/Admin/Revenue/Revenue';
 import LenderList from '../Screens/Admin/Lenders/LenderList';
+import AdminBorrowerList from '../Screens/Admin/Borrowers/AdminBorrowerList';
+import AdminProfileScreen from '../Screens/Admin/Profile/AdminProfileScreen';
 
 // Borrower screens
 import BorrowerDashboard from '../Screens/Borrower/Dashboard/BorrowerDashboard';
@@ -85,7 +87,7 @@ export default function BottomNavigation() {
     ],
   };
 
-  // Admin Dashboard (roleId === 0)
+  // Admin Dashboard (roleId === 0) - 5 Clean Tabs
   if (roleId === 0) {
     return (
       <View style={styles.container}>
@@ -103,35 +105,35 @@ export default function BottomNavigation() {
             }}
           />
           <Tab.Screen
-            name="Plans"
-            component={PlansList}
-            options={{
-              tabBarLabel: 'Plans',
-              tabBarIcon: ({ color, size, focused }) =>
-                renderIcon('file-text', color, size, focused),
-            }}
-          />
-          <Tab.Screen
-            name="Revenue"
-            component={Revenue}
-            options={{
-              tabBarLabel: 'Revenue',
-              tabBarIcon: ({ color, size, focused }) =>
-                renderIcon('dollar-sign', color, size, focused),
-            }}
-          />
-          <Tab.Screen
             name="Lenders"
             component={LenderList}
             options={{
               tabBarLabel: 'Lenders',
               tabBarIcon: ({ color, size, focused }) =>
-                renderIcon('users', color, size, focused),
+                renderIcon('briefcase', color, size, focused),
+            }}
+          />
+          <Tab.Screen
+            name="Borrowers"
+            component={AdminBorrowerList}
+            options={{
+              tabBarLabel: 'Borrowers',
+              tabBarIcon: ({ color, size, focused }) =>
+                renderIcon('user-check', color, size, focused),
+            }}
+          />
+          <Tab.Screen
+            name="Plans"
+            component={PlansList}
+            options={{
+              tabBarLabel: 'Plans',
+              tabBarIcon: ({ color, size, focused }) =>
+                renderIcon('layers', color, size, focused),
             }}
           />
           <Tab.Screen
             name="Profile"
-            component={Profile}
+            component={AdminProfileScreen}
             options={{
               tabBarLabel: 'Profile',
               tabBarIcon: ({ color, size, focused }) =>

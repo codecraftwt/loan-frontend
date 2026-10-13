@@ -60,13 +60,63 @@ export const adminAPI = {
       return response.data;
     } catch (error) {
       console.error('Error fetching admin recent activities:', error);
-      // console.error('Error details:', {
-      //   message: error.message,
-      //   status: error.response?.status,
-      //   statusText: error.response?.statusText,
-      //   data: error.response?.data,
-      //   url: error.config?.url
-      // });
+      throw error;
+    }
+  },
+
+  // Get borrowers directory with filters
+  getAdminBorrowers: async (params = {}) => {
+    try {
+      const queryParams = new URLSearchParams();
+      if (params.page) queryParams.append('page', params.page.toString());
+      if (params.limit) queryParams.append('limit', (params.limit || 100).toString());
+      if (params.search && params.search.trim()) queryParams.append('search', params.search.trim());
+      if (params.kycStatus && params.kycStatus !== 'all') queryParams.append('kycStatus', params.kycStatus);
+      if (params.loanStatus && params.loanStatus !== 'all') queryParams.append('loanStatus', params.loanStatus);
+
+      const queryString = queryParams.toString();
+      const url = `admin/borrowers${queryString ? `?${queryString}` : ''}`;
+
+      const response = await axiosInstance.get(url);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching admin borrowers:', error);
+      throw error;
+    }
+  },
+
+  // Get borrower detailed profile & KYC
+  getAdminBorrowerDetails: async (borrowerId) => {
+    try {
+      const url = `admin/borrowers/${borrowerId}/details?includeReputation=true`;
+      const response = await axiosInstance.get(url);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching admin borrower details:', error);
+      throw error;
+    }
+  },
+
+  // Get lender subscription history
+  getLenderSubscriptionHistory: async (lenderId) => {
+    try {
+      const url = `admin/lenders/${lenderId}/subscriptions`;
+      const response = await axiosInstance.get(url);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching lender subscription history:', error);
+      throw error;
+    }
+  },
+
+  // Get lender details with plans
+  getLenderDetails: async (lenderId) => {
+    try {
+      const url = `admin/lenders/plans?lenderId=${lenderId}&includeDetails=true`;
+      const response = await axiosInstance.get(url);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching lender details:', error);
       throw error;
     }
   },

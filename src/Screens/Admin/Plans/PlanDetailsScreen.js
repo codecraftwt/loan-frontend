@@ -11,234 +11,214 @@ import Icon from 'react-native-vector-icons/Feather';
 import LinearGradient from 'react-native-linear-gradient';
 import { m } from 'walstar-rn-responsive';
 import Header from '../../../Components/Header';
-import moment from 'moment';
 
-const DetailItem = ({ icon, label, value }) => (
-  <View style={styles.detailItem}>
-    <View style={styles.detailIconContainer}>
-      <Icon name={icon} size={20} color="#ff6700" />
-    </View>
-    <View style={styles.detailContent}>
-      <Text style={styles.detailLabel}>{label}</Text>
-      <Text style={styles.detailValue} numberOfLines={2}>
-        {value || 'N/A'}
-      </Text>
-    </View>
-  </View>
-);
-
-// FeatureBadge Component
-const FeatureBadge = ({ label, enabled }) => {
-  if (!enabled) return null;
-  return (
-    <View style={styles.featureBadge}>
-      <Icon name="check" size={14} color="#4CAF50" />
-      <Text style={styles.featureText}>{label}</Text>
-    </View>
-  );
+/**
+ * Format currency
+ */
+const formatCurrency = value => {
+  if (!value) return '₹0';
+  const num = Number(value) || 0;
+  return `₹${num.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 };
 
-// PlanDetailsScreen Component
+/**
+ * Format date
+ */
+const formatDate = dateStr => {
+  if (!dateStr) return 'N/A';
+  try {
+    return new Date(dateStr).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+  } catch {
+    return 'N/A';
+  }
+};
+
 export default function PlanDetailsScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const { plan } = route.params || {};
 
-  // Handle navigation to edit screen
   const handleEditPlan = useCallback(() => {
     navigation.navigate('CreateEditPlan', { plan, mode: 'edit' });
   }, [navigation, plan]);
 
-  // Memoized plan information array
-  const planInfo = useMemo(() => {
-    if (!plan) return [];
-    return [
-      {
-        icon: 'tag',
-        label: 'Plan Name',
-        value: plan.planName,
-      },
-      {
-        icon: 'clock',
-        label: 'Duration',
-        value: plan.duration,
-      },
-      {
-        icon: 'dollar-sign',
-        label: 'Monthly Price',
-        value: `₹${plan.priceMonthly?.toLocaleString('en-IN') || '0'}`,
-      },
-      {
-        icon: 'calendar',
-        label: 'Created At',
-        value: plan.createdAt
-          ? moment(plan.createdAt).format('DD MMM YYYY, hh:mm A')
-          : 'N/A',
-      },
-      {
-        icon: 'edit',
-        label: 'Last Updated',
-        value: plan.updatedAt
-          ? moment(plan.updatedAt).format('DD MMM YYYY, hh:mm A')
-          : 'N/A',
-      },
-      {
-        icon: 'credit-card',
-        label: 'Razorpay Plan ID',
-        value: plan.razorpayPlanId || 'Not configured',
-      },
-    ];
-  }, [plan]);
-
-  // Error state - plan not found
   if (!plan) {
     return (
       <View style={styles.container}>
-        <Header title="Plan Details" showBackButton />
-        <View style={styles.errorContainer}>
-          <Icon name="alert-circle" size={48} color="#F44336" />
-          <Text style={styles.errorText}>Plan not found</Text>
+        <Header title="Plan Specifications" showBackButton />
+        <View style={styles.emptyBox}>
+          <Icon name="alert-circle" size={44} color="#f87171" />
+          <Text style={styles.emptyTitle}>Plan Not Found</Text>
+          <Text style={styles.emptySubtitle}>The specified plan could not be located.</Text>
         </View>
       </View>
     );
   }
 
+  const durationDays =
+    plan.durationDays ||
+    (plan.duration === '1 year'
+      ? 365
+      : plan.duration === '6 months'
+      ? 180
+      : plan.duration === '3 months'
+      ? 90
+      : 30);
+
+  const packPrice = Number(plan.price || plan.priceMonthly || 1999);
+  const monthlyRate =
+    plan.priceMonthly || Math.round(packPrice / (durationDays / 30)) || packPrice;
+  const isActive = plan.isActive ?? true;
+
   return (
     <View style={styles.container}>
-      <Header title="Plan Details" showBackButton />
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
-        {/* Plan Header Card */}
-        <View style={styles.headerCard}>
-          <View style={styles.headerContent}>
-            <View style={styles.planIconContainer}>
-              <Icon name="package" size={32} color="#ff6700" />
-            </View>
-            <View style={styles.planHeaderInfo}>
-              <Text style={styles.planName} numberOfLines={2}>
-                {plan.planName}
+      <Header title="Plan Specifications" showBackButton />
+
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Hero Plan Banner */}
+        <LinearGradient
+          colors={['#0f172a', '#1e293b', '#0f2942']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.heroBanner}
+        >
+          <View style={styles.heroHeader}>
+            <View style={styles.heroTitleArea}>
+              <View style={styles.titleBadgeRow}>
+                <Text style={styles.planTitle}>{plan.planName}</Text>
+                {plan.tag ? (
+                  <View style={styles.tagBadge}>
+                    <Text style={styles.tagText}>{plan.tag}</Text>
+                  </View>
+                ) : null}
+              </View>
+              <Text style={styles.planDurationText}>
+                {plan.duration} • {durationDays} Days Unrestricted Platform Access
               </Text>
-              <View style={styles.planMeta}>
-                <View style={styles.metaItem}>
-                  <Icon name="clock" size={14} color="#666" />
-                  <Text style={styles.metaText}>{plan.duration}</Text>
-                </View>
-                <View style={styles.metaDivider} />
-                <View style={styles.metaItem}>
-                  <Icon name="dollar-sign" size={14} color="#666" />
-                  <Text style={styles.metaText}>
-                    ₹{plan.priceMonthly?.toLocaleString('en-IN')}/month
-                  </Text>
-                </View>
-              </View>
+            </View>
+
+            <View
+              style={[
+                styles.statusBadge,
+                isActive ? styles.activeBadge : styles.inactiveBadge,
+              ]}
+            >
+              <View
+                style={[
+                  styles.statusDot,
+                  { backgroundColor: isActive ? '#22c55e' : '#ef4444' },
+                ]}
+              />
+              <Text
+                style={[
+                  styles.statusText,
+                  isActive ? styles.activeText : styles.inactiveText,
+                ]}
+              >
+                {isActive ? 'Published' : 'Archived'}
+              </Text>
             </View>
           </View>
-          <View
-            style={[
-              styles.statusBadge,
-              {
-                backgroundColor: plan.isActive ? '#E8F5E9' : '#FFEBEE',
-              },
-            ]}>
-            <Icon
-              name={plan.isActive ? 'check-circle' : 'x-circle'}
-              size={16}
-              color={plan.isActive ? '#4CAF50' : '#F44336'}
-            />
-            <Text
-              style={[
-                styles.statusText,
-                { color: plan.isActive ? '#4CAF50' : '#F44336' },
-              ]}>
-              {plan.isActive ? 'Active' : 'Inactive'}
-            </Text>
-          </View>
-        </View>
 
-        {/* Plan Details Card */}
-        <View style={styles.detailsCard}>
-          <Text style={styles.detailsTitle}>Plan Information</Text>
-          <View style={styles.detailsGrid}>
-            {planInfo.map((item, index) => (
-              <DetailItem
-                key={`${item.label}-${index}`}
-                icon={item.icon}
-                label={item.label}
-                value={item.value}
-              />
-            ))}
+          {/* Pricing Highlight */}
+          <View style={styles.pricingStrip}>
+            <View>
+              <Text style={styles.priceSubLabel}>Pack Price</Text>
+              <Text style={styles.heroPrice}>{formatCurrency(packPrice)}</Text>
+            </View>
+            <View style={styles.monthlyBlock}>
+              <Text style={styles.priceSubLabel}>Effective Monthly</Text>
+              <Text style={styles.heroMonthly}>{formatCurrency(monthlyRate)}/mo</Text>
+            </View>
           </View>
-        </View>
+        </LinearGradient>
 
-        {/* Plan Features Card */}
-        <View style={styles.featuresCard}>
-          <Text style={styles.featuresTitle}>Plan Features</Text>
-          <View style={styles.featuresList}>
+        {/* Feature Specifications */}
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeader}>
+            <Icon name="check-circle" size={16} color="#2563eb" />
+            <Text style={styles.sectionTitle}>Included Capabilities</Text>
+          </View>
+
+          <View style={styles.featureList}>
             <View style={styles.featureItem}>
-              <View style={styles.featureIconContainer}>
-                <Icon name="check-circle" size={20} color="#4CAF50" />
+              <View style={styles.featureIconBox}>
+                <Icon name="check" size={14} color="#16a34a" />
               </View>
-              <View style={styles.featureContent}>
-                <Text style={styles.featureLabel}>Unlimited Loans</Text>
-                <Text style={styles.featureDescription}>
-                  Create unlimited loans with this plan
+              <View style={styles.featureTextCol}>
+                <Text style={styles.featureTitle}>Full Platform Services</Text>
+                <Text style={styles.featureDesc}>
+                  Underwriting pipeline, borrower exploration, and loan agreement tools.
                 </Text>
               </View>
             </View>
-            <FeatureBadge
-              label="Advanced Analytics"
-              enabled={plan.planFeatures?.advancedAnalytics ?? false}
-            />
-            <FeatureBadge
-              label="Priority Support"
-              enabled={plan.planFeatures?.prioritySupport ?? false}
-            />
-          </View>
-          <View style={styles.featuresGrid}>
-            {(plan.planFeatures?.advancedAnalytics ?? false) && (
-              <View style={styles.featureBadge}>
-                <Icon name="bar-chart-2" size={14} color="#4CAF50" />
-                <Text style={styles.featureText}>Advanced Analytics</Text>
-              </View>
-            )}
-            {(plan.planFeatures?.prioritySupport ?? false) && (
-              <View style={styles.featureBadge}>
-                <Icon name="headphones" size={14} color="#4CAF50" />
-                <Text style={styles.featureText}>Priority Support</Text>
-              </View>
-            )}
-          </View>
-        </View>
 
-        {/* Description Card */}
-        {plan.description && (
-          <View style={styles.descriptionCard}>
-            <View style={styles.descriptionHeader}>
-              <Icon name="file-text" size={18} color="#ff6700" />
-              <Text style={styles.descriptionTitle}>Description</Text>
+            <View style={styles.featureItem}>
+              <View style={styles.featureIconBox}>
+                <Icon name="check" size={14} color="#16a34a" />
+              </View>
+              <View style={styles.featureTextCol}>
+                <Text style={styles.featureTitle}>DigiLocker KYC Credentials Access</Text>
+                <Text style={styles.featureDesc}>
+                  Direct access to verified government identity dossiers.
+                </Text>
+              </View>
             </View>
-            <Text style={styles.descriptionText}>{plan.description}</Text>
-          </View>
-        )}
 
-        {/* Action Buttons */}
-        <View style={styles.actionsContainer}>
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={handleEditPlan}
-            activeOpacity={0.8}>
-            <LinearGradient
-              colors={['#ff6700', '#ff7900']}
-              style={styles.editGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}>
-              <Icon name="edit" size={18} color="#FFFFFF" />
-              <Text style={styles.editButtonText}>Edit Plan</Text>
-            </LinearGradient>
-          </TouchableOpacity>
+            <View style={styles.featureItem}>
+              <View style={styles.featureIconBox}>
+                <Icon name="check" size={14} color="#16a34a" />
+              </View>
+              <View style={styles.featureTextCol}>
+                <Text style={styles.featureTitle}>Portfolio & Deal Quota</Text>
+                <Text style={styles.featureDesc}>
+                  Unlimited incoming deal evaluation and loan application tracking.
+                </Text>
+              </View>
+            </View>
+          </View>
         </View>
+
+        {/* Specifications Ledger */}
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeader}>
+            <Icon name="layers" size={16} color="#7c3aed" />
+            <Text style={styles.sectionTitle}>Technical Specifications</Text>
+          </View>
+
+          <View style={styles.specGrid}>
+            <View style={styles.specRow}>
+              <Text style={styles.specLabel}>Duration Tier</Text>
+              <Text style={styles.specValue}>{plan.duration || '1 month'}</Text>
+            </View>
+            <View style={styles.specRow}>
+              <Text style={styles.specLabel}>Active Days</Text>
+              <Text style={styles.specValue}>{durationDays} Days</Text>
+            </View>
+            <View style={styles.specRow}>
+              <Text style={styles.specLabel}>Created Date</Text>
+              <Text style={styles.specValue}>{formatDate(plan.createdAt)}</Text>
+            </View>
+            <View style={styles.specRow}>
+              <Text style={styles.specLabel}>Last Configured</Text>
+              <Text style={styles.specValue}>{formatDate(plan.updatedAt)}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Edit Button */}
+        <TouchableOpacity
+          style={styles.editButton}
+          activeOpacity={0.85}
+          onPress={handleEditPlan}
+        >
+          <Icon name="edit" size={16} color="#ffffff" />
+          <Text style={styles.editButtonText}>Configure Plan Specifications</Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -247,259 +227,216 @@ export default function PlanDetailsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f8f8',
-  },
-  scrollView: {
-    flex: 1,
+    backgroundColor: '#f8fafc',
   },
   scrollContent: {
-    padding: m(20),
-    paddingBottom: m(100),
+    padding: m(16),
+    paddingBottom: m(80),
   },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: m(16),
-  },
-  errorText: {
-    fontSize: m(16),
-    color: '#666',
-    fontWeight: '500',
-  },
-  headerCard: {
-    backgroundColor: '#FFFFFF',
+  heroBanner: {
     borderRadius: m(16),
-    padding: m(20),
-    marginBottom: m(16),
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    padding: m(18),
+    marginBottom: m(14),
+    borderWidth: 1,
+    borderColor: '#1e293b',
   },
-  headerContent: {
+  heroHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  heroTitleArea: {
+    flex: 1,
+    marginRight: m(8),
+  },
+  titleBadgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: m(16),
+    flexWrap: 'wrap',
+    gap: m(6),
   },
-  planIconContainer: {
-    width: m(64),
-    height: m(64),
-    borderRadius: m(16),
-    backgroundColor: '#FFF7ED',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: m(16),
+  planTitle: {
+    fontSize: m(18),
+    fontWeight: '800',
+    color: '#ffffff',
   },
-  planHeaderInfo: {
-    flex: 1,
+  tagBadge: {
+    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+    paddingHorizontal: m(8),
+    paddingVertical: m(2),
+    borderRadius: m(4),
+    borderWidth: 1,
+    borderColor: 'rgba(96, 165, 250, 0.4)',
   },
-  planName: {
-    fontSize: m(22),
+  tagText: {
+    fontSize: m(10),
     fontWeight: '700',
-    color: '#333',
-    marginBottom: m(8),
-    letterSpacing: 0.3,
+    color: '#93c5fd',
   },
-  planMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(12),
-  },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(4),
-  },
-  metaText: {
-    fontSize: m(14),
-    color: '#666',
-  },
-  metaDivider: {
-    width: 1,
-    height: m(16),
-    backgroundColor: '#E0E0E0',
+  planDurationText: {
+    fontSize: m(12),
+    color: '#cbd5e1',
+    marginTop: m(4),
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: m(12),
-    paddingVertical: m(6),
-    borderRadius: m(20),
-    gap: m(6),
+    paddingHorizontal: m(8),
+    paddingVertical: m(3),
+    borderRadius: m(6),
+    gap: m(4),
+  },
+  activeBadge: {
+    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.4)',
+  },
+  inactiveBadge: {
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.4)',
+  },
+  statusDot: {
+    width: m(5),
+    height: m(5),
+    borderRadius: m(2.5),
   },
   statusText: {
-    fontSize: m(12),
-    fontWeight: '600',
+    fontSize: m(10),
+    fontWeight: '700',
   },
-  detailsCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(16),
-    padding: m(20),
-    marginBottom: m(16),
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+  activeText: {
+    color: '#86efac',
   },
-  detailsTitle: {
-    fontSize: m(18),
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: m(16),
-    letterSpacing: 0.3,
+  inactiveText: {
+    color: '#fca5a5',
   },
-  detailsGrid: {
-    gap: m(12),
-  },
-  detailItem: {
+  pricingStrip: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    borderRadius: m(12),
-    padding: m(14),
-  },
-  detailIconContainer: {
-    width: m(40),
-    height: m(40),
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: m(10),
-    backgroundColor: '#FFF7ED',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: m(12),
+    padding: m(12),
+    marginTop: m(14),
   },
-  detailContent: {
-    flex: 1,
-  },
-  detailLabel: {
-    fontSize: m(12),
-    color: '#666',
-    marginBottom: m(4),
-    fontWeight: '500',
-  },
-  detailValue: {
-    fontSize: m(14),
+  priceSubLabel: {
+    fontSize: m(10),
+    color: '#94a3b8',
     fontWeight: '600',
-    color: '#333',
   },
-  featuresCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(16),
-    padding: m(20),
-    marginBottom: m(16),
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+  heroPrice: {
+    fontSize: m(20),
+    fontWeight: '800',
+    color: '#ffffff',
+    marginTop: m(2),
   },
-  featuresTitle: {
-    fontSize: m(18),
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: m(16),
-    letterSpacing: 0.3,
+  monthlyBlock: {
+    alignItems: 'flex-end',
   },
-  featuresList: {
-    gap: m(12),
-    marginBottom: m(16),
+  heroMonthly: {
+    fontSize: m(15),
+    fontWeight: '700',
+    color: '#60a5fa',
+    marginTop: m(2),
   },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F0FDF4',
-    borderRadius: m(12),
-    padding: m(14),
+  sectionCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: m(14),
+    padding: m(16),
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginBottom: m(14),
   },
-  featureIconContainer: {
-    marginRight: m(12),
-  },
-  featureContent: {
-    flex: 1,
-  },
-  featureLabel: {
-    fontSize: m(14),
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: m(4),
-  },
-  featureDescription: {
-    fontSize: m(12),
-    color: '#666',
-    lineHeight: m(16),
-  },
-  featuresGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: m(8),
-  },
-  featureBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E8F5E9',
-    paddingHorizontal: m(12),
-    paddingVertical: m(6),
-    borderRadius: m(20),
-    gap: m(6),
-  },
-  featureText: {
-    fontSize: m(12),
-    fontWeight: '600',
-    color: '#4CAF50',
-  },
-  descriptionCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(16),
-    padding: m(20),
-    marginBottom: m(16),
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-  },
-  descriptionHeader: {
+  sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: m(8),
     marginBottom: m(12),
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+    paddingBottom: m(8),
   },
-  descriptionTitle: {
-    fontSize: m(16),
-    fontWeight: '600',
-    color: '#333',
-  },
-  descriptionText: {
+  sectionTitle: {
     fontSize: m(14),
-    color: '#666',
-    lineHeight: m(20),
+    fontWeight: '700',
+    color: '#0f172a',
   },
-  actionsContainer: {
-    marginTop: m(8),
+  featureList: {
+    gap: m(12),
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: m(10),
+  },
+  featureIconBox: {
+    width: m(24),
+    height: m(24),
+    borderRadius: m(12),
+    backgroundColor: '#dcfce7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: m(1),
+  },
+  featureTextCol: {
+    flex: 1,
+  },
+  featureTitle: {
+    fontSize: m(13),
+    fontWeight: '700',
+    color: '#1e293b',
+  },
+  featureDesc: {
+    fontSize: m(11),
+    color: '#64748b',
+    marginTop: m(2),
+    lineHeight: m(15),
+  },
+  specGrid: {
+    gap: m(10),
+  },
+  specRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  specLabel: {
+    fontSize: m(12),
+    color: '#64748b',
+  },
+  specValue: {
+    fontSize: m(12),
+    fontWeight: '600',
+    color: '#0f172a',
   },
   editButton: {
-    borderRadius: m(12),
-    overflow: 'hidden',
-    elevation: 4,
-    shadowColor: '#ff6700',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-  },
-  editGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: m(16),
+    backgroundColor: '#2563eb',
+    paddingVertical: m(14),
+    borderRadius: m(12),
     gap: m(8),
+    marginTop: m(4),
   },
   editButtonText: {
-    fontSize: m(16),
-    fontWeight: '600',
-    color: '#FFFFFF',
-    letterSpacing: 0.3,
+    fontSize: m(14),
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  emptyBox: {
+    alignItems: 'center',
+    paddingVertical: m(60),
+    gap: m(8),
+  },
+  emptyTitle: {
+    fontSize: m(15),
+    fontWeight: '700',
+    color: '#334155',
+  },
+  emptySubtitle: {
+    fontSize: m(12),
+    color: '#94a3b8',
   },
 });

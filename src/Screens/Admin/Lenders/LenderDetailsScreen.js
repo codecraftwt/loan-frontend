@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { m } from 'walstar-rn-responsive';
-import { useRoute } from '@react-navigation/native';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import Header from '../../../Components/Header';
 
 /**
@@ -173,6 +173,7 @@ const PlanCard = ({ plan, planDetails, isExpanded, onToggle, isActive }) => {
 
 export default function LenderDetailsScreen() {
   const route = useRoute();
+  const navigation = useNavigation();
   const { lenderData } = route.params || {};
   const [expandedPlans, setExpandedPlans] = useState({});
 
@@ -359,6 +360,22 @@ export default function LenderDetailsScreen() {
               <Text style={styles.noPlansText}>No plans found</Text>
             </View>
           )}
+
+          {/* Subscription Ledger Link */}
+          <TouchableOpacity
+            style={styles.historyButton}
+            activeOpacity={0.8}
+            onPress={() =>
+              navigation.navigate('AdminLenderSubscriptionHistory', {
+                lenderId: lender._id || lender.id,
+                lenderName: lender.name || 'Institutional Lender',
+              })
+            }
+          >
+            <Icon name="clock" size={16} color="#2563eb" />
+            <Text style={styles.historyButtonText}>View Complete Subscription Ledger</Text>
+            <Icon name="chevron-right" size={16} color="#2563eb" />
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </View>
@@ -586,6 +603,25 @@ const styles = StyleSheet.create({
     marginTop: m(12),
     fontSize: m(16),
     color: '#999',
+  },
+  historyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#eff6ff',
+    paddingHorizontal: m(14),
+    paddingVertical: m(12),
+    borderRadius: m(10),
+    marginTop: m(14),
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+  },
+  historyButtonText: {
+    fontSize: m(13),
+    fontWeight: '700',
+    color: '#1d4ed8',
+    flex: 1,
+    marginLeft: m(8),
   },
 });
 
