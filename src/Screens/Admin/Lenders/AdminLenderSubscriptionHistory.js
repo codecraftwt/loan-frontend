@@ -11,16 +11,17 @@ import {
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/Feather';
-import { m } from 'walstar-rn-responsive';
-import Header from '../../../Components/Header';
+import Feather from 'react-native-vector-icons/Feather';
+import { colors, FontFamily } from '../../../constants';
+import { m } from '../../../Utils/responsive';
+import { ScreenWrapper } from '../../../Components/common';
 import {
   getLenderSubscriptionHistory,
   clearSubscriptionHistory,
 } from '../../../Redux/Slices/adminLendersSlice';
 
 /**
- * Format currency value
+ * Format currency value to Indian Rupee format
  */
 const formatCurrency = value => {
   if (!value) return '₹0';
@@ -29,7 +30,7 @@ const formatCurrency = value => {
 };
 
 /**
- * Format date
+ * Format date string to readable format
  */
 const formatDate = dateStr => {
   if (!dateStr) return 'N/A';
@@ -48,10 +49,10 @@ export default function AdminLenderSubscriptionHistory() {
   const route = useRoute();
   const navigation = useNavigation();
   const dispatch = useDispatch();
-  const { lenderId, lenderName } = route.params || {};
+  const { lenderId, lenderName = 'Institutional Lender' } = route.params || {};
 
-  const { subscriptionHistory, historyLoading } = useSelector(
-    (state) => state.adminLenders
+  const { subscriptionHistory = [], historyLoading } = useSelector(
+    (state) => state.adminLenders || {}
   );
 
   const [refreshing, setRefreshing] = useState(false);
@@ -74,7 +75,9 @@ export default function AdminLenderSubscriptionHistory() {
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     if (lenderId) {
-      dispatch(getLenderSubscriptionHistory(lenderId)).finally(() => setRefreshing(false));
+      dispatch(getLenderSubscriptionHistory(lenderId)).finally(() =>
+        setRefreshing(false)
+      );
     } else {
       setRefreshing(false);
     }
@@ -112,17 +115,26 @@ export default function AdminLenderSubscriptionHistory() {
     (item) => item.status === 'active' || Boolean(item.isActive)
   );
 
+  const initials = (lenderName || 'LN')
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .substring(0, 2);
+
+  // Render individual history item card
   const renderHistoryItem = ({ item }) => {
     const isActive = item.status === 'active' || Boolean(item.isActive);
     const planName = item.planName || item.plan?.name || item.name || 'SaaS Plan';
     const amount = item.price || item.amount || item.plan?.price || 0;
-    const paymentId = item.razorpayPaymentId || item.paymentId || item.transactionId || 'TXN-DIRECT';
+    const paymentId =
+      item.razorpayPaymentId || item.paymentId || item.transactionId || 'TXN-DIRECT';
     const orderId = item.razorpayOrderId || item.orderId || null;
     const features = item.planFeatures || item.features || {};
 
     return (
       <View style={styles.historyCard}>
-        {/* Card Header */}
+        {/* Header row: Plan title + Price + Status */}
         <View style={styles.cardHeader}>
           <View style={styles.planInfo}>
             <View style={styles.titleRow}>
@@ -134,7 +146,11 @@ export default function AdminLenderSubscriptionHistory() {
               ) : null}
             </View>
             <Text style={styles.refId}>Ref: {paymentId}</Text>
+            {orderId ? (
+              <Text style={styles.orderIdText}>Order: {orderId}</Text>
+            ) : null}
           </View>
+
           <View style={styles.priceContainer}>
             <Text style={styles.price}>{formatCurrency(amount)}</Text>
             <View
@@ -146,7 +162,7 @@ export default function AdminLenderSubscriptionHistory() {
               <View
                 style={[
                   styles.statusDot,
-                  { backgroundColor: isActive ? '#16a34a' : '#64748b' },
+                  { backgroundColor: isActive ? '#00D09E' : '#FF4D4F' },
                 ]}
               />
               <Text
@@ -161,13 +177,9 @@ export default function AdminLenderSubscriptionHistory() {
           </View>
         </View>
 
-        {orderId ? (
-          <Text style={styles.orderIdText}>Order: {orderId}</Text>
-        ) : null}
+        <View style={styles.cardDivider} />
 
-        <View style={styles.divider} />
-
-        {/* Validity Dates */}
+        {/* Validity Dates 3-column row */}
         <View style={styles.dateRow}>
           <View style={styles.dateCol}>
             <Text style={styles.dateLabel}>Activated On</Text>
@@ -188,269 +200,379 @@ export default function AdminLenderSubscriptionHistory() {
         </View>
 
         {/* Quota Highlights */}
-        {(features.dealCapacityQuota || features.maxActiveLoans) && (
+        {(features.dealCapacityQuota || features.maxActiveLoans) ? (
           <View style={styles.quotaStrip}>
+            <Feather name="info" size={m(12)} color={colors.blueButton} />
             <Text style={styles.quotaText}>
               Capacity: {features.dealCapacityQuota || features.maxActiveLoans} Deals
               {features.aiReviewCredits ? ` • AI Credits: ${features.aiReviewCredits}` : ''}
             </Text>
           </View>
-        )}
+        ) : null}
       </View>
     );
   };
 
   return (
-    <View style={styles.container}>
-      <Header title="Subscription Ledger" />
-
-      {/* Lender Identification Strip */}
-      <View style={styles.lenderStrip}>
-        <View style={styles.lenderAvatar}>
-          <Icon name="briefcase" size={16} color="#1d4ed8" />
-        </View>
-        <View style={styles.lenderStripInfo}>
-          <Text style={styles.lenderNameText} numberOfLines={1}>
-            {lenderName || 'Institutional Lender'}
-          </Text>
-          <Text style={styles.lenderSubText}>Lender ID: {lenderId}</Text>
-        </View>
-      </View>
-
-      {/* High-Level KPI Summary */}
-      <View style={styles.kpiRow}>
-        <View style={styles.kpiBox}>
-          <Text style={styles.kpiValue}>{totalPurchases}</Text>
-          <Text style={styles.kpiLabel}>Total Invoices</Text>
-        </View>
-        <View style={styles.kpiBox}>
-          <Text style={[styles.kpiValue, { color: '#2563eb' }]}>
-            {formatCurrency(totalSpent)}
-          </Text>
-          <Text style={styles.kpiLabel}>Total Paid</Text>
-        </View>
-        <View style={styles.kpiBox}>
-          <Text
-            style={[
-              styles.kpiValue,
-              { color: hasActivePlan ? '#16a34a' : '#d97706' },
-            ]}
-          >
-            {hasActivePlan ? 'Active' : 'Expired'}
-          </Text>
-          <Text style={styles.kpiLabel}>Current Status</Text>
-        </View>
-      </View>
-
-      {/* Search & Filter Bar */}
-      <View style={styles.searchSection}>
-        <View style={styles.searchBar}>
-          <Icon name="search" size={16} color="#64748b" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search by plan, transaction ID, price..."
-            placeholderTextColor="#94a3b8"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery ? (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Icon name="x" size={16} color="#94a3b8" />
-            </TouchableOpacity>
-          ) : null}
-        </View>
-
-        <View style={styles.pillRow}>
-          {[
-            { id: 'all', label: 'All Invoices' },
-            { id: 'active', label: 'Active Plans' },
-            { id: 'expired', label: 'Expired Records' },
-          ].map((pill) => (
+    <ScreenWrapper
+      backgroundColor={colors.backgroundGreenWhite}
+      topInsetBg={colors.primary}
+      statusBarColor={colors.primary}
+      statusBarStyle="dark-content"
+      includeTabBarClearance={false}
+      scrollable={false}
+    >
+      <View style={styles.pageGreenWrapper}>
+        {/* Top Green Banner */}
+        <View style={styles.topSection}>
+          {/* Header Row with Back Button */}
+          <View style={styles.headerRow}>
             <TouchableOpacity
-              key={pill.id}
-              style={[
-                styles.pill,
-                selectedFilter === pill.id && styles.activePill,
-              ]}
-              onPress={() => setSelectedFilter(pill.id)}
+              style={styles.backBtn}
+              onPress={() => navigation.goBack()}
+              activeOpacity={0.7}
             >
-              <Text
-                style={[
-                  styles.pillText,
-                  selectedFilter === pill.id && styles.activePillText,
-                ]}
-              >
-                {pill.label}
-              </Text>
+              <Feather name="arrow-left" size={m(22)} color={colors.white} />
             </TouchableOpacity>
-          ))}
-        </View>
-      </View>
+            <Text style={styles.headerTitle}>Subscription Ledger</Text>
+            <View style={styles.headerPlaceholder} />
+          </View>
 
-      {/* Ledger Feed */}
-      {historyLoading && !refreshing && (subscriptionHistory || []).length === 0 ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#2563eb" />
-          <Text style={styles.loadingText}>Fetching subscription ledger...</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={filteredHistory}
-          renderItem={renderHistoryItem}
-          keyExtractor={(item, index) =>
-            item._id || item.razorpayPaymentId || item.transactionId || String(index)
-          }
-          contentContainerStyle={styles.listContent}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={['#2563eb']}
-            />
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Icon name="file-text" size={44} color="#cbd5e1" />
-              <Text style={styles.emptyTitle}>No Subscriptions Found</Text>
-              <Text style={styles.emptySubtitle}>
-                {searchQuery
-                  ? 'No invoices matched your search filter.'
-                  : 'No subscription purchases have been recorded for this lender yet.'}
+          {/* Lender Identification Strip */}
+          <View style={styles.lenderStrip}>
+            <View style={styles.lenderAvatar}>
+              <Text style={styles.lenderAvatarText}>{initials || 'LN'}</Text>
+            </View>
+            <View style={styles.lenderStripInfo}>
+              <Text style={styles.lenderNameText} numberOfLines={1}>
+                {lenderName}
+              </Text>
+              <Text style={styles.lenderSubText} numberOfLines={1}>
+                ID: {lenderId || 'N/A'}
               </Text>
             </View>
-          }
-        />
-      )}
-    </View>
+          </View>
+
+          {/* High-Level KPI Summary Strip */}
+          <View style={styles.kpiRow}>
+            <View style={styles.kpiBox}>
+              <Text style={styles.kpiValue}>{totalPurchases}</Text>
+              <Text style={styles.kpiLabel}>Total Invoices</Text>
+            </View>
+            <View style={styles.kpiSep} />
+            <View style={styles.kpiBox}>
+              <Text style={[styles.kpiValue, { color: colors.blueButton }]}>
+                {formatCurrency(totalSpent)}
+              </Text>
+              <Text style={styles.kpiLabel}>Total Paid</Text>
+            </View>
+            <View style={styles.kpiSep} />
+            <View style={styles.kpiBox}>
+              <Text
+                style={[
+                  styles.kpiValue,
+                  { color: hasActivePlan ? '#00D09E' : '#FF4D4F' },
+                ]}
+              >
+                {hasActivePlan ? 'Active' : 'Expired'}
+              </Text>
+              <Text style={styles.kpiLabel}>Current Status</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Curved Sheet Container */}
+        <View style={styles.sheetSection}>
+          {/* Search Pill Bar */}
+          <View style={styles.searchBar}>
+            <Feather
+              name="search"
+              size={m(17)}
+              color={colors.lettersAndIcons}
+              style={styles.searchIcon}
+            />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search by plan, ref ID, amount..."
+              placeholderTextColor="#7E9D86"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+              autoCorrect={false}
+              clearButtonMode="while-editing"
+            />
+            {searchQuery ? (
+              <TouchableOpacity
+                onPress={() => setSearchQuery('')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Feather name="x" size={m(16)} color={colors.lettersAndIcons} />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+
+          {/* Filter Pill Tabs */}
+          <View style={styles.pillRow}>
+            {[
+              { id: 'all', label: `All (${totalPurchases})` },
+              { id: 'active', label: 'Active Plans' },
+              { id: 'expired', label: 'Expired Records' },
+            ].map((pill) => {
+              const isSelected = selectedFilter === pill.id;
+              return (
+                <TouchableOpacity
+                  key={pill.id}
+                  style={[styles.pill, isSelected && styles.activePill]}
+                  onPress={() => setSelectedFilter(pill.id)}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={[
+                      styles.pillText,
+                      isSelected && styles.activePillText,
+                    ]}
+                  >
+                    {pill.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Ledger Invoices Feed */}
+          {historyLoading && !refreshing && (subscriptionHistory || []).length === 0 ? (
+            <View style={styles.centerContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={styles.loadingText}>Fetching subscription ledger...</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={filteredHistory}
+              renderItem={renderHistoryItem}
+              keyExtractor={(item, index) =>
+                item._id || item.razorpayPaymentId || item.transactionId || String(index)
+              }
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  colors={[colors.primary]}
+                />
+              }
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <Feather name="file-text" size={m(40)} color={colors.textSecondary} />
+                  <Text style={styles.emptyTitle}>No Invoices Found</Text>
+                  <Text style={styles.emptySubtitle}>
+                    {searchQuery
+                      ? 'No invoices matched your search filter.'
+                      : 'No subscription purchases have been recorded for this lender yet.'}
+                  </Text>
+                </View>
+              }
+            />
+          )}
+        </View>
+      </View>
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  pageGreenWrapper: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.primary,
   },
+  topSection: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: m(18),
+    paddingTop: m(14),
+    paddingBottom: m(18),
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: m(14),
+  },
+  backBtn: {
+    width: m(38),
+    height: m(38),
+    borderRadius: m(19),
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: m(19),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    textAlign: 'center',
+  },
+  headerPlaceholder: {
+    width: m(38),
+  },
+
+  // Lender Identification Strip
   lenderStrip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    paddingHorizontal: m(16),
-    paddingVertical: m(12),
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-    gap: m(12),
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
+    borderRadius: m(16),
+    paddingHorizontal: m(12),
+    paddingVertical: m(8),
+    marginBottom: m(12),
   },
   lenderAvatar: {
     width: m(36),
     height: m(36),
     borderRadius: m(18),
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#E6F2FF',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#bfdbfe',
+    marginRight: m(10),
+    borderWidth: 1.5,
+    borderColor: 'rgba(50, 153, 255, 0.3)',
+  },
+  lenderAvatarText: {
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.blueButton,
   },
   lenderStripInfo: {
     flex: 1,
   },
   lenderNameText: {
-    fontSize: m(14),
-    fontWeight: '700',
-    color: '#0f172a',
+    fontSize: m(14.5),
+    lineHeight: m(18),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
   lenderSubText: {
     fontSize: m(11),
-    color: '#64748b',
+    lineHeight: m(14),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.lettersAndIcons,
+    opacity: 0.75,
     marginTop: m(1),
   },
+
+  // High-Level KPI Summary Strip
   kpiRow: {
     flexDirection: 'row',
-    backgroundColor: '#ffffff',
-    marginHorizontal: m(16),
-    marginTop: m(12),
-    paddingVertical: m(12),
-    paddingHorizontal: m(16),
-    borderRadius: m(12),
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
+    backgroundColor: colors.white,
+    borderRadius: m(16),
+    paddingVertical: m(10),
+    paddingHorizontal: m(12),
+    alignItems: 'center',
     justifyContent: 'space-around',
+    elevation: 2,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
   },
   kpiBox: {
     alignItems: 'center',
+    flex: 1,
   },
   kpiValue: {
-    fontSize: m(16),
-    fontWeight: '800',
-    color: '#0f172a',
+    fontSize: m(15),
+    lineHeight: m(19),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
   kpiLabel: {
     fontSize: m(11),
-    color: '#64748b',
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
     marginTop: m(2),
   },
-  searchSection: {
-    paddingHorizontal: m(16),
-    paddingTop: m(12),
-    paddingBottom: m(8),
+  kpiSep: {
+    width: 1,
+    height: m(22),
+    backgroundColor: 'rgba(9, 48, 48, 0.1)',
   },
+
+  // Curved Sheet Container
+  sheetSection: {
+    flex: 1,
+    backgroundColor: colors.backgroundGreenWhite,
+    borderTopLeftRadius: m(36),
+    borderTopRightRadius: m(36),
+    paddingTop: m(18),
+    paddingHorizontal: m(18),
+  },
+
+  // Search Bar
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: m(10),
-    paddingHorizontal: m(12),
-    height: m(40),
+    backgroundColor: colors.white,
+    borderRadius: m(22),
+    paddingHorizontal: m(14),
+    height: m(44),
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: 'rgba(9, 48, 48, 0.08)',
+    marginBottom: m(10),
   },
   searchIcon: {
     marginRight: m(8),
   },
   searchInput: {
     flex: 1,
-    fontSize: m(12),
-    color: '#0f172a',
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.lettersAndIcons,
     paddingVertical: 0,
   },
+
+  // Filter Pills
   pillRow: {
     flexDirection: 'row',
     gap: m(8),
-    marginTop: m(10),
+    marginBottom: m(14),
   },
   pill: {
     paddingHorizontal: m(12),
-    paddingVertical: m(5),
+    paddingVertical: m(6),
     borderRadius: m(16),
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: 'rgba(9, 48, 48, 0.08)',
   },
   activePill: {
-    backgroundColor: '#2563eb',
-    borderColor: '#2563eb',
+    backgroundColor: colors.lettersAndIcons,
+    borderColor: colors.lettersAndIcons,
   },
   pillText: {
-    fontSize: m(11),
-    fontWeight: '600',
-    color: '#64748b',
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
   },
   activePillText: {
-    color: '#ffffff',
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
   },
+
+  // List Feed
   listContent: {
-    padding: m(16),
-    paddingBottom: m(80),
+    paddingBottom: m(40),
   },
+
+  // History Card
   historyCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: m(12),
+    backgroundColor: colors.white,
+    borderRadius: m(16),
     padding: m(14),
     marginBottom: m(12),
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: '#000000',
+    borderColor: 'rgba(9, 48, 48, 0.08)',
+    shadowColor: colors.lettersAndIcons,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
+    shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
   },
@@ -461,6 +583,7 @@ const styles = StyleSheet.create({
   },
   planInfo: {
     flex: 1,
+    paddingRight: m(10),
   },
   titleRow: {
     flexDirection: 'row',
@@ -468,29 +591,32 @@ const styles = StyleSheet.create({
     gap: m(6),
   },
   planName: {
-    fontSize: m(15),
-    fontWeight: '700',
-    color: '#0f172a',
+    fontSize: m(15.5),
+    lineHeight: m(20),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
   tierTag: {
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#E6F2FF',
     paddingHorizontal: m(6),
     paddingVertical: m(2),
-    borderRadius: m(4),
+    borderRadius: m(6),
   },
   tierTagText: {
     fontSize: m(10),
-    fontWeight: '700',
-    color: '#2563eb',
+    fontFamily: FontFamily.primaryBold,
+    color: colors.blueButton,
   },
   refId: {
     fontSize: m(11),
-    color: '#94a3b8',
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
     marginTop: m(3),
   },
   orderIdText: {
-    fontSize: m(10),
-    color: '#94a3b8',
+    fontSize: m(10.5),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
     marginTop: m(2),
   },
   priceContainer: {
@@ -498,46 +624,43 @@ const styles = StyleSheet.create({
   },
   price: {
     fontSize: m(16),
-    fontWeight: '800',
-    color: '#0f172a',
+    lineHeight: m(20),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: m(4),
+    marginTop: m(5),
     paddingHorizontal: m(8),
-    paddingVertical: m(2),
-    borderRadius: m(6),
+    paddingVertical: m(3),
+    borderRadius: m(8),
     gap: m(4),
   },
   activeBadge: {
-    backgroundColor: '#f0fdf4',
-    borderWidth: 1,
-    borderColor: '#bbf7d0',
+    backgroundColor: colors.lightGreen,
   },
   expiredBadge: {
-    backgroundColor: '#f1f5f9',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
+    backgroundColor: '#FFEBEB',
   },
   statusDot: {
-    width: m(5),
-    height: m(5),
-    borderRadius: m(2.5),
+    width: m(6),
+    height: m(6),
+    borderRadius: m(3),
   },
   statusText: {
-    fontSize: m(10),
-    fontWeight: '700',
+    fontSize: m(11),
+    fontFamily: FontFamily.primarySemiBold,
   },
   activeText: {
-    color: '#15803d',
+    color: colors.lettersAndIcons,
   },
   expiredText: {
-    color: '#64748b',
+    color: '#E02424',
   },
-  divider: {
+  cardDivider: {
     height: 1,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: 'rgba(9, 48, 48, 0.08)',
     marginVertical: m(10),
   },
   dateRow: {
@@ -549,52 +672,60 @@ const styles = StyleSheet.create({
   },
   dateLabel: {
     fontSize: m(10),
-    color: '#94a3b8',
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
     marginBottom: m(2),
   },
   dateValue: {
-    fontSize: m(11),
-    fontWeight: '600',
-    color: '#334155',
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primarySemiBold,
+    color: colors.lettersAndIcons,
   },
   quotaStrip: {
-    backgroundColor: '#f8fafc',
-    borderRadius: m(6),
-    padding: m(6),
-    marginTop: m(8),
-    borderWidth: 1,
-    borderColor: '#f1f5f9',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E6F2FF',
+    borderRadius: m(8),
+    paddingHorizontal: m(8),
+    paddingVertical: m(6),
+    marginTop: m(10),
+    gap: m(6),
   },
   quotaText: {
-    fontSize: m(10),
-    color: '#64748b',
-    fontWeight: '500',
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
   },
+
+  // Loading & Empty States
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: m(60),
   },
   loadingText: {
     marginTop: m(8),
     fontSize: m(13),
-    color: '#64748b',
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
   },
   emptyContainer: {
     alignItems: 'center',
     paddingVertical: m(60),
+    paddingHorizontal: m(20),
   },
   emptyTitle: {
     fontSize: m(15),
-    fontWeight: '700',
-    color: '#475569',
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
     marginTop: m(10),
   },
   emptySubtitle: {
     fontSize: m(12),
-    color: '#94a3b8',
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
     textAlign: 'center',
     marginTop: m(4),
-    paddingHorizontal: m(30),
   },
 });

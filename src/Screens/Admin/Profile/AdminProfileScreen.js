@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -6,12 +6,14 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Image,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/Feather';
-import { m } from 'walstar-rn-responsive';
-import Header from '../../../Components/Header';
+import Feather from 'react-native-vector-icons/Feather';
+import { m } from '../../../Utils/responsive';
+import { colors, FontFamily } from '../../../constants';
+import { ScreenWrapper } from '../../../Components/common';
 import { logout } from '../../../Redux/Slices/authslice';
 
 export default function AdminProfileScreen() {
@@ -19,9 +21,20 @@ export default function AdminProfileScreen() {
   const dispatch = useDispatch();
   const user = useSelector((state) => state.auth.user);
 
-  const displayName = user?.name || user?.userName || 'Enterprise Admin';
-  const displayEmail = user?.email || 'admin@loanhub.internal';
-  const displayPhone = user?.mobileNumber || user?.phone || '+91 98765 43210';
+  const displayName = user?.name || user?.userName || 'John Smith';
+  const displayId =
+    user?.adminId ||
+    user?.customId ||
+    (user?._id ? user._id.slice(-8).toUpperCase() : '25030024');
+  const avatarUrl = user?.profileImage || user?.avatar || user?.image;
+
+  const initials = displayName
+    .split(' ')
+    .filter(Boolean)
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) || 'JS';
 
   const handleLogout = () => {
     Alert.alert(
@@ -44,279 +57,293 @@ export default function AdminProfileScreen() {
     );
   };
 
-  const menuSections = [
+  const menuItems = [
+    /*
     {
-      title: 'Management & Overview',
-      items: [
-        {
-          id: 'revenue',
-          title: 'SaaS Revenue & Analytics',
-          icon: 'dollar-sign',
-          color: '#059669',
-          onPress: () => navigation.navigate('Revenue'),
-        },
-        {
-          id: 'plans',
-          title: 'Subscription Tiers & Plans',
-          icon: 'layers',
-          color: '#2563eb',
-          onPress: () => navigation.navigate('PlansList'),
-        },
-        {
-          id: 'lenders',
-          title: 'Lending Institutions',
-          icon: 'briefcase',
-          color: '#7c3aed',
-          onPress: () => navigation.navigate('LenderList'),
-        },
-      ],
+      id: 'edit_profile',
+      title: 'Edit Profile',
+      icon: 'user',
+      onPress: () => navigation.navigate('EditProfile'),
+    },
+    */
+    /*
+    {
+      id: 'security',
+      title: 'Security',
+      icon: 'shield',
+      onPress: () => navigation.navigate('ChangePassword'),
+    },
+    */
+    {
+      id: 'setting',
+      title: 'Settings',
+      icon: 'settings',
+      onPress: () => navigation.navigate('Settings'),
     },
     {
-      title: 'Security & Access',
-      items: [
-        {
-          id: 'password',
-          title: 'Change Password',
-          icon: 'lock',
-          color: '#d97706',
-          onPress: () => navigation.navigate('ChangePassword'),
-        },
-        {
-          id: 'privacy',
-          title: 'Security & Privacy Policies',
-          icon: 'shield',
-          color: '#4f46e5',
-          onPress: () => navigation.navigate('PrivacyPolicy'),
-        },
-      ],
+      id: 'revenue',
+      title: 'SaaS Revenue & Analytics',
+      icon: 'trending-up',
+      onPress: () => navigation.navigate('Revenue'),
     },
     {
-      title: 'Platform Info',
-      items: [
-        {
-          id: 'terms',
-          title: 'Terms of Service',
-          icon: 'file-text',
-          color: '#64748b',
-          onPress: () => navigation.navigate('TermsOfService'),
-        },
-        {
-          id: 'about',
-          title: 'About LoanHub Platform',
-          icon: 'info',
-          color: '#64748b',
-          onPress: () => navigation.navigate('AboutUs'),
-        },
-      ],
+      id: 'help',
+      title: 'Help',
+      icon: 'headphones',
+      onPress: () => navigation.navigate('HelpAndSupportScreen'),
+    },
+    {
+      id: 'logout',
+      title: 'Logout',
+      icon: 'log-out',
+      onPress: handleLogout,
     },
   ];
 
   return (
-    <View style={styles.container}>
-      <Header title="Admin Console Profile" />
-
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Profile Card */}
-        <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {displayName
-                .split(' ')
-                .map((n) => n[0])
-                .join('')
-                .toUpperCase()
-                .slice(0, 2)}
-            </Text>
-          </View>
-          <View style={styles.profileInfo}>
-            <View style={styles.badgeRow}>
-              <View style={styles.roleBadge}>
-                <Icon name="shield" size={11} color="#1d4ed8" />
-                <Text style={styles.roleText}>SYSTEM ADMIN</Text>
-              </View>
-            </View>
-            <Text style={styles.name}>{displayName}</Text>
-            <Text style={styles.email}>{displayEmail}</Text>
-            <Text style={styles.phone}>{displayPhone}</Text>
-          </View>
+    <ScreenWrapper
+      backgroundColor={colors.backgroundGreenWhite}
+      topInsetBg={colors.primary}
+      statusBarColor={colors.primary}
+      statusBarStyle="dark-content"
+      includeTabBarClearance={false}
+      scrollable={false}
+    >
+      <View style={styles.pageWrapper}>
+        {/* Fixed Header Bar with Centered Profile Title & Edit Profile Button */}
+        <View style={styles.headerBar}>
+          <View style={styles.headerPlaceholder} />
+          <Text style={styles.headerTitle}>Profile</Text>
+          <TouchableOpacity
+            style={styles.editHeaderBtn}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('EditProfile')}
+          >
+            <Feather name="edit-2" size={m(17)} color={colors.lettersAndIcons} />
+          </TouchableOpacity>
         </View>
 
-        {/* Menu Sections */}
-        {menuSections.map((section) => (
-          <View key={section.title} style={styles.section}>
-            <Text style={styles.sectionTitle}>{section.title}</Text>
-            <View style={styles.sectionBody}>
-              {section.items.map((item, index) => (
+        {/* Green Backdrop Segment for Top Half of Avatar */}
+        <View style={styles.greenBackdrop} />
+
+        {/* Curved Sheet Container */}
+        <View style={styles.sheetSection}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+          >
+            {/* User Details */}
+            <Text style={styles.userName}>{displayName}</Text>
+            <Text style={styles.userIdText}>ID: {displayId}</Text>
+
+            {/* Figma-Style Blue Circle Menu Items */}
+            <View style={styles.menuList}>
+              {menuItems.map((item) => (
                 <TouchableOpacity
                   key={item.id}
-                  style={[
-                    styles.menuItem,
-                    index < section.items.length - 1 && styles.menuItemBorder,
-                  ]}
-                  activeOpacity={0.7}
+                  style={styles.menuRow}
+                  activeOpacity={0.75}
                   onPress={item.onPress}
                 >
-                  <View style={[styles.iconBox, { backgroundColor: `${item.color}15` }]}>
-                    <Icon name={item.icon} size={18} color={item.color} />
+                  <View style={styles.menuIconCircle}>
+                    <Feather name={item.icon} size={m(20)} color={colors.white} />
                   </View>
                   <Text style={styles.menuTitle}>{item.title}</Text>
-                  <Icon name="chevron-right" size={18} color="#cbd5e1" />
                 </TouchableOpacity>
               ))}
             </View>
-          </View>
-        ))}
 
-        {/* Logout Button */}
-        <TouchableOpacity
-          style={styles.logoutButton}
-          activeOpacity={0.8}
-          onPress={handleLogout}
-        >
-          <Icon name="log-out" size={18} color="#ef4444" />
-          <Text style={styles.logoutText}>Sign Out from Admin Console</Text>
-        </TouchableOpacity>
+            {/* Subdued Platform Version Tag */}
+            <Text style={styles.versionText}>LoanHub Enterprise Admin v2.4.0</Text>
+          </ScrollView>
+        </View>
 
-        <Text style={styles.versionText}>LoanHub Enterprise Admin v2.4.0</Text>
-      </ScrollView>
-    </View>
+        {/* Floating Avatar Perfectly Positioned at the Seam */}
+        <View style={styles.avatarFloatingWrapper} pointerEvents="box-none">
+          <TouchableOpacity
+            style={styles.avatarCircle}
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('EditProfile')}
+          >
+            {avatarUrl ? (
+              <Image
+                source={{ uri: avatarUrl }}
+                style={styles.avatarImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={styles.avatarFallback}>
+                <Text style={styles.avatarInitials}>{initials}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  pageWrapper: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.primary,
+  },
+
+  // Fixed Top Header
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: m(18),
+    paddingTop: m(12),
+    paddingBottom: m(12),
+    backgroundColor: colors.primary,
+  },
+  headerPlaceholder: {
+    width: m(36),
+    height: m(36),
+  },
+  headerTitle: {
+    fontSize: m(19),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    textAlign: 'center',
+  },
+  editHeaderBtn: {
+    width: m(36),
+    height: m(36),
+    borderRadius: m(18),
+    backgroundColor: colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  bellBtn: {
+    width: m(36),
+    height: m(36),
+    borderRadius: m(18),
+    backgroundColor: colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // Green Backdrop Segment (46px tall, hosts top half of 92px avatar)
+  greenBackdrop: {
+    height: m(46),
+    backgroundColor: colors.primary,
+  },
+
+  // Curved Sheet
+  sheetSection: {
+    flex: 1,
+    backgroundColor: colors.backgroundGreenWhite,
+    borderTopLeftRadius: m(36),
+    borderTopRightRadius: m(36),
   },
   scrollContent: {
-    padding: m(16),
-    paddingBottom: m(90),
+    paddingTop: m(52), // Space for bottom half of avatar
+    paddingBottom: m(100),
   },
-  profileCard: {
-    flexDirection: 'row',
+
+  // Floating Avatar (over the seam between header & curved sheet)
+  avatarFloatingWrapper: {
+    position: 'absolute',
+    top: m(60), // Starts at bottom of headerBar
+    left: 0,
+    right: 0,
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: m(14),
-    padding: m(16),
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    marginBottom: m(16),
+    zIndex: 20,
+    elevation: 6,
   },
-  avatar: {
-    width: m(60),
-    height: m(60),
-    borderRadius: m(30),
-    backgroundColor: '#0f172a',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: m(14),
-  },
-  avatarText: {
-    fontSize: m(20),
-    fontWeight: '700',
-    color: '#ffffff',
-  },
-  profileInfo: {
-    flex: 1,
-  },
-  badgeRow: {
-    flexDirection: 'row',
-    marginBottom: m(4),
-  },
-  roleBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#dbeafe',
-    paddingHorizontal: m(8),
-    paddingVertical: m(2),
-    borderRadius: m(4),
-    gap: m(4),
-  },
-  roleText: {
-    fontSize: m(10),
-    fontWeight: '700',
-    color: '#1d4ed8',
-    letterSpacing: 0.5,
-  },
-  name: {
-    fontSize: m(16),
-    fontWeight: '700',
-    color: '#0f172a',
-  },
-  email: {
-    fontSize: m(12),
-    color: '#64748b',
-    marginTop: m(2),
-  },
-  phone: {
-    fontSize: m(11),
-    color: '#94a3b8',
-    marginTop: m(1),
-  },
-  section: {
-    marginBottom: m(16),
-  },
-  sectionTitle: {
-    fontSize: m(12),
-    fontWeight: '700',
-    color: '#64748b',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: m(8),
-    marginLeft: m(4),
-  },
-  sectionBody: {
-    backgroundColor: '#ffffff',
-    borderRadius: m(12),
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
+  avatarCircle: {
+    width: m(92),
+    height: m(92),
+    borderRadius: m(46),
+    borderWidth: m(3.5),
+    borderColor: colors.white,
+    backgroundColor: colors.white,
     overflow: 'hidden',
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.16,
+    shadowRadius: 8,
+    elevation: 6,
   },
-  menuItem: {
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: m(46),
+  },
+  avatarFallback: {
+    width: '100%',
+    height: '100%',
+    borderRadius: m(46),
+    backgroundColor: colors.oceanBlueButton,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarInitials: {
+    fontSize: m(28),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
+  },
+
+  // User Header Text
+  userName: {
+    fontSize: m(20),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    textAlign: 'center',
+  },
+  userIdText: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryBold,
+    color: '#4B6358',
+    textAlign: 'center',
+    marginTop: m(3),
+    marginBottom: m(22),
+  },
+
+  // Menu List
+  menuList: {
+    paddingHorizontal: m(20),
+    gap: m(14),
+  },
+  menuRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: m(14),
-    paddingVertical: m(13),
+    paddingVertical: m(4),
   },
-  menuItemBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-  },
-  iconBox: {
-    width: m(34),
-    height: m(34),
-    borderRadius: m(8),
-    alignItems: 'center',
+  menuIconCircle: {
+    width: m(48),
+    height: m(48),
+    borderRadius: m(24),
+    backgroundColor: '#52A6FF',
     justifyContent: 'center',
-    marginRight: m(12),
+    alignItems: 'center',
+    shadowColor: '#52A6FF',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    elevation: 2,
   },
   menuTitle: {
-    flex: 1,
-    fontSize: m(13),
-    fontWeight: '600',
-    color: '#1e293b',
+    fontSize: m(16),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    marginLeft: m(18),
   },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fee2e2',
-    borderRadius: m(12),
-    paddingVertical: m(14),
-    marginTop: m(8),
-    gap: m(8),
-    borderWidth: 1,
-    borderColor: '#fca5a5',
-  },
-  logoutText: {
-    fontSize: m(13),
-    fontWeight: '700',
-    color: '#dc2626',
-  },
+
+  // Version Footer
   versionText: {
-    textAlign: 'center',
     fontSize: m(11),
-    color: '#94a3b8',
-    marginTop: m(16),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#7E9D86',
+    textAlign: 'center',
+    marginTop: m(28),
   },
 });

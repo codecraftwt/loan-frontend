@@ -9,10 +9,12 @@ import {
   RefreshControl,
   Modal,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Feather';
-import { m } from 'walstar-rn-responsive';
+import Feather from 'react-native-vector-icons/Feather';
+import { useNavigation } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
-import Header from '../../../Components/Header';
+import { m } from '../../../Utils/responsive';
+import { colors, FontFamily } from '../../../constants';
+import { ScreenWrapper } from '../../../Components/common';
 import {
   getRevenueStatistics,
   setRevenueFilters,
@@ -21,8 +23,6 @@ import {
 
 /**
  * Format currency value to Indian Rupee format
- * @param {number} value - The amount to format
- * @returns {string} Formatted currency string
  */
 const formatCurrency = value => {
   if (!value) return '₹0';
@@ -32,8 +32,6 @@ const formatCurrency = value => {
 
 /**
  * Format date string to readable format
- * @param {string} dateString - ISO date string
- * @returns {string} Formatted date string
  */
 const formatDate = dateString => {
   if (!dateString) return 'N/A';
@@ -56,11 +54,8 @@ const GROUP_BY_OPTIONS = [
   { value: 'year', label: 'By Year' },
 ];
 
-/**
- * Revenue Component
- * Displays revenue statistics with filtering and grouping options
- */
 export default function Revenue() {
+  const navigation = useNavigation();
   const dispatch = useDispatch();
   const { revenueData, loading, error, filters } = useSelector(
     state => state.adminRevenue,
@@ -114,6 +109,16 @@ export default function Revenue() {
     loadRevenue(tempFilters);
   }, [dispatch, tempFilters, loadRevenue]);
 
+  // Handle direct tab switch
+  const handleTabSwitch = useCallback(
+    groupByValue => {
+      const updated = { ...filters, groupBy: groupByValue };
+      dispatch(setRevenueFilters(updated));
+      loadRevenue(updated);
+    },
+    [dispatch, filters, loadRevenue],
+  );
+
   // Handle filter clearing
   const handleClearFilters = useCallback(() => {
     const resetFilters = {
@@ -166,69 +171,60 @@ export default function Revenue() {
       {
         id: 'totalRevenue',
         icon: 'dollar-sign',
-        iconColor: '#4CAF50',
-        iconBg: 'rgba(76, 175, 80, 0.15)',
+        iconColor: '#0068FF',
+        iconBg: '#E6F0FF',
         label: 'Total Revenue',
         value: formatCurrency(summary.totalRevenue || 0),
         description: 'Total revenue generated from all plan purchases',
       },
       {
         id: 'totalPurchases',
-        icon: 'shopping-cart',
-        iconColor: '#2196F3',
-        iconBg: 'rgba(33, 150, 243, 0.15)',
+        icon: 'shopping-bag',
+        iconColor: '#00D09E',
+        iconBg: '#DFF7E2',
         label: 'Total Purchases',
         value: (summary.totalPurchases || 0).toLocaleString('en-IN'),
-        description: 'Total number of plan purchases made',
+        description: 'Total number of plan purchases made across all lenders',
       },
       {
         id: 'avgPurchase',
         icon: 'trending-up',
-        iconColor: '#FF9800',
-        iconBg: 'rgba(255, 152, 0, 0.15)',
+        iconColor: '#7C3AED',
+        iconBg: '#F3E8FF',
         label: 'Avg. Per Purchase',
         value: formatCurrency(summary.averageRevenuePerPurchase || 0),
-        description: 'Average revenue per purchase transaction',
+        description: 'Average revenue generated per purchase transaction',
       },
       {
         id: 'activePlans',
         icon: 'check-circle',
-        iconColor: '#4CAF50',
-        iconBg: 'rgba(76, 175, 80, 0.15)',
+        iconColor: '#0068FF',
+        iconBg: '#E6F0FF',
         label: 'Active Plans',
         value: (summary.activePlansCount || 0).toLocaleString('en-IN'),
-        description: 'Number of currently active subscription plans',
+        description: 'Number of currently active subscription tiers',
       },
     ];
   }, [revenueSummary]);
 
-  // Handle summary card click
-  const handleSummaryClick = useCallback((card) => {
+  const handleSummaryClick = useCallback(card => {
     setSelectedSummary(card);
     setShowDetailModal(true);
   }, []);
 
-  // Memoized filter button text
-  const filterButtonText = useMemo(() => {
-    if (filters.groupBy === 'all') return 'All Data';
-    return filters.groupBy.charAt(0).toUpperCase() + filters.groupBy.slice(1);
-  }, [filters.groupBy]);
-
-  // Check if filters are active
   const hasActiveFilters = useMemo(() => {
-    return (
-      filters.startDate || filters.endDate || filters.groupBy !== 'all'
-    );
+    return filters.startDate || filters.endDate || filters.groupBy !== 'all';
   }, [filters]);
 
-  // Render detail modal
+  // Detail Modal
   const renderDetailModal = useCallback(
     () => (
       <Modal
         visible={showDetailModal}
         transparent={true}
         animationType="fade"
-        onRequestClose={() => setShowDetailModal(false)}>
+        onRequestClose={() => setShowDetailModal(false)}
+      >
         <View style={styles.detailModalOverlay}>
           <TouchableOpacity
             style={StyleSheet.absoluteFill}
@@ -243,18 +239,20 @@ export default function Revenue() {
                     style={[
                       styles.detailIconContainer,
                       { backgroundColor: selectedSummary.iconBg },
-                    ]}>
-                    <Icon
+                    ]}
+                  >
+                    <Feather
                       name={selectedSummary.icon}
-                      size={32}
+                      size={m(24)}
                       color={selectedSummary.iconColor}
                     />
                   </View>
                   <TouchableOpacity
                     style={styles.detailCloseButton}
                     onPress={() => setShowDetailModal(false)}
-                    activeOpacity={0.7}>
-                    <Icon name="x" size={24} color="#666" />
+                    activeOpacity={0.7}
+                  >
+                    <Feather name="x" size={m(18)} color={colors.lettersAndIcons} />
                   </TouchableOpacity>
                 </View>
                 <View style={styles.detailModalBody}>
@@ -279,14 +277,15 @@ export default function Revenue() {
     [showDetailModal, selectedSummary],
   );
 
-  // Render filter modal
+  // Filter Modal
   const renderFilterModal = useCallback(
     () => (
       <Modal
         visible={showFilters}
         transparent={true}
         animationType="slide"
-        onRequestClose={() => setShowFilters(false)}>
+        onRequestClose={() => setShowFilters(false)}
+      >
         <View style={styles.modalOverlay}>
           <TouchableOpacity
             style={StyleSheet.absoluteFill}
@@ -295,24 +294,24 @@ export default function Revenue() {
           />
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Filters</Text>
+              <Text style={styles.modalTitle}>Revenue Filters</Text>
               <TouchableOpacity
                 onPress={() => setShowFilters(false)}
-                activeOpacity={0.7}>
-                <Icon name="x" size={24} color="#333" />
+                activeOpacity={0.7}
+              >
+                <Feather name="x" size={m(22)} color={colors.lettersAndIcons} />
               </TouchableOpacity>
             </View>
 
             <ScrollView
               style={styles.modalBody}
               contentContainerStyle={styles.modalBodyContent}
-              showsVerticalScrollIndicator={true}
-              nestedScrollEnabled={true}>
-              {/* Group By Filter */}
+              showsVerticalScrollIndicator={false}
+            >
               <View style={styles.filterSection}>
                 <View style={styles.filterSectionHeader}>
-                  <Icon name="filter" size={18} color="#ff6700" />
-                  <Text style={styles.filterLabel}>Group By</Text>
+                  <Feather name="filter" size={m(16)} color={colors.primary} />
+                  <Text style={styles.filterLabel}>Group Aggregation</Text>
                 </View>
                 <View style={styles.filterOptionsContainer}>
                   {GROUP_BY_OPTIONS.map(option => (
@@ -326,14 +325,16 @@ export default function Revenue() {
                       onPress={() =>
                         setTempFilters({ ...tempFilters, groupBy: option.value })
                       }
-                      activeOpacity={0.7}>
+                      activeOpacity={0.7}
+                    >
                       <View style={styles.filterOptionContent}>
                         <View
                           style={[
                             styles.radioButton,
                             tempFilters.groupBy === option.value &&
                               styles.radioButtonActive,
-                          ]}>
+                          ]}
+                        >
                           {tempFilters.groupBy === option.value && (
                             <View style={styles.radioButtonInner} />
                           )}
@@ -343,7 +344,8 @@ export default function Revenue() {
                             styles.filterOptionText,
                             tempFilters.groupBy === option.value &&
                               styles.filterOptionTextActive,
-                          ]}>
+                          ]}
+                        >
                           {option.label}
                         </Text>
                       </View>
@@ -353,7 +355,6 @@ export default function Revenue() {
               </View>
             </ScrollView>
 
-            {/* Modal Footer */}
             <View style={styles.modalFooter}>
               <TouchableOpacity
                 style={[
@@ -362,20 +363,18 @@ export default function Revenue() {
                 ]}
                 onPress={handleClearFilters}
                 disabled={!hasActiveFilters}
-                activeOpacity={0.7}>
-                <Icon
-                  name="x-circle"
-                  size={18}
-                  color={hasActiveFilters ? '#F44336' : '#CCC'}
-                />
+                activeOpacity={0.7}
+              >
                 <Text
                   style={[
                     styles.clearButtonText,
                     !hasActiveFilters && styles.clearButtonTextDisabled,
-                  ]}>
-                  Clear All
+                  ]}
+                >
+                  Reset
                 </Text>
               </TouchableOpacity>
+
               <TouchableOpacity
                 style={[
                   styles.applyButton,
@@ -383,9 +382,9 @@ export default function Revenue() {
                 ]}
                 onPress={handleApplyFilters}
                 disabled={!hasTempFilterChanges}
-                activeOpacity={0.8}>
+                activeOpacity={0.8}
+              >
                 <Text style={styles.applyButtonText}>Apply Filters</Text>
-                <Icon name="check" size={18} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
           </View>
@@ -403,470 +402,952 @@ export default function Revenue() {
   );
 
   return (
-    <View style={styles.container}>
-      <Header title="Revenue Report" />
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }>
-        {/* Filter Button and Clear Filter */}
-        <View style={styles.filterContainer}>
+    <ScreenWrapper
+      backgroundColor={colors.backgroundGreenWhite}
+      topInsetBg={colors.primary}
+      statusBarColor={colors.primary}
+      statusBarStyle="dark-content"
+      includeTabBarClearance={false}
+      scrollable={false}
+    >
+      <View style={styles.pageWrapper}>
+        {/* Fixed Top Mint Green Header */}
+        <View style={styles.topHeader}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
+            <Feather name="arrow-left" size={m(20)} color={colors.lettersAndIcons} />
+          </TouchableOpacity>
+
+          <Text style={styles.headerTitle}>Revenue Report</Text>
+
           <TouchableOpacity
             style={[
-              styles.filterButton,
-              hasActiveFilters && styles.filterButtonActive,
+              styles.filterHeaderBtn,
+              hasActiveFilters && styles.filterHeaderBtnActive,
             ]}
+            activeOpacity={0.8}
             onPress={() => setShowFilters(true)}
-            activeOpacity={0.7}>
-            <Icon name="filter" size={20} color={hasActiveFilters ? '#FFFFFF' : '#ff6700'} />
-            <Text
-              style={[
-                styles.filterButtonText,
-                hasActiveFilters && styles.filterButtonTextActive,
-              ]}>
-              {filterButtonText}
-            </Text>
-            {hasActiveFilters && <View style={styles.filterBadge} />}
+          >
+            <Feather
+              name="filter"
+              size={m(16)}
+              color={hasActiveFilters ? colors.white : colors.lettersAndIcons}
+            />
+            {hasActiveFilters && <View style={styles.filterBadgeDot} />}
           </TouchableOpacity>
-          {hasActiveFilters && (
-            <TouchableOpacity
-              style={styles.clearFilterButton}
-              onPress={handleClearFilters}
-              activeOpacity={0.7}>
-              <Icon name="x-circle" size={18} color="#F44336" />
-              <Text style={styles.clearFilterButtonText}>Clear Filters</Text>
-            </TouchableOpacity>
-          )}
         </View>
 
-        {/* Loading State */}
-        {loading && !revenueData && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#ff6700" />
-            <Text style={styles.loadingText}>Loading revenue data...</Text>
-          </View>
-        )}
+        {/* Curved Sheet Container */}
+        <View style={styles.sheetSection}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={[colors.primary]}
+              />
+            }
+          >
+            {/* Ocean Blue Hero Revenue Card */}
+            <View style={styles.heroBanner}>
+              <View style={styles.heroHeaderRow}>
+                <View>
+                  <Text style={styles.heroSubLabel}>GROSS SAAS REVENUE</Text>
+                  <Text style={styles.heroTotalValue}>
+                    {formatCurrency(revenueSummary.summary.totalRevenue || 0)}
+                  </Text>
+                </View>
+                <View style={styles.heroIconBox}>
+                  <Feather name="trending-up" size={m(22)} color={colors.white} />
+                </View>
+              </View>
 
-        {/* Error State */}
-        {error && !revenueData && (
-          <View style={styles.errorContainer}>
-            <Icon name="alert-circle" size={48} color="#F44336" />
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity
-              style={styles.retryButton}
-              onPress={() => loadRevenue()}
-              activeOpacity={0.8}>
-              <Text style={styles.retryButtonText}>Retry</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+              {/* 3-Metric Strip inside Hero Banner */}
+              <View style={styles.heroMetricsStrip}>
+                <View style={styles.heroMetricCol}>
+                  <Text style={styles.heroMetricLabel}>Purchases</Text>
+                  <Text style={styles.heroMetricVal}>
+                    {revenueSummary.summary.totalPurchases || 0}
+                  </Text>
+                </View>
+                <View style={styles.heroMetricDivider} />
+                <View style={styles.heroMetricCol}>
+                  <Text style={styles.heroMetricLabel}>Avg / Deal</Text>
+                  <Text style={styles.heroMetricVal}>
+                    {formatCurrency(revenueSummary.summary.averageRevenuePerPurchase || 0)}
+                  </Text>
+                </View>
+                <View style={styles.heroMetricDivider} />
+                <View style={styles.heroMetricCol}>
+                  <Text style={styles.heroMetricLabel}>Active Tiers</Text>
+                  <Text style={styles.heroMetricVal}>
+                    {revenueSummary.summary.activePlansCount || 0}
+                  </Text>
+                </View>
+              </View>
+            </View>
 
-        {/* Summary Cards - Circular */}
-        {revenueData && (
-          <>
-            <View style={styles.summaryRow}>
-              {summaryCards.map((card) => (
+            {/* 4 Interactive KPI Summary Cards (2x2 Grid) */}
+            <View style={styles.kpiGrid}>
+              {summaryCards.map(card => (
                 <TouchableOpacity
                   key={card.id}
-                  style={styles.summaryCardContainer}
+                  style={styles.kpiCard}
+                  activeOpacity={0.75}
                   onPress={() => handleSummaryClick(card)}
-                  activeOpacity={0.8}>
-                  <View style={[styles.summaryCircle, { backgroundColor: card.iconBg }]}>
-                    <Icon name={card.icon} size={28} color={card.iconColor} />
+                >
+                  <View style={styles.kpiTopRow}>
+                    <View style={[styles.kpiIconBox, { backgroundColor: card.iconBg }]}>
+                      <Feather name={card.icon} size={m(15)} color={card.iconColor} />
+                    </View>
+                    <Feather name="info" size={m(13)} color="#7E9D86" />
                   </View>
-                  <Text style={styles.summaryCircleLabel} numberOfLines={2}>
+                  <Text style={styles.kpiValue} numberOfLines={1}>
+                    {card.value}
+                  </Text>
+                  <Text style={styles.kpiLabel} numberOfLines={1}>
                     {card.label}
                   </Text>
                 </TouchableOpacity>
               ))}
-        </View>
+            </View>
 
-            {/* Revenue by Plan */}
-            {(filters.groupBy === 'all' || filters.groupBy === 'plan') &&
-              revenueSummary.revenueByPlan.length > 0 && (
-        <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Revenue by Plan</Text>
-                  {revenueSummary.revenueByPlan.map((item, index) => {
-                    const percentage =
-                      revenueSummary.summary.totalRevenue > 0
-                        ? (item.totalRevenue /
-                            revenueSummary.summary.totalRevenue) *
-                          100
-                        : 0;
-            return (
-                      <View key={`plan-${index}`} style={styles.planCard}>
-                        <View style={[styles.detailModalHeader, {marginBottom:m(12)}]}>
-                          <View style={styles.planHeaderLeft}>
-                            <Icon name="package" size={20} color="#ff9900ff" />
-                            <View style={styles.planInfo}>
-                              <Text style={styles.planName} numberOfLines={1}>
-                                {item.planName}
-                              </Text>
-                              <Text style={styles.planPrice}>
-                                {formatCurrency(item.priceMonthly)}/
-                                {item.duration}
+            {/* Quick Grouping Filter Tabs */}
+            <View style={styles.filterTabsRow}>
+              {GROUP_BY_OPTIONS.map(tab => {
+                const isSelected = filters.groupBy === tab.value;
+                return (
+                  <TouchableOpacity
+                    key={tab.value}
+                    style={[
+                      styles.filterTab,
+                      isSelected && styles.filterTabActive,
+                    ]}
+                    onPress={() => handleTabSwitch(tab.value)}
+                    activeOpacity={0.8}
+                  >
+                    <Text
+                      style={[
+                        styles.filterTabText,
+                        isSelected && styles.filterTabTextActive,
+                      ]}
+                    >
+                      {tab.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Loading State */}
+            {loading && !revenueData && (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={styles.loadingText}>Fetching revenue analytics...</Text>
+              </View>
+            )}
+
+            {/* Error State */}
+            {error && !revenueData && (
+              <View style={styles.errorContainer}>
+                <Feather name="alert-circle" size={m(36)} color="#EF4444" />
+                <Text style={styles.errorText}>{error}</Text>
+                <TouchableOpacity
+                  style={styles.retryBtn}
+                  onPress={() => loadRevenue()}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.retryBtnText}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Content Sections */}
+            {revenueData && (
+              <>
+                {/* 1. Revenue by Plan */}
+                {(filters.groupBy === 'all' || filters.groupBy === 'plan') &&
+                  revenueSummary.revenueByPlan.length > 0 && (
+                    <View style={styles.section}>
+                      <Text style={styles.sectionTitle}>Revenue by Plan Tier</Text>
+                      {revenueSummary.revenueByPlan.map((item, index) => {
+                        const percentage =
+                          revenueSummary.summary.totalRevenue > 0
+                            ? (item.totalRevenue /
+                                revenueSummary.summary.totalRevenue) *
+                              100
+                            : 0;
+                        return (
+                          <View key={`plan-${index}`} style={styles.planCard}>
+                            <View style={styles.cardHeaderRow}>
+                              <View style={styles.planHeaderLeft}>
+                                <View style={styles.planIconBox}>
+                                  <Feather name="layers" size={m(16)} color={colors.white} />
+                                </View>
+                                <View style={styles.planInfo}>
+                                  <Text style={styles.planName} numberOfLines={1}>
+                                    {item.planName}
+                                  </Text>
+                                  <Text style={styles.planPrice}>
+                                    {formatCurrency(item.priceMonthly)} / {item.duration}
+                                  </Text>
+                                </View>
+                              </View>
+                              <Text style={styles.planRevenue}>
+                                {formatCurrency(item.totalRevenue)}
                               </Text>
                             </View>
-                          </View>
-                          <Text style={styles.planRevenue}>
-                            {formatCurrency(item.totalRevenue)}
-                          </Text>
-                        </View>
-                        <View style={styles.barContainer}>
-                          <View
-                            style={[styles.bar, { width: `${percentage}%` }]}
-                          />
-                        </View>
-                        <View style={styles.planStats}>
-                          <View style={styles.planStatItem}>
-                            <Text style={styles.planStatLabel}>Purchases</Text>
-                            <Text style={styles.planStatValue}>
-                              {item.totalPurchases}
-                            </Text>
-                          </View>
-                          <View style={styles.planStatItem}>
-                            <Text style={styles.planStatLabel}>Active</Text>
-                            <Text
-                              style={[
-                                styles.planStatValue,
-                                styles.activeText,
-                              ]}>
-                              {item.activePurchases}
-                            </Text>
-                          </View>
-                          <View style={styles.planStatItem}>
-                            <Text style={styles.planStatLabel}>Expired</Text>
-                            <Text
-                              style={[
-                                styles.planStatValue,
-                                styles.expiredText,
-                              ]}>
-                              {item.expiredPurchases}
-                            </Text>
-                          </View>
-                          <View style={styles.planStatItem}>
-                            <Text style={styles.planStatLabel}>Avg.</Text>
-                            <Text style={styles.planStatValue}>
-                              {formatCurrency(
-                                item.averageRevenuePerPurchase,
-                              )}
-                            </Text>
-                          </View>
-                        </View>
-                  </View>
-                    );
-                  })}
-                </View>
-              )}
 
-            {/* Revenue by Month */}
-            {(filters.groupBy === 'all' || filters.groupBy === 'month') &&
-              revenueSummary.revenueByMonth.length > 0 && (
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Monthly Revenue</Text>
-                  {revenueSummary.revenueByMonth.map((item, index) => {
-                    const percentage =
-                      revenueSummary.maxRevenue > 0
-                        ? (item.totalRevenue / revenueSummary.maxRevenue) * 100
-                        : 0;
-                    return (
-                      <View key={`month-${index}`} style={styles.planCard}>
-                        <View style={[styles.detailModalHeader,{marginBottom: m(12)}]}>
-                          <Text style={styles.monthName}>
-                            {item.monthName} {item.year}
-                          </Text>
-                          <Text style={styles.planRevenue}>
-                            {formatCurrency(item.totalRevenue)}
-                          </Text>
-                </View>
-                <View style={styles.barContainer}>
-                  <View
-                            style={[styles.bar, { width: `${percentage}%` }]}
-                  />
-                </View>
-                <View style={styles.monthDetails}>
-                  <View style={styles.monthDetailItem}>
-                            <Icon name="shopping-cart" size={16} color="#2196F3" />
-                            <Text style={styles.monthPurchases}>
-                              {item.totalPurchases} purchases
-                    </Text>
-                  </View>
-                        </View>
-                  </View>
-                    );
-                  })}
-                </View>
-              )}
+                            {/* Progress Bar */}
+                            <View style={styles.barContainer}>
+                              <View
+                                style={[
+                                  styles.bar,
+                                  { width: `${Math.min(percentage, 100)}%` },
+                                ]}
+                              />
+                            </View>
 
-            {/* Revenue by Year */}
-            {(filters.groupBy === 'all' || filters.groupBy === 'year') &&
-              revenueSummary.revenueByYear.length > 0 && (
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Yearly Revenue</Text>
-                  {revenueSummary.revenueByYear.map((item, index) => {
-                    const totalYearRevenue = revenueSummary.revenueByYear.reduce(
-                      (sum, y) => sum + (y.totalRevenue || 0),
-                      0,
-                    );
-                    const percentage =
-                      totalYearRevenue > 0
-                        ? (item.totalRevenue / totalYearRevenue) * 100
-                        : 0;
-                    return (
-                      <View key={`year-${index}`} style={styles.planCard}>
-                        <View style={[styles.detailModalHeader,{marginBottom: m(12)}]}>
-                          <Text style={styles.yearName}>{item.year}</Text>
-                          <Text style={styles.planRevenue}>
-                            {formatCurrency(item.totalRevenue)}
-                          </Text>
-                        </View>
-                        <View style={styles.barContainer}>
-                          <View
-                            style={[styles.bar, { width: `${percentage}%` }]}
-                          />
-                        </View>
-                        <View style={styles.yearDetails}>
-                          <Icon name="shopping-cart" size={16} color="#2196F3" />
-                          <Text style={styles.yearPurchases}>
-                            {item.totalPurchases} purchases
-                          </Text>
-                </View>
-              </View>
-            );
-          })}
-        </View>
-              )}
-
-            {/* Purchase Details */}
-            {filters.groupBy === 'all' &&
-              revenueSummary.purchaseDetails.length > 0 && (
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>
-                    Recent Purchases ({revenueSummary.purchaseDetails.length})
-                  </Text>
-                  {revenueSummary.purchaseDetails.slice(0, 10).map((item, index) => (
-                    <View key={`purchase-${index}`} style={styles.planCard}>
-                      <View style={[styles.detailModalHeader,{marginBottom: m(12)}]}>
-                        <View style={styles.purchaseHeaderLeft}>
-                          <View
-                            style={[
-                              styles.purchaseStatusIndicator,
-                              item.isActive
-                                ? styles.purchaseStatusActive
-                                : styles.purchaseStatusExpired,
-                            ]}
-                          />
-                          <View style={styles.purchaseInfo}>
-                            <Text style={styles.purchasePlanName} numberOfLines={1}>
-                              {item.planName}
-                            </Text>
-                            <Text style={styles.purchaseDate}>
-                              {formatDate(item.purchaseDate)}
-                            </Text>
+                            {/* Plan Stats Strip */}
+                            <View style={styles.planStatsStrip}>
+                              <View style={styles.planStatItem}>
+                                <Text style={styles.planStatLabel}>Purchases</Text>
+                                <Text style={styles.planStatValue}>
+                                  {item.totalPurchases}
+                                </Text>
+                              </View>
+                              <View style={styles.planStatItem}>
+                                <Text style={styles.planStatLabel}>Active</Text>
+                                <Text style={[styles.planStatValue, styles.activeText]}>
+                                  {item.activePurchases}
+                                </Text>
+                              </View>
+                              <View style={styles.planStatItem}>
+                                <Text style={styles.planStatLabel}>Expired</Text>
+                                <Text style={[styles.planStatValue, styles.expiredText]}>
+                                  {item.expiredPurchases}
+                                </Text>
+                              </View>
+                              <View style={styles.planStatItem}>
+                                <Text style={styles.planStatLabel}>Avg Value</Text>
+                                <Text style={styles.planStatValue}>
+                                  {formatCurrency(item.averageRevenuePerPurchase)}
+                                </Text>
+                              </View>
+                            </View>
                           </View>
-                        </View>
-                        <Text style={styles.planRevenue}>
-                          {formatCurrency(item.price)}
-                        </Text>
-                      </View>
-                      <View style={styles.purchaseDetails}>
-                        <View style={styles.purchaseDetailItem}>
-                          <Icon name="clock" size={14} color="#666" />
-                          <Text style={styles.purchaseDetailText}>
-                            Expires: {formatDate(item.expiryDate)}
-                          </Text>
-                        </View>
-                        {item.isActive && item.remainingDays !== undefined && (
-                          <View style={styles.purchaseDetailItem}>
-                            <Icon name="calendar" size={14} color="#4CAF50" />
-                            <Text
-                              style={[
-                                styles.purchaseDetailText,
-                                styles.remainingDaysText,
-                              ]}>
-                              {item.remainingDays} days remaining
-                            </Text>
-                          </View>
-                        )}
-                      </View>
+                        );
+                      })}
                     </View>
-                  ))}
-                </View>
-              )}
-          </>
-        )}
-      </ScrollView>
+                  )}
+
+                {/* 2. Revenue by Month */}
+                {(filters.groupBy === 'all' || filters.groupBy === 'month') &&
+                  revenueSummary.revenueByMonth.length > 0 && (
+                    <View style={styles.section}>
+                      <Text style={styles.sectionTitle}>Monthly Distribution</Text>
+                      {revenueSummary.revenueByMonth.map((item, index) => {
+                        const percentage =
+                          revenueSummary.maxRevenue > 0
+                            ? (item.totalRevenue / revenueSummary.maxRevenue) * 100
+                            : 0;
+                        return (
+                          <View key={`month-${index}`} style={styles.planCard}>
+                            <View style={styles.cardHeaderRow}>
+                              <View style={styles.monthHeaderLeft}>
+                                <View style={styles.monthIconBox}>
+                                  <Feather name="calendar" size={m(15)} color={colors.white} />
+                                </View>
+                                <Text style={styles.monthName}>
+                                  {item.monthName} {item.year}
+                                </Text>
+                              </View>
+                              <Text style={styles.planRevenue}>
+                                {formatCurrency(item.totalRevenue)}
+                              </Text>
+                            </View>
+
+                            <View style={styles.barContainer}>
+                              <View
+                                style={[
+                                  styles.bar,
+                                  { width: `${Math.min(percentage, 100)}%` },
+                                ]}
+                              />
+                            </View>
+
+                            <View style={styles.monthBottomRow}>
+                              <View style={styles.purchaseCountRow}>
+                                <Feather name="shopping-bag" size={m(13)} color="#0068FF" />
+                                <Text style={styles.monthPurchases}>
+                                  {item.totalPurchases} completed subscriptions
+                                </Text>
+                              </View>
+                            </View>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  )}
+
+                {/* 3. Revenue by Year */}
+                {(filters.groupBy === 'all' || filters.groupBy === 'year') &&
+                  revenueSummary.revenueByYear.length > 0 && (
+                    <View style={styles.section}>
+                      <Text style={styles.sectionTitle}>Annual Overview</Text>
+                      {revenueSummary.revenueByYear.map((item, index) => {
+                        const totalYearRevenue = revenueSummary.revenueByYear.reduce(
+                          (sum, y) => sum + (y.totalRevenue || 0),
+                          0,
+                        );
+                        const percentage =
+                          totalYearRevenue > 0
+                            ? (item.totalRevenue / totalYearRevenue) * 100
+                            : 0;
+                        return (
+                          <View key={`year-${index}`} style={styles.planCard}>
+                            <View style={styles.cardHeaderRow}>
+                              <View style={styles.monthHeaderLeft}>
+                                <View style={styles.monthIconBox}>
+                                  <Feather name="bar-chart-2" size={m(15)} color={colors.white} />
+                                </View>
+                                <Text style={styles.yearName}>Year {item.year}</Text>
+                              </View>
+                              <Text style={styles.planRevenue}>
+                                {formatCurrency(item.totalRevenue)}
+                              </Text>
+                            </View>
+
+                            <View style={styles.barContainer}>
+                              <View
+                                style={[
+                                  styles.bar,
+                                  { width: `${Math.min(percentage, 100)}%` },
+                                ]}
+                              />
+                            </View>
+
+                            <View style={styles.monthBottomRow}>
+                              <View style={styles.purchaseCountRow}>
+                                <Feather name="shopping-bag" size={m(13)} color="#0068FF" />
+                                <Text style={styles.yearPurchases}>
+                                  {item.totalPurchases} subscriptions
+                                </Text>
+                              </View>
+                            </View>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  )}
+
+                {/* 4. Recent Purchases */}
+                {filters.groupBy === 'all' &&
+                  revenueSummary.purchaseDetails.length > 0 && (
+                    <View style={styles.section}>
+                      <Text style={styles.sectionTitle}>
+                        Recent Subscriptions ({revenueSummary.purchaseDetails.length})
+                      </Text>
+                      {revenueSummary.purchaseDetails.slice(0, 10).map((item, index) => (
+                        <View key={`purchase-${index}`} style={styles.purchaseCard}>
+                          <View style={styles.cardHeaderRow}>
+                            <View style={styles.purchaseHeaderLeft}>
+                              <View
+                                style={[
+                                  styles.purchaseStatusDot,
+                                  item.isActive
+                                    ? styles.purchaseStatusActive
+                                    : styles.purchaseStatusExpired,
+                                ]}
+                              />
+                              <View style={styles.purchaseInfo}>
+                                <Text style={styles.purchasePlanName} numberOfLines={1}>
+                                  {item.planName}
+                                </Text>
+                                <Text style={styles.purchaseDate}>
+                                  {formatDate(item.purchaseDate)}
+                                </Text>
+                              </View>
+                            </View>
+                            <Text style={styles.purchasePrice}>
+                              {formatCurrency(item.price)}
+                            </Text>
+                          </View>
+
+                          <View style={styles.purchaseMetaRow}>
+                            <View style={styles.purchaseMetaItem}>
+                              <Feather name="clock" size={m(12)} color="#5A7A71" />
+                              <Text style={styles.purchaseMetaText}>
+                                Valid until: {formatDate(item.expiryDate)}
+                              </Text>
+                            </View>
+
+                            {item.isActive && item.remainingDays !== undefined && (
+                              <View style={styles.daysRemainingBadge}>
+                                <Text style={styles.daysRemainingText}>
+                                  {item.remainingDays}d active
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                {/* Empty State for By Plan */}
+                {filters.groupBy === 'plan' &&
+                  revenueSummary.revenueByPlan.length === 0 && (
+                    <View style={styles.emptyCard}>
+                      <Feather name="layers" size={m(28)} color="#8EABA3" />
+                      <Text style={styles.emptyCardText}>
+                        No plan revenue recorded yet
+                      </Text>
+                    </View>
+                  )}
+
+                {/* Empty State for By Month */}
+                {filters.groupBy === 'month' &&
+                  revenueSummary.revenueByMonth.length === 0 && (
+                    <View style={styles.emptyCard}>
+                      <Feather name="calendar" size={m(28)} color="#8EABA3" />
+                      <Text style={styles.emptyCardText}>
+                        No monthly revenue recorded yet
+                      </Text>
+                    </View>
+                  )}
+
+                {/* Empty State for By Year */}
+                {filters.groupBy === 'year' &&
+                  revenueSummary.revenueByYear.length === 0 && (
+                    <View style={styles.emptyCard}>
+                      <Feather name="bar-chart-2" size={m(28)} color="#8EABA3" />
+                      <Text style={styles.emptyCardText}>
+                        No annual revenue recorded yet
+                      </Text>
+                    </View>
+                  )}
+
+                {/* Empty State for All Data */}
+                {filters.groupBy === 'all' &&
+                  revenueSummary.revenueByPlan.length === 0 &&
+                  revenueSummary.revenueByMonth.length === 0 &&
+                  revenueSummary.revenueByYear.length === 0 &&
+                  revenueSummary.purchaseDetails.length === 0 && (
+                    <View style={styles.emptyCard}>
+                      <Feather name="inbox" size={m(32)} color="#8EABA3" />
+                      <Text style={styles.emptyCardText}>
+                        No revenue transactions recorded yet
+                      </Text>
+                    </View>
+                  )}
+              </>
+            )}
+          </ScrollView>
+        </View>
+      </View>
+
       {renderFilterModal()}
       {renderDetailModal()}
-    </View>
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  // ==================== Container & Layout ====================
-  container: {
+  pageWrapper: {
     flex: 1,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: colors.primary,
   },
-  scrollView: {
+
+  // Fixed Top Mint Green Header
+  topHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.primary,
+    paddingHorizontal: m(18),
+    paddingTop: m(12),
+    paddingBottom: m(16),
+  },
+  backBtn: {
+    width: m(36),
+    height: m(36),
+    borderRadius: m(18),
+    backgroundColor: 'rgba(9, 48, 48, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: m(19),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    textAlign: 'center',
+  },
+  filterHeaderBtn: {
+    width: m(36),
+    height: m(36),
+    borderRadius: m(18),
+    backgroundColor: 'rgba(255, 255, 255, 0.35)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  filterHeaderBtnActive: {
+    backgroundColor: colors.lettersAndIcons,
+  },
+  filterBadgeDot: {
+    position: 'absolute',
+    top: m(6),
+    right: m(6),
+    width: m(7),
+    height: m(7),
+    borderRadius: m(3.5),
+    backgroundColor: '#00D09E',
+  },
+
+  // Curved Sheet
+  sheetSection: {
     flex: 1,
+    backgroundColor: colors.backgroundGreenWhite,
+    borderTopLeftRadius: m(36),
+    borderTopRightRadius: m(36),
+    paddingTop: m(18),
   },
   scrollContent: {
-    padding: m(20),
-    paddingBottom: m(100),
+    paddingHorizontal: m(18),
+    paddingBottom: m(80),
   },
 
-  // ==================== Filter Section ====================
-  filterContainer: {
-    flexDirection: 'row',
-    gap: m(12),
-    marginBottom: m(16),
+  // Ocean Blue Hero Banner
+  heroBanner: {
+    backgroundColor: colors.oceanBlueButton,
+    borderRadius: m(22),
+    padding: m(18),
+    marginBottom: m(14),
+    shadowColor: colors.oceanBlueButton,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 4,
   },
-  filterButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(12),
-    paddingHorizontal: m(16),
-    paddingVertical: m(12),
-    gap: m(8),
-    position: 'relative',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  filterButtonActive: {
-    backgroundColor: '#ff6700',
-    borderColor: '#ff6700',
-  },
-  filterButtonText: {
-    fontSize: m(14),
-    fontWeight: '600',
-    color: '#333',
-  },
-  filterButtonTextActive: {
-    color: '#FFFFFF',
-  },
-  filterBadge: {
-    position: 'absolute',
-    top: m(8),
-    right: m(8),
-    width: m(8),
-    height: m(8),
-    borderRadius: m(4),
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#ff6700',
-  },
-  clearFilterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(12),
-    paddingHorizontal: m(16),
-    paddingVertical: m(12),
-    gap: m(6),
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    borderWidth: 1,
-    borderColor: '#FFEBEE',
-    minWidth: m(120),
-  },
-  clearFilterButtonText: {
-    fontSize: m(14),
-    fontWeight: '600',
-    color: '#F44336',
-  },
-
-  // ==================== Loading & Error States ====================
-  loadingContainer: {
-    padding: m(40),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingText: {
-    marginTop: m(12),
-    fontSize: m(16),
-    color: '#666',
-    fontWeight: '500',
-  },
-  errorContainer: {
-    padding: m(40),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  errorText: {
-    marginTop: m(12),
-    fontSize: m(16),
-    color: '#F44336',
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  retryButton: {
-    marginTop: m(16),
-    paddingHorizontal: m(24),
-    paddingVertical: m(12),
-    backgroundColor: '#ff6700',
-    borderRadius: m(8),
-    elevation: 2,
-    shadowColor: '#ff6700',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  retryButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: m(14),
-  },
-
-  // ==================== Summary Cards (Circular) ====================
-  summaryRow: {
+  heroHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    gap: m(4),
-    marginBottom: m(20),
-    paddingHorizontal: m(0),
-    flexWrap: 'nowrap',
   },
-  summaryCardContainer: {
+  heroSubLabel: {
+    fontSize: m(10.5),
+    fontFamily: FontFamily.primaryBold,
+    color: 'rgba(255, 255, 255, 0.82)',
+    letterSpacing: 0.5,
+  },
+  heroTotalValue: {
+    fontSize: m(28),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
+    marginTop: m(2),
+  },
+  heroIconBox: {
+    width: m(42),
+    height: m(42),
+    borderRadius: m(14),
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  heroMetricsStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(255, 255, 255, 0.16)',
+    borderRadius: m(14),
+    paddingVertical: m(10),
+    paddingHorizontal: m(12),
+    marginTop: m(14),
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.22)',
+  },
+  heroMetricCol: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    minWidth: 0,
-    maxWidth: '25%',
   },
-  summaryCircle: {
-    width: m(60),
-    height: m(60),
-    borderRadius: m(30),
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: m(8),
+  heroMetricLabel: {
+    fontSize: m(10),
+    fontFamily: FontFamily.primaryMedium,
+    color: 'rgba(255, 255, 255, 0.85)',
   },
-  summaryCircleLabel: {
-    fontSize: m(11),
-    color: '#64748b',
-    fontWeight: '600',
-    textAlign: 'center',
-    lineHeight: m(14),
-    maxWidth: m(80),
+  heroMetricVal: {
+    fontSize: m(14),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
+    marginTop: m(2),
+  },
+  heroMetricDivider: {
+    width: 1,
+    height: m(22),
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
   },
 
-  // ==================== Detail Modal ====================
+  // 2x2 Interactive KPI Grid
+  kpiGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    rowGap: m(10),
+    marginBottom: m(16),
+  },
+  kpiCard: {
+    width: '48.5%',
+    backgroundColor: colors.white,
+    borderRadius: m(18),
+    padding: m(14),
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.08)',
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  kpiTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: m(10),
+  },
+  kpiIconBox: {
+    width: m(34),
+    height: m(34),
+    borderRadius: m(17),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  kpiValue: {
+    fontSize: m(17),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    marginBottom: m(2),
+  },
+  kpiLabel: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryMedium,
+    color: '#5A7A71',
+  },
+
+  // Filter Tabs
+  filterTabsRow: {
+    flexDirection: 'row',
+    gap: m(8),
+    marginBottom: m(16),
+  },
+  filterTab: {
+    flex: 1,
+    backgroundColor: colors.lightGreen,
+    paddingVertical: m(8),
+    borderRadius: m(14),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterTabActive: {
+    backgroundColor: colors.lettersAndIcons,
+  },
+  filterTabText: {
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
+  },
+  filterTabTextActive: {
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
+  },
+
+  // Loading & Error States
+  loadingContainer: {
+    paddingVertical: m(40),
+    alignItems: 'center',
+    gap: m(8),
+  },
+  loadingText: {
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryMedium,
+    color: '#5A7A71',
+  },
+  errorContainer: {
+    paddingVertical: m(30),
+    alignItems: 'center',
+    gap: m(8),
+  },
+  errorText: {
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryMedium,
+    color: '#EF4444',
+    textAlign: 'center',
+  },
+  retryBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: m(18),
+    paddingVertical: m(8),
+    borderRadius: m(16),
+    marginTop: m(8),
+  },
+  retryBtnText: {
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  emptyCard: {
+    backgroundColor: colors.white,
+    borderRadius: m(18),
+    paddingVertical: m(32),
+    paddingHorizontal: m(20),
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.08)',
+    marginBottom: m(16),
+    gap: m(8),
+  },
+  emptyCardText: {
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryMedium,
+    color: '#5A7A71',
+    textAlign: 'center',
+  },
+
+  // Sections
+  section: {
+    marginBottom: m(16),
+  },
+  sectionTitle: {
+    fontSize: m(13.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    marginBottom: m(10),
+    marginLeft: m(2),
+  },
+
+  // Plan Cards
+  planCard: {
+    backgroundColor: colors.white,
+    borderRadius: m(16),
+    padding: m(15),
+    marginBottom: m(10),
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.08)',
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: m(10),
+  },
+  planHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: m(10),
+    marginRight: m(8),
+  },
+  planIconBox: {
+    width: m(34),
+    height: m(34),
+    borderRadius: m(10),
+    backgroundColor: '#0068FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  planInfo: {
+    flex: 1,
+  },
+  planName: {
+    fontSize: m(14.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  planPrice: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#5A7A71',
+    marginTop: m(1),
+  },
+  planRevenue: {
+    fontSize: m(15),
+    fontFamily: FontFamily.primaryBold,
+    color: '#00A87A',
+  },
+  barContainer: {
+    height: m(6),
+    backgroundColor: '#E8F5E9',
+    borderRadius: m(3),
+    marginBottom: m(10),
+    overflow: 'hidden',
+  },
+  bar: {
+    height: '100%',
+    backgroundColor: colors.primary,
+    borderRadius: m(3),
+  },
+  planStatsStrip: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: '#F8FCF9',
+    borderRadius: m(10),
+    paddingVertical: m(6),
+    paddingHorizontal: m(8),
+  },
+  planStatItem: {
+    alignItems: 'center',
+  },
+  planStatLabel: {
+    fontSize: m(10),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#5A7A71',
+  },
+  planStatValue: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    marginTop: m(1),
+  },
+  activeText: {
+    color: '#00A87A',
+  },
+  expiredText: {
+    color: '#EF4444',
+  },
+
+  // Monthly / Yearly
+  monthHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(10),
+  },
+  monthIconBox: {
+    width: m(32),
+    height: m(32),
+    borderRadius: m(10),
+    backgroundColor: '#52A6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  monthName: {
+    fontSize: m(14.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  yearName: {
+    fontSize: m(15),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  monthBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  purchaseCountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(6),
+  },
+  monthPurchases: {
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryMedium,
+    color: '#5A7A71',
+  },
+  yearPurchases: {
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryMedium,
+    color: '#5A7A71',
+  },
+
+  // Purchase Cards
+  purchaseCard: {
+    backgroundColor: colors.white,
+    borderRadius: m(14),
+    padding: m(13),
+    marginBottom: m(8),
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.08)',
+  },
+  purchaseHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(10),
+    flex: 1,
+  },
+  purchaseStatusDot: {
+    width: m(10),
+    height: m(10),
+    borderRadius: m(5),
+  },
+  purchaseStatusActive: {
+    backgroundColor: '#00D09E',
+  },
+  purchaseStatusExpired: {
+    backgroundColor: '#CBD5E1',
+  },
+  purchaseInfo: {
+    flex: 1,
+  },
+  purchasePlanName: {
+    fontSize: m(13.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  purchaseDate: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#5A7A71',
+    marginTop: m(1),
+  },
+  purchasePrice: {
+    fontSize: m(14),
+    fontFamily: FontFamily.primaryBold,
+    color: '#00A87A',
+  },
+  purchaseMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: m(8),
+    paddingTop: m(6),
+    borderTopWidth: 1,
+    borderTopColor: '#F1F7F3',
+  },
+  purchaseMetaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(6),
+  },
+  purchaseMetaText: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#5A7A71',
+  },
+  daysRemainingBadge: {
+    backgroundColor: '#DFF7E2',
+    paddingHorizontal: m(8),
+    paddingVertical: m(2),
+    borderRadius: m(8),
+  },
+  daysRemainingText: {
+    fontSize: m(10.5),
+    fontFamily: FontFamily.primaryBold,
+    color: '#009B72',
+  },
+
+  // Modals
   detailModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -875,36 +1356,31 @@ const styles = StyleSheet.create({
     padding: m(20),
   },
   detailModalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: m(20),
     width: '100%',
     maxWidth: m(320),
-    padding: m(24),
+    padding: m(22),
     elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    zIndex: 1000,
   },
   detailModalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: m(20),
+    marginBottom: m(16),
   },
   detailIconContainer: {
-    width: m(64),
-    height: m(64),
-    borderRadius: m(32),
+    width: m(54),
+    height: m(54),
+    borderRadius: m(27),
     alignItems: 'center',
     justifyContent: 'center',
   },
   detailCloseButton: {
-    width: m(36),
-    height: m(36),
-    borderRadius: m(18),
-    backgroundColor: '#F5F5F5',
+    width: m(32),
+    height: m(32),
+    borderRadius: m(16),
+    backgroundColor: '#F1FFF3',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -912,374 +1388,159 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   detailLabel: {
-    fontSize: m(16),
-    color: '#64748b',
-    fontWeight: '600',
-    marginBottom: m(12),
-    textAlign: 'center',
+    fontSize: m(14),
+    fontFamily: FontFamily.primaryMedium,
+    color: '#5A7A71',
+    marginBottom: m(6),
   },
   detailValue: {
-    fontSize: m(32),
-    fontWeight: '800',
-    color: '#1e293b',
-    marginBottom: m(16),
-    textAlign: 'center',
+    fontSize: m(26),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    marginBottom: m(8),
   },
   detailDescription: {
-    fontSize: m(14),
-    color: '#94a3b8',
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#5A7A71',
     textAlign: 'center',
-    lineHeight: m(20),
+    lineHeight: m(17),
   },
 
-  // ==================== Section Styles ====================
-  section: {
-    marginTop: m(14),
-  },
-  sectionTitle: {
-    fontSize: m(18),
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: m(16),
-    letterSpacing: 0.3,
-  },
-
-  // ==================== Plan Card Styles ====================
-  planCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(12),
-    padding: m(16),
-    marginBottom: m(12),
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  planHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    gap: m(12),
-    marginRight: m(12),
-  },
-  planInfo: {
-    flex: 1,
-  },
-  planName: {
-    fontSize: m(16),
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: m(4),
-  },
-  planPrice: {
-    fontSize: m(12),
-    color: '#666',
-  },
-  planRevenue: {
-    fontSize: m(16),
-    fontWeight: '700',
-    color: '#74C365',
-  },
-  barContainer: {
-    height: m(8),
-    backgroundColor: '#F5F5F5',
-    borderRadius: m(4),
-    marginBottom: m(12),
-    overflow: 'hidden',
-  },
-  bar: {
-    height: '100%',
-    backgroundColor: '#ff9900ff',
-    borderRadius: m(4),
-  },
-  planStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  planStatItem: {
-    alignItems: 'center',
-  },
-  planStatLabel: {
-    fontSize: m(11),
-    color: '#666',
-    marginBottom: m(4),
-    fontWeight: '500',
-  },
-  planStatValue: {
-    fontSize: m(14),
-    fontWeight: '600',
-    color: '#333',
-  },
-  activeText: {
-    color: '#4CAF50',
-  },
-  expiredText: {
-    color: '#F44336',
-  },
-
-  // ==================== Month Card Styles ====================
-  monthName: {
-    fontSize: m(16),
-    fontWeight: '700',
-    color: '#333',
-  },
-  monthDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(6),
-  },
-  monthDetailItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(6),
-  },
-  monthPurchases: {
-    fontSize: m(14),
-    fontWeight: '600',
-    color: '#333',
-  },
-
-  // ==================== Year Card Styles ====================
-  yearName: {
-    fontSize: m(18),
-    fontWeight: '700',
-    color: '#333',
-  },
-  yearDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(6),
-  },
-  yearPurchases: {
-    fontSize: m(14),
-    fontWeight: '600',
-    color: '#333',
-  },
-
-  // ==================== Purchase Card Styles ====================
-  purchaseHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    gap: m(12),
-    marginRight: m(12),
-  },
-  purchaseStatusIndicator: {
-    width: m(12),
-    height: m(12),
-    borderRadius: m(6),
-  },
-  purchaseStatusActive: {
-    backgroundColor: '#4CAF50',
-  },
-  purchaseStatusExpired: {
-    backgroundColor: '#CCC',
-  },
-  purchaseInfo: {
-    flex: 1,
-  },
-  purchasePlanName: {
-    fontSize: m(16),
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: m(4),
-  },
-  purchaseDate: {
-    fontSize: m(12),
-    color: '#666',
-  },
-  purchaseDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(16),
-    flexWrap: 'wrap',
-  },
-  purchaseDetailItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(6),
-  },
-  purchaseDetailText: {
-    fontSize: m(12),
-    color: '#666',
-  },
-  remainingDaysText: {
-    color: '#4CAF50',
-    fontWeight: '600',
-  },
-
-  // ==================== Filter Modal Styles ====================
+  // Filter Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: m(24),
-    borderTopRightRadius: m(24),
-    maxHeight: '85%',
-    width: '100%',
+    backgroundColor: colors.white,
+    borderTopLeftRadius: m(28),
+    borderTopRightRadius: m(28),
     paddingHorizontal: m(20),
-    paddingTop: m(24),
-    paddingBottom: m(20),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    paddingTop: m(20),
+    paddingBottom: m(24),
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: m(24),
-    paddingBottom: m(16),
+    marginBottom: m(18),
+    paddingBottom: m(12),
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: '#F1F7F3',
   },
   modalTitle: {
-    fontSize: m(22),
-    fontWeight: '700',
-    color: '#1e293b',
-    letterSpacing: 0.3,
+    fontSize: m(18),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
   modalBody: {
     width: '100%',
-    flexGrow: 1,
   },
   modalBodyContent: {
     paddingBottom: m(10),
   },
   filterSection: {
-    marginBottom: m(24),
+    marginBottom: m(18),
   },
   filterSectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: m(16),
-    gap: m(10),
-    paddingBottom: m(12),
-    borderBottomWidth: 1,
-    borderBottomColor: '#F5F5F5',
+    gap: m(8),
+    marginBottom: m(12),
   },
   filterLabel: {
-    fontSize: m(17),
-    fontWeight: '700',
-    color: '#1e293b',
-    letterSpacing: 0.3,
+    fontSize: m(14),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
   filterOptionsContainer: {
-    gap: m(12),
+    gap: m(8),
   },
   filterOption: {
-    padding: m(16),
-    backgroundColor: '#F8F9FA',
+    padding: m(14),
+    backgroundColor: '#F8FCF9',
     borderRadius: m(14),
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderWidth: 1.5,
+    borderColor: '#E8F5E9',
   },
   filterOptionActive: {
-    backgroundColor: '#FFF8F0',
-    borderWidth: 2,
-    borderColor: '#ff6700',
-    elevation: 2,
-    shadowColor: '#ff6700',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    backgroundColor: '#F1FFF3',
+    borderColor: colors.primary,
   },
   filterOptionContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(12),
+    gap: m(10),
   },
   radioButton: {
-    width: m(22),
-    height: m(22),
-    borderRadius: m(11),
+    width: m(18),
+    height: m(18),
+    borderRadius: m(9),
     borderWidth: 2,
-    borderColor: '#D1D5DB',
+    borderColor: '#CBD5E1',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
   },
   radioButtonActive: {
-    borderColor: '#ff6700',
-    backgroundColor: '#FFF8F0',
+    borderColor: colors.primary,
   },
   radioButtonInner: {
-    width: m(12),
-    height: m(12),
-    borderRadius: m(6),
-    backgroundColor: '#ff6700',
+    width: m(10),
+    height: m(10),
+    borderRadius: m(5),
+    backgroundColor: colors.primary,
   },
   filterOptionText: {
-    fontSize: m(15),
-    color: '#64748b',
-    flex: 1,
-    fontWeight: '500',
+    fontSize: m(13.5),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
   },
   filterOptionTextActive: {
-    color: '#ff6700',
-    fontWeight: '700',
+    fontFamily: FontFamily.primaryBold,
   },
   modalFooter: {
     flexDirection: 'row',
-    paddingTop: m(20),
+    paddingTop: m(16),
     borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
-    gap: m(12),
-    backgroundColor: '#FFFFFF',
+    borderTopColor: '#F1F7F3',
+    gap: m(10),
   },
   clearButton: {
     flex: 1,
-    flexDirection: 'row',
+    height: m(48),
+    borderRadius: m(24),
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: m(16),
-    backgroundColor: '#F5F5F5',
-    borderRadius: m(14),
-    gap: m(8),
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderWidth: 1.5,
+    borderColor: 'rgba(9, 48, 48, 0.15)',
   },
   clearButtonDisabled: {
     opacity: 0.5,
   },
   clearButtonText: {
-    fontSize: m(15),
-    fontWeight: '600',
-    color: '#F44336',
+    fontSize: m(14),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
   clearButtonTextDisabled: {
-    color: '#9CA3AF',
+    color: '#94A3B8',
   },
   applyButton: {
     flex: 2,
-    flexDirection: 'row',
+    height: m(48),
+    borderRadius: m(24),
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: m(16),
-    backgroundColor: '#ff6700',
-    borderRadius: m(14),
-    gap: m(8),
-    elevation: 3,
-    shadowColor: '#ff6700',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
   },
   applyButtonDisabled: {
-    backgroundColor: '#D1D5DB',
-    elevation: 0,
-    shadowOpacity: 0,
+    backgroundColor: '#CBD5E1',
   },
   applyButtonText: {
-    fontSize: m(16),
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.3,
+    fontSize: m(14),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
 });

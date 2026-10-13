@@ -10,9 +10,10 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Feather';
-import { m } from 'walstar-rn-responsive';
-import Header from '../../../Components/Header';
+import Feather from 'react-native-vector-icons/Feather';
+import { m } from '../../../Utils/responsive';
+import { colors, FontFamily } from '../../../constants';
+import { ScreenWrapper } from '../../../Components/common';
 import Toast from 'react-native-toast-message';
 import { ratingAPI } from '../../../Services/ratingService';
 
@@ -33,8 +34,8 @@ export default function RateAppScreen({ navigation }) {
   ];
 
   const feedbackPrompts = [
-    'What do you like most about the app?',
-    'Any features you would like us to add?',
+    'What do you like most about the platform?',
+    'Any underwriting features you would like us to add?',
     'How can we improve your experience?',
   ];
 
@@ -65,7 +66,6 @@ export default function RateAppScreen({ navigation }) {
     setLoading(true);
     try {
       const payload = { rating, feedback, selectedOptions };
-      
       const response = await ratingAPI.submitRating(payload);
 
       if (response.success) {
@@ -91,8 +91,8 @@ export default function RateAppScreen({ navigation }) {
   };
 
   const handleTagToggle = (tag) => {
-    setSelectedOptions(prev => 
-      prev.includes(tag) 
+    setSelectedOptions(prev =>
+      prev.includes(tag)
         ? prev.filter(t => t !== tag)
         : [...prev, tag]
     );
@@ -118,502 +118,561 @@ export default function RateAppScreen({ navigation }) {
     fetchExistingRating();
   }, []);
 
-  if (initialLoading) {
-    return (
-      <View style={styles.container}>
-        <Header title="Rate App" showBackButton />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FF9800" />
-        </View>
-      </View>
-    );
-  }
-
-  if (submitted) {
-    return (
-      <View style={styles.container}>
-        <Header title="Rate App" showBackButton />
-        <View style={styles.successContainer}>
-          <View style={styles.successIconContainer}>
-            <Icon name="check-circle" size={64} color="#10B981" />
-          </View>
-          <Text style={styles.successTitle}>Thank You!</Text>
-          <Text style={styles.successSubtitle}>
-            Your feedback has been submitted successfully.
-          </Text>
-
-          {rating >= 4 && (
-            <View style={styles.storePromptCard}>
-              <Text style={styles.storePromptTitle}>
-                Enjoying LoanHub?
-              </Text>
-              <Text style={styles.storePromptText}>
-                Help others discover the app by leaving a review on the{' '}
-                {Platform.OS === 'ios' ? 'App Store' : 'Play Store'}!
-              </Text>
-              <TouchableOpacity
-                style={styles.storeButton}
-                onPress={handleOpenStore}
-                activeOpacity={0.8}>
-                <Icon
-                  name={Platform.OS === 'ios' ? 'smartphone' : 'play'}
-                  size={20}
-                  color="#FFFFFF"
-                />
-                <Text style={styles.storeButtonText}>
-                  Rate on {Platform.OS === 'ios' ? 'App Store' : 'Play Store'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-            activeOpacity={0.7}>
-            <Icon name="arrow-left" size={18} color="#6B7280" />
-            <Text style={styles.backButtonText}>Back to Settings</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
-
   return (
-    <View style={styles.container}>
-      <Header title="Rate App" showBackButton />
-
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
-        {/* Header Card */}
-        <View style={styles.headerCard}>
-          <View style={styles.headerIconContainer}>
-            <Icon name="star" size={36} color="#F59E0B" />
-          </View>
-          <Text style={styles.headerTitle}>Rate LoanHub</Text>
-          <Text style={styles.headerSubtitle}>
-            We'd love to hear your thoughts about the app
-          </Text>
-        </View>
-
-        {/* Rating Stars */}
-        <View style={styles.ratingCard}>
-          <Text style={styles.ratingPrompt}>How would you rate your experience?</Text>
-          <View style={styles.starsContainer}>
-            {[1, 2, 3, 4, 5].map(star => (
-              <TouchableOpacity
-                key={star}
-                onPress={() => setRating(star)}
-                activeOpacity={0.7}
-                style={styles.starButton}>
-                <Icon
-                  name="star"
-                  size={40}
-                  color={star <= rating ? '#F59E0B' : '#E5E7EB'}
-                  style={star <= rating ? styles.filledStar : {}}
-                />
-              </TouchableOpacity>
-            ))}
-          </View>
-          {getCurrentRatingInfo() && (
-            <View style={styles.ratingLabelContainer}>
-              <Text style={styles.ratingEmoji}>
-                {getCurrentRatingInfo().emoji}
-              </Text>
-              <Text style={styles.ratingLabel}>
-                {getCurrentRatingInfo().label}
-              </Text>
-            </View>
-          )}
-        </View>
-
-        {/* Feedback Section */}
-        {rating > 0 && (
-          <View style={styles.feedbackCard}>
-            <Text style={styles.feedbackTitle}>Share Your Feedback</Text>
-            <Text style={styles.feedbackHint}>
-              {feedbackPrompts[Math.floor(Math.random() * feedbackPrompts.length)]}
-            </Text>
-            <TextInput
-              style={styles.feedbackInput}
-              placeholder="Tell us what you think..."
-              placeholderTextColor="#9CA3AF"
-              multiline
-              numberOfLines={5}
-              textAlignVertical="top"
-              value={feedback}
-              onChangeText={setFeedback}
-            />
-          </View>
-        )}
-
-        {/* Quick Feedback Tags */}
-        {rating > 0 && rating < 4 && (
-          <View style={styles.tagsCard}>
-            <Text style={styles.tagsTitle}>What could be better?</Text>
-            <View style={styles.tagsContainer}>
-              {[
-                'App Speed',
-                'User Interface',
-                'Features',
-                'Bugs',
-                'Navigation',
-                'Notifications',
-              ].map((tag, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={[
-                    styles.tag,
-                    selectedOptions.includes(tag) && styles.selectedTag,
-                  ]}
-                  activeOpacity={0.7}
-                  onPress={() => handleTagToggle(tag)}>
-                  <Text style={[
-                    styles.tagText,
-                    selectedOptions.includes(tag) && styles.selectedTagText,
-                  ]}>{tag}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* Submit Button */}
-        <TouchableOpacity
-          style={[
-            styles.submitButton,
-            rating === 0 && styles.submitButtonDisabled,
-          ]}
-          onPress={handleSubmitFeedback}
-          activeOpacity={0.8}
-          disabled={rating === 0 || loading}>
-          {loading ? (
-            <ActivityIndicator size="small" color={rating === 0 ? '#9CA3AF' : '#FFFFFF'} />
-          ) : (
-            <Icon
-              name="send"
-              size={20}
-              color={rating === 0 ? '#9CA3AF' : '#FFFFFF'}
-            />
-          )}
-          <Text
-            style={[
-              styles.submitButtonText,
-              rating === 0 && styles.submitButtonTextDisabled,
-            ]}>
-            {loading ? 'Submitting...' : 'Submit Feedback'}
-          </Text>
-        </TouchableOpacity>
-
-        {/* Store Rating Option */}
-        <View style={styles.storeCard}>
-          <View style={styles.storeInfo}>
-            <Icon
-              name={Platform.OS === 'ios' ? 'smartphone' : 'play'}
-              size={24}
-              color="#3B82F6"
-            />
-            <View style={styles.storeTextContainer}>
-              <Text style={styles.storeTitle}>
-                Rate on {Platform.OS === 'ios' ? 'App Store' : 'Play Store'}
-              </Text>
-              <Text style={styles.storeSubtitle}>
-                Your review helps others discover LoanHub
-              </Text>
-            </View>
-          </View>
+    <ScreenWrapper
+      backgroundColor={colors.backgroundGreenWhite}
+      topInsetBg={colors.primary}
+      statusBarColor={colors.primary}
+      statusBarStyle="dark-content"
+      includeTabBarClearance={false}
+      scrollable={false}
+    >
+      <View style={styles.pageWrapper}>
+        {/* Fixed Top Mint Green Header */}
+        <View style={styles.topHeader}>
           <TouchableOpacity
-            style={styles.storeLink}
-            onPress={handleOpenStore}
-            activeOpacity={0.7}>
-            <Icon name="external-link" size={20} color="#3B82F6" />
+            style={styles.backBtn}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
+            <Feather name="arrow-left" size={m(22)} color={colors.white} />
           </TouchableOpacity>
+
+          <Text style={styles.headerTitle}>Rate App</Text>
+
+          <View style={styles.headerPlaceholder} />
         </View>
-      </ScrollView>
-    </View>
+
+        {/* Curved Sheet Container */}
+        <View style={styles.sheetSection}>
+          {initialLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+            </View>
+          ) : submitted ? (
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.scrollContent}
+            >
+              <View style={styles.successCard}>
+                <View style={styles.successIconCircle}>
+                  <Feather name="check" size={m(36)} color={colors.white} />
+                </View>
+                <Text style={styles.successTitle}>Thank You!</Text>
+                <Text style={styles.successSubtitle}>
+                  Your feedback has been submitted successfully and helps us build a better platform.
+                </Text>
+
+                {rating >= 4 && (
+                  <View style={styles.storeCard}>
+                    <Text style={styles.storeCardTitle}>Enjoying LoanHub?</Text>
+                    <Text style={styles.storeCardSubtitle}>
+                      Help others discover the platform by leaving a rating on the {Platform.OS === 'ios' ? 'App Store' : 'Google Play Store'}!
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.storeBtn}
+                      activeOpacity={0.85}
+                      onPress={handleOpenStore}
+                    >
+                      <Feather name="external-link" size={m(16)} color={colors.white} />
+                      <Text style={styles.storeBtnText}>
+                        Rate on {Platform.OS === 'ios' ? 'App Store' : 'Play Store'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                <TouchableOpacity
+                  style={styles.backToSettingsBtn}
+                  activeOpacity={0.75}
+                  onPress={() => navigation.goBack()}
+                >
+                  <Text style={styles.backToSettingsText}>Back to Settings</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          ) : (
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+            >
+              {/* Header Hero Card */}
+              <View style={styles.heroCard}>
+                <View style={styles.heroIconCircle}>
+                  <Feather name="star" size={m(24)} color={colors.white} />
+                </View>
+                <Text style={styles.heroTitle}>Rate LoanHub</Text>
+                <Text style={styles.heroSubtitle}>
+                  We value your feedback to constantly elevate your experience
+                </Text>
+              </View>
+
+              {/* Stars Selection Card */}
+              <View style={styles.ratingCard}>
+                <Text style={styles.ratingPrompt}>How would you rate your experience?</Text>
+                <View style={styles.starsRow}>
+                  {[1, 2, 3, 4, 5].map(star => (
+                    <TouchableOpacity
+                      key={star}
+                      onPress={() => setRating(star)}
+                      activeOpacity={0.7}
+                      style={styles.starBtn}
+                    >
+                      <Feather
+                        name="star"
+                        size={m(32)}
+                        color={star <= rating ? '#F59E0B' : '#CBD5E1'}
+                      />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {getCurrentRatingInfo() && (
+                  <View style={styles.ratingBadge}>
+                    <Text style={styles.ratingEmoji}>{getCurrentRatingInfo().emoji}</Text>
+                    <Text style={styles.ratingLabel}>{getCurrentRatingInfo().label}</Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Quick Feedback Tags (for constructive ratings < 4) */}
+              {rating > 0 && rating < 4 && (
+                <View style={styles.tagsCard}>
+                  <Text style={styles.tagsTitle}>What could we improve?</Text>
+                  <View style={styles.tagsContainer}>
+                    {[
+                      'App Speed',
+                      'User Interface',
+                      'Features',
+                      'Navigation',
+                      'Notifications',
+                      'Reports',
+                    ].map((tag, index) => {
+                      const isSelected = selectedOptions.includes(tag);
+                      return (
+                        <TouchableOpacity
+                          key={index}
+                          style={[
+                            styles.tagPill,
+                            isSelected && styles.tagPillSelected,
+                          ]}
+                          activeOpacity={0.7}
+                          onPress={() => handleTagToggle(tag)}
+                        >
+                          <Text
+                            style={[
+                              styles.tagText,
+                              isSelected && styles.tagTextSelected,
+                            ]}
+                          >
+                            {tag}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              )}
+
+              {/* Detailed Feedback Textarea */}
+              {rating > 0 && (
+                <View style={styles.feedbackCard}>
+                  <Text style={styles.feedbackTitle}>Share Your Thoughts</Text>
+                  <Text style={styles.feedbackHint}>
+                    {feedbackPrompts[0]}
+                  </Text>
+                  <View style={styles.textareaContainer}>
+                    <TextInput
+                      style={styles.textarea}
+                      placeholder="Tell us what you like or what we can do better..."
+                      placeholderTextColor="#7E9D86"
+                      multiline
+                      numberOfLines={4}
+                      textAlignVertical="top"
+                      value={feedback}
+                      onChangeText={setFeedback}
+                    />
+                  </View>
+                </View>
+              )}
+
+              {/* Submit Button */}
+              <View style={styles.actionSection}>
+                <TouchableOpacity
+                  style={[
+                    styles.submitBtn,
+                    rating === 0 && styles.submitBtnDisabled,
+                  ]}
+                  activeOpacity={0.85}
+                  onPress={handleSubmitFeedback}
+                  disabled={rating === 0 || loading}
+                >
+                  {loading ? (
+                    <ActivityIndicator size="small" color={colors.lettersAndIcons} />
+                  ) : (
+                    <Text
+                      style={[
+                        styles.submitBtnText,
+                        rating === 0 && styles.submitBtnTextDisabled,
+                      ]}
+                    >
+                      Submit Feedback
+                    </Text>
+                  )}
+                </TouchableOpacity>
+
+                {/* Store Option Strip */}
+                <TouchableOpacity
+                  style={styles.storeStrip}
+                  onPress={handleOpenStore}
+                  activeOpacity={0.75}
+                >
+                  <Feather name="external-link" size={m(16)} color="#0068FF" />
+                  <Text style={styles.storeStripText}>
+                    Rate directly on {Platform.OS === 'ios' ? 'App Store' : 'Play Store'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          )}
+        </View>
+      </View>
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  pageWrapper: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.primary,
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: m(16),
-    paddingBottom: m(40),
-  },
-  headerCard: {
-    backgroundColor: '#FFFBEB',
-    borderRadius: m(20),
-    padding: m(28),
+
+  // Fixed Top Mint Green Header
+  topHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: m(20),
-    borderWidth: 1,
-    borderColor: '#FDE68A',
+    justifyContent: 'space-between',
+    backgroundColor: colors.primary,
+    paddingHorizontal: m(18),
+    paddingTop: m(12),
+    paddingBottom: m(16),
   },
-  headerIconContainer: {
-    width: m(72),
-    height: m(72),
-    borderRadius: m(36),
-    backgroundColor: '#FEF3C7',
+  backBtn: {
+    width: m(36),
+    height: m(36),
+    borderRadius: m(18),
+    backgroundColor: 'rgba(9, 48, 48, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: m(16),
   },
   headerTitle: {
-    fontSize: m(24),
-    fontWeight: '700',
-    color: '#92400E',
-    marginBottom: m(8),
-  },
-  headerSubtitle: {
-    fontSize: m(14),
-    color: '#B45309',
+    fontSize: m(19),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
     textAlign: 'center',
   },
-  ratingCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(16),
-    padding: m(24),
+  headerPlaceholder: {
+    width: m(36),
+  },
+
+  // Curved Sheet
+  sheetSection: {
+    flex: 1,
+    backgroundColor: colors.backgroundGreenWhite,
+    borderTopLeftRadius: m(36),
+    borderTopRightRadius: m(36),
+    paddingTop: m(18),
+  },
+  scrollContent: {
+    paddingHorizontal: m(18),
+    paddingBottom: m(80),
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: m(16),
+  },
+
+  // Hero Card
+  heroCard: {
+    backgroundColor: colors.white,
+    borderRadius: m(18),
+    padding: m(20),
+    alignItems: 'center',
+    marginBottom: m(14),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: 'rgba(9, 48, 48, 0.08)',
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  heroIconCircle: {
+    width: m(54),
+    height: m(54),
+    borderRadius: m(27),
+    backgroundColor: '#52A6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: m(10),
+    shadowColor: '#52A6FF',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  heroTitle: {
+    fontSize: m(18),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    marginBottom: m(4),
+  },
+  heroSubtitle: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryMedium,
+    color: '#5A7A71',
+    textAlign: 'center',
+    paddingHorizontal: m(16),
+  },
+
+  // Rating Stars Card
+  ratingCard: {
+    backgroundColor: colors.white,
+    borderRadius: m(18),
+    padding: m(20),
+    alignItems: 'center',
+    marginBottom: m(14),
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.08)',
   },
   ratingPrompt: {
-    fontSize: m(16),
-    fontWeight: '500',
-    color: '#374151',
-    marginBottom: m(20),
-  },
-  starsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: m(8),
-  },
-  starButton: {
-    padding: m(4),
-  },
-  filledStar: {
-    textShadowColor: 'rgba(245, 158, 11, 0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 8,
-  },
-  ratingLabelContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: m(20),
-    gap: m(8),
-  },
-  ratingEmoji: {
-    fontSize: m(28),
-  },
-  ratingLabel: {
-    fontSize: m(18),
-    fontWeight: '600',
-    color: '#F59E0B',
-  },
-  feedbackCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(16),
-    padding: m(20),
+    fontSize: m(14),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
     marginBottom: m(16),
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
-  feedbackTitle: {
-    fontSize: m(16),
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: m(6),
-  },
-  feedbackHint: {
-    fontSize: m(13),
-    color: '#6B7280',
+  starsRow: {
+    flexDirection: 'row',
+    gap: m(14),
     marginBottom: m(14),
   },
-  feedbackInput: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: m(12),
-    padding: m(14),
-    fontSize: m(14),
-    color: '#374151',
-    minHeight: m(120),
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+  starBtn: {
+    padding: m(4),
   },
-  tagsCard: {
-    backgroundColor: '#FFFFFF',
+  ratingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(8),
+    backgroundColor: '#FFF7ED',
+    paddingHorizontal: m(14),
+    paddingVertical: m(6),
     borderRadius: m(16),
-    padding: m(20),
-    marginBottom: m(16),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#FED7AA',
+  },
+  ratingEmoji: {
+    fontSize: m(16),
+  },
+  ratingLabel: {
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryBold,
+    color: '#D97706',
+  },
+
+  // Tags
+  tagsCard: {
+    backgroundColor: colors.white,
+    borderRadius: m(16),
+    padding: m(16),
+    marginBottom: m(14),
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.08)',
   },
   tagsTitle: {
-    fontSize: m(14),
-    fontWeight: '500',
-    color: '#374151',
-    marginBottom: m(12),
+    fontSize: m(13.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    marginBottom: m(10),
   },
   tagsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: m(8),
   },
-  tag: {
-    backgroundColor: '#F3F4F6',
+  tagPill: {
+    backgroundColor: colors.lightGreen,
     paddingHorizontal: m(14),
-    paddingVertical: m(8),
-    borderRadius: m(20),
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    paddingVertical: m(7),
+    borderRadius: m(14),
+  },
+  tagPillSelected: {
+    backgroundColor: colors.primary,
   },
   tagText: {
-    fontSize: m(13),
-    color: '#4B5563',
-    fontWeight: '500',
-  },
-  selectedTag: {
-    backgroundColor: '#3B82F6',
-    borderColor: '#3B82F6',
-  },
-  selectedTagText: {
-    color: '#FFFFFF',
-  },
-  submitButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FF9800',
-    paddingVertical: m(16),
-    borderRadius: m(14),
-    gap: m(10),
-    marginBottom: m(20),
-  },
-  submitButtonDisabled: {
-    backgroundColor: '#E5E7EB',
-  },
-  submitButtonText: {
-    fontSize: m(16),
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  submitButtonTextDisabled: {
-    color: '#9CA3AF',
-  },
-  storeCard: {
-    backgroundColor: '#EFF6FF',
-    borderRadius: m(14),
-    padding: m(16),
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
-  },
-  storeInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(14),
-    flex: 1,
-  },
-  storeTextContainer: {
-    flex: 1,
-  },
-  storeTitle: {
-    fontSize: m(14),
-    fontWeight: '600',
-    color: '#1E40AF',
-  },
-  storeSubtitle: {
     fontSize: m(12),
-    color: '#3B82F6',
-    marginTop: m(2),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
   },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  storeLink: {
-    padding: m(8),
+  tagTextSelected: {
+    fontFamily: FontFamily.primaryBold,
   },
 
-  // Success State Styles
-  successContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: m(24),
-  },
-  successIconContainer: {
-    marginBottom: m(24),
-  },
-  successTitle: {
-    fontSize: m(28),
-    fontWeight: '700',
-    color: '#10B981',
-    marginBottom: m(12),
-  },
-  successSubtitle: {
-    fontSize: m(16),
-    color: '#6B7280',
-    textAlign: 'center',
-    marginBottom: m(32),
-  },
-  storePromptCard: {
-    backgroundColor: '#FFFFFF',
+  // Feedback Textarea
+  feedbackCard: {
+    backgroundColor: colors.white,
     borderRadius: m(16),
-    padding: m(24),
-    width: '100%',
-    alignItems: 'center',
-    marginBottom: m(24),
+    padding: m(16),
+    marginBottom: m(14),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: 'rgba(9, 48, 48, 0.08)',
   },
-  storePromptTitle: {
-    fontSize: m(18),
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: m(8),
+  feedbackTitle: {
+    fontSize: m(13.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    marginBottom: m(4),
   },
-  storePromptText: {
-    fontSize: m(14),
-    color: '#6B7280',
-    textAlign: 'center',
-    marginBottom: m(20),
-    lineHeight: m(22),
+  feedbackHint: {
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#5A7A71',
+    marginBottom: m(10),
   },
-  storeButton: {
+  textareaContainer: {
+    backgroundColor: colors.lightGreen,
+    borderRadius: m(16),
+    padding: m(12),
+    minHeight: m(90),
+  },
+  textarea: {
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
+    padding: 0,
+  },
+
+  // Actions
+  actionSection: {
+    gap: m(10),
+    marginTop: m(4),
+  },
+  submitBtn: {
+    backgroundColor: colors.primary,
+    height: m(50),
+    borderRadius: m(25),
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  submitBtnDisabled: {
+    backgroundColor: '#CBD5E1',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  submitBtnText: {
+    fontSize: m(15),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  submitBtnTextDisabled: {
+    color: '#94A3B8',
+  },
+  storeStrip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#3B82F6',
-    paddingVertical: m(14),
-    paddingHorizontal: m(24),
-    borderRadius: m(12),
-    gap: m(10),
+    justifyContent: 'center',
+    gap: m(8),
+    paddingVertical: m(10),
   },
-  storeButtonText: {
+  storeStripText: {
+    fontSize: m(12.5),
+    fontFamily: FontFamily.primaryBold,
+    color: '#0068FF',
+  },
+
+  // Success Card
+  successCard: {
+    backgroundColor: colors.white,
+    borderRadius: m(20),
+    padding: m(24),
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.08)',
+    marginTop: m(10),
+  },
+  successIconCircle: {
+    width: m(72),
+    height: m(72),
+    borderRadius: m(36),
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: m(16),
+  },
+  successTitle: {
+    fontSize: m(20),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    marginBottom: m(6),
+  },
+  successSubtitle: {
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#5A7A71',
+    textAlign: 'center',
+    lineHeight: m(18),
+    marginBottom: m(20),
+  },
+  storeCard: {
+    backgroundColor: '#F1F7FF',
+    borderRadius: m(16),
+    padding: m(16),
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: m(18),
+    borderWidth: 1,
+    borderColor: 'rgba(0, 104, 255, 0.15)',
+  },
+  storeCardTitle: {
     fontSize: m(15),
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    marginBottom: m(4),
   },
-  backButton: {
+  storeCardSubtitle: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#4A6563',
+    textAlign: 'center',
+    lineHeight: m(17),
+    marginBottom: m(14),
+  },
+  storeBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: m(8),
-    paddingVertical: m(12),
+    backgroundColor: colors.oceanBlueButton,
+    paddingHorizontal: m(18),
+    paddingVertical: m(10),
+    borderRadius: m(20),
   },
-  backButtonText: {
-    fontSize: m(15),
-    color: '#6B7280',
-    fontWeight: '500',
+  storeBtnText: {
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
+  },
+  backToSettingsBtn: {
+    paddingVertical: m(8),
+  },
+  backToSettingsText: {
+    fontSize: m(13.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
 });

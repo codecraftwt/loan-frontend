@@ -4,21 +4,22 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
+  ScrollView,
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
   RefreshControl,
-  Alert,
+  Dimensions,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
-import Icon from 'react-native-vector-icons/Feather';
-import { m } from 'walstar-rn-responsive';
-import Header from '../../../Components/Header';
-import {
-  getAdminPlans,
-  clearErrors,
-} from '../../../Redux/Slices/adminPlanSlice';
+import Feather from 'react-native-vector-icons/Feather';
+import { colors, FontFamily } from '../../../constants';
+import { m } from '../../../Utils/responsive';
+import { ScreenWrapper } from '../../../Components/common';
+import { getAdminPlans } from '../../../Redux/Slices/adminPlanSlice';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const GRID_ITEM_WIDTH = Math.floor((SCREEN_WIDTH - m(36) - m(14)) / 2);
 
 /**
  * Format currency value
@@ -29,10 +30,24 @@ const formatCurrency = value => {
   return `₹${num.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 };
 
+/**
+ * Map plan tier name to matching Figma/fintech icon
+ */
+const getPlanIcon = (name = '', tag = '') => {
+  const combined = `${name} ${tag}`.toLowerCase();
+  if (combined.includes('basic') || combined.includes('starter')) return 'package';
+  if (combined.includes('plus') || combined.includes('standard')) return 'zap';
+  if (combined.includes('pro') || combined.includes('professional')) return 'star';
+  if (combined.includes('premium') || combined.includes('gold') || combined.includes('elite')) return 'award';
+  if (combined.includes('enterprise') || combined.includes('corporate')) return 'shield';
+  if (combined.includes('annual') || combined.includes('year')) return 'calendar';
+  return 'layers';
+};
+
 export default function PlansList() {
   const navigation = useNavigation();
   const dispatch = useDispatch();
-  const { plans, loading, error } = useSelector(state => state.adminPlans);
+  const { plans = [], loading } = useSelector(state => state.adminPlans || {});
 
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -77,556 +92,493 @@ export default function PlansList() {
     });
   }, [plans, searchQuery, statusFilter]);
 
-  const activePlansCount = (plans || []).filter(p => p.isActive ?? true).length;
   const totalPlansCount = (plans || []).length;
-
-  const renderPlanCard = ({ item }) => {
-    const isActive = item.isActive ?? true;
-    const packPrice = Number(item.price || item.priceMonthly || 0);
-    const durationDays =
-      item.durationDays ||
-      (item.duration === '1 year'
-        ? 365
-        : item.duration === '6 months'
-        ? 180
-        : item.duration === '3 months'
-        ? 90
-        : 30);
-    const monthlyRate =
-      item.priceMonthly || Math.round(packPrice / (durationDays / 30)) || packPrice;
-
-    return (
-      <View style={styles.planCard}>
-        {/* Card Header */}
-        <View style={styles.cardHeader}>
-          <View style={styles.planHeaderInfo}>
-            <View style={styles.planTitleRow}>
-              <Text style={styles.planName} numberOfLines={1}>
-                {item.planName}
-              </Text>
-              {item.tag ? (
-                <View style={styles.tagBadge}>
-                  <Text style={styles.tagText}>{item.tag}</Text>
-                </View>
-              ) : null}
-            </View>
-            <Text style={styles.durationText}>
-              Duration: {item.duration} ({durationDays} days)
-            </Text>
-          </View>
-
-          <View
-            style={[
-              styles.statusBadge,
-              isActive ? styles.activeBadge : styles.inactiveBadge,
-            ]}
-          >
-            <View
-              style={[
-                styles.statusDot,
-                { backgroundColor: isActive ? '#16a34a' : '#dc2626' },
-              ]}
-            />
-            <Text
-              style={[
-                styles.statusText,
-                isActive ? styles.activeText : styles.inactiveText,
-              ]}
-            >
-              {isActive ? 'Active' : 'Inactive'}
-            </Text>
-          </View>
-        </View>
-
-        {/* Pricing Area */}
-        <View style={styles.pricingRow}>
-          <View>
-            <Text style={styles.priceLabel}>Plan Price</Text>
-            <Text style={styles.packPriceText}>{formatCurrency(packPrice)}</Text>
-          </View>
-          <View style={styles.monthlyBox}>
-            <Text style={styles.monthlyLabel}>Effective Monthly</Text>
-            <Text style={styles.monthlyRateText}>{formatCurrency(monthlyRate)}/mo</Text>
-          </View>
-        </View>
-
-        {/* Description */}
-        {item.description ? (
-          <Text style={styles.planDesc} numberOfLines={2}>
-            {item.description}
-          </Text>
-        ) : null}
-
-        {/* Features / Quota Highlights */}
-        <View style={styles.featureChipsRow}>
-          <View style={styles.chip}>
-            <Icon name="check" size={11} color="#16a34a" />
-            <Text style={styles.chipText}>All Services Included</Text>
-          </View>
-          {(item.planFeatures?.advancedAnalytics || item.tier === 'pro' || item.tier === 'enterprise') && (
-            <View style={styles.chip}>
-              <Icon name="check" size={11} color="#2563eb" />
-              <Text style={styles.chipText}>Analytics Suite</Text>
-            </View>
-          )}
-          {(item.planFeatures?.prioritySupport || item.tier === 'enterprise') && (
-            <View style={styles.chip}>
-              <Icon name="check" size={11} color="#7c3aed" />
-              <Text style={styles.chipText}>Priority Underwriting</Text>
-            </View>
-          )}
-        </View>
-
-        <View style={styles.divider} />
-
-        {/* Action Buttons */}
-        <View style={styles.cardActions}>
-          <TouchableOpacity
-            style={styles.actionBtnOutline}
-            activeOpacity={0.8}
-            onPress={() => navigation.navigate('CreateEditPlan', { plan: item, mode: 'edit' })}
-          >
-            <Icon name="edit-2" size={13} color="#2563eb" />
-            <Text style={styles.actionBtnOutlineText}>Configure</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionBtnSolid}
-            activeOpacity={0.8}
-            onPress={() => navigation.navigate('PlanDetailsScreen', { plan: item })}
-          >
-            <Text style={styles.actionBtnSolidText}>Specifications</Text>
-            <Icon name="chevron-right" size={14} color="#ffffff" />
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  };
+  const activePlansCount = (plans || []).filter(p => p.isActive ?? true).length;
+  const inactivePlansCount = totalPlansCount - activePlansCount;
+  const activePercent = totalPlansCount > 0 ? Math.round((activePlansCount / totalPlansCount) * 100) : 0;
 
   return (
-    <View style={styles.container}>
-      <Header title="Subscription Plans" />
+    <ScreenWrapper
+      backgroundColor={colors.backgroundGreenWhite}
+      topInsetBg={colors.primary}
+      statusBarColor={colors.primary}
+      statusBarStyle="dark-content"
+      includeTabBarClearance={false}
+      scrollable={false}
+    >
+      <View style={styles.pageGreenWrapper}>
+        {/* ======================================================== */}
+        {/* Top Mint Green Section with Summary & Progress Widget   */}
+        {/* ======================================================== */}
+        <View style={styles.topSection}>
+          {/* Top Bar */}
+          <View style={styles.topBar}>
+            <Text style={styles.headerTitle}>Subscription Plans</Text>
 
-      {/* Top Search & Filter Bar */}
-      <View style={styles.filterSection}>
-        <View style={styles.searchBar}>
-          <Icon name="search" size={18} color="#64748b" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search plans by name, tier, duration..."
-            placeholderTextColor="#94a3b8"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery ? (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Icon name="x" size={18} color="#94a3b8" />
+            <TouchableOpacity
+              style={styles.addPlanHeaderBtn}
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate('CreateEditPlan', { mode: 'create' })}
+            >
+              <Feather name="plus" size={m(18)} color={colors.white} />
             </TouchableOpacity>
-          ) : null}
-        </View>
-
-        <View style={styles.filterTabsRow}>
-          <View style={styles.pillRow}>
-            {[
-              { id: 'all', label: 'All Tiers' },
-              { id: 'active', label: 'Active Plans' },
-              { id: 'inactive', label: 'Archived' },
-            ].map(tab => (
-              <TouchableOpacity
-                key={tab.id}
-                style={[
-                  styles.pill,
-                  statusFilter === tab.id && styles.activePill,
-                ]}
-                onPress={() => setStatusFilter(tab.id)}
-              >
-                <Text
-                  style={[
-                    styles.pillText,
-                    statusFilter === tab.id && styles.activePillText,
-                  ]}
-                >
-                  {tab.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
           </View>
 
-          {/* Add Plan Shortcut */}
-          <TouchableOpacity
-            style={styles.createBtn}
-            activeOpacity={0.8}
-            onPress={() => navigation.navigate('CreateEditPlan', { mode: 'create' })}
-          >
-            <Icon name="plus" size={14} color="#ffffff" />
-            <Text style={styles.createBtnText}>Add Plan</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+          {/* Metric Overview Row (Figma 9.4.9 Pattern) */}
+          <View style={styles.summaryRow}>
+            <View style={styles.summaryCol}>
+              <View style={styles.summaryLabelRow}>
+                <Feather name="layers" size={m(12)} color={colors.lettersAndIcons} />
+                <Text style={styles.summaryLabel}>Total Tiers</Text>
+              </View>
+              <Text style={styles.summaryValue}>{totalPlansCount} Plans</Text>
+            </View>
 
-      {/* KPI Overview Strip */}
-      <View style={styles.statsStrip}>
-        <View style={styles.statItem}>
-          <Text style={styles.statNumber}>{totalPlansCount}</Text>
-          <Text style={styles.statLabel}>Total Tiers</Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={[styles.statNumber, { color: '#16a34a' }]}>{activePlansCount}</Text>
-          <Text style={styles.statLabel}>Active Pricing</Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={[styles.statNumber, { color: '#2563eb' }]}>
-            {totalPlansCount - activePlansCount}
-          </Text>
-          <Text style={styles.statLabel}>Inactive Tiers</Text>
-        </View>
-      </View>
+            <View style={styles.summaryDivider} />
 
-      {/* Plans Feed */}
-      {loading && !refreshing && (plans || []).length === 0 ? (
-        <View style={styles.centerBox}>
-          <ActivityIndicator size="large" color="#2563eb" />
-          <Text style={styles.loadingText}>Fetching SaaS pricing tiers...</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={filteredPlans}
-          renderItem={renderPlanCard}
-          keyExtractor={(item, index) => item._id || item.id || String(index)}
-          contentContainerStyle={styles.listContent}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={['#2563eb']}
-            />
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyBox}>
-              <Icon name="layers" size={44} color="#cbd5e1" />
-              <Text style={styles.emptyTitle}>No Plans Available</Text>
-              <Text style={styles.emptySubtitle}>
-                Create and configure SaaS pricing packages for lenders.
+            <View style={styles.summaryCol}>
+              <View style={styles.summaryLabelRow}>
+                <Feather name="check-circle" size={m(12)} color={colors.white} />
+                <Text style={styles.summaryLabel}>Active Pricing</Text>
+              </View>
+              <Text style={[styles.summaryValue, { color: colors.white }]}>
+                {activePlansCount} Active
               </Text>
             </View>
-          }
-        />
-      )}
-    </View>
+          </View>
+
+          {/* Signature Progress Bar (Figma Categories Widget) */}
+          <View style={styles.progressSection}>
+            <View style={styles.progressBarWrapper}>
+              <View style={styles.percentPill}>
+                <Text style={styles.percentPillText}>{activePercent}%</Text>
+              </View>
+              <View style={styles.track}>
+                <View style={[styles.trackFill, { width: `${activePercent}%` }]} />
+              </View>
+            </View>
+            <View style={styles.progressNoteRow}>
+              <Feather name="check-square" size={m(13)} color={colors.lettersAndIcons} />
+              <Text style={styles.progressNoteText}>
+                {activePlansCount} of {totalPlansCount} Tiers Active & Available for Lenders
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* ======================================================== */}
+        {/* Curved Sheet Container with Categories Squircle Grid     */}
+        {/* ======================================================== */}
+        <View style={styles.sheetSection}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={[colors.primary]}
+              />
+            }
+          >
+            {/* Search Pill Bar */}
+            <View style={styles.searchBar}>
+              <Feather
+                name="search"
+                size={m(18)}
+                color={colors.lettersAndIcons}
+                style={styles.searchIcon}
+              />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search plans by name, tier, duration..."
+                placeholderTextColor="#7E9D86"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                autoCapitalize="none"
+                autoCorrect={false}
+                clearButtonMode="while-editing"
+              />
+              {searchQuery ? (
+                <TouchableOpacity
+                  onPress={() => setSearchQuery('')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Feather name="x" size={m(16)} color={colors.lettersAndIcons} />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+
+            {/* Filter Pills with Counts */}
+            <View style={styles.filterTabsRow}>
+              {[
+                { id: 'all', label: `All (${totalPlansCount})` },
+                { id: 'active', label: `Active (${activePlansCount})` },
+                { id: 'inactive', label: `Archived (${inactivePlansCount})` },
+              ].map(tab => {
+                const isSelected = statusFilter === tab.id;
+                return (
+                  <TouchableOpacity
+                    key={tab.id}
+                    style={[
+                      styles.filterTab,
+                      isSelected && styles.filterTabActive,
+                    ]}
+                    onPress={() => setStatusFilter(tab.id)}
+                    activeOpacity={0.8}
+                  >
+                    <Text
+                      style={[
+                        styles.filterTabText,
+                        isSelected && styles.filterTabTextActive,
+                      ]}
+                    >
+                      {tab.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Loading State */}
+            {loading && !refreshing && (plans || []).length === 0 ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={styles.loadingText}>Loading SaaS subscription tiers...</Text>
+              </View>
+            ) : (
+              <>
+                {/* ======================================================== */}
+                {/* 3-Column Categories Squircle Grid (Figma 9.4.9 Style)   */}
+                {/* ======================================================== */}
+                <View style={styles.squircleGrid}>
+                  {filteredPlans.map((plan, index) => {
+                    const planId = plan._id || plan.id;
+                    const isActive = plan.isActive ?? true;
+                    const iconName = getPlanIcon(plan.planName, plan.tag);
+                    const packPrice = Number(plan.price || plan.priceMonthly || 0);
+
+                    // Uniform Ocean Blue for all active cards
+                    const squircleBg = !isActive
+                      ? '#94A3B8'
+                      : colors.oceanBlueButton;
+
+                    return (
+                      <TouchableOpacity
+                        key={planId || `plan-${index}`}
+                        style={styles.gridItemContainer}
+                        activeOpacity={0.75}
+                        onPress={() => navigation.navigate('PlanDetailsScreen', { plan })}
+                      >
+                        {/* Squircle Tile Box */}
+                        <View
+                          style={[
+                            styles.squircleTile,
+                            { backgroundColor: squircleBg },
+                          ]}
+                        >
+                          <Feather name={iconName} size={m(40)} color={colors.white} />
+
+                          {/* Top-Right Price Pill Badge */}
+                          <View style={styles.tilePriceBadge}>
+                            <Text style={styles.tilePriceText}>
+                              {formatCurrency(packPrice)}
+                            </Text>
+                          </View>
+                        </View>
+
+                        {/* Label Underneath Squircle */}
+                        <Text style={styles.gridItemTitle} numberOfLines={1}>
+                          {plan.planName}
+                        </Text>
+                        <Text style={styles.gridItemSubtitle} numberOfLines={1}>
+                          {plan.duration || 'Monthly'}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                {/* Empty State */}
+                {filteredPlans.length === 0 && (
+                  <View style={styles.emptyContainer}>
+                    <Feather name="layers" size={m(42)} color={colors.textSecondary} />
+                    <Text style={styles.emptyTitle}>No Plans Match Filter</Text>
+                    <Text style={styles.emptyDesc}>
+                      {searchQuery
+                        ? 'Try adjusting your search keywords.'
+                        : 'No subscription tiers configured in this category.'}
+                    </Text>
+                  </View>
+                )}
+
+              </>
+            )}
+          </ScrollView>
+        </View>
+      </View>
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  pageGreenWrapper: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.primary,
   },
-  filterSection: {
-    paddingHorizontal: m(16),
+
+  // ==========================================
+  // Top Mint Section
+  // ==========================================
+  topSection: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: m(18),
     paddingTop: m(12),
-    paddingBottom: m(8),
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    paddingBottom: m(16),
   },
-  searchBar: {
+  topBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f1f5f9',
-    borderRadius: m(10),
-    paddingHorizontal: m(12),
-    height: m(42),
-  },
-  searchIcon: {
-    marginRight: m(8),
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: m(13),
-    color: '#0f172a',
-    paddingVertical: 0,
-  },
-  filterTabsRow: {
-    flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: m(10),
-  },
-  pillRow: {
-    flexDirection: 'row',
-    gap: m(6),
-  },
-  pill: {
-    paddingHorizontal: m(10),
-    paddingVertical: m(5),
-    borderRadius: m(16),
-    backgroundColor: '#f1f5f9',
-  },
-  activePill: {
-    backgroundColor: '#2563eb',
-  },
-  pillText: {
-    fontSize: m(11),
-    fontWeight: '600',
-    color: '#64748b',
-  },
-  activePillText: {
-    color: '#ffffff',
-  },
-  createBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#2563eb',
-    paddingHorizontal: m(10),
-    paddingVertical: m(6),
-    borderRadius: m(8),
-    gap: m(4),
-  },
-  createBtnText: {
-    fontSize: m(11),
-    fontWeight: '700',
-    color: '#ffffff',
-  },
-  statsStrip: {
-    flexDirection: 'row',
-    backgroundColor: '#ffffff',
-    marginHorizontal: m(16),
-    marginTop: m(12),
-    paddingVertical: m(12),
-    paddingHorizontal: m(16),
-    borderRadius: m(12),
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    justifyContent: 'space-around',
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statNumber: {
-    fontSize: m(16),
-    fontWeight: '800',
-    color: '#0f172a',
-  },
-  statLabel: {
-    fontSize: m(11),
-    color: '#64748b',
-    marginTop: m(2),
-  },
-  listContent: {
-    padding: m(16),
-    paddingBottom: m(80),
-  },
-  planCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: m(14),
-    padding: m(16),
     marginBottom: m(14),
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 2,
   },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+  headerTitle: {
+    fontSize: m(21),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    textAlign: 'left',
   },
-  planHeaderInfo: {
-    flex: 1,
-    marginRight: m(8),
-  },
-  planTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: m(6),
-  },
-  planName: {
-    fontSize: m(15),
-    fontWeight: '700',
-    color: '#0f172a',
-  },
-  tagBadge: {
-    backgroundColor: '#eff6ff',
-    paddingHorizontal: m(6),
-    paddingVertical: m(2),
-    borderRadius: m(4),
-    borderWidth: 1,
-    borderColor: '#bfdbfe',
-  },
-  tagText: {
-    fontSize: m(10),
-    fontWeight: '700',
-    color: '#1d4ed8',
-  },
-  durationText: {
-    fontSize: m(11),
-    color: '#64748b',
-    marginTop: m(3),
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: m(8),
-    paddingVertical: m(3),
-    borderRadius: m(6),
-    gap: m(4),
-  },
-  activeBadge: {
-    backgroundColor: '#f0fdf4',
-    borderWidth: 1,
-    borderColor: '#bbf7d0',
-  },
-  inactiveBadge: {
-    backgroundColor: '#fef2f2',
-    borderWidth: 1,
-    borderColor: '#fecaca',
-  },
-  statusDot: {
-    width: m(5),
-    height: m(5),
-    borderRadius: m(2.5),
-  },
-  statusText: {
-    fontSize: m(10),
-    fontWeight: '700',
-  },
-  activeText: {
-    color: '#15803d',
-  },
-  inactiveText: {
-    color: '#b91c1c',
-  },
-  pricingRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
-    borderRadius: m(10),
-    padding: m(12),
-    marginTop: m(12),
-    borderWidth: 1,
-    borderColor: '#f1f5f9',
-  },
-  priceLabel: {
-    fontSize: m(10),
-    color: '#64748b',
-    fontWeight: '600',
-  },
-  packPriceText: {
-    fontSize: m(18),
-    fontWeight: '800',
-    color: '#0f172a',
-    marginTop: m(2),
-  },
-  monthlyBox: {
-    alignItems: 'flex-end',
-  },
-  monthlyLabel: {
-    fontSize: m(10),
-    color: '#64748b',
-    fontWeight: '600',
-  },
-  monthlyRateText: {
-    fontSize: m(13),
-    fontWeight: '700',
-    color: '#2563eb',
-    marginTop: m(2),
-  },
-  planDesc: {
-    fontSize: m(12),
-    color: '#475569',
-    marginTop: m(10),
-    lineHeight: m(16),
-  },
-  featureChipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: m(6),
-    marginTop: m(10),
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(4),
-    backgroundColor: '#f1f5f9',
-    paddingHorizontal: m(8),
-    paddingVertical: m(3),
-    borderRadius: m(6),
-  },
-  chipText: {
-    fontSize: m(10),
-    color: '#334155',
-    fontWeight: '600',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#f1f5f9',
-    marginVertical: m(12),
-  },
-  cardActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: m(8),
-  },
-  actionBtnOutline: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: m(12),
-    paddingVertical: m(6),
-    borderRadius: m(6),
-    borderWidth: 1,
-    borderColor: '#bfdbfe',
-    backgroundColor: '#eff6ff',
-    gap: m(4),
-  },
-  actionBtnOutlineText: {
-    fontSize: m(11),
-    fontWeight: '700',
-    color: '#1d4ed8',
-  },
-  actionBtnSolid: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: m(12),
-    paddingVertical: m(6),
-    borderRadius: m(6),
-    backgroundColor: '#2563eb',
-    gap: m(4),
-  },
-  actionBtnSolidText: {
-    fontSize: m(11),
-    fontWeight: '700',
-    color: '#ffffff',
-  },
-  centerBox: {
-    flex: 1,
+  addPlanHeaderBtn: {
+    width: m(36),
+    height: m(36),
+    borderRadius: m(18),
+    backgroundColor: 'rgba(9, 48, 48, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  loadingText: {
-    marginTop: m(8),
-    fontSize: m(13),
-    color: '#64748b',
-  },
-  emptyBox: {
+
+  // Metric Overview Row
+  summaryRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: m(60),
+    justifyContent: 'space-between',
+    marginBottom: m(12),
+  },
+  summaryCol: {
+    flex: 1,
+  },
+  summaryLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(5),
+    marginBottom: m(3),
+  },
+  summaryLabel: {
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
+  },
+  summaryValue: {
+    fontSize: m(20),
+    lineHeight: m(26),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  summaryDivider: {
+    width: 1,
+    height: m(32),
+    backgroundColor: 'rgba(9, 48, 48, 0.15)',
+    marginHorizontal: m(14),
+  },
+
+  // Signature Progress Bar
+  progressSection: {
+    marginTop: m(2),
+  },
+  progressBarWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(8),
+    marginBottom: m(6),
+  },
+  percentPill: {
+    backgroundColor: colors.lettersAndIcons,
+    paddingHorizontal: m(8),
+    paddingVertical: m(3),
+    borderRadius: m(10),
+  },
+  percentPillText: {
+    fontSize: m(10.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
+  },
+  track: {
+    flex: 1,
+    height: m(12),
+    borderRadius: m(6),
+    backgroundColor: colors.white,
+    overflow: 'hidden',
+  },
+  trackFill: {
+    height: '100%',
+    backgroundColor: colors.oceanBlueButton,
+    borderRadius: m(6),
+  },
+  progressNoteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(5),
+  },
+  progressNoteText: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
+  },
+
+  // ==========================================
+  // Curved Sheet
+  // ==========================================
+  sheetSection: {
+    flex: 1,
+    backgroundColor: colors.backgroundGreenWhite,
+    borderTopLeftRadius: m(36),
+    borderTopRightRadius: m(36),
+    paddingTop: m(16),
+  },
+  scrollContent: {
+    paddingHorizontal: m(18),
+    paddingBottom: m(110),
+  },
+
+  // Search & Filters
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.lightGreen,
+    borderRadius: m(24),
+    height: m(46),
+    paddingHorizontal: m(16),
+    marginBottom: m(12),
+  },
+  searchIcon: {
+    marginRight: m(10),
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: m(14),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.lettersAndIcons,
+    padding: 0,
+  },
+  filterTabsRow: {
+    flexDirection: 'row',
+    gap: m(8),
+    marginBottom: m(16),
+  },
+  filterTab: {
+    paddingHorizontal: m(14),
+    paddingVertical: m(6),
+    borderRadius: m(18),
+    backgroundColor: 'rgba(9, 48, 48, 0.08)',
+  },
+  filterTabActive: {
+    backgroundColor: colors.lettersAndIcons,
+  },
+  filterTabText: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
+  },
+  filterTabTextActive: {
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
+  },
+
+  // ==========================================
+  // 3-Column Categories Squircle Grid
+  // ==========================================
+  squircleGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: m(14),
+    marginBottom: m(18),
+  },
+  gridItemContainer: {
+    width: GRID_ITEM_WIDTH,
+    alignItems: 'center',
+    marginBottom: m(8),
+  },
+  squircleTile: {
+    width: GRID_ITEM_WIDTH,
+    height: m(120),
+    borderRadius: m(24),
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.oceanBlueButton,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  tilePriceBadge: {
+    position: 'absolute',
+    top: m(8),
+    right: m(8),
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
+    paddingHorizontal: m(8),
+    paddingVertical: m(3),
+    borderRadius: m(8),
+  },
+  tilePriceText: {
+    fontSize: m(10.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
+  },
+  gridItemTitle: {
+    fontSize: m(14),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    textAlign: 'center',
+    marginTop: m(8),
+  },
+  gridItemSubtitle: {
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: m(2),
+  },
+
+
+
+  // States
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: m(60),
+  },
+  loadingText: {
+    marginTop: m(10),
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: m(40),
+    paddingHorizontal: m(30),
   },
   emptyTitle: {
     fontSize: m(15),
-    fontWeight: '700',
-    color: '#475569',
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
     marginTop: m(10),
   },
-  emptySubtitle: {
+  emptyDesc: {
     fontSize: m(12),
-    color: '#94a3b8',
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
     textAlign: 'center',
     marginTop: m(4),
-    paddingHorizontal: m(30),
   },
 });

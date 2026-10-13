@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,16 +6,17 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  ActivityIndicator,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Feather';
-import { m } from 'walstar-rn-responsive';
+import Feather from 'react-native-vector-icons/Feather';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import Header from '../../../Components/Header';
+import { colors, FontFamily } from '../../../constants';
+import { m } from '../../../Utils/responsive';
+import { ScreenWrapper } from '../../../Components/common';
+import { adminAPI } from '../../../Services/adminService';
 
 /**
  * Format currency value to Indian Rupee format
- * @param {number} value - The amount to format
- * @returns {string} Formatted currency string
  */
 const formatCurrency = value => {
   if (!value) return '₹0';
@@ -25,8 +26,6 @@ const formatCurrency = value => {
 
 /**
  * Format date string to readable format
- * @param {string} dateString - ISO date string
- * @returns {string} Formatted date string
  */
 const formatDate = dateString => {
   if (!dateString) return 'N/A';
@@ -41,10 +40,14 @@ const formatDate = dateString => {
   }
 };
 
-const DetailRow = ({ label, value, icon, iconColor = '#666' }) => (
+const DetailRow = ({ label, value, icon, iconColor = colors.lettersAndIcons }) => (
   <View style={styles.detailRow}>
     <View style={styles.detailRowLeft}>
-      {icon && <Icon name={icon} size={16} color={iconColor} style={styles.detailIcon} />}
+      {icon && (
+        <View style={styles.detailIconBox}>
+          <Feather name={icon} size={m(15)} color={iconColor} />
+        </View>
+      )}
       <Text style={styles.detailLabel}>{label}</Text>
     </View>
     <Text style={styles.detailValue}>{value || 'N/A'}</Text>
@@ -52,118 +55,72 @@ const DetailRow = ({ label, value, icon, iconColor = '#666' }) => (
 );
 
 const PlanCard = ({ plan, planDetails, isExpanded, onToggle, isActive }) => {
-  const planStatus = planDetails?.planStatus || 'expired';
   const isPlanActive = planDetails?.isPlanActive || false;
 
   return (
-    <View style={[styles.planCard, !isActive && styles.expiredPlanCard]}>
+    <View style={styles.planCard}>
       <TouchableOpacity
         style={styles.planCardHeader}
         onPress={onToggle}
-        activeOpacity={0.7}>
+        activeOpacity={0.8}
+      >
         <View style={styles.planCardHeaderLeft}>
-          <View style={[
-            styles.planStatusIndicator,
-            isPlanActive ? styles.planStatusActive : styles.planStatusExpired
-          ]} />
-          <Text style={styles.planCardTitle}>{plan?.planName || 'Plan'}</Text>
-        </View>
-        <TouchableOpacity
-          onPress={onToggle}
-          style={styles.toggleButton}
-          activeOpacity={0.7}>
-          <Icon
-            name={isExpanded ? 'chevron-up' : 'chevron-down'}
-            size={20}
-            color="#ff6700"
+          <View
+            style={[
+              styles.planStatusIndicator,
+              { backgroundColor: isPlanActive ? colors.primary : '#FF4D4F' },
+            ]}
           />
-        </TouchableOpacity>
+          <Text style={styles.planCardTitle}>{plan?.planName || 'Plan'}</Text>
+          <View
+            style={[
+              styles.planBadge,
+              { backgroundColor: isPlanActive ? colors.lightGreen : '#FFEBEB' },
+            ]}
+          >
+            <Text
+              style={[
+                styles.planBadgeText,
+                { color: isPlanActive ? colors.lettersAndIcons : '#E02424' },
+              ]}
+            >
+              {isPlanActive ? 'Active' : 'Expired'}
+            </Text>
+          </View>
+        </View>
+
+        <Feather
+          name={isExpanded ? 'chevron-up' : 'chevron-down'}
+          size={m(18)}
+          color={colors.lettersAndIcons}
+        />
       </TouchableOpacity>
 
       {isExpanded && (
         <View style={styles.planCardContent}>
-          {/* Plan Information */}
-          <View style={styles.planInfoSection}>
-            <Text style={styles.planSectionTitle}>Plan Information</Text>
+          <DetailRow
+            label="Plan Price"
+            value={`${formatCurrency(plan?.priceMonthly || plan?.price)}/${plan?.duration || 'mo'}`}
+            icon="dollar-sign"
+            iconColor={colors.blueButton}
+          />
+          <DetailRow
+            label="Purchase Date"
+            value={formatDate(planDetails?.planPurchaseDate)}
+            icon="calendar"
+          />
+          <DetailRow
+            label="Expiry Date"
+            value={formatDate(planDetails?.planExpiryDate)}
+            icon="clock"
+          />
+          {isPlanActive && planDetails?.remainingDays !== undefined && (
             <DetailRow
-              label="Plan Name"
-              value={plan?.planName}
-              icon="package"
-              iconColor="#ff6700"
+              label="Remaining Days"
+              value={`${planDetails.remainingDays} days left`}
+              icon="check-circle"
+              iconColor={colors.primary}
             />
-            <DetailRow
-              label="Description"
-              value={plan?.description}
-              icon="file-text"
-            />
-            <DetailRow
-              label="Duration"
-              value={plan?.duration}
-              icon="calendar"
-            />
-            <DetailRow
-              label="Price"
-              value={`${formatCurrency(plan?.priceMonthly)}/${plan?.duration}`}
-              icon="dollar-sign"
-            />
-          </View>
-
-          {/* Plan Features */}
-          {plan?.planFeatures && (
-            <View style={styles.planInfoSection}>
-              <Text style={styles.planSectionTitle}>Plan Features</Text>
-              <View style={styles.featuresList}>
-                {plan.planFeatures.unlimitedLoans && (
-                  <View style={styles.featureItem}>
-                    <Icon name="check-circle" size={16} color="#4CAF50" />
-                    <Text style={styles.featureText}>Unlimited Loans</Text>
-                  </View>
-                )}
-                {plan.planFeatures.advancedAnalytics && (
-                  <View style={styles.featureItem}>
-                    <Icon name="check-circle" size={16} color="#4CAF50" />
-                    <Text style={styles.featureText}>Advanced Analytics</Text>
-                  </View>
-                )}
-                {plan.planFeatures.prioritySupport && (
-                  <View style={styles.featureItem}>
-                    <Icon name="check-circle" size={16} color="#4CAF50" />
-                    <Text style={styles.featureText}>Priority Support</Text>
-                  </View>
-                )}
-              </View>
-            </View>
-          )}
-
-          {/* Purchase Details */}
-          {planDetails && (
-            <View style={styles.planInfoSection}>
-              <Text style={styles.planSectionTitle}>Purchase Details</Text>
-              <DetailRow
-                label="Purchase Date"
-                value={formatDate(planDetails.planPurchaseDate)}
-                icon="calendar"
-              />
-              <DetailRow
-                label="Expiry Date"
-                value={formatDate(planDetails.planExpiryDate)}
-                icon="clock"
-              />
-              <DetailRow
-                label="Status"
-                value={planStatus === 'active' ? 'Active' : 'Expired'}
-                icon={isPlanActive ? 'check-circle' : 'x-circle'}
-                iconColor={isPlanActive ? '#4CAF50' : '#F44336'}
-              />
-              {isPlanActive && planDetails.remainingDays !== undefined && (
-                <DetailRow
-                  label="Remaining Days"
-                  value={`${planDetails.remainingDays} days`}
-                  icon="clock"
-                  iconColor="#4CAF50"
-                />
-              )}
-            </View>
           )}
         </View>
       )}
@@ -175,16 +132,17 @@ export default function LenderDetailsScreen() {
   const route = useRoute();
   const navigation = useNavigation();
   const { lenderData } = route.params || {};
-  const [expandedPlans, setExpandedPlans] = useState({});
+  const [expandedPlans, setExpandedPlans] = useState({ 0: true });
+  const [portfolioData, setPortfolioData] = useState(null);
+  const [portfolioLoading, setPortfolioLoading] = useState(false);
 
   // Memoized lender data
   const lenderInfo = useMemo(() => {
     if (!lenderData) return null;
-    const lender = lenderData.lender || {};
+    const lender = lenderData.lender || lenderData || {};
     const currentPlan = lenderData.currentPlan || null;
     const planPurchaseDetails = lenderData.planPurchaseDetails || null;
 
-    // Build plans array
     const plans = [];
     if (currentPlan && planPurchaseDetails) {
       plans.push({
@@ -197,9 +155,8 @@ export default function LenderDetailsScreen() {
     return { lender, plans };
   }, [lenderData]);
 
-  // Get user initials helper
   const getInitials = useCallback((name) => {
-    if (!name) return 'L';
+    if (!name) return 'LN';
     return name
       .split(' ')
       .map(n => n[0])
@@ -208,7 +165,6 @@ export default function LenderDetailsScreen() {
       .substring(0, 2);
   }, []);
 
-  // Toggle plan expansion
   const togglePlan = useCallback((index) => {
     setExpandedPlans(prev => ({
       ...prev,
@@ -216,65 +172,283 @@ export default function LenderDetailsScreen() {
     }));
   }, []);
 
-  // Error state - lender data not available
+  const targetLenderId = useMemo(() => {
+    if (!lenderData && !lenderInfo) return '';
+    const lender = lenderInfo?.lender || lenderData?.lender || lenderData || {};
+    return lender._id || lender.id || lenderData?._id || lenderData?.id || '';
+  }, [lenderData, lenderInfo]);
+
+  // Fetch real-time live lending portfolio and borrowers data
+  useEffect(() => {
+    if (targetLenderId) {
+      setPortfolioLoading(true);
+      adminAPI
+        .getBorrowersByLender(targetLenderId)
+        .then(res => {
+          if (res && res.success && res.summary) {
+            setPortfolioData(res.summary);
+          }
+        })
+        .catch(err => {
+          console.log('Error fetching lender portfolio:', err);
+        })
+        .finally(() => {
+          setPortfolioLoading(false);
+        });
+    }
+  }, [targetLenderId]);
+
   if (!lenderData || !lenderInfo) {
     return (
-      <View style={styles.container}>
-        <Header title="Lender Details" showBackButton />
+      <ScreenWrapper
+        backgroundColor={colors.backgroundGreenWhite}
+        topInsetBg={colors.primary}
+        statusBarColor={colors.primary}
+      >
+        <View style={styles.topHeader}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
+            <Feather name="arrow-left" size={m(22)} color={colors.white} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Lender Details</Text>
+        </View>
         <View style={styles.errorContainer}>
-          <Icon name="alert-circle" size={48} color="#F44336" />
+          <Feather name="alert-circle" size={m(42)} color="#FF4D4F" />
           <Text style={styles.errorText}>Lender details not available</Text>
         </View>
-      </View>
+      </ScreenWrapper>
     );
   }
 
   const { lender, plans } = lenderInfo;
+  const lenderName = lender.userName || lender.name || 'Institutional Lender';
+  const isActive = Boolean(lenderData?.planPurchaseDetails?.isPlanActive);
+
+  // Compute live portfolio statistics
+  const stats = portfolioData || lenderData?.loanStats || lender?.loanStats || {
+    totalLoans: 0,
+    totalLoanAmount: 0,
+    totalPaidAmount: 0,
+    totalRemainingAmount: 0,
+    activeLoans: 0,
+    paidLoans: 0,
+    overdueLoans: 0,
+  };
+
+  const totalAmount = stats.totalLoanAmount ?? stats.totalAmount ?? 0;
+  const totalPaid = stats.totalPaidAmount ?? stats.totalPaid ?? 0;
+  const totalRemaining = stats.totalRemainingAmount ?? stats.totalRemaining ?? 0;
+  const totalLoans = stats.totalLoans ?? 0;
+  const activeLoans = stats.activeLoans ?? 0;
+  const paidLoans = stats.paidLoans ?? 0;
+
+  const fullAddress = [
+    lender.address,
+    lender.city,
+    lender.district,
+    lender.state
+      ? `${lender.state}${lender.pincode ? ` - ${lender.pincode}` : ''}`
+      : lender.pincode,
+  ]
+    .filter(Boolean)
+    .join(', ') || lender.address || 'Address on file';
 
   return (
-    <View style={styles.container}>
-      <Header title="Lender Details" showBackButton />
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
-
-        {/* Lender Profile Card */}
-        <View style={styles.profileCard}>
-          <View style={styles.profileHeader}>
-            {lender.profileImage ? (
-              <Image
-                source={{ uri: lender.profileImage }}
-                style={styles.profileImage}
-                resizeMode="cover"
-              />
-            ) : (
-              <View style={styles.profileAvatar}>
-                <Text style={styles.profileAvatarText}>
-                  {getInitials(lender.userName)}
-                </Text>
-              </View>
-            )}
-            <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{lender.userName || 'N/A'}</Text>
-              <View style={styles.profileBadge}>
-                <Icon name="user" size={14} color="#FFFFFF" />
-                <Text style={styles.profileBadgeText}>Lender</Text>
-              </View>
-            </View>
-          </View>
+    <ScreenWrapper
+      backgroundColor={colors.backgroundGreenWhite}
+      topInsetBg={colors.primary}
+      statusBarColor={colors.primary}
+      statusBarStyle="dark-content"
+      includeTabBarClearance={false}
+      scrollable={false}
+    >
+      <View style={styles.pageGreenWrapper}>
+        {/* Top Green Header with Back Button (Fixed, Non-scrolling) */}
+        <View style={styles.topHeader}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
+            <Feather name="arrow-left" size={m(22)} color={colors.white} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Lender Details</Text>
+          <View style={styles.headerPlaceholder} />
         </View>
 
-        {/* Lender Information Section */}
-        <View style={styles.sectionCard}>
-          <View style={styles.sectionHeader}>
-            <Icon name="user" size={20} color="#ff6700" />
-            <Text style={styles.sectionTitle}>Personal Information</Text>
+        {/* Curved Sheet Container (Scrollable Content Below Header) */}
+        <View style={styles.sheetSection}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* ======================================================== */}
+            {/* 1. Executive Profile & Subscription Ledger Hero Showcase */}
+            {/* ======================================================== */}
+            <View style={styles.heroProfileCard}>
+              <View style={styles.heroProfileTop}>
+                <View style={styles.heroAvatarCircle}>
+                  {lender.profileImage ? (
+                    <Image
+                      source={{ uri: lender.profileImage }}
+                      style={styles.heroAvatarImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <Text style={styles.heroAvatarText}>{getInitials(lenderName)}</Text>
+                  )}
+                </View>
+
+                <View style={styles.heroProfileInfo}>
+                  <Text style={styles.heroProfileName} numberOfLines={1}>
+                    {lenderName}
+                  </Text>
+                  <Text style={styles.heroProfileContact} numberOfLines={1}>
+                    {lender.email || 'No email registered'}
+                  </Text>
+
+                  <View style={styles.heroBadgeRow}>
+                    <View style={styles.heroRoleBadge}>
+                      <Text style={styles.heroRoleBadgeText}>Lender</Text>
+                    </View>
+
+                    <View
+                      style={[
+                        styles.heroStatusBadge,
+                        { backgroundColor: isActive ? '#FFFFFF' : '#FFF3CD' },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.heroStatusBadgeText,
+                          { color: isActive ? '#009B72' : '#D97706' },
+                        ]}
+                      >
+                        {isActive ? '● Active Plan' : '● Inactive / Free'}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+
+              {/* Integrated Subscription Ledger Bar */}
+              <TouchableOpacity
+                style={styles.heroLedgerBar}
+                activeOpacity={0.8}
+                onPress={() =>
+                  navigation.navigate('AdminLenderSubscriptionHistory', {
+                    lenderId: targetLenderId,
+                    lenderName: lenderName,
+                  })
+                }
+              >
+                <View style={styles.heroLedgerLeft}>
+                  <View style={styles.heroLedgerIconBox}>
+                    <Feather name="file-text" size={m(15)} color={colors.oceanBlueButton} />
+                  </View>
+                  <View style={styles.heroLedgerTexts}>
+                    <Text style={styles.heroLedgerTitle}>Subscription Ledger</Text>
+                    <Text style={styles.heroLedgerSub}>
+                      View plan purchases & billing invoices
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.heroLedgerBtn}>
+                  <Feather name="chevron-right" size={m(15)} color={colors.oceanBlueButton} />
+                </View>
+              </TouchableOpacity>
+            </View>
+
+          {/* ======================================================== */}
+          {/* Live Lending Portfolio & Activity (Live Real-Time Data)  */}
+          {/* ======================================================== */}
+          <View style={styles.sectionCard}>
+            <View style={styles.portfolioHeaderRow}>
+              <View style={styles.portfolioHeaderLeft}>
+                <View style={styles.portfolioTrendIconBox}>
+                  <Feather name="trending-up" size={m(15)} color="#00D09E" />
+                </View>
+                <Text style={styles.portfolioSectionTitle}>
+                  LIVE LENDING PORTFOLIO & ACTIVITY
+                </Text>
+              </View>
+
+              <View style={styles.liveDataBadge}>
+                <Text style={styles.liveDataBadgeText}>Live Data</Text>
+              </View>
+            </View>
+
+            {portfolioLoading && !portfolioData ? (
+              <View style={styles.portfolioLoadingBox}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={styles.portfolioLoadingText}>Loading portfolio data...</Text>
+              </View>
+            ) : (
+              <View style={styles.portfolioGrid}>
+                {/* 1. Capital Disbursed */}
+                <View style={styles.portfolioMetricCard}>
+                  <View style={styles.portfolioMetricTop}>
+                    <Feather name="dollar-sign" size={m(14)} color="#00D09E" />
+                    <Text style={styles.portfolioMetricLabel}>CAPITAL DISBURSED</Text>
+                  </View>
+                  <Text style={styles.portfolioMetricValue}>
+                    {formatCurrency(totalAmount)}
+                  </Text>
+                  <Text style={styles.portfolioMetricSub}>
+                    Across {totalLoans} total {totalLoans === 1 ? 'loan' : 'loans'}
+                  </Text>
+                </View>
+
+                {/* 2-Column Row: Active Deals & Recovered Capital */}
+                <View style={styles.portfolioDualRow}>
+                  {/* 2. Active Deals */}
+                  <View style={[styles.portfolioMetricCard, styles.portfolioDualCol]}>
+                    <View style={styles.portfolioMetricTop}>
+                      <Feather name="activity" size={m(14)} color={colors.blueButton} />
+                      <Text style={styles.portfolioMetricLabel}>ACTIVE DEALS</Text>
+                    </View>
+                    <Text style={styles.portfolioMetricValue}>
+                      {activeLoans} Active
+                    </Text>
+                    <Text style={[styles.portfolioMetricSub, { color: '#00D09E' }]}>
+                      {paidLoans} closed & repaid
+                    </Text>
+                  </View>
+
+                  {/* 3. Recovered Capital */}
+                  <View style={[styles.portfolioMetricCard, styles.portfolioDualCol]}>
+                    <View style={styles.portfolioMetricTop}>
+                      <Feather name="check-circle" size={m(14)} color="#8B5CF6" />
+                      <Text style={styles.portfolioMetricLabel}>RECOVERED CAPITAL</Text>
+                    </View>
+                    <Text style={styles.portfolioMetricValue}>
+                      {formatCurrency(totalPaid)}
+                    </Text>
+                    <Text style={styles.portfolioMetricSub}>
+                      {formatCurrency(totalRemaining)} remaining
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            )}
           </View>
-          <View style={styles.sectionContent}>
+
+          {/* Personal / Institution Information Card */}
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <View style={[styles.sectionIconBox, { backgroundColor: '#E6F2FF' }]}>
+                <Feather name="user" size={m(16)} color={colors.blueButton} />
+              </View>
+              <Text style={styles.sectionTitle}>Contact & Institution</Text>
+            </View>
+
             <DetailRow
               label="Full Name"
-              value={lender.userName}
+              value={lenderName}
               icon="user"
             />
             <DetailRow
@@ -283,45 +457,38 @@ export default function LenderDetailsScreen() {
               icon="mail"
             />
             <DetailRow
-              label="Mobile Number"
-              value={lender.mobileNo}
+              label="Phone"
+              value={lender.mobileNo || lender.phone}
               icon="phone"
             />
             <DetailRow
-              label="Aadhar Card"
+              label="Aadhaar"
               value={lender.aadharCardNo}
               icon="credit-card"
             />
-            {lender.panCardNumber && (
+            {lender.panCardNumber ? (
               <DetailRow
                 label="PAN Card"
                 value={lender.panCardNumber}
                 icon="file-text"
               />
-            )}
+            ) : null}
             <DetailRow
-              label="Address"
-              value={lender.address}
+              label="Registered Office Address"
+              value={fullAddress}
               icon="map-pin"
             />
-          </View>
-        </View>
 
-        {/* Account Status Section */}
-        <View style={styles.sectionCard}>
-          <View style={styles.sectionHeader}>
-            <Icon name="shield" size={20} color="#ff6700" />
-            <Text style={styles.sectionTitle}>Account Status</Text>
-          </View>
-          <View style={styles.sectionContent}>
+            <View style={styles.detailDivider} />
+
             <DetailRow
-              label="Account Status"
+              label="Account State"
               value={lender.isActive ? 'Active' : 'Inactive'}
-              icon={lender.isActive ? 'check-circle' : 'x-circle'}
-              iconColor={lender.isActive ? '#4CAF50' : '#F44336'}
+              icon="check-circle"
+              iconColor={lender.isActive ? colors.primary : '#FF4D4F'}
             />
             <DetailRow
-              label="Account Created"
+              label="Registered On"
               value={formatDate(lender.createdAt)}
               icon="calendar"
             />
@@ -331,19 +498,20 @@ export default function LenderDetailsScreen() {
               icon="clock"
             />
           </View>
-        </View>
 
-        {/* Plans Section */}
-        <View style={styles.sectionCard}>
-          <View style={styles.sectionHeader}>
-            <Icon name="package" size={20} color="#ff6700" />
-            <Text style={styles.sectionTitle}>
-              Subscription Plans {plans.length > 0 && `(${plans.length})`}
-            </Text>
-          </View>
-          {plans.length > 0 ? (
-            <View style={styles.plansContainer}>
-              {plans.map((planData, index) => (
+          {/* Subscription Plans Section */}
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <View style={[styles.sectionIconBox, { backgroundColor: '#E6F2FF' }]}>
+                <Feather name="package" size={m(16)} color={colors.blueButton} />
+              </View>
+              <Text style={styles.sectionTitle}>
+                Assigned Plans {plans.length > 0 ? `(${plans.length})` : ''}
+              </Text>
+            </View>
+
+            {plans.length > 0 ? (
+              plans.map((planData, index) => (
                 <PlanCard
                   key={`plan-${index}`}
                   plan={planData.plan}
@@ -352,276 +520,431 @@ export default function LenderDetailsScreen() {
                   onToggle={() => togglePlan(index)}
                   isActive={planData.isActive}
                 />
-              ))}
-            </View>
-          ) : (
-            <View style={styles.noPlansContainer}>
-              <Icon name="package" size={48} color="#CCC" />
-              <Text style={styles.noPlansText}>No plans found</Text>
-            </View>
-          )}
-
-          {/* Subscription Ledger Link */}
-          <TouchableOpacity
-            style={styles.historyButton}
-            activeOpacity={0.8}
-            onPress={() =>
-              navigation.navigate('AdminLenderSubscriptionHistory', {
-                lenderId: lender._id || lender.id,
-                lenderName: lender.name || 'Institutional Lender',
-              })
-            }
-          >
-            <Icon name="clock" size={16} color="#2563eb" />
-            <Text style={styles.historyButtonText}>View Complete Subscription Ledger</Text>
-            <Icon name="chevron-right" size={16} color="#2563eb" />
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+              ))
+            ) : (
+              <View style={styles.noPlansBox}>
+                <Feather name="inbox" size={m(32)} color={colors.textSecondary} />
+                <Text style={styles.noPlansText}>No active plan assigned</Text>
+              </View>
+            )}
+          </View>
+        </ScrollView>
+      </View>
     </View>
-  );
+  </ScreenWrapper>
+);
 }
 
 const styles = StyleSheet.create({
-  container: {
+  pageGreenWrapper: {
     flex: 1,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: colors.primary,
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: m(20),
-    paddingBottom: m(100),
-  },
-  errorContainer: {
-    flex: 1,
+  topHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: m(40),
+    justifyContent: 'space-between',
+    backgroundColor: colors.primary,
+    paddingHorizontal: m(18),
+    paddingTop: m(14),
+    paddingBottom: m(18),
   },
-  errorText: {
-    marginTop: m(16),
-    fontSize: m(16),
-    color: '#F44336',
+  backBtn: {
+    width: m(38),
+    height: m(38),
+    borderRadius: m(19),
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: m(19),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
     textAlign: 'center',
   },
-  profileCard: {
-    borderRadius: m(20),
+  headerPlaceholder: {
+    width: m(38),
+  },
+
+  // Curved Sheet Container
+  sheetSection: {
+    flex: 1,
+    backgroundColor: colors.backgroundGreenWhite,
+    borderTopLeftRadius: m(36),
+    borderTopRightRadius: m(36),
     overflow: 'hidden',
-    marginBottom: m(20),
-    backgroundColor: 'black',
-    padding: m(24),
-    alignItems: 'flex-start',
   },
-  profileHeader: {
+  scrollContent: {
+    paddingHorizontal: m(18),
+    paddingTop: m(20),
+    paddingBottom: m(40),
+  },
+
+  // Executive Profile & Ledger Hero Card
+  heroProfileCard: {
+    backgroundColor: colors.oceanBlueButton,
+    borderRadius: m(22),
+    padding: m(16),
+    marginBottom: m(14),
+    elevation: 4,
+    shadowColor: colors.oceanBlueButton,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+  },
+  heroProfileTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(28),
   },
-  profileImage: {
-    width: m(76),
-    height: m(76),
-    borderRadius: m(40),
-    marginBottom: 0,
-  },
-  profileAvatar: {
-    width: m(80),
-    height: m(80),
-    borderRadius: m(40),
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    alignItems: 'center',
+  heroAvatarCircle: {
+    width: m(54),
+    height: m(54),
+    borderRadius: m(27),
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
     justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: m(14),
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+    overflow: 'hidden',
   },
-  profileAvatarText: {
-    fontSize: m(32),
-    fontWeight: '700',
-    color: '#FFFFFF',
+  heroAvatarImage: {
+    width: m(54),
+    height: m(54),
+    borderRadius: m(27),
   },
-  profileInfo: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
+  heroAvatarText: {
+    fontSize: m(18),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
   },
-  profileName: {
-    fontSize: m(24),
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: m(4),
+  heroProfileInfo: {
+    flex: 1,
   },
-  profileBadge: {
+  heroProfileName: {
+    fontSize: m(16.5),
+    lineHeight: m(22),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
+  },
+  heroProfileContact: {
+    fontSize: m(12),
+    lineHeight: m(16),
+    fontFamily: FontFamily.primaryMedium,
+    color: 'rgba(255, 255, 255, 0.85)',
+    marginTop: m(2),
+  },
+  heroBadgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: m(12),
-    paddingVertical: m(6),
-    borderRadius: m(16),
-    gap: m(6),
+    gap: m(8),
+    marginTop: m(8),
   },
-  profileBadgeText: {
-    fontSize: m(12),
-    fontWeight: '600',
-    color: '#FFFFFF',
+  heroRoleBadge: {
+    paddingHorizontal: m(8),
+    paddingVertical: m(3),
+    borderRadius: m(8),
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
   },
+  heroRoleBadgeText: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primarySemiBold,
+    color: colors.white,
+  },
+  heroStatusBadge: {
+    paddingHorizontal: m(8),
+    paddingVertical: m(3),
+    borderRadius: m(8),
+  },
+  heroStatusBadgeText: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primarySemiBold,
+  },
+
+  // Hero Integrated Subscription Ledger Bar
+  heroLedgerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    borderRadius: m(14),
+    padding: m(10),
+    marginTop: m(14),
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+  },
+  heroLedgerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: m(10),
+  },
+  heroLedgerIconBox: {
+    width: m(32),
+    height: m(32),
+    borderRadius: m(8),
+    backgroundColor: colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  heroLedgerTexts: {
+    flex: 1,
+  },
+  heroLedgerTitle: {
+    fontSize: m(13),
+    lineHeight: m(17),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
+  },
+  heroLedgerSub: {
+    fontSize: m(10.5),
+    lineHeight: m(14),
+    fontFamily: FontFamily.primaryMedium,
+    color: 'rgba(255, 255, 255, 0.85)',
+    marginTop: m(1),
+  },
+  heroLedgerBtn: {
+    width: m(28),
+    height: m(28),
+    borderRadius: m(14),
+    backgroundColor: colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: m(8),
+  },
+
+  detailDivider: {
+    height: 1,
+    backgroundColor: 'rgba(9, 48, 48, 0.08)',
+    marginVertical: m(8),
+  },
+
+  // Section Cards
   sectionCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(16),
-    padding: m(20),
-    marginBottom: m(16),
+    backgroundColor: colors.white,
+    borderRadius: m(18),
+    padding: m(16),
+    marginBottom: m(14),
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.08)',
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: colors.lettersAndIcons,
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: m(16),
-    gap: m(10),
+    marginBottom: m(14),
+  },
+  sectionIconBox: {
+    width: m(32),
+    height: m(32),
+    borderRadius: m(10),
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: m(10),
   },
   sectionTitle: {
-    fontSize: m(18),
-    fontWeight: '700',
-    color: '#333',
+    fontSize: m(15),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
-  sectionContent: {
-    gap: m(12),
-  },
+
+  // Detail Rows
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: m(10),
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E0E0E0',
+    paddingVertical: m(9),
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(9, 48, 48, 0.05)',
   },
   detailRowLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    gap: m(8),
   },
-  detailIcon: {
-    marginRight: m(4),
+  detailIconBox: {
+    marginRight: m(8),
   },
   detailLabel: {
-    fontSize: m(14),
-    color: '#666',
-    flex: 1,
+    fontSize: m(12.5),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
   },
   detailValue: {
-    fontSize: m(14),
-    fontWeight: '600',
-    color: '#333',
+    fontSize: m(13),
+    fontFamily: FontFamily.primarySemiBold,
+    color: colors.lettersAndIcons,
+    maxWidth: '55%',
     textAlign: 'right',
-    flex: 1,
   },
-  plansContainer: {
-    gap: m(12),
-  },
+
+  // Plans Card
   planCard: {
-    backgroundColor: '#F8F8F8',
-    borderRadius: m(12),
-    borderWidth: 2,
-    borderColor: '#4CAF50',
-    overflow: 'hidden',
-  },
-  expiredPlanCard: {
-    borderColor: '#E0E0E0',
-    backgroundColor: '#FAFAFA',
+    backgroundColor: colors.backgroundGreenWhite,
+    borderRadius: m(14),
+    padding: m(12),
+    marginBottom: m(8),
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.08)',
   },
   planCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: m(16),
   },
   planCardHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
-    gap: m(12),
+    gap: m(8),
   },
   planStatusIndicator: {
-    width: m(12),
-    height: m(12),
-    borderRadius: m(6),
-  },
-  planStatusActive: {
-    backgroundColor: '#4CAF50',
-  },
-  planStatusExpired: {
-    backgroundColor: '#CCC',
+    width: m(8),
+    height: m(8),
+    borderRadius: m(4),
   },
   planCardTitle: {
-    fontSize: m(16),
-    fontWeight: '700',
-    color: '#333',
-    flex: 1,
+    fontSize: m(14),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
-  toggleButton: {
-    padding: m(8),
-    borderRadius: m(8),
-    backgroundColor: '#FFF3E0',
+  planBadge: {
+    paddingHorizontal: m(8),
+    paddingVertical: m(2),
+    borderRadius: m(6),
+  },
+  planBadgeText: {
+    fontSize: m(10.5),
+    fontFamily: FontFamily.primarySemiBold,
   },
   planCardContent: {
-    padding: m(16),
-    paddingTop: 0,
+    marginTop: m(10),
+    paddingTop: m(8),
     borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
+    borderTopColor: 'rgba(9, 48, 48, 0.06)',
   },
-  planInfoSection: {
-    marginBottom: m(16),
-  },
-  planSectionTitle: {
-    fontSize: m(14),
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: m(12),
-    paddingBottom: m(8),
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  featuresList: {
-    gap: m(8),
-  },
-  featureItem: {
-    flexDirection: 'row',
+  noPlansBox: {
     alignItems: 'center',
-    gap: m(8),
-  },
-  featureText: {
-    fontSize: m(14),
-    color: '#666',
-  },
-  noPlansContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: m(40),
+    paddingVertical: m(20),
   },
   noPlansText: {
-    marginTop: m(12),
-    fontSize: m(16),
-    color: '#999',
+    fontSize: m(12.5),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+    marginTop: m(6),
   },
-  historyButton: {
+
+  // Live Lending Portfolio & Activity Styles
+  portfolioHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#eff6ff',
-    paddingHorizontal: m(14),
-    paddingVertical: m(12),
-    borderRadius: m(10),
-    marginTop: m(14),
-    borderWidth: 1,
-    borderColor: '#bfdbfe',
+    marginBottom: m(14),
+    paddingBottom: m(10),
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(9, 48, 48, 0.06)',
   },
-  historyButtonText: {
-    fontSize: m(13),
-    fontWeight: '700',
-    color: '#1d4ed8',
+  portfolioHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(8),
     flex: 1,
-    marginLeft: m(8),
+  },
+  portfolioTrendIconBox: {
+    width: m(30),
+    height: m(30),
+    borderRadius: m(8),
+    backgroundColor: '#E6FAF5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  portfolioSectionTitle: {
+    fontSize: m(12),
+    lineHeight: m(16),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    letterSpacing: 0.3,
+    flex: 1,
+  },
+  liveDataBadge: {
+    backgroundColor: 'rgba(9, 48, 48, 0.06)',
+    paddingHorizontal: m(8),
+    paddingVertical: m(3),
+    borderRadius: m(6),
+  },
+  liveDataBadgeText: {
+    fontSize: m(10.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  portfolioLoadingBox: {
+    paddingVertical: m(24),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  portfolioLoadingText: {
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+    marginTop: m(6),
+  },
+  portfolioGrid: {
+    gap: m(10),
+  },
+  portfolioMetricCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: m(12),
+    padding: m(12),
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.06)',
+  },
+  portfolioMetricTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(5),
+    marginBottom: m(4),
+  },
+  portfolioMetricLabel: {
+    fontSize: m(10),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.textSecondary,
+    letterSpacing: 0.3,
+  },
+  portfolioMetricValue: {
+    fontSize: m(16),
+    lineHeight: m(22),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  portfolioMetricSub: {
+    fontSize: m(10.5),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.textSecondary,
+    marginTop: m(2),
+  },
+  portfolioDualRow: {
+    flexDirection: 'row',
+    gap: m(10),
+  },
+  portfolioDualCol: {
+    flex: 1,
+  },
+
+  // Error State
+  errorContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: m(80),
+  },
+  errorText: {
+    fontSize: m(14),
+    fontFamily: FontFamily.primaryMedium,
+    color: '#FF4D4F',
+    marginTop: m(10),
   },
 });
-

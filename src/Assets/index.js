@@ -1,4 +1,6 @@
 export const logo = require('../Assets/logo.png');
+export const spalshlogo = require('../Assets/spalshlogo.png');
+export const splashLogo = require('../Assets/spalshlogo.png');
 
 // export const calculateEmi = require('../Assets/images/calculate-emi.avif');
 // export const searchBorrowers = require('../Assets/images/search-borrowers.jpg');

@@ -6,69 +6,53 @@ import {
   StyleSheet,
   StatusBar,
   Animated,
+  SafeAreaView,
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
-import {logo} from '../../Assets';
 import {useDispatch} from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {setUser} from '../../Redux/Slices/authslice';
 import {m} from 'walstar-rn-responsive';
 import {FontFamily, colors} from '../../constants';
+import {spalshlogo} from '../../Assets';
 
 export default function SplashScreen({navigation}) {
   const dispatch = useDispatch();
+
+  // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.84)).current;
+  const scaleAnim = useRef(new Animated.Value(0.88)).current;
   const textAnim = useRef(new Animated.Value(0)).current;
-  const dotAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Animation sequence
-    Animated.sequence([
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          tension: 80,
-          friction: 8,
-          useNativeDriver: true,
-        }),
-      ]),
-      // Text fade in
+    // Smooth entrance animation
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 700,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 65,
+        friction: 8,
+        useNativeDriver: true,
+      }),
       Animated.timing(textAnim, {
         toValue: 1,
-        duration: 600,
+        duration: 800,
+        delay: 200,
         useNativeDriver: true,
       }),
     ]).start();
 
-    const dotLoop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(dotAnim, {
-          toValue: 1,
-          duration: 700,
-          useNativeDriver: true,
-        }),
-        Animated.timing(dotAnim, {
-          toValue: 0,
-          duration: 700,
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-    dotLoop.start();
-
+    // Check login state and navigate
     const checkLoginStatus = async () => {
       try {
         const token = await AsyncStorage.getItem('token');
         if (token) {
-          const user = await AsyncStorage.getItem('user');
-          if (user) {
-            dispatch(setUser(JSON.parse(user)));
+          const storedUser = await AsyncStorage.getItem('user');
+          if (storedUser) {
+            dispatch(setUser(JSON.parse(storedUser)));
           }
           navigation.replace('BottomNavigation');
         } else {
@@ -82,179 +66,123 @@ export default function SplashScreen({navigation}) {
 
     const timer = setTimeout(() => {
       checkLoginStatus();
-    }, 2500);
+    }, 2000);
 
-    return () => {
-      clearTimeout(timer);
-      dotLoop.stop();
-    };
-  }, [dispatch, navigation, dotAnim, fadeAnim, scaleAnim, textAnim]);
-
-  const dotOpacity = dotAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.35, 1],
-  });
+    return () => clearTimeout(timer);
+  }, [dispatch, navigation, fadeAnim, scaleAnim, textAnim]);
 
   return (
-    <LinearGradient
-      colors={[colors.navyDark, colors.navy, colors.navyLight]}
-      style={styles.container}
-      start={{x: 0, y: 0}}
-      end={{x: 1, y: 1}}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.navyDark} />
-
-      {/* Animated Logo Container */}
-      <Animated.View
-        style={[
-          styles.logoContainer,
-          {
-            opacity: fadeAnim,
-            transform: [{scale: scaleAnim}],
-          },
-        ]}>
-        <View style={styles.logoWrapper}>
-          <View style={styles.logoPlate}>
-            <Image resizeMode="contain" style={styles.logo} source={logo} />
-          </View>
-        </View>
-      </Animated.View>
-
-      {/* App Name with Animation */}
-      <Animated.View
-        style={[
-          styles.appNameContainer,
-          {
-            opacity: textAnim,
-            transform: [
-              {
-                translateY: textAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [20, 0],
-                }),
-              },
-            ],
-          },
-        ]}>
-        <Text style={styles.appName}>Loan Hub</Text>
-      </Animated.View>
-
-      {/* Tagline with Animation */}
-      <Animated.View
-        style={[
-          styles.taglineContainer,
-          {
-            opacity: textAnim,
-          },
-        ]}>
-        <Text style={styles.tagline}>Simple lending. Clear tracking.</Text>
-      </Animated.View>
-
-      {/* Loading Indicator */}
-      <View style={styles.loadingDots}>
-        <Animated.View style={[styles.dot, {opacity: dotOpacity}]} />
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor={colors.primary}
+        translucent={false}
+      />
+      <View style={styles.container}>
+        {/* Main Centered Content */}
         <Animated.View
           style={[
-            styles.dot,
-            styles.dotMiddle,
+            styles.brandWrapper,
             {
-              opacity: dotOpacity,
-              transform: [
-                {
-                  scale: dotAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.86, 1.15],
-                  }),
-                },
-              ],
+              opacity: fadeAnim,
+              transform: [{scale: scaleAnim}],
             },
-          ]}
-        />
-        <Animated.View style={[styles.dot, {opacity: dotOpacity}]} />
+          ]}>
+          {/* Logo image from Assets/spalshlogo.png */}
+          <View style={styles.iconContainer}>
+            <Image
+              source={spalshlogo}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+          </View>
+
+          {/* App Name: Loan Hub with Poppins-Bold font */}
+          <Animated.View
+            style={[
+              styles.textWrapper,
+              {
+                opacity: textAnim,
+                transform: [
+                  {
+                    translateY: textAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [12, 0],
+                    }),
+                  },
+                ],
+              },
+            ]}>
+            <Text style={styles.appName}>Loan Hub</Text>
+          </Animated.View>
+        </Animated.View>
+
+        {/* Bottom Tagline */}
+        <Animated.View
+          style={[
+            styles.bottomContainer,
+            {
+              opacity: textAnim,
+            },
+          ]}>
+          <Text style={styles.tagline}>Simple Lending • Transparent Tracking</Text>
+        </Animated.View>
       </View>
-    </LinearGradient>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.primary,
+  },
   container: {
     flex: 1,
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: m(28),
   },
-  logoContainer: {
-    alignItems: 'center',
-    marginBottom: m(18),
-  },
-  logoWrapper: {
+  brandWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logoPlate: {
-    width: m(188),
-    height: m(188),
-    borderRadius: m(94),
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.22)',
+  iconContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.navyDark,
-    shadowOffset: {width: 0, height: 12},
-    shadowOpacity: 0.22,
-    shadowRadius: 20,
-    elevation: 10,
+    marginBottom: m(16),
   },
-  logo: {
-    width: m(154),
-    height: m(94),
+  logoImage: {
+    width: m(120),
+    height: m(120),
   },
-  appNameContainer: {
-    marginBottom: m(6),
+  textWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   appName: {
-    fontSize: m(30),
-    lineHeight: m(38),
+    fontSize: m(42),
+    lineHeight: m(52),
     fontFamily: FontFamily.primaryBold,
     color: colors.white,
     textAlign: 'center',
+    letterSpacing: -0.2,
   },
-  taglineContainer: {
-    marginBottom: m(34),
-  },
-  tagline: {
-    fontSize: m(14),
-    lineHeight: m(20),
-    color: 'rgba(255, 255, 255, 0.84)',
-    fontFamily: FontFamily.bodyMedium,
-    textAlign: 'center',
-  },
-  loadingDots: {
-    flexDirection: 'row',
+  bottomContainer: {
+    position: 'absolute',
+    bottom: m(36),
+    left: 0,
+    right: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: m(4),
+    paddingHorizontal: m(20),
   },
-  dot: {
-    width: m(8),
-    height: m(8),
-    borderRadius: m(4),
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: m(4),
-  },
-  dotMiddle: {
-    backgroundColor: colors.butter,
-  },
-});
-
-// Add keyframes for bounce animation
-StyleSheet.create({
-  '@keyframes bounce': {
-    '0%, 100%': {
-      transform: [{translateY: 0}],
-    },
-    '50%': {
-      transform: [{translateY: -m(10)}],
-    },
+  tagline: {
+    fontSize: m(13),
+    lineHeight: m(18),
+    fontFamily: FontFamily.primaryMedium,
+    color: 'rgba(255, 255, 255, 0.92)',
+    textAlign: 'center',
+    letterSpacing: 0.6,
   },
 });

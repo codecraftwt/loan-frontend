@@ -6,50 +6,39 @@ import {
   FlatList,
   TouchableOpacity,
   TextInput,
+  Image,
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
+import Feather from 'react-native-vector-icons/Feather';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/Feather';
-import { m } from 'walstar-rn-responsive';
-import Header from '../../../Components/Header';
-import {
-  getAdminBorrowers,
-  setBorrowerFilters,
-} from '../../../Redux/Slices/adminBorrowersSlice';
-
-/**
- * Format currency value
- */
-const formatCurrency = value => {
-  if (!value) return '₹0';
-  const num = Number(value) || 0;
-  return `₹${num.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
-};
+import { colors, FontFamily } from '../../../constants';
+import { m } from '../../../Utils/responsive';
+import { ScreenWrapper } from '../../../Components/common';
+import { getAdminBorrowers } from '../../../Redux/Slices/adminBorrowersSlice';
 
 export default function AdminBorrowerList() {
   const navigation = useNavigation();
   const dispatch = useDispatch();
-  const { borrowers, summary, loading } = useSelector(
-    (state) => state.adminBorrowers
+  const { borrowers = [], loading } = useSelector(
+    (state) => state.adminBorrowers || {}
   );
 
-  const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [kycTab, setKycTab] = useState('all'); // 'all' | 'verified' | 'unverified'
-  const [loanTab, setLoanTab] = useState('all'); // 'all' | 'active' | 'overdue'
+  const [refreshing, setRefreshing] = useState(false);
 
+  // Load borrowers from API
   const loadData = useCallback(() => {
     dispatch(
       getAdminBorrowers({
         search: searchQuery,
         kycStatus: kycTab,
-        loanStatus: loanTab,
         limit: 100,
       })
     );
-  }, [dispatch, searchQuery, kycTab, loanTab]);
+  }, [dispatch, searchQuery, kycTab]);
 
   useEffect(() => {
     loadData();
@@ -61,14 +50,13 @@ export default function AdminBorrowerList() {
       getAdminBorrowers({
         search: searchQuery,
         kycStatus: kycTab,
-        loanStatus: loanTab,
         limit: 100,
       })
     );
     setRefreshing(false);
-  }, [dispatch, searchQuery, kycTab, loanTab]);
+  }, [dispatch, searchQuery, kycTab]);
 
-  // Local responsive filtering
+  // Client-side filtering for fast responsive interactions
   const filteredBorrowers = useMemo(() => {
     return borrowers.filter((b) => {
       const q = searchQuery.toLowerCase().trim();
@@ -89,34 +77,32 @@ export default function AdminBorrowerList() {
       if (!matchesSearch) return false;
 
       const isVerified = Boolean(
-        b.digilockerKyc?.isVerified || b.aadhaarVerified || b.isAadhaarVerified || b.kycStatus === 'verified'
-      );
-      if (kycTab === 'verified' && !isVerified) return false;
-      if (kycTab === 'unverified' && isVerified) return false;
-
-      const hasActive = Boolean(b.hasActiveLoan || (b.activeLoansCount || 0) > 0 || (b.loans || []).length > 0);
-      if (loanTab === 'active' && !hasActive) return false;
-      if (loanTab === 'overdue' && !b.hasOverdueLoan) return false;
-
-      return true;
-    });
-  }, [borrowers, searchQuery, kycTab, loanTab]);
-
-  // High-level KPI Metrics
-  const totalCount = summary?.totalBorrowers ?? borrowers.length;
-  const verifiedCount =
-    summary?.verifiedKycCount ??
-    borrowers.filter(
-      (b) =>
         b.digilockerKyc?.isVerified ||
         b.aadhaarVerified ||
         b.isAadhaarVerified ||
         b.kycStatus === 'verified'
-    ).length;
-  const activeExposuresCount =
-    summary?.activeLoansTotal ??
-    borrowers.filter((b) => b.hasActiveLoan || (b.activeLoansCount || 0) > 0).length;
+      );
+      if (kycTab === 'verified') return isVerified;
+      if (kycTab === 'unverified') return !isVerified;
 
+      return true;
+    });
+  }, [borrowers, searchQuery, kycTab]);
+
+  // Statistics counters
+  const totalCount = borrowers.length;
+  const verifiedCount = borrowers.filter(
+    (b) =>
+      Boolean(
+        b.digilockerKyc?.isVerified ||
+        b.aadhaarVerified ||
+        b.isAadhaarVerified ||
+        b.kycStatus === 'verified'
+      )
+  ).length;
+  const pendingCount = totalCount - verifiedCount;
+
+  // Render individual borrower item: ONLY Avatar + Name + Status Dot + Chevron Button
   const renderBorrowerCard = ({ item }) => {
     const isKycVerified = Boolean(
       item.digilockerKyc?.isVerified ||
@@ -124,24 +110,24 @@ export default function AdminBorrowerList() {
       item.isAadhaarVerified ||
       item.kycStatus === 'verified'
     );
-    const displayName = item.userName || item.name || item.borrowerName || 'Anonymous Borrower';
-    const email = item.email || 'No email';
-    const phone = item.mobileNo || item.mobileNumber || item.phone || 'No phone';
-    const initials = displayName
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+    const displayName =
+      item.userName || item.name || item.borrowerName || 'Anonymous Borrower';
+    const initials =
+      displayName
+        .split(' ')
+        .filter(Boolean)
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2) || 'BR';
 
-    const creditScore = item.borrowerProfile?.creditScore || item.creditScore || '750';
-    const exposureAmount = item.totalExposure || item.activeExposure || item.totalLoanAmount || 0;
-    const activeFacilities = item.activeLoansCount || (item.loans || []).length || (item.hasActiveLoan ? 1 : 0);
+    const avatarUrl =
+      item.profileImage || item.borrowerProfile?.profileImage || item.avatar;
 
     return (
       <TouchableOpacity
         style={styles.card}
-        activeOpacity={0.8}
+        activeOpacity={0.7}
         onPress={() =>
           navigation.navigate('AdminBorrowerDetailsScreen', {
             borrowerId: item._id || item.id,
@@ -149,408 +135,337 @@ export default function AdminBorrowerList() {
           })
         }
       >
-        <View style={styles.cardHeader}>
-          <View style={styles.avatar}>
+        {/* 1. Name Logo / Initials Avatar */}
+        <View style={styles.avatar}>
+          {avatarUrl ? (
+            <Image
+              source={{ uri: avatarUrl }}
+              style={styles.avatarImage}
+              resizeMode="cover"
+            />
+          ) : (
             <Text style={styles.avatarText}>{initials}</Text>
-          </View>
-          <View style={styles.headerInfo}>
-            <View style={styles.nameRow}>
-              <Text style={styles.borrowerName} numberOfLines={1}>
-                {displayName}
-              </Text>
-              {isKycVerified ? (
-                <View style={styles.verifiedBadge}>
-                  <Icon name="check-circle" size={11} color="#16a34a" />
-                  <Text style={styles.verifiedText}>DigiLocker KYC</Text>
-                </View>
-              ) : (
-                <View style={styles.unverifiedBadge}>
-                  <Icon name="clock" size={11} color="#d97706" />
-                  <Text style={styles.unverifiedText}>KYC Pending</Text>
-                </View>
-              )}
-            </View>
-            <Text style={styles.contactText}>
-              {email} • {phone}
+          )}
+        </View>
+
+        {/* 2. Borrower Name + Status Dot (Green for Verified, Red for Pending) */}
+        <View style={styles.infoCol}>
+          <View style={styles.nameRow}>
+            <Text style={styles.borrowerName} numberOfLines={1}>
+              {displayName}
             </Text>
+            <View
+              style={[
+                styles.statusDot,
+                { backgroundColor: isKycVerified ? '#00D09E' : '#FF4D4F' },
+              ]}
+            />
           </View>
         </View>
 
-        <View style={styles.divider} />
-
-        {/* Exposure & Credit Assessment Row */}
-        <View style={styles.statsRow}>
-          <View style={styles.statCol}>
-            <Text style={styles.statLabel}>Active Facilities</Text>
-            <Text style={styles.statValue}>{activeFacilities}</Text>
-          </View>
-          <View style={styles.statCol}>
-            <Text style={styles.statLabel}>Credit Score</Text>
-            <Text style={[styles.statValue, { color: '#2563eb' }]}>
-              {creditScore}
-            </Text>
-          </View>
-          <View style={styles.statCol}>
-            <Text style={styles.statLabel}>Total Exposure</Text>
-            <Text style={styles.statValue}>
-              {formatCurrency(exposureAmount)}
-            </Text>
-          </View>
-        </View>
-
-        {/* View Dossier Action */}
-        <View style={styles.footerRow}>
-          <Text style={styles.borrowerIdText}>
-            ID: #{item._id?.slice(-8).toUpperCase() || 'NEW'}
-          </Text>
-          <View style={styles.viewLink}>
-            <Text style={styles.viewLinkText}>View Dossier</Text>
-            <Icon name="chevron-right" size={14} color="#2563eb" />
-          </View>
+        {/* 3. Icon Button Only (Chevron) */}
+        <View style={styles.viewBtn}>
+          <Feather name="chevron-right" size={m(15)} color={colors.white} />
         </View>
       </TouchableOpacity>
     );
   };
 
   return (
-    <View style={styles.container}>
-      <Header title="Borrowers Directory" />
+    <ScreenWrapper
+      backgroundColor={colors.backgroundGreenWhite}
+      topInsetBg={colors.primary}
+      statusBarColor={colors.primary}
+      statusBarStyle="dark-content"
+      includeTabBarClearance={false}
+      scrollable={false}
+    >
+      <View style={styles.pageGreenWrapper}>
+        {/* Top Green Banner */}
+        <View style={styles.topSection}>
+          <Text style={styles.headerTitle}>Borrowers Directory</Text>
 
-      {/* Top Search & Filter Section */}
-      <View style={styles.filterSection}>
-        <View style={styles.searchBar}>
-          <Icon name="search" size={18} color="#64748b" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search name, phone, PAN, Aadhaar..."
-            placeholderTextColor="#94a3b8"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery ? (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Icon name="x" size={18} color="#94a3b8" />
-            </TouchableOpacity>
-          ) : null}
-        </View>
-
-        {/* Instant KYC Filter Pills */}
-        <View style={styles.pillRow}>
-          {[
-            { id: 'all', label: 'All KYC' },
-            { id: 'verified', label: 'DigiLocker Verified' },
-            { id: 'unverified', label: 'KYC Pending' },
-          ].map((pill) => (
-            <TouchableOpacity
-              key={pill.id}
-              style={[
-                styles.pill,
-                kycTab === pill.id && styles.activePill,
-              ]}
-              onPress={() => setKycTab(pill.id)}
-            >
-              <Text
-                style={[
-                  styles.pillText,
-                  kycTab === pill.id && styles.activePillText,
-                ]}
-              >
-                {pill.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      {/* KPI Overview Strip */}
-      <View style={styles.statsStrip}>
-        <View style={styles.statItem}>
-          <Text style={styles.statNumber}>{totalCount}</Text>
-          <Text style={styles.statSubLabel}>Total Borrowers</Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={[styles.statNumber, { color: '#16a34a' }]}>{verifiedCount}</Text>
-          <Text style={styles.statSubLabel}>DigiLocker Verified</Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={[styles.statNumber, { color: '#2563eb' }]}>{activeExposuresCount}</Text>
-          <Text style={styles.statSubLabel}>Active Facilities</Text>
-        </View>
-      </View>
-
-      {/* Borrowers Feed */}
-      {loading && !refreshing && borrowers.length === 0 ? (
-        <View style={styles.centerBox}>
-          <ActivityIndicator size="large" color="#2563eb" />
-          <Text style={styles.loadingText}>Fetching borrowers directory...</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={filteredBorrowers}
-          renderItem={renderBorrowerCard}
-          keyExtractor={(item, index) => item._id || item.id || String(index)}
-          contentContainerStyle={styles.listContent}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={['#2563eb']}
+          {/* Search Pill Bar */}
+          <View style={styles.searchBar}>
+            <Feather
+              name="search"
+              size={m(18)}
+              color={colors.lettersAndIcons}
+              style={styles.searchIcon}
             />
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyBox}>
-              <Icon name="users" size={44} color="#cbd5e1" />
-              <Text style={styles.emptyTitle}>No Borrowers Found</Text>
-              <Text style={styles.emptySubtitle}>
-                {searchQuery
-                  ? 'No borrower matching your search criteria.'
-                  : 'Registered borrowers and credit dossiers will appear here.'}
-              </Text>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search by borrower name, phone, PAN..."
+              placeholderTextColor="#7E9D86"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+              autoCorrect={false}
+              clearButtonMode="while-editing"
+            />
+            {searchQuery ? (
+              <TouchableOpacity
+                onPress={() => setSearchQuery('')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Feather name="x" size={m(16)} color={colors.lettersAndIcons} />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+
+          {/* Filter Pills with Counts */}
+          <View style={styles.filterTabsRow}>
+            {[
+              { id: 'all', label: `All (${totalCount})` },
+              { id: 'verified', label: `Verified (${verifiedCount})` },
+              { id: 'unverified', label: `Pending (${pendingCount})` },
+            ].map((tab) => {
+              const isSelected = kycTab === tab.id;
+              return (
+                <TouchableOpacity
+                  key={tab.id}
+                  style={[
+                    styles.filterTab,
+                    isSelected && styles.filterTabActive,
+                  ]}
+                  onPress={() => setKycTab(tab.id)}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={[
+                      styles.filterTabText,
+                      isSelected && styles.filterTabTextActive,
+                    ]}
+                  >
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Curved Sheet Container */}
+        <View style={styles.sheetSection}>
+          {loading && !refreshing && borrowers.length === 0 ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={styles.loadingText}>Loading borrowers...</Text>
             </View>
-          }
-        />
-      )}
-    </View>
+          ) : (
+            <FlatList
+              data={filteredBorrowers}
+              keyExtractor={(item, idx) =>
+                item?._id || item?.id || String(idx)
+              }
+              renderItem={renderBorrowerCard}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  colors={[colors.primary]}
+                />
+              }
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <Feather
+                    name="users"
+                    size={m(42)}
+                    color={colors.textSecondary}
+                  />
+                  <Text style={styles.emptyTitle}>No Borrowers Found</Text>
+                  <Text style={styles.emptyDesc}>
+                    {searchQuery
+                      ? 'No borrowers match your search query.'
+                      : 'Registered borrowers and credit dossiers will appear here.'}
+                  </Text>
+                </View>
+              }
+            />
+          )}
+        </View>
+      </View>
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  pageGreenWrapper: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.primary,
   },
-  filterSection: {
-    paddingHorizontal: m(16),
-    paddingTop: m(12),
-    paddingBottom: m(8),
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+  topSection: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: m(18),
+    paddingTop: m(14),
+    paddingBottom: m(18),
+  },
+  headerTitle: {
+    fontSize: m(22),
+    lineHeight: m(28),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    marginBottom: m(12),
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f1f5f9',
-    borderRadius: m(10),
-    paddingHorizontal: m(12),
-    height: m(42),
+    backgroundColor: colors.lightGreen,
+    borderRadius: m(24),
+    height: m(46),
+    paddingHorizontal: m(16),
+    marginBottom: m(12),
   },
   searchIcon: {
-    marginRight: m(8),
+    marginRight: m(10),
   },
   searchInput: {
     flex: 1,
-    fontSize: m(13),
-    color: '#0f172a',
-    paddingVertical: 0,
+    fontSize: m(14),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.lettersAndIcons,
+    padding: 0,
   },
-  pillRow: {
+  filterTabsRow: {
     flexDirection: 'row',
     gap: m(8),
-    marginTop: m(10),
+    marginBottom: m(12),
   },
-  pill: {
-    paddingHorizontal: m(12),
-    paddingVertical: m(5),
-    borderRadius: m(16),
-    backgroundColor: '#f1f5f9',
+  filterTab: {
+    paddingHorizontal: m(14),
+    paddingVertical: m(6),
+    borderRadius: m(18),
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
   },
-  activePill: {
-    backgroundColor: '#2563eb',
+  filterTabActive: {
+    backgroundColor: colors.lettersAndIcons,
   },
-  pillText: {
-    fontSize: m(11),
-    fontWeight: '600',
-    color: '#64748b',
+  filterTabText: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
   },
-  activePillText: {
-    color: '#ffffff',
+  filterTabTextActive: {
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
   },
-  statsStrip: {
-    flexDirection: 'row',
-    backgroundColor: '#ffffff',
-    marginHorizontal: m(16),
-    marginTop: m(12),
-    paddingVertical: m(12),
-    paddingHorizontal: m(16),
-    borderRadius: m(12),
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    justifyContent: 'space-around',
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statNumber: {
-    fontSize: m(16),
-    fontWeight: '800',
-    color: '#0f172a',
-  },
-  statSubLabel: {
-    fontSize: m(11),
-    color: '#64748b',
-    marginTop: m(2),
+  // Curved Sheet
+  sheetSection: {
+    flex: 1,
+    backgroundColor: colors.backgroundGreenWhite,
+    borderTopLeftRadius: m(36),
+    borderTopRightRadius: m(36),
+    paddingTop: m(16),
   },
   listContent: {
-    padding: m(16),
-    paddingBottom: m(80),
+    paddingHorizontal: m(18),
+    paddingBottom: m(110),
+    paddingTop: m(4),
   },
+
+  // Borrower Card: Avatar + Name + Status Dot + Chevron Button
   card: {
-    backgroundColor: '#ffffff',
-    borderRadius: m(14),
-    padding: m(14),
-    marginBottom: m(12),
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: colors.white,
+    borderRadius: m(14),
+    paddingVertical: m(9),
+    paddingHorizontal: m(12),
+    marginBottom: m(10),
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.08)',
+    elevation: 2,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
   },
   avatar: {
-    width: m(44),
-    height: m(44),
-    borderRadius: m(22),
-    backgroundColor: '#eef2ff',
-    borderWidth: 1,
-    borderColor: '#c7d2fe',
-    alignItems: 'center',
+    width: m(36),
+    height: m(36),
+    borderRadius: m(18),
+    backgroundColor: '#E6F2FF',
     justifyContent: 'center',
-    marginRight: m(12),
+    alignItems: 'center',
+    marginRight: m(10),
+    borderWidth: 1.5,
+    borderColor: 'rgba(50, 153, 255, 0.3)',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: m(36),
+    height: m(36),
+    borderRadius: m(18),
   },
   avatarText: {
-    fontSize: m(15),
-    fontWeight: '700',
-    color: '#4338ca',
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.blueButton,
+    letterSpacing: -0.2,
   },
-  headerInfo: {
+  infoCol: {
     flex: 1,
+    paddingRight: m(10),
+    justifyContent: 'center',
   },
   nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: m(7),
   },
   borrowerName: {
-    fontSize: m(14),
-    fontWeight: '700',
-    color: '#0f172a',
-    flex: 1,
-    marginRight: m(6),
+    fontSize: m(14.5),
+    lineHeight: m(19),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    flexShrink: 1,
   },
-  verifiedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f0fdf4',
-    paddingHorizontal: m(7),
-    paddingVertical: m(2),
-    borderRadius: m(6),
-    borderWidth: 1,
-    borderColor: '#bbf7d0',
-    gap: m(3),
+  statusDot: {
+    width: m(7),
+    height: m(7),
+    borderRadius: m(3.5),
   },
-  verifiedText: {
-    fontSize: m(10),
-    fontWeight: '700',
-    color: '#16a34a',
-  },
-  unverifiedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fffbeb',
-    paddingHorizontal: m(7),
-    paddingVertical: m(2),
-    borderRadius: m(6),
-    borderWidth: 1,
-    borderColor: '#fde68a',
-    gap: m(3),
-  },
-  unverifiedText: {
-    fontSize: m(10),
-    fontWeight: '700',
-    color: '#d97706',
-  },
-  contactText: {
-    fontSize: m(11),
-    color: '#64748b',
-    marginTop: m(2),
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#f1f5f9',
-    marginVertical: m(10),
-  },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  statCol: {
-    flex: 1,
-  },
-  statLabel: {
-    fontSize: m(10),
-    color: '#94a3b8',
-    marginBottom: m(2),
-  },
-  statValue: {
-    fontSize: m(12),
-    fontWeight: '700',
-    color: '#1e293b',
-  },
-  footerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: m(10),
-    paddingTop: m(8),
-    borderTopWidth: 1,
-    borderTopColor: '#f8fafc',
-  },
-  borrowerIdText: {
-    fontSize: m(10),
-    color: '#94a3b8',
-    fontWeight: '600',
-  },
-  viewLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(2),
-  },
-  viewLinkText: {
-    fontSize: m(11),
-    fontWeight: '700',
-    color: '#2563eb',
-  },
-  centerBox: {
-    flex: 1,
+  viewBtn: {
+    width: m(28),
+    height: m(28),
+    borderRadius: m(14),
+    backgroundColor: colors.blueButton,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  loadingText: {
-    marginTop: m(8),
-    fontSize: m(13),
-    color: '#64748b',
-  },
-  emptyBox: {
+
+  // Loading & Empty States
+  loadingContainer: {
+    flex: 1,
     alignItems: 'center',
-    paddingVertical: m(60),
+    justifyContent: 'center',
+    paddingTop: m(60),
+  },
+  loadingText: {
+    marginTop: m(10),
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: m(60),
+    paddingHorizontal: m(30),
   },
   emptyTitle: {
-    fontSize: m(15),
-    fontWeight: '700',
-    color: '#475569',
-    marginTop: m(10),
+    fontSize: m(16),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    marginTop: m(12),
   },
-  emptySubtitle: {
-    fontSize: m(12),
-    color: '#94a3b8',
+  emptyDesc: {
+    fontSize: m(12.5),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
     textAlign: 'center',
     marginTop: m(4),
-    paddingHorizontal: m(30),
   },
 });

@@ -60,8 +60,8 @@ export default function BottomNavigation() {
       <View style={[styles.iconWrapper, focused && styles.activeIconWrapper]}>
         <Feather
           name={name}
-          size={focused ? size : size - 1}
-          color={focused ? colors.white : color}
+          size={focused ? m(22) : m(21)}
+          color={focused ? colors.white : colors.lettersAndIcons}
         />
       </View>
     );
@@ -70,19 +70,20 @@ export default function BottomNavigation() {
   const tabScreenOptions = {
     headerShown: false,
     tabBarHideOnKeyboard: true,
-    tabBarShowLabel: true,
-    tabBarActiveTintColor: colors.navy,
-    tabBarInactiveTintColor: colors.textSecondary,
-    tabBarLabelStyle: styles.tabBarLabel,
+    tabBarShowLabel: false,
+    tabBarActiveTintColor: colors.lettersAndIcons,
+    tabBarInactiveTintColor: colors.lettersAndIcons,
     tabBarIconStyle: styles.tabBarIcon,
     tabBarItemStyle: styles.tabBarItem,
     tabBarStyle: [
       styles.tabBar,
       {
+        paddingTop: 0,
+        paddingBottom: 0,
         bottom:
           Platform.OS === 'ios'
-            ? Math.max(insets.bottom, m(10))
-            : Math.max(insets.bottom + m(6), m(12)),
+            ? Math.max(insets.bottom, m(12))
+            : Math.max(insets.bottom + m(8), m(16)),
       },
     ],
   };
@@ -265,49 +266,47 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: m(18),
     right: m(18),
-    height: m(72),
-    backgroundColor: colors.white,
+    height: m(64),
+    backgroundColor: colors.lightGreen,
     borderTopWidth: 0,
-    borderRadius: m(28),
-    paddingHorizontal: m(8),
-    paddingTop: m(6),
-    paddingBottom: m(6),
-    elevation: 16,
-    shadowColor: colors.black,
+    borderRadius: m(32),
+    paddingHorizontal: m(6),
+    paddingTop: 0,
+    paddingBottom: 0,
+    elevation: 14,
+    shadowColor: colors.lettersAndIcons,
     shadowOffset: {
       width: 0,
-      height: m(8),
+      height: m(6),
     },
-    shadowOpacity: 0.14,
-    shadowRadius: m(16),
+    shadowOpacity: 0.15,
+    shadowRadius: m(12),
   },
   tabBarItem: {
-    height: m(60),
+    height: m(64),
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: m(2),
-    paddingBottom: m(2),
+    paddingTop: 0,
+    paddingBottom: 0,
+    paddingVertical: 0,
+    marginVertical: 0,
   },
   tabBarIcon: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: m(2),
-    marginBottom: m(2),
-  },
-  tabBarLabel: {
-    fontSize: FontSizes.xs,
-    fontFamily: FontFamily.primarySemiBold,
-    marginTop: m(1),
-    marginBottom: m(2),
+    margin: 0,
+    padding: 0,
+    width: '100%',
+    height: '100%',
   },
   iconWrapper: {
-    width: m(34),
-    height: m(34),
-    borderRadius: m(17),
+    width: m(44),
+    height: m(44),
+    borderRadius: m(22),
     justifyContent: 'center',
     alignItems: 'center',
   },
   activeIconWrapper: {
-    backgroundColor: colors.ink,
+    backgroundColor: colors.lettersAndIcons,
   },
 });

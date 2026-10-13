@@ -11,10 +11,10 @@ import {
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/Feather';
-import LinearGradient from 'react-native-linear-gradient';
-import { m } from 'walstar-rn-responsive';
-import Header from '../../../Components/Header';
+import Feather from 'react-native-vector-icons/Feather';
+import { colors, FontFamily } from '../../../constants';
+import { m } from '../../../Utils/responsive';
+import { ScreenWrapper } from '../../../Components/common';
 import {
   getAdminBorrowerDetails,
   clearSelectedBorrower,
@@ -45,14 +45,30 @@ const formatDate = dateStr => {
   }
 };
 
+const DetailRow = ({ label, value, icon, iconColor = colors.lettersAndIcons }) => (
+  <View style={styles.detailRow}>
+    <View style={styles.detailRowLeft}>
+      {icon && (
+        <View style={styles.detailIconBox}>
+          <Feather name={icon} size={m(14)} color={iconColor} />
+        </View>
+      )}
+      <Text style={styles.detailLabel}>{label}</Text>
+    </View>
+    <Text style={styles.detailValue} numberOfLines={2}>
+      {value || 'N/A'}
+    </Text>
+  </View>
+);
+
 export default function AdminBorrowerDetailsScreen() {
   const route = useRoute();
   const navigation = useNavigation();
   const dispatch = useDispatch();
   const { borrowerId, borrower: initialBorrower } = route.params || {};
 
-  const { selectedBorrower, detailsLoading, detailsError } = useSelector(
-    (state) => state.adminBorrowers
+  const { selectedBorrower, detailsLoading } = useSelector(
+    (state) => state.adminBorrowers || {}
   );
 
   const [refreshing, setRefreshing] = React.useState(false);
@@ -88,514 +104,770 @@ export default function AdminBorrowerDetailsScreen() {
     borrower.kycStatus === 'verified'
   );
 
+  const initials = displayName
+    .split(' ')
+    .filter(Boolean)
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) || 'BR';
+
   const aadhaarNumber =
     borrower.aadharCardNo ||
     borrower.aadhaarNumber ||
-    borrower.digilockerKyc?.aadhaarLast4
-      ? `•••• •••• ${borrower.digilockerKyc?.aadhaarLast4 || (borrower.aadharCardNo || borrower.aadhaarNumber)?.slice(-4)}`
-      : 'Verified via DigiLocker';
+    (borrower.digilockerKyc?.aadhaarLast4
+      ? `•••• •••• ${borrower.digilockerKyc?.aadhaarLast4}`
+      : (borrower.aadharCardNo || borrower.aadhaarNumber)
+      ? `•••• •••• ${(borrower.aadharCardNo || borrower.aadhaarNumber).slice(-4)}`
+      : 'Verified via DigiLocker');
 
   const panNumber =
     borrower.panCardNumber ||
     borrower.digilockerKyc?.panNumber ||
     borrower.panNumber ||
-    'ABCDE1234F';
+    'N/A';
 
   const creditScore = borrower.borrowerProfile?.creditScore || borrower.creditScore || 750;
   const riskGrade = borrower.borrowerProfile?.riskGrade || 'A Grade';
   const loans = borrower.loans || [];
 
   const totalLoansCount = borrower.totalLoansCount ?? loans.length;
-  const totalLoanAmount = borrower.totalLoanAmount ?? loans.reduce((s, l) => s + (Number(l.amount || l.loanAmount) || 0), 0);
-  const totalPaidAmount = borrower.totalPaidAmount ?? loans.reduce((s, l) => s + (Number(l.totalPaid) || 0), 0);
+  const totalLoanAmount =
+    borrower.totalLoanAmount ??
+    loans.reduce((s, l) => s + (Number(l.amount || l.loanAmount) || 0), 0);
+  const totalPaidAmount =
+    borrower.totalPaidAmount ??
+    loans.reduce((s, l) => s + (Number(l.totalPaid) || 0), 0);
   const totalRemainingAmount =
     borrower.totalRemainingAmount ??
-    loans.reduce((s, l) => s + (Number(l.remainingAmount ?? l.remainigAmount ?? l.amount) || 0), 0);
+    loans.reduce(
+      (s, l) =>
+        s + (Number(l.remainingAmount ?? l.remainigAmount ?? l.amount) || 0),
+      0
+    );
+
+  const repaymentPercent =
+    totalLoanAmount > 0
+      ? Math.min(100, Math.round((totalPaidAmount / totalLoanAmount) * 100))
+      : 0;
 
   const getStatusBadgeConfig = status => {
     const s = (status || '').toLowerCase();
     if (s === 'paid' || s === 'completed') {
-      return { bg: '#dcfce7', text: '#15803d', label: 'Paid' };
+      return { bg: '#DFF7E2', text: '#009B72', label: 'Paid' };
     }
     if (s === 'overdue') {
-      return { bg: '#fee2e2', text: '#b91c1c', label: 'Overdue' };
+      return { bg: '#FFEBEB', text: '#E02424', label: 'Overdue' };
     }
     if (s === 'part paid' || s === 'partially paid') {
-      return { bg: '#fef3c7', text: '#b45309', label: 'Part Paid' };
+      return { bg: '#FEF3C7', text: '#B45309', label: 'Part Paid' };
     }
-    return { bg: '#dbeafe', text: '#1d4ed8', label: status || 'Active' };
+    return { bg: '#E6F2FF', text: colors.blueButton, label: status || 'Active' };
   };
 
-  return (
-    <View style={styles.container}>
-      <Header title="Borrower Dossier" />
-
-      {detailsLoading && !refreshing && !selectedBorrower ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#2563eb" />
-          <Text style={styles.loadingText}>Fetching borrower credit profile...</Text>
-        </View>
-      ) : (
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563eb']} />
-          }
-        >
-          {/* Hero Profile Banner */}
-          <LinearGradient
-            colors={['#0f172a', '#1e293b', '#0f2942']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.heroBanner}
+  if (!borrowerId && !initialBorrower) {
+    return (
+      <ScreenWrapper
+        backgroundColor={colors.backgroundGreenWhite}
+        topInsetBg={colors.primary}
+        statusBarColor={colors.primary}
+        statusBarStyle="dark-content"
+      >
+        <View style={styles.topHeader}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
           >
-            <View style={styles.heroHeaderRow}>
-              <View style={styles.avatar}>
-                {borrower.profileImage ? (
-                  <Image source={{ uri: borrower.profileImage }} style={styles.avatarImg} />
-                ) : (
-                  <Text style={styles.avatarText}>
-                    {displayName
-                      .split(' ')
-                      .map((n) => n[0])
-                      .join('')
-                      .toUpperCase()
-                      .slice(0, 2)}
-                  </Text>
-                )}
-              </View>
+            <Feather name="arrow-left" size={m(22)} color={colors.white} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Borrower Dossier</Text>
+          <View style={styles.headerPlaceholder} />
+        </View>
+        <View style={styles.errorContainer}>
+          <Feather name="alert-circle" size={m(42)} color="#FF4D4F" />
+          <Text style={styles.errorText}>Borrower details not available</Text>
+        </View>
+      </ScreenWrapper>
+    );
+  }
 
-              <View style={styles.heroInfo}>
-                <View style={styles.nameBadgeRow}>
-                  <Text style={styles.heroName} numberOfLines={1}>
-                    {displayName}
-                  </Text>
-                  {isKycVerified ? (
-                    <View style={styles.verifiedHeroBadge}>
-                      <Icon name="check-circle" size={11} color="#22c55e" />
-                      <Text style={styles.verifiedHeroText}>Verified KYC</Text>
-                    </View>
-                  ) : (
-                    <View style={styles.unverifiedHeroBadge}>
-                      <Icon name="clock" size={11} color="#f59e0b" />
-                      <Text style={styles.unverifiedHeroText}>Pending KYC</Text>
-                    </View>
-                  )}
-                </View>
-                <Text style={styles.heroSubText}>
-                  ID: #{borrower._id?.slice(-8).toUpperCase() || 'NEW'} • Joined{' '}
-                  {formatDate(borrower.createdAt)}
-                </Text>
-              </View>
-            </View>
+  return (
+    <ScreenWrapper
+      backgroundColor={colors.backgroundGreenWhite}
+      topInsetBg={colors.primary}
+      statusBarColor={colors.primary}
+      statusBarStyle="dark-content"
+      includeTabBarClearance={false}
+      scrollable={false}
+    >
+      <View style={styles.pageGreenWrapper}>
+        {/* Fixed Non-scrolling Brand Green Header */}
+        <View style={styles.topHeader}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
+            <Feather name="arrow-left" size={m(22)} color={colors.white} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Borrower Dossier</Text>
+          <View style={styles.headerPlaceholder} />
+        </View>
 
-            {/* Quick Contact Row in Banner */}
-            <View style={styles.heroContactRow}>
-              <View style={styles.contactChip}>
-                <Icon name="phone" size={12} color="#93c5fd" />
-                <Text style={styles.contactChipText}>
-                  {borrower.mobileNo || borrower.mobileNumber || borrower.phone || 'N/A'}
-                </Text>
-              </View>
-              <View style={styles.contactChip}>
-                <Icon name="mail" size={12} color="#93c5fd" />
-                <Text style={styles.contactChipText}>{borrower.email || 'N/A'}</Text>
-              </View>
+        {/* Curved Sheet Container */}
+        <View style={styles.sheetSection}>
+          {detailsLoading && !refreshing && !selectedBorrower ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={styles.loadingText}>Fetching borrower credit profile...</Text>
             </View>
-          </LinearGradient>
+          ) : (
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  colors={[colors.primary]}
+                />
+              }
+            >
+              {/* ======================================================== */}
+              {/* 1. Executive Brand Hero Profile Card                     */}
+              {/* ======================================================== */}
+              <View style={styles.heroProfileCard}>
+                <View style={styles.heroProfileTop}>
+                  <View style={styles.heroAvatarCircle}>
+                    {borrower.profileImage ? (
+                      <Image
+                        source={{ uri: borrower.profileImage }}
+                        style={styles.heroAvatarImage}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <Text style={styles.heroAvatarText}>{initials}</Text>
+                    )}
+                  </View>
 
-          {/* Credit Rating Assessment Widget */}
-          <View style={styles.creditWidget}>
-            <View style={styles.creditWidgetHeader}>
-              <View style={styles.creditIconCircle}>
-                <Icon name="trending-up" size={18} color="#059669" />
-              </View>
-              <View style={styles.creditWidgetTitleArea}>
-                <Text style={styles.creditWidgetTitle}>Credit Rating Assessment</Text>
-                <Text style={styles.creditWidgetSub}>Verified bureau risk evaluation</Text>
-              </View>
-            </View>
-            <View style={styles.scoreRow}>
-              <View style={styles.scoreBlock}>
-                <Text style={styles.scoreNumber}>CIBIL {creditScore}</Text>
-                <Text style={styles.gradeText}>({riskGrade})</Text>
-              </View>
-              <View style={styles.scoreBadge}>
-                <Text style={styles.scoreBadgeText}>Low Default Risk</Text>
-              </View>
-            </View>
-          </View>
+                  <View style={styles.heroProfileInfo}>
+                    <Text style={styles.heroProfileName} numberOfLines={1}>
+                      {displayName}
+                    </Text>
+                    <Text style={styles.heroProfileSub} numberOfLines={1}>
+                      ID: #{borrower._id?.slice(-8).toUpperCase() || 'NEW'} • Joined{' '}
+                      {formatDate(borrower.createdAt)}
+                    </Text>
 
-          {/* Financial Exposure KPI Grid */}
-          <View style={styles.kpiGrid}>
-            <View style={styles.kpiCard}>
-              <Text style={styles.kpiLabel}>TOTAL FACILITIES</Text>
-              <Text style={styles.kpiValue}>
-                {totalLoansCount} {totalLoansCount === 1 ? 'Loan' : 'Loans'}
-              </Text>
-            </View>
-            <View style={styles.kpiCard}>
-              <Text style={styles.kpiLabel}>SANCTIONED BOOK</Text>
-              <Text style={[styles.kpiValue, { color: '#2563eb' }]}>
-                {formatCurrency(totalLoanAmount)}
-              </Text>
-            </View>
-            <View style={styles.kpiCard}>
-              <Text style={styles.kpiLabel}>TOTAL REPAID</Text>
-              <Text style={[styles.kpiValue, { color: '#16a34a' }]}>
-                {formatCurrency(totalPaidAmount)}
-              </Text>
-            </View>
-            <View style={styles.kpiCard}>
-              <Text style={styles.kpiLabel}>EXPOSURE AT RISK</Text>
-              <Text style={[styles.kpiValue, { color: '#d97706' }]}>
-                {formatCurrency(totalRemainingAmount)}
-              </Text>
-            </View>
-          </View>
+                    <View style={styles.heroBadgeRow}>
+                      <View style={styles.heroRoleBadge}>
+                        <Text style={styles.heroRoleBadgeText}>Borrower</Text>
+                      </View>
 
-          {/* DigiLocker KYC Credential Dossier */}
-          <View style={styles.sectionCard}>
-            <View style={styles.sectionHeader}>
-              <Icon name="shield" size={16} color="#2563eb" />
-              <Text style={styles.sectionTitle}>DigiLocker Identity Credentials</Text>
-            </View>
-
-            <View style={styles.dossierGrid}>
-              <View style={styles.dossierRow}>
-                <Text style={styles.dossierLabel}>Aadhaar Number</Text>
-                <Text style={styles.dossierValue}>{aadhaarNumber}</Text>
-              </View>
-              <View style={styles.dossierRow}>
-                <Text style={styles.dossierLabel}>PAN Identification</Text>
-                <Text style={styles.dossierValue}>{panNumber}</Text>
-              </View>
-              <View style={styles.dossierRow}>
-                <Text style={styles.dossierLabel}>Date of Birth</Text>
-                <Text style={styles.dossierValue}>
-                  {formatDate(borrower.digilockerKyc?.dob || borrower.dob || '1990-01-01')}
-                </Text>
-              </View>
-              <View style={styles.dossierRow}>
-                <Text style={styles.dossierLabel}>Gender</Text>
-                <Text style={styles.dossierValue}>
-                  {borrower.digilockerKyc?.gender || borrower.gender || 'Not specified'}
-                </Text>
-              </View>
-              <View style={styles.dossierRow}>
-                <Text style={styles.dossierLabel}>Permanent Address</Text>
-                <Text style={styles.dossierValue}>
-                  {borrower.address || borrower.digilockerKyc?.address || 'Verified DigiLocker address on file'}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Facilities & Historical Loans */}
-          <View style={styles.sectionCard}>
-            <View style={styles.sectionHeader}>
-              <Icon name="file-text" size={16} color="#7c3aed" />
-              <Text style={styles.sectionTitle}>
-                Borrower Facilities Ledger ({loans.length})
-              </Text>
-            </View>
-
-            {loans.length > 0 ? (
-              loans.map((loan, idx) => {
-                const config = getStatusBadgeConfig(loan.status);
-                const amount = loan.amount || loan.loanAmount || 0;
-                const purpose = loan.purpose || loan.type || loan.title || 'Commercial Facility';
-                const tenure = loan.tenure || loan.duration || '6 Mos';
-
-                return (
-                  <View key={loan._id || idx} style={styles.facilityItem}>
-                    <View style={styles.facilityHeader}>
-                      <Text style={styles.facilityPurpose}>{purpose}</Text>
-                      <Text style={styles.facilityAmount}>{formatCurrency(amount)}</Text>
-                    </View>
-                    <View style={styles.facilityMetaRow}>
-                      <Text style={styles.facilityMeta}>Tenure: {tenure}</Text>
-                      <View style={[styles.facilityBadge, { backgroundColor: config.bg }]}>
-                        <Text style={[styles.facilityBadgeText, { color: config.text }]}>
-                          {config.label}
+                      <View
+                        style={[
+                          styles.heroStatusBadge,
+                          { backgroundColor: isKycVerified ? '#FFFFFF' : '#FFF3CD' },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.heroStatusBadgeText,
+                            { color: isKycVerified ? '#009B72' : '#D97706' },
+                          ]}
+                        >
+                          {isKycVerified ? '● Verified KYC' : '● Pending KYC'}
                         </Text>
                       </View>
                     </View>
                   </View>
-                );
-              })
-            ) : (
-              <View style={styles.emptyLoanBox}>
-                <Icon name="file-text" size={32} color="#cbd5e1" />
-                <Text style={styles.emptyLoanText}>No facilities recorded yet for this borrower.</Text>
+                </View>
+
+                {/* Quick Contact Chips Row */}
+                {(borrower.mobileNo || borrower.mobileNumber || borrower.phone || borrower.email) ? (
+                  <View style={styles.heroContactRow}>
+                    {(borrower.mobileNo || borrower.mobileNumber || borrower.phone) ? (
+                      <View style={styles.heroContactChip}>
+                        <Feather name="phone" size={m(12)} color={colors.white} />
+                        <Text style={styles.heroContactText}>
+                          {borrower.mobileNo || borrower.mobileNumber || borrower.phone}
+                        </Text>
+                      </View>
+                    ) : null}
+                    {borrower.email ? (
+                      <View style={styles.heroContactChip}>
+                        <Feather name="mail" size={m(12)} color={colors.white} />
+                        <Text style={styles.heroContactText} numberOfLines={1}>
+                          {borrower.email}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+                ) : null}
+
+                {/* Integrated Credit Rating Assessment Bar */}
+                <View style={styles.heroCreditBar}>
+                  <View style={styles.heroCreditLeft}>
+                    <View style={styles.heroCreditIconBox}>
+                      <Feather name="trending-up" size={m(15)} color={colors.oceanBlueButton} />
+                    </View>
+                    <View>
+                      <Text style={styles.heroCreditScore}>CIBIL {creditScore}</Text>
+                      <Text style={styles.heroCreditGrade}>{riskGrade} Evaluation</Text>
+                    </View>
+                  </View>
+                  <View style={styles.heroCreditBadge}>
+                    <Text style={styles.heroCreditBadgeText}>Low Default Risk</Text>
+                  </View>
+                </View>
               </View>
-            )}
-          </View>
-        </ScrollView>
-      )}
-    </View>
+
+              {/* ======================================================== */}
+              {/* 2. Financial Facilities & Capital Exposure Showcase      */}
+              {/* ======================================================== */}
+              <View style={styles.sectionCard}>
+                <View style={styles.sectionHeader}>
+                  <View style={[styles.sectionIconBox, { backgroundColor: '#E6F2FF' }]}>
+                    <Feather name="pie-chart" size={m(16)} color={colors.blueButton} />
+                  </View>
+                  <View style={styles.sectionHeaderTitleArea}>
+                    <Text style={styles.sectionTitle}>Facilities & Exposure</Text>
+                    <Text style={styles.sectionSubtitle}>Aggregate lending limits & recovery</Text>
+                  </View>
+                </View>
+
+                {/* KPI Overview Grid */}
+                <View style={styles.kpiGrid}>
+                  <View style={styles.kpiCard}>
+                    <Text style={styles.kpiLabel}>TOTAL FACILITIES</Text>
+                    <Text style={styles.kpiValue}>
+                      {totalLoansCount} {totalLoansCount === 1 ? 'Loan' : 'Loans'}
+                    </Text>
+                  </View>
+                  <View style={styles.kpiCard}>
+                    <Text style={styles.kpiLabel}>SANCTIONED BOOK</Text>
+                    <Text style={[styles.kpiValue, { color: colors.blueButton }]}>
+                      {formatCurrency(totalLoanAmount)}
+                    </Text>
+                  </View>
+                  <View style={styles.kpiCard}>
+                    <Text style={styles.kpiLabel}>TOTAL REPAID</Text>
+                    <Text style={[styles.kpiValue, { color: '#00A87A' }]}>
+                      {formatCurrency(totalPaidAmount)}
+                    </Text>
+                  </View>
+                  <View style={styles.kpiCard}>
+                    <Text style={styles.kpiLabel}>EXPOSURE AT RISK</Text>
+                    <Text style={[styles.kpiValue, { color: '#E67E22' }]}>
+                      {formatCurrency(totalRemainingAmount)}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Capital Recovery Bar */}
+                <View style={styles.progressContainer}>
+                  <View style={styles.progressHeader}>
+                    <Text style={styles.progressLabel}>Capital Recovery Rate</Text>
+                    <Text style={styles.progressValue}>{repaymentPercent}%</Text>
+                  </View>
+                  <View style={styles.progressBarTrack}>
+                    <View
+                      style={[
+                        styles.progressBarFill,
+                        { width: `${repaymentPercent}%` },
+                      ]}
+                    />
+                  </View>
+                </View>
+              </View>
+
+              {/* ======================================================== */}
+              {/* 3. DigiLocker Identity Credentials Dossier               */}
+              {/* ======================================================== */}
+              <View style={styles.sectionCard}>
+                <View style={styles.sectionHeader}>
+                  <View style={[styles.sectionIconBox, { backgroundColor: '#DFF7E2' }]}>
+                    <Feather name="shield" size={m(16)} color="#009B72" />
+                  </View>
+                  <View style={styles.sectionHeaderTitleArea}>
+                    <Text style={styles.sectionTitle}>DigiLocker Identity</Text>
+                    <Text style={styles.sectionSubtitle}>Government verified KYC dossier</Text>
+                  </View>
+                  {isKycVerified ? (
+                    <View style={styles.verifiedMiniBadge}>
+                      <Feather name="check" size={m(12)} color="#00A87A" />
+                      <Text style={styles.verifiedMiniBadgeText}>Verified</Text>
+                    </View>
+                  ) : null}
+                </View>
+
+                <View style={styles.dossierContent}>
+                  <DetailRow
+                    label="Aadhaar Number"
+                    value={aadhaarNumber}
+                    icon="hash"
+                  />
+                  <DetailRow
+                    label="PAN Identification"
+                    value={panNumber}
+                    icon="credit-card"
+                  />
+                  <DetailRow
+                    label="Date of Birth"
+                    value={formatDate(borrower.digilockerKyc?.dob || borrower.dob || '1990-01-01')}
+                    icon="calendar"
+                  />
+                  <DetailRow
+                    label="Gender"
+                    value={borrower.digilockerKyc?.gender || borrower.gender || 'Not specified'}
+                    icon="user"
+                  />
+                  <DetailRow
+                    label="Permanent Address"
+                    value={
+                      borrower.address ||
+                      borrower.digilockerKyc?.address ||
+                      'Verified DigiLocker address on file'
+                    }
+                    icon="map-pin"
+                  />
+                </View>
+              </View>
+
+              {/* ======================================================== */}
+              {/* 4. Facilities & Historical Loans Ledger                  */}
+              {/* ======================================================== */}
+              <View style={styles.sectionCard}>
+                <View style={styles.sectionHeader}>
+                  <View style={[styles.sectionIconBox, { backgroundColor: '#F3E8FF' }]}>
+                    <Feather name="file-text" size={m(16)} color="#7C3AED" />
+                  </View>
+                  <View style={styles.sectionHeaderTitleArea}>
+                    <Text style={styles.sectionTitle}>
+                      Facilities Ledger ({loans.length})
+                    </Text>
+                    <Text style={styles.sectionSubtitle}>
+                      Underwritten active & settled contracts
+                    </Text>
+                  </View>
+                </View>
+
+                {loans.length > 0 ? (
+                  loans.map((loan, idx) => {
+                    const config = getStatusBadgeConfig(loan.status);
+                    const amount = loan.amount || loan.loanAmount || 0;
+                    const purpose =
+                      loan.purpose || loan.type || loan.title || 'Commercial Facility';
+                    const tenure = loan.tenure || loan.duration || '6 Mos';
+
+                    return (
+                      <View key={loan._id || idx} style={styles.facilityItem}>
+                        <View style={styles.facilityHeader}>
+                          <Text style={styles.facilityPurpose}>{purpose}</Text>
+                          <Text style={styles.facilityAmount}>
+                            {formatCurrency(amount)}
+                          </Text>
+                        </View>
+                        <View style={styles.facilityMetaRow}>
+                          <Text style={styles.facilityMeta}>Tenure: {tenure}</Text>
+                          <View
+                            style={[
+                              styles.facilityBadge,
+                              { backgroundColor: config.bg },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.facilityBadgeText,
+                                { color: config.text },
+                              ]}
+                            >
+                              {config.label}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                    );
+                  })
+                ) : (
+                  <View style={styles.emptyLoanBox}>
+                    <Feather
+                      name="file-text"
+                      size={m(32)}
+                      color={colors.textSecondary}
+                    />
+                    <Text style={styles.emptyLoanText}>
+                      No facilities recorded yet for this borrower.
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </ScrollView>
+          )}
+        </View>
+      </View>
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  pageGreenWrapper: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.primary,
+  },
+  topHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.primary,
+    paddingHorizontal: m(18),
+    paddingTop: m(12),
+    paddingBottom: m(16),
+  },
+  backBtn: {
+    width: m(36),
+    height: m(36),
+    borderRadius: m(18),
+    backgroundColor: 'rgba(9, 48, 48, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: m(19),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    textAlign: 'center',
+  },
+  headerPlaceholder: {
+    width: m(36),
+  },
+
+  // Curved Sheet
+  sheetSection: {
+    flex: 1,
+    backgroundColor: colors.backgroundGreenWhite,
+    borderTopLeftRadius: m(36),
+    borderTopRightRadius: m(36),
+    paddingTop: m(16),
   },
   scrollContent: {
-    padding: m(16),
+    paddingHorizontal: m(18),
     paddingBottom: m(90),
   },
-  heroBanner: {
-    borderRadius: m(16),
-    padding: m(18),
+
+  // Executive Hero Card in Ocean Blue (#0068FF)
+  heroProfileCard: {
+    backgroundColor: colors.oceanBlueButton,
+    borderRadius: m(22),
+    padding: m(16),
     marginBottom: m(14),
-    borderWidth: 1,
-    borderColor: '#1e293b',
+    shadowColor: colors.oceanBlueButton,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 4,
   },
-  heroHeaderRow: {
+  heroProfileTop: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  avatar: {
+  heroAvatarCircle: {
     width: m(54),
     height: m(54),
     borderRadius: m(27),
-    backgroundColor: '#1d4ed8',
-    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
     justifyContent: 'center',
+    alignItems: 'center',
     marginRight: m(14),
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+    overflow: 'hidden',
   },
-  avatarImg: {
+  heroAvatarImage: {
     width: '100%',
     height: '100%',
     borderRadius: m(27),
   },
-  avatarText: {
+  heroAvatarText: {
     fontSize: m(18),
-    fontWeight: '800',
-    color: '#ffffff',
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
   },
-  heroInfo: {
+  heroProfileInfo: {
     flex: 1,
   },
-  nameBadgeRow: {
+  heroProfileName: {
+    fontSize: m(17.5),
+    lineHeight: m(22),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
+  },
+  heroProfileSub: {
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryMedium,
+    color: 'rgba(255, 255, 255, 0.85)',
+    marginTop: m(2),
+  },
+  heroBadgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: m(8),
+    marginTop: m(8),
   },
-  heroName: {
-    fontSize: m(16),
-    fontWeight: '800',
-    color: '#ffffff',
-    flex: 1,
-    marginRight: m(8),
-  },
-  verifiedHeroBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+  heroRoleBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
     paddingHorizontal: m(8),
     paddingVertical: m(3),
     borderRadius: m(6),
-    borderWidth: 1,
-    borderColor: 'rgba(34, 197, 94, 0.4)',
-    gap: m(4),
   },
-  verifiedHeroText: {
-    fontSize: m(10),
-    fontWeight: '700',
-    color: '#86efac',
+  heroRoleBadgeText: {
+    fontSize: m(10.5),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.white,
   },
-  unverifiedHeroBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+  heroStatusBadge: {
     paddingHorizontal: m(8),
     paddingVertical: m(3),
     borderRadius: m(6),
-    borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.4)',
-    gap: m(4),
   },
-  unverifiedHeroText: {
-    fontSize: m(10),
-    fontWeight: '700',
-    color: '#fde68a',
-  },
-  heroSubText: {
-    fontSize: m(11),
-    color: '#94a3b8',
-    marginTop: m(3),
+  heroStatusBadgeText: {
+    fontSize: m(10.5),
+    fontFamily: FontFamily.primaryBold,
   },
   heroContactRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: m(8),
     marginTop: m(14),
-    paddingTop: m(10),
+    paddingTop: m(12),
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    borderTopColor: 'rgba(255, 255, 255, 0.22)',
   },
-  contactChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(5),
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    paddingHorizontal: m(10),
-    paddingVertical: m(4),
-    borderRadius: m(6),
-  },
-  contactChipText: {
-    fontSize: m(11),
-    color: '#cbd5e1',
-  },
-  creditWidget: {
-    backgroundColor: '#ffffff',
-    borderRadius: m(14),
-    padding: m(14),
-    marginBottom: m(14),
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  creditWidgetHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: m(8),
-  },
-  creditIconCircle: {
-    width: m(32),
-    height: m(32),
-    borderRadius: m(8),
-    backgroundColor: '#ecfdf5',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: m(10),
-  },
-  creditWidgetTitleArea: {
-    flex: 1,
-  },
-  creditWidgetTitle: {
-    fontSize: m(13),
-    fontWeight: '700',
-    color: '#0f172a',
-  },
-  creditWidgetSub: {
-    fontSize: m(11),
-    color: '#64748b',
-  },
-  scoreRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
-    borderRadius: m(10),
-    padding: m(10),
-  },
-  scoreBlock: {
+  heroContactChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: m(6),
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: m(10),
+    paddingVertical: m(5),
+    borderRadius: m(8),
   },
-  scoreNumber: {
-    fontSize: m(18),
-    fontWeight: '800',
-    color: '#0f172a',
+  heroContactText: {
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.white,
   },
-  gradeText: {
-    fontSize: m(12),
-    color: '#2563eb',
-    fontWeight: '700',
-  },
-  scoreBadge: {
-    backgroundColor: '#dcfce7',
-    paddingHorizontal: m(8),
-    paddingVertical: m(3),
-    borderRadius: m(6),
-  },
-  scoreBadgeText: {
-    fontSize: m(10),
-    fontWeight: '700',
-    color: '#15803d',
-  },
-  kpiGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: m(10),
-    marginBottom: m(14),
-  },
-  kpiCard: {
-    width: '48.5%',
-    backgroundColor: '#ffffff',
-    borderRadius: m(12),
-    padding: m(12),
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  kpiLabel: {
-    fontSize: m(10),
-    fontWeight: '700',
-    color: '#64748b',
-    letterSpacing: 0.3,
-    marginBottom: m(4),
-  },
-  kpiValue: {
-    fontSize: m(16),
-    fontWeight: '800',
-    color: '#0f172a',
-  },
-  sectionCard: {
-    backgroundColor: '#ffffff',
+  heroCreditBar: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: m(14),
-    padding: m(16),
+    paddingHorizontal: m(12),
+    paddingVertical: m(10),
+    marginTop: m(12),
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  heroCreditLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(10),
+  },
+  heroCreditIconBox: {
+    width: m(32),
+    height: m(32),
+    borderRadius: m(8),
+    backgroundColor: colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  heroCreditScore: {
+    fontSize: m(14),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
+  },
+  heroCreditGrade: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryMedium,
+    color: 'rgba(255, 255, 255, 0.88)',
+  },
+  heroCreditBadge: {
+    backgroundColor: colors.white,
+    paddingHorizontal: m(9),
+    paddingVertical: m(4),
+    borderRadius: m(8),
+  },
+  heroCreditBadgeText: {
+    fontSize: m(10.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.oceanBlueButton,
+  },
+
+  // Section Cards
+  sectionCard: {
+    backgroundColor: colors.white,
+    borderRadius: m(16),
+    padding: m(16),
     marginBottom: m(14),
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.08)',
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(8),
-    marginBottom: m(12),
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-    paddingBottom: m(8),
+    marginBottom: m(14),
+  },
+  sectionIconBox: {
+    width: m(32),
+    height: m(32),
+    borderRadius: m(10),
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: m(10),
+  },
+  sectionHeaderTitleArea: {
+    flex: 1,
   },
   sectionTitle: {
-    fontSize: m(14),
-    fontWeight: '700',
-    color: '#1e293b',
+    fontSize: m(14.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
-  dossierGrid: {
-    gap: m(10),
+  sectionSubtitle: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+    marginTop: m(1),
   },
-  dossierRow: {
+  verifiedMiniBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(3),
+    backgroundColor: '#DFF7E2',
+    paddingHorizontal: m(8),
+    paddingVertical: m(3),
+    borderRadius: m(6),
+  },
+  verifiedMiniBadgeText: {
+    fontSize: m(10.5),
+    fontFamily: FontFamily.primaryBold,
+    color: '#009B72',
+  },
+
+  // KPI Grid
+  kpiGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: m(8),
+  },
+  kpiCard: {
+    width: '48.5%',
+    backgroundColor: '#F8FAFC',
+    borderRadius: m(12),
+    padding: m(10),
+    borderWidth: 1,
+    borderColor: '#EDF2F7',
+  },
+  kpiLabel: {
+    fontSize: m(9.5),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.textSecondary,
+    letterSpacing: 0.3,
+    marginBottom: m(4),
+  },
+  kpiValue: {
+    fontSize: m(15),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  progressContainer: {
+    marginTop: m(14),
+    paddingTop: m(12),
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  progressHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: m(6),
   },
-  dossierLabel: {
+  progressLabel: {
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
+  },
+  progressValue: {
     fontSize: m(12),
-    color: '#64748b',
+    fontFamily: FontFamily.primaryBold,
+    color: '#00A87A',
+  },
+  progressBarTrack: {
+    height: m(6),
+    borderRadius: m(3),
+    backgroundColor: '#E2E8F0',
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#00D09E',
+    borderRadius: m(3),
+  },
+
+  // Detail Rows
+  dossierContent: {
+    gap: m(10),
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: m(4),
+  },
+  detailRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flex: 1,
+    paddingRight: m(8),
   },
-  dossierValue: {
+  detailIconBox: {
+    width: m(26),
+    height: m(26),
+    borderRadius: m(6),
+    backgroundColor: '#F1FFF3',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: m(8),
+  },
+  detailLabel: {
     fontSize: m(12),
-    fontWeight: '600',
-    color: '#0f172a',
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+  },
+  detailValue: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
     flex: 1,
     textAlign: 'right',
   },
+
+  // Facilities List
   facilityItem: {
-    backgroundColor: '#f8fafc',
-    borderRadius: m(8),
-    padding: m(10),
+    backgroundColor: '#F8FAFC',
+    borderRadius: m(12),
+    padding: m(12),
     marginBottom: m(8),
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#EDF2F7',
   },
   facilityHeader: {
     flexDirection: 'row',
@@ -604,13 +876,13 @@ const styles = StyleSheet.create({
   },
   facilityPurpose: {
     fontSize: m(13),
-    fontWeight: '700',
-    color: '#0f172a',
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
   facilityAmount: {
-    fontSize: m(13),
-    fontWeight: '800',
-    color: '#2563eb',
+    fontSize: m(13.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.blueButton,
   },
   facilityMetaRow: {
     flexDirection: 'row',
@@ -619,35 +891,53 @@ const styles = StyleSheet.create({
     marginTop: m(6),
   },
   facilityMeta: {
-    fontSize: m(11),
-    color: '#64748b',
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
   },
   facilityBadge: {
-    paddingHorizontal: m(6),
+    paddingHorizontal: m(7),
     paddingVertical: m(2),
     borderRadius: m(4),
   },
   facilityBadgeText: {
     fontSize: m(10),
-    fontWeight: '700',
+    fontFamily: FontFamily.primaryBold,
   },
   emptyLoanBox: {
-    paddingVertical: m(20),
+    paddingVertical: m(24),
     alignItems: 'center',
-    gap: m(6),
+    gap: m(8),
   },
   emptyLoanText: {
     fontSize: m(12),
-    color: '#94a3b8',
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
   },
-  centerContainer: {
+
+  // States
+  loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: m(60),
   },
   loadingText: {
-    marginTop: m(8),
+    marginTop: m(10),
     fontSize: m(13),
-    color: '#64748b',
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+  },
+  errorContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: m(60),
+  },
+  errorText: {
+    marginTop: m(10),
+    fontSize: m(14),
+    fontFamily: FontFamily.primaryMedium,
+    color: '#FF4D4F',
   },
 });

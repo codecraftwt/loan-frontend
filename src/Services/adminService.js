@@ -120,6 +120,25 @@ export const adminAPI = {
       throw error;
     }
   },
+
+  // Get borrowers & live lending portfolio by lender
+  getBorrowersByLender: async (lenderId, params = {}) => {
+    try {
+      const queryParams = new URLSearchParams();
+      if (params.page) queryParams.append('page', params.page.toString());
+      if (params.limit) queryParams.append('limit', (params.limit || 100).toString());
+      if (params.search) queryParams.append('search', params.search.trim());
+      if (params.status) queryParams.append('status', params.status);
+
+      const queryString = queryParams.toString();
+      const url = `admin/lenders/${lenderId}/borrowers${queryString ? `?${queryString}` : ''}`;
+      const response = await axiosInstance.get(url);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching borrowers by lender:', error);
+      throw error;
+    }
+  },
 };
 
 export default adminAPI;

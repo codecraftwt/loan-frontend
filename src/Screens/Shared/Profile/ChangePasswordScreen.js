@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,13 +10,12 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Feather';
-import LinearGradient from 'react-native-linear-gradient';
+import Feather from 'react-native-vector-icons/Feather';
 import Toast from 'react-native-toast-message';
-import { m } from 'walstar-rn-responsive';
-import Header from '../../../Components/Header';
+import { m } from '../../../Utils/responsive';
+import { colors, FontFamily } from '../../../constants';
+import { ScreenWrapper } from '../../../Components/common';
 import { userAPI } from '../../../Services/userService';
-import { FontFamily } from '../../../constants';
 
 const ChangePasswordScreen = ({ navigation }) => {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -28,7 +27,6 @@ const ChangePasswordScreen = ({ navigation }) => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const [focusedField, setFocusedField] = useState(null);
   const [submitted, setSubmitted] = useState(false);
 
   const newPasswordRef = useRef(null);
@@ -46,7 +44,7 @@ const ChangePasswordScreen = ({ navigation }) => {
     if (score <= 1) return { level: 1, label: 'Weak', color: '#EF4444' };
     if (score <= 2) return { level: 2, label: 'Fair', color: '#F59E0B' };
     if (score <= 3) return { level: 3, label: 'Good', color: '#3B82F6' };
-    return { level: 4, label: 'Strong', color: '#10B981' };
+    return { level: 4, label: 'Strong', color: '#00D09E' };
   };
 
   const passwordStrength = getPasswordStrength(newPassword);
@@ -103,7 +101,7 @@ const ChangePasswordScreen = ({ navigation }) => {
         setNewPassword('');
         setConfirmNewPassword('');
         setSubmitted(false);
-        setTimeout(() => navigation.goBack(), 1500);
+        setTimeout(() => navigation.goBack(), 1200);
       }
     } catch (error) {
       const message =
@@ -114,540 +112,485 @@ const ChangePasswordScreen = ({ navigation }) => {
     }
   };
 
-  const renderPasswordField = ({
-    label,
-    value,
-    setValue,
-    showPassword,
-    toggleShow,
-    iconName,
-    accentColor,
-    fieldKey,
-    nextRef,
-  }) => {
-    const isFocused = focusedField === fieldKey;
-    const isMatchField = fieldKey === 'confirm';
-    const showMatchIcon = isMatchField && confirmNewPassword.length > 0 && (passwordsMatch || submitted);
-
-    return (
-      <View
-        style={[
-          styles.fieldCard,
-          isFocused && { borderColor: accentColor, borderWidth: 1.5 },
-        ]}>
-        <View style={[styles.fieldIconCircle, { backgroundColor: `${accentColor}12` }]}>
-          <View style={[styles.fieldIconInner, { backgroundColor: `${accentColor}20` }]}>
-            <Icon name={iconName} size={20} color={accentColor} />
-          </View>
-        </View>
-
-        <View style={styles.fieldBody}>
-          <Text style={[styles.fieldLabel, isFocused && { color: accentColor }]}>{label}</Text>
-          <View style={styles.inputRow}>
-            <TextInput
-              style={styles.fieldInput}
-              value={value}
-              onChangeText={setValue}
-              placeholder={`Enter ${label.toLowerCase()}`}
-              placeholderTextColor="#C5C9D6"
-              secureTextEntry={!showPassword}
-              autoCapitalize="none"
-              onFocus={() => setFocusedField(fieldKey)}
-              onBlur={() => setFocusedField(null)}
-              returnKeyType={nextRef ? 'next' : 'done'}
-              onSubmitEditing={() => nextRef?.current?.focus()}
-              ref={
-                fieldKey === 'new'
-                  ? newPasswordRef
-                  : fieldKey === 'confirm'
-                  ? confirmPasswordRef
-                  : undefined
-              }
-            />
-            <View style={styles.inputActions}>
-              {showMatchIcon && (
-                <View style={[styles.matchBadge, { backgroundColor: passwordsMatch ? '#10B98118' : '#EF444418' }]}>
-                  <Icon
-                    name={passwordsMatch ? 'check' : 'x'}
-                    size={14}
-                    color={passwordsMatch ? '#10B981' : '#EF4444'}
-                  />
-                </View>
-              )}
-              <TouchableOpacity onPress={toggleShow} style={styles.eyeButton} activeOpacity={0.6}>
-                <Icon name={showPassword ? 'eye' : 'eye-off'} size={18} color={isFocused ? accentColor : '#B0B5C3'} />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </View>
-    );
-  };
-
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <Header title="Change Password" showBackButton />
+    <ScreenWrapper
+      backgroundColor={colors.backgroundGreenWhite}
+      topInsetBg={colors.primary}
+      statusBarColor={colors.primary}
+      statusBarStyle="dark-content"
+      includeTabBarClearance={false}
+      scrollable={false}
+    >
+      <KeyboardAvoidingView
+        style={styles.pageWrapper}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        {/* Fixed Top Mint Green Header */}
+        <View style={styles.topHeader}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
+            <Feather name="arrow-left" size={m(22)} color={colors.white} />
+          </TouchableOpacity>
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled">
+          <Text style={styles.headerTitle}>Change Password</Text>
 
-        {/* Hero Section */}
-        <View style={styles.heroSection}>
-          <LinearGradient
-            colors={['#FFF7ED', '#FFEDD5', '#FED7AA']}
-            style={styles.heroIconWrapper}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}>
-            <View style={styles.heroIconOuter}>
-              <LinearGradient
-                colors={['#ff9100ff', '#ffa200ff']}
-                style={styles.heroIconInner}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}>
-                <Icon name="shield" size={m(32)} color="#FFFFFF" />
-              </LinearGradient>
-            </View>
-          </LinearGradient>
-          <Text style={styles.heroTitle}>Secure Your Account</Text>
-          <Text style={styles.heroSubtitle}>
-            Keep your account protected by updating your password regularly
-          </Text>
+          <View style={styles.headerPlaceholder} />
         </View>
 
-        {/* Current Password Card */}
-        <View style={styles.sectionCard}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionDot} />
-            <Text style={styles.sectionTitle}>Verify Identity</Text>
-          </View>
-          {renderPasswordField({
-            label: 'Current Password',
-            value: currentPassword,
-            setValue: setCurrentPassword,
-            showPassword: showCurrentPassword,
-            toggleShow: () => setShowCurrentPassword(prev => !prev),
-            iconName: 'key',
-            accentColor: '#6366F1',
-            fieldKey: 'current',
-            nextRef: newPasswordRef,
-          })}
-        </View>
-
-        {/* New Password Card */}
-        <View style={styles.sectionCard}>
-          <View style={styles.sectionHeader}>
-            <View style={[styles.sectionDot, { backgroundColor: '#10B981' }]} />
-            <Text style={styles.sectionTitle}>Set New Password</Text>
-          </View>
-
-          {renderPasswordField({
-            label: 'New Password',
-            value: newPassword,
-            setValue: setNewPassword,
-            showPassword: showNewPassword,
-            toggleShow: () => setShowNewPassword(prev => !prev),
-            iconName: 'lock',
-            accentColor: '#10B981',
-            fieldKey: 'new',
-            nextRef: confirmPasswordRef,
-          })}
-
-          {/* Strength Indicator */}
-          {newPassword.length > 0 && (
-            <View style={styles.strengthSection}>
-              <View style={styles.strengthBarTrack}>
-                {[1, 2, 3, 4].map(i => (
-                  <View
-                    key={i}
-                    style={[
-                      styles.strengthBarSegment,
-                      {
-                        backgroundColor:
-                          i <= passwordStrength.level ? passwordStrength.color : '#E5E7EB',
-                      },
-                    ]}
-                  />
-                ))}
+        {/* Curved Sheet Container */}
+        <View style={styles.sheetSection}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Hero Security Icon */}
+            <View style={styles.heroSection}>
+              <View style={styles.heroOuterCircle}>
+                <View style={styles.heroInnerCircle}>
+                  <Feather name="shield" size={m(26)} color={colors.white} />
+                </View>
               </View>
-              <Text style={[styles.strengthLabel, { color: passwordStrength.color }]}>
-                {passwordStrength.label}
+              <Text style={styles.heroTitle}>Secure Your Account</Text>
+              <Text style={styles.heroSubtitle}>
+                Keep your account protected by updating your password regularly
               </Text>
             </View>
-          )}
 
-          {renderPasswordField({
-            label: 'Confirm New Password',
-            value: confirmNewPassword,
-            setValue: setConfirmNewPassword,
-            showPassword: showConfirmPassword,
-            toggleShow: () => setShowConfirmPassword(prev => !prev),
-            iconName: 'check-circle',
-            accentColor: '#F59E0B',
-            fieldKey: 'confirm',
-            nextRef: null,
-          })}
-
-          {passwordsMismatch && (
-            <View style={styles.mismatchRow}>
-              <Icon name="alert-circle" size={14} color="#EF4444" />
-              <Text style={styles.mismatchText}>Passwords do not match</Text>
-            </View>
-          )}
-        </View>
-
-        {/* Security Tips */}
-        <View style={styles.tipsCard}>
-          <View style={styles.tipsHeader}>
-            <Icon name="info" size={16} color="#6366F1" />
-            <Text style={styles.tipsTitle}>Password Tips</Text>
-          </View>
-          <View style={styles.tipsList}>
-            {[
-              { label: 'At least 8 characters long', met: hasMinLength },
-              { label: 'Mix uppercase & lowercase letters', met: hasMixedCase },
-              { label: 'Include numbers and symbols', met: hasNumberAndSymbol },
-            ].map((tip, i) => (
-              <View key={i} style={styles.tipItem}>
-                <View style={[styles.tipDot, { backgroundColor: tip.met ? '#10B981' : '#D1D5DB' }]} />
-                <Text style={[styles.tipText, { color: tip.met ? '#10B981' : '#6B7280' }]}>{tip.label}</Text>
+            {/* Form Fields - Pastel Mint Input Style */}
+            <View style={styles.formContainer}>
+              {/* Current Password */}
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Current Password *</Text>
+                <View style={styles.inputContainer}>
+                  <Feather
+                    name="key"
+                    size={m(16)}
+                    color={colors.lettersAndIcons}
+                    style={styles.inputIcon}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    value={currentPassword}
+                    onChangeText={setCurrentPassword}
+                    placeholder="Enter current password"
+                    placeholderTextColor="#7E9D86"
+                    secureTextEntry={!showCurrentPassword}
+                    autoCapitalize="none"
+                    returnKeyType="next"
+                    onSubmitEditing={() => newPasswordRef.current?.focus()}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowCurrentPassword(prev => !prev)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Feather
+                      name={showCurrentPassword ? 'eye' : 'eye-off'}
+                      size={m(17)}
+                      color={colors.lettersAndIcons}
+                    />
+                  </TouchableOpacity>
+                </View>
               </View>
-            ))}
-          </View>
-        </View>
 
-        {/* Action Buttons */}
-        <View style={styles.actionSection}>
-          <TouchableOpacity
-            style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
-            onPress={handleChangePassword}
-            activeOpacity={0.8}
-            disabled={loading}>
-            <LinearGradient
-              colors={loading ? ['#d1d5db', '#9ca3af'] : ['#ff9100ff', '#ffa200ff']}
-              style={styles.primaryButtonGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}>
-              {loading ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <>
-                  <Icon name="check-circle" size={20} color="#FFFFFF" />
-                  <Text style={styles.primaryButtonText}>Update Password</Text>
-                </>
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
+              {/* New Password */}
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>New Password *</Text>
+                <View style={styles.inputContainer}>
+                  <Feather
+                    name="lock"
+                    size={m(16)}
+                    color={colors.lettersAndIcons}
+                    style={styles.inputIcon}
+                  />
+                  <TextInput
+                    ref={newPasswordRef}
+                    style={styles.input}
+                    value={newPassword}
+                    onChangeText={setNewPassword}
+                    placeholder="Enter new password"
+                    placeholderTextColor="#7E9D86"
+                    secureTextEntry={!showNewPassword}
+                    autoCapitalize="none"
+                    returnKeyType="next"
+                    onSubmitEditing={() => confirmPasswordRef.current?.focus()}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowNewPassword(prev => !prev)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Feather
+                      name={showNewPassword ? 'eye' : 'eye-off'}
+                      size={m(17)}
+                      color={colors.lettersAndIcons}
+                    />
+                  </TouchableOpacity>
+                </View>
 
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={() => navigation.goBack()}
-            activeOpacity={0.8}
-            disabled={loading}>
-            <Text style={styles.secondaryButtonText}>Cancel</Text>
-          </TouchableOpacity>
+                {/* Password Strength Bar */}
+                {newPassword.length > 0 && (
+                  <View style={styles.strengthSection}>
+                    <View style={styles.strengthTrack}>
+                      {[1, 2, 3, 4].map(i => (
+                        <View
+                          key={i}
+                          style={[
+                            styles.strengthSegment,
+                            {
+                              backgroundColor:
+                                i <= passwordStrength.level ? passwordStrength.color : '#D5EBD7',
+                            },
+                          ]}
+                        />
+                      ))}
+                    </View>
+                    <Text style={[styles.strengthText, { color: passwordStrength.color }]}>
+                      {passwordStrength.label}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Confirm New Password */}
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Confirm New Password *</Text>
+                <View style={styles.inputContainer}>
+                  <Feather
+                    name="check-circle"
+                    size={m(16)}
+                    color={colors.lettersAndIcons}
+                    style={styles.inputIcon}
+                  />
+                  <TextInput
+                    ref={confirmPasswordRef}
+                    style={styles.input}
+                    value={confirmNewPassword}
+                    onChangeText={setConfirmNewPassword}
+                    placeholder="Re-enter new password"
+                    placeholderTextColor="#7E9D86"
+                    secureTextEntry={!showConfirmPassword}
+                    autoCapitalize="none"
+                    returnKeyType="done"
+                    onSubmitEditing={handleChangePassword}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowConfirmPassword(prev => !prev)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Feather
+                      name={showConfirmPassword ? 'eye' : 'eye-off'}
+                      size={m(17)}
+                      color={colors.lettersAndIcons}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                {passwordsMismatch && (
+                  <View style={styles.mismatchRow}>
+                    <Feather name="alert-circle" size={m(13)} color="#EF4444" />
+                    <Text style={styles.mismatchText}>Passwords do not match</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+
+            {/* Password Tips Checklist Card */}
+            <View style={styles.tipsCard}>
+              <View style={styles.tipsHeader}>
+                <Feather name="info" size={m(14)} color={colors.primary} />
+                <Text style={styles.tipsTitle}>Password Requirements</Text>
+              </View>
+              <View style={styles.tipsList}>
+                {[
+                  { label: 'At least 8 characters long', met: hasMinLength },
+                  { label: 'Mix uppercase & lowercase letters', met: hasMixedCase },
+                  { label: 'Include numbers and symbols', met: hasNumberAndSymbol },
+                ].map((tip, i) => (
+                  <View key={i} style={styles.tipItem}>
+                    <Feather
+                      name={tip.met ? 'check' : 'circle'}
+                      size={m(13)}
+                      color={tip.met ? colors.primary : '#94A3B8'}
+                    />
+                    <Text
+                      style={[
+                        styles.tipText,
+                        { color: tip.met ? colors.lettersAndIcons : '#64748B' },
+                      ]}
+                    >
+                      {tip.label}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            {/* Action Buttons: Mint Green Pill & Cancel */}
+            <View style={styles.actionSection}>
+              <TouchableOpacity
+                style={[styles.saveBtn, loading && styles.saveBtnDisabled]}
+                activeOpacity={0.85}
+                onPress={handleChangePassword}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator size="small" color={colors.lettersAndIcons} />
+                ) : (
+                  <Text style={styles.saveBtnText}>Update Password</Text>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                activeOpacity={0.7}
+                onPress={() => navigation.goBack()}
+                disabled={loading}
+              >
+                <Text style={styles.cancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </ScreenWrapper>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  pageWrapper: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.primary,
   },
-  scrollView: {
+
+  // Fixed Top Mint Green Header
+  topHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.primary,
+    paddingHorizontal: m(18),
+    paddingTop: m(12),
+    paddingBottom: m(16),
+  },
+  backBtn: {
+    width: m(36),
+    height: m(36),
+    borderRadius: m(18),
+    backgroundColor: 'rgba(9, 48, 48, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: m(19),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    textAlign: 'center',
+  },
+  headerPlaceholder: {
+    width: m(36),
+  },
+
+  // Curved Sheet
+  sheetSection: {
     flex: 1,
+    backgroundColor: colors.backgroundGreenWhite,
+    borderTopLeftRadius: m(36),
+    borderTopRightRadius: m(36),
+    paddingTop: m(16),
   },
   scrollContent: {
-    padding: m(16),
-    paddingBottom: m(120),
+    paddingHorizontal: m(18),
+    paddingBottom: m(90),
   },
 
-  /* ── Hero ── */
+  // Hero Section
   heroSection: {
     alignItems: 'center',
-    paddingVertical: m(24),
+    paddingVertical: m(14),
     marginBottom: m(8),
   },
-  heroIconWrapper: {
-    width: m(96),
-    height: m(96),
-    borderRadius: m(48),
+  heroOuterCircle: {
+    width: m(76),
+    height: m(76),
+    borderRadius: m(38),
+    backgroundColor: colors.lightGreen,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: m(18),
-  },
-  heroIconOuter: {
-    width: m(72),
-    height: m(72),
-    borderRadius: m(36),
-    backgroundColor: '#FFEDD5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  heroIconInner: {
-    width: m(56),
-    height: m(56),
-    borderRadius: m(28),
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#F97316',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  heroTitle: {
-    fontSize: m(22),
-    fontFamily: FontFamily.primaryExtraBold,
-    color: '#111827',
-    letterSpacing: 0.3,
-    marginBottom: m(6),
-  },
-  heroSubtitle: {
-    fontSize: m(13),
-    fontFamily: FontFamily.bodyRegular,
-    color: '#6B7280',
-    textAlign: 'center',
-    lineHeight: m(20),
-    paddingHorizontal: m(32),
-  },
-
-  /* ── Section Cards ── */
-  sectionCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(20),
-    padding: m(18),
-    marginBottom: m(14),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 3,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: m(16),
-    gap: m(10),
-  },
-  sectionDot: {
-    width: m(8),
-    height: m(8),
-    borderRadius: m(4),
-    backgroundColor: '#6366F1',
-  },
-  sectionTitle: {
-    fontSize: m(15),
-    fontFamily: FontFamily.primaryBold,
-    color: '#374151',
-    letterSpacing: 0.2,
-  },
-
-  /* ── Field Card ── */
-  fieldCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: m(14),
-    backgroundColor: '#F9FAFB',
-    borderRadius: m(16),
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    gap: m(14),
     marginBottom: m(12),
   },
-  fieldIconCircle: {
+  heroInnerCircle: {
     width: m(50),
     height: m(50),
     borderRadius: m(25),
+    backgroundColor: '#52A6FF',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#52A6FF',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    elevation: 3,
   },
-  fieldIconInner: {
-    width: m(40),
-    height: m(40),
-    borderRadius: m(20),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  fieldBody: {
-    flex: 1,
-  },
-  fieldLabel: {
-    fontSize: m(11),
-    color: '#9CA3AF',
+  heroTitle: {
+    fontSize: m(18),
     fontFamily: FontFamily.primaryBold,
-    marginBottom: m(6),
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    color: colors.lettersAndIcons,
+    marginBottom: m(4),
   },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: m(10),
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    paddingHorizontal: m(10),
-  },
-  fieldInput: {
-    flex: 1,
-    fontSize: m(15),
-    fontFamily: FontFamily.bodySemiBold,
-    color: '#111827',
-    paddingVertical: Platform.OS === 'ios' ? m(10) : m(8),
-  },
-  inputActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(4),
-  },
-  matchBadge: {
-    width: m(24),
-    height: m(24),
-    borderRadius: m(12),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  eyeButton: {
-    padding: m(6),
+  heroSubtitle: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#5A7A71',
+    textAlign: 'center',
+    lineHeight: m(17),
+    paddingHorizontal: m(20),
   },
 
-  /* ── Strength Indicator ── */
+  // Form Container
+  formContainer: {
+    marginTop: m(6),
+  },
+  fieldGroup: {
+    marginBottom: m(14),
+  },
+  fieldLabel: {
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    marginBottom: m(6),
+    marginLeft: m(4),
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.lightGreen,
+    borderRadius: m(18),
+    height: m(50),
+    paddingHorizontal: m(16),
+  },
+  inputIcon: {
+    marginRight: m(10),
+  },
+  input: {
+    flex: 1,
+    fontSize: m(14),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
+    padding: 0,
+  },
+
+  // Strength Bar
   strengthSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(10),
-    marginBottom: m(14),
+    justifyContent: 'space-between',
+    marginTop: m(6),
     paddingHorizontal: m(4),
   },
-  strengthBarTrack: {
+  strengthTrack: {
     flex: 1,
     flexDirection: 'row',
     gap: m(4),
+    marginRight: m(10),
   },
-  strengthBarSegment: {
+  strengthSegment: {
     flex: 1,
     height: m(4),
     borderRadius: m(2),
   },
-  strengthLabel: {
-    fontSize: m(11),
+  strengthText: {
+    fontSize: m(11.5),
     fontFamily: FontFamily.primaryBold,
-    letterSpacing: 0.5,
-    minWidth: m(44),
-    textAlign: 'right',
   },
 
-  /* ── Mismatch Warning ── */
+  // Mismatch
   mismatchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: m(6),
-    paddingHorizontal: m(4),
-    marginTop: m(-4),
+    marginTop: m(6),
+    marginLeft: m(4),
   },
   mismatchText: {
-    fontSize: m(12),
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryMedium,
     color: '#EF4444',
-    fontFamily: FontFamily.bodyMedium,
   },
 
-  /* ── Tips Card ── */
+  // Tips Card
   tipsCard: {
-    backgroundColor: '#F5F3FF',
+    backgroundColor: colors.white,
     borderRadius: m(16),
-    padding: m(16),
-    marginBottom: m(20),
+    padding: m(14),
+    marginTop: m(4),
+    marginBottom: m(18),
     borderWidth: 1,
-    borderColor: '#E0E0FF',
+    borderColor: 'rgba(9, 48, 48, 0.08)',
   },
   tipsHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: m(8),
-    marginBottom: m(12),
+    marginBottom: m(10),
   },
   tipsTitle: {
     fontSize: m(13),
     fontFamily: FontFamily.primaryBold,
-    color: '#6366F1',
-    letterSpacing: 0.3,
+    color: colors.lettersAndIcons,
   },
   tipsList: {
-    gap: m(8),
+    gap: m(6),
   },
   tipItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(10),
-  },
-  tipDot: {
-    width: m(7),
-    height: m(7),
-    borderRadius: m(3.5),
+    gap: m(8),
   },
   tipText: {
     fontSize: m(12),
-    fontFamily: FontFamily.bodyMedium,
+    fontFamily: FontFamily.primaryRegular,
   },
 
-  /* ── Action Buttons ── */
+  // Actions
   actionSection: {
-    gap: m(12),
-    paddingHorizontal: m(4),
-  },
-  primaryButton: {
-    borderRadius: m(16),
-    overflow: 'hidden',
-    shadowColor: '#F97316',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 6,
-  },
-  primaryButtonDisabled: {
-    opacity: 0.7,
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  primaryButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: m(56),
     gap: m(10),
+    marginTop: m(4),
   },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: m(16),
-    fontFamily: FontFamily.primaryBold,
-    letterSpacing: 0.3,
-  },
-  secondaryButton: {
-    alignItems: 'center',
+  saveBtn: {
+    backgroundColor: colors.primary,
+    height: m(50),
+    borderRadius: m(25),
     justifyContent: 'center',
-    height: m(48),
-    borderRadius: m(14),
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
+    alignItems: 'center',
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  secondaryButtonText: {
-    color: '#6B7280',
+  saveBtnDisabled: {
+    opacity: 0.65,
+  },
+  saveBtnText: {
     fontSize: m(15),
-    fontFamily: FontFamily.primarySemiBold,
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  cancelBtn: {
+    height: m(46),
+    borderRadius: m(23),
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: 'rgba(9, 48, 48, 0.15)',
+  },
+  cancelBtnText: {
+    fontSize: m(14),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
 });
 

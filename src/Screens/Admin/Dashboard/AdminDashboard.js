@@ -3,17 +3,16 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/Feather';
-import LinearGradient from 'react-native-linear-gradient';
+import Feather from 'react-native-vector-icons/Feather';
 import { useSelector, useDispatch } from 'react-redux';
-import { m } from 'walstar-rn-responsive';
-import Header from '../../../Components/Header';
+import { colors, FontFamily } from '../../../constants';
+import { m } from '../../../Utils/responsive';
+import { ScreenWrapper } from '../../../Components/common';
 import { getRevenueStatistics } from '../../../Redux/Slices/adminRevenueSlice';
 import { getAdminRecentActivities } from '../../../Redux/Slices/adminActivitiesSlice';
 
@@ -42,20 +41,29 @@ const formatRelativeTime = dateStr => {
   }
 };
 
+/**
+ * Get dynamic greeting based on time of day
+ */
+const getGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good Morning';
+  if (hour < 17) return 'Good Afternoon';
+  return 'Good Evening';
+};
+
 export default function AdminDashboard() {
   const navigation = useNavigation();
   const dispatch = useDispatch();
 
   // Redux state selectors
-  const user = useSelector(state => state.auth.user);
-  const { revenueData, loading: revenueLoading } = useSelector(
-    state => state.adminRevenue,
-  );
-  const { activities: recentActivities, loading: activitiesLoading } = useSelector(
-    state => state.adminActivities,
+  const user = useSelector(state => state.auth?.user);
+  const { revenueData } = useSelector(state => state.adminRevenue || {});
+  const { activities: recentActivities = [], loading: activitiesLoading } = useSelector(
+    state => state.adminActivities || {},
   );
 
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState('All');
 
   // Fetch data
   const fetchData = useCallback(() => {
@@ -86,608 +94,783 @@ export default function AdminDashboard() {
     };
   }, [revenueData]);
 
+  const displayName = user?.name || user?.userName || 'Admin';
+
   // Activity type icon configuration
   const getActivityConfig = useCallback((type) => {
     switch (type) {
       case 'subscription_purchased':
-        return { icon: 'shopping-cart', color: '#16a34a', bg: '#dcfce7', label: 'Subscription' };
+        return { icon: 'shopping-cart', label: 'Subscription', tag: 'Plan' };
       case 'plan_updated':
-        return { icon: 'edit-3', color: '#2563eb', bg: '#dbeafe', label: 'Plan Updated' };
+        return { icon: 'edit-3', label: 'Plan Updated', tag: 'Config' };
       case 'plan_created':
-        return { icon: 'plus-circle', color: '#7c3aed', bg: '#ede9fe', label: 'Plan Created' };
+        return { icon: 'plus-circle', label: 'Plan Created', tag: 'Tier' };
       case 'lender_registered':
-        return { icon: 'user-plus', color: '#0284c7', bg: '#e0f2fe', label: 'New Lender' };
+        return { icon: 'user-plus', label: 'New Lender', tag: 'KYC' };
       default:
-        return { icon: 'activity', color: '#0284c7', bg: '#e0f2fe', label: 'System Event' };
+        return { icon: 'activity', label: 'System Event', tag: 'Audit' };
     }
   }, []);
 
-  const displayName = user?.name || user?.userName || 'Admin';
+  // Filter activities based on tab
+  const filteredActivities = useMemo(() => {
+    if (!recentActivities || recentActivities.length === 0) return [];
+    if (selectedPeriod === 'All') return recentActivities.slice(0, 5);
+    if (selectedPeriod === 'Plans') {
+      return recentActivities
+        .filter(a => a.type?.includes('plan') || a.type?.includes('subscription'))
+        .slice(0, 5);
+    }
+    if (selectedPeriod === 'Lenders') {
+      return recentActivities
+        .filter(a => a.type?.includes('lender') || a.type?.includes('user'))
+        .slice(0, 5);
+    }
+    return recentActivities.slice(0, 5);
+  }, [recentActivities, selectedPeriod]);
 
   return (
-    <View style={styles.container}>
-      <Header title="System Console" />
-
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563eb']} />
-        }
-      >
-        {/* Enterprise Hero Banner */}
-        <LinearGradient
-          colors={['#090d16', '#0f172a', '#1e293b']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.heroBanner}
-        >
-          <View style={styles.heroBadgeRow}>
-            <View style={styles.consoleBadge}>
-              <View style={styles.pulseDot} />
-              <Text style={styles.consoleBadgeText}>Admin Console</Text>
-            </View>
-            <Text style={styles.enterpriseTag}>LoanHub Enterprise</Text>
+    <ScreenWrapper
+      backgroundColor={colors.backgroundGreenWhite}
+      topInsetBg={colors.primary}
+      statusBarColor={colors.primary}
+      statusBarStyle="dark-content"
+      includeTabBarClearance={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={[colors.lettersAndIcons]}
+        />
+      }
+    >
+      <View style={styles.pageGreenWrapper}>
+        {/* ======================================================== */}
+        {/* 1. TOP GREEN SECTION (Matching Figma Design)             */}
+        {/* ======================================================== */}
+        <View style={styles.topSection}>
+        {/* Greeting & Notification Row */}
+        <View style={styles.greetingRow}>
+          <View style={styles.greetingTextContainer}>
+            <Text style={styles.greetingTitle}>Hi, Welcome Back</Text>
+            <Text style={styles.greetingSubtitle}>
+              {getGreeting()}, {displayName}
+            </Text>
           </View>
 
-          <Text style={styles.heroTitle}>System Dashboard</Text>
-          <Text style={styles.heroSubtitle}>
-            Welcome back, {displayName}. Oversee institutional lenders, borrower KYC dossiers, and SaaS revenues.
-          </Text>
+          {/* White Circular Notification Button */}
+          <TouchableOpacity
+            style={styles.notificationBtn}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('AdminActivityDetailsScreen')}
+          >
+            <Feather name="bell" size={m(20)} color={colors.lettersAndIcons} />
+            <View style={styles.notificationDot} />
+          </TouchableOpacity>
+        </View>
 
-          {/* Banner Quick Actions */}
-          <View style={styles.heroActionsRow}>
-            <TouchableOpacity
-              style={styles.heroPrimaryBtn}
-              activeOpacity={0.85}
-              onPress={() => navigation.navigate('LenderList')}
-            >
-              <Icon name="users" size={14} color="#ffffff" />
-              <Text style={styles.heroPrimaryBtnText}>Manage Lenders</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.heroSecondaryBtn}
-              activeOpacity={0.85}
-              onPress={() => navigation.navigate('Revenue')}
-            >
-              <Icon name="trending-up" size={14} color="#e2e8f0" />
-              <Text style={styles.heroSecondaryBtnText}>Revenue Reports</Text>
-            </TouchableOpacity>
-          </View>
-        </LinearGradient>
-
-        {/* KPI Stats Grid */}
-        <View style={styles.kpiGrid}>
-          {/* Total Revenue */}
-          <View style={styles.kpiCard}>
-            <View style={styles.kpiHeader}>
-              <Text style={styles.kpiLabel}>TOTAL SAAS REVENUE</Text>
-              <View style={[styles.kpiIconBox, { backgroundColor: '#eff6ff' }]}>
-                <Icon name="trending-up" size={16} color="#2563eb" />
-              </View>
+        {/* 2-Column Summary Stats on Green */}
+        <View style={styles.topMetricsCard}>
+          {/* Left Column: Total SaaS Revenue */}
+          <View style={styles.metricColumn}>
+            <View style={styles.metricLabelRow}>
+              <Feather name="credit-card" size={m(13)} color={colors.lettersAndIcons} />
+              <Text style={styles.metricLabelText}>Total SaaS Revenue</Text>
             </View>
-            <Text style={styles.kpiValue} numberOfLines={1}>
+            <Text style={styles.metricValueWhite} numberOfLines={1}>
               {formatCurrency(summary.totalRevenue)}
             </Text>
           </View>
 
-          {/* Total Subscriptions */}
-          <View style={styles.kpiCard}>
-            <View style={styles.kpiHeader}>
-              <Text style={styles.kpiLabel}>TOTAL SUBSCRIPTIONS</Text>
-              <View style={[styles.kpiIconBox, { backgroundColor: '#f0fdf4' }]}>
-                <Icon name="shopping-cart" size={16} color="#16a34a" />
-              </View>
-            </View>
-            <Text style={styles.kpiValue} numberOfLines={1}>
-              {summary.totalPurchases.toLocaleString('en-IN')}
-            </Text>
-          </View>
+          {/* Vertical Divider Line */}
+          <View style={styles.metricDivider} />
 
-          {/* Average Deal Size */}
-          <View style={styles.kpiCard}>
-            <View style={styles.kpiHeader}>
-              <Text style={styles.kpiLabel}>AVERAGE DEAL SIZE</Text>
-              <View style={[styles.kpiIconBox, { backgroundColor: '#faf5ff' }]}>
-                <Icon name="dollar-sign" size={16} color="#7c3aed" />
-              </View>
+          {/* Right Column: Active Plans */}
+          <View style={styles.metricColumn}>
+            <View style={styles.metricLabelRow}>
+              <Feather name="layers" size={m(13)} color={colors.lettersAndIcons} />
+              <Text style={styles.metricLabelText}>Active Plans</Text>
             </View>
-            <Text style={styles.kpiValue} numberOfLines={1}>
-              {formatCurrency(Math.round(summary.avgRevenue))}
-            </Text>
-          </View>
-
-          {/* Active Plans */}
-          <View style={styles.kpiCard}>
-            <View style={styles.kpiHeader}>
-              <Text style={styles.kpiLabel}>ACTIVE PLANS</Text>
-              <View style={[styles.kpiIconBox, { backgroundColor: '#ecfeff' }]}>
-                <Icon name="check-circle" size={16} color="#0891b2" />
-              </View>
-            </View>
-            <Text style={styles.kpiValue} numberOfLines={1}>
-              {summary.activePlans.toLocaleString('en-IN')}
+            <Text style={styles.metricValueBlue} numberOfLines={1}>
+              {summary.activePlans} Tiers
             </Text>
           </View>
         </View>
 
-        {/* Core Management Hub Cards */}
-        <Text style={styles.sectionHeading}>Management Directory</Text>
-
-        <View style={styles.hubGrid}>
-          {/* Card 1: Lending Institutions */}
-          <View style={styles.hubCard}>
-            <View style={[styles.hubIconBox, { backgroundColor: '#eff6ff' }]}>
-              <Icon name="users" size={20} color="#2563eb" />
+        {/* Target Progress Pill */}
+        <View style={styles.progressContainer}>
+          <View style={styles.progressBarPill}>
+            <View style={styles.progressDarkTag}>
+              <Text style={styles.progressDarkText}>100%</Text>
             </View>
-            <Text style={styles.hubTitle}>Lending Institutions</Text>
-            <Text style={styles.hubDesc}>
-              Oversee registered private lending firms, inspect active subscriptions, and view lender portfolios.
-            </Text>
-            <TouchableOpacity
-              style={[styles.hubButton, { backgroundColor: '#eff6ff', borderColor: '#bfdbfe' }]}
-              activeOpacity={0.8}
-              onPress={() => navigation.navigate('LenderList')}
-            >
-              <Text style={[styles.hubButtonText, { color: '#1d4ed8' }]}>View All Lenders</Text>
-              <Icon name="arrow-right" size={14} color="#1d4ed8" />
-            </TouchableOpacity>
-          </View>
-
-          {/* Card 2: Borrowers Directory */}
-          <View style={styles.hubCard}>
-            <View style={[styles.hubIconBox, { backgroundColor: '#eef2ff' }]}>
-              <Icon name="shield" size={20} color="#4f46e5" />
-            </View>
-            <Text style={styles.hubTitle}>Borrowers Directory</Text>
-            <Text style={styles.hubDesc}>
-              Inspect registered borrowers, verified DigiLocker KYC credentials, and platform credit exposure.
-            </Text>
-            <TouchableOpacity
-              style={[styles.hubButton, { backgroundColor: '#eef2ff', borderColor: '#c7d2fe' }]}
-              activeOpacity={0.8}
-              onPress={() => navigation.navigate('AdminBorrowerList')}
-            >
-              <Text style={[styles.hubButtonText, { color: '#4338ca' }]}>View All Borrowers</Text>
-              <Icon name="arrow-right" size={14} color="#4338ca" />
-            </TouchableOpacity>
-          </View>
-
-          {/* Card 3: Subscription Tiers & Pricing */}
-          <View style={styles.hubCard}>
-            <View style={[styles.hubIconBox, { backgroundColor: '#f0fdfa' }]}>
-              <Icon name="layers" size={20} color="#0d9488" />
-            </View>
-            <Text style={styles.hubTitle}>Subscription Tiers & Pricing</Text>
-            <Text style={styles.hubDesc}>
-              Create, configure, and manage SaaS pricing plans, deal capacity quotas, and AI review credits.
-            </Text>
-            <TouchableOpacity
-              style={[styles.hubButton, { backgroundColor: '#f0fdfa', borderColor: '#99f6e4' }]}
-              activeOpacity={0.8}
-              onPress={() => navigation.navigate('PlansList')}
-            >
-              <Text style={[styles.hubButtonText, { color: '#0f766e' }]}>Manage Plans</Text>
-              <Icon name="arrow-right" size={14} color="#0f766e" />
-            </TouchableOpacity>
-          </View>
-
-          {/* Card 4: Financial Revenue Analytics */}
-          <View style={styles.hubCard}>
-            <View style={[styles.hubIconBox, { backgroundColor: '#ecfdf5' }]}>
-              <Icon name="trending-up" size={20} color="#059669" />
-            </View>
-            <Text style={styles.hubTitle}>Financial Revenue Analytics</Text>
-            <Text style={styles.hubDesc}>
-              Analyze platform billing breakdowns, monthly growth trajectories, and download auditor-ready ledger reports.
-            </Text>
-            <TouchableOpacity
-              style={[styles.hubButton, { backgroundColor: '#ecfdf5', borderColor: '#a7f3d0' }]}
-              activeOpacity={0.8}
-              onPress={() => navigation.navigate('Revenue')}
-            >
-              <Text style={[styles.hubButtonText, { color: '#047857' }]}>Open Analytics</Text>
-              <Icon name="arrow-right" size={14} color="#047857" />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Platform Audit & Subscription Events */}
-        <View style={styles.auditSection}>
-          <View style={styles.auditHeader}>
-            <View style={styles.auditHeaderLeft}>
-              <View style={styles.auditTitleRow}>
-                <Icon name="activity" size={16} color="#2563eb" />
-                <Text style={styles.auditTitle}>Platform Audit & Subscription Events</Text>
-              </View>
-              <Text style={styles.auditSubtitle}>
-                Live updates across plan upgrades, lender registrations, and system configurations.
+            <View style={styles.progressWhiteBar}>
+              <Text style={styles.progressWhiteText}>
+                {summary.totalPurchases} Subscriptions Active
               </Text>
             </View>
-            <TouchableOpacity
-              style={styles.viewLogsBtn}
-              activeOpacity={0.7}
-              onPress={() => navigation.navigate('AdminActivityDetailsScreen')}
-            >
-              <Text style={styles.viewLogsText}>View All Logs</Text>
-            </TouchableOpacity>
           </View>
 
-          {/* Activity List */}
-          {activitiesLoading && recentActivities.length === 0 ? (
-            <View style={styles.activityLoadingBox}>
-              <ActivityIndicator size="small" color="#2563eb" />
-              <Text style={styles.activityLoadingText}>Loading audit events...</Text>
-            </View>
-          ) : recentActivities.length > 0 ? (
-            <View style={styles.activityList}>
-              {recentActivities.slice(0, 6).map((item, idx) => {
-                const config = getActivityConfig(item.type || item.action);
-                const title = item.shortMessage || item.title || item.type || 'Platform Event';
-                const desc = item.message || item.description || item.details || 'Event logged successfully.';
-                const timeStr = item.relativeTime || formatRelativeTime(item.createdAt || item.timestamp);
-
-                return (
-                  <View
-                    key={item._id || item.id || idx}
-                    style={[
-                      styles.activityRow,
-                      idx < recentActivities.length - 1 && styles.activityRowBorder,
-                    ]}
-                  >
-                    <View style={[styles.activityIconCircle, { backgroundColor: config.bg }]}>
-                      <Icon name={config.icon} size={15} color={config.color} />
-                    </View>
-                    <View style={styles.activityBody}>
-                      <View style={styles.activityMetaRow}>
-                        <Text style={styles.activityItemTitle} numberOfLines={1}>
-                          {title}
-                        </Text>
-                        <Text style={styles.activityItemTime}>{timeStr}</Text>
-                      </View>
-                      <Text style={styles.activityItemDesc} numberOfLines={2}>
-                        {desc}
-                      </Text>
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
-          ) : (
-            <View style={styles.emptyActivityBox}>
-              <Icon name="check-circle" size={32} color="#cbd5e1" />
-              <Text style={styles.emptyActivityText}>No recent activity recorded yet.</Text>
-            </View>
-          )}
+          {/* Target caption */}
+          <View style={styles.progressCaptionRow}>
+            <Feather name="check-circle" size={m(14)} color={colors.lettersAndIcons} />
+            <Text style={styles.progressCaptionText}>
+              Platform SaaS operations active & healthy.
+            </Text>
+          </View>
         </View>
-      </ScrollView>
-    </View>
+      </View>
+
+      {/* ======================================================== */}
+      {/* 2. MAIN CURVED SHEET SECTION (#F1FFF3)                   */}
+      {/* ======================================================== */}
+      <View style={styles.sheetSection}>
+        {/* Feature Green Highlight Card */}
+        <View style={styles.featureCard}>
+          {/* Left Donut / Quota Circle */}
+          <View style={styles.featureLeftCol}>
+            <View style={styles.featureRingWrapper}>
+              <Feather name="briefcase" size={m(22)} color={colors.lettersAndIcons} />
+            </View>
+            <Text style={styles.featureRingLabel}>Institutional</Text>
+            <Text style={styles.featureRingSub}>Lenders Active</Text>
+          </View>
+
+          {/* Vertical Divider */}
+          <View style={styles.featureDivider} />
+
+          {/* Right Metrics Stack */}
+          <View style={styles.featureRightCol}>
+            {/* Row 1: Avg Deal Size */}
+            <View style={styles.featureStatItem}>
+              <View style={styles.featureStatIconBox}>
+                <Feather name="dollar-sign" size={m(16)} color={colors.lettersAndIcons} />
+              </View>
+              <View style={styles.featureStatTexts}>
+                <Text style={styles.featureStatLabel}>Average Deal Size</Text>
+                <Text style={styles.featureStatValue}>
+                  {formatCurrency(Math.round(summary.avgRevenue))}
+                </Text>
+              </View>
+            </View>
+
+            {/* Row 2: Total Purchases */}
+            <View style={[styles.featureStatItem, { marginTop: m(12) }]}>
+              <View style={styles.featureStatIconBox}>
+                <Feather name="shopping-bag" size={m(16)} color={colors.lettersAndIcons} />
+              </View>
+              <View style={styles.featureStatTexts}>
+                <Text style={styles.featureStatLabel}>Total Purchases</Text>
+                <Text style={styles.featureStatValue}>
+                  {summary.totalPurchases} Deals
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Period Filter Capsule Tabs */}
+        <View style={styles.periodCapsuleRow}>
+          {['All', 'Plans', 'Lenders'].map(period => {
+            const isSelected = selectedPeriod === period;
+            return (
+              <TouchableOpacity
+                key={period}
+                style={[
+                  styles.periodTab,
+                  isSelected && styles.periodTabActive,
+                ]}
+                onPress={() => setSelectedPeriod(period)}
+                activeOpacity={0.8}
+              >
+                <Text
+                  style={[
+                    styles.periodTabText,
+                    isSelected && styles.periodTabTextActive,
+                  ]}
+                >
+                  {period}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* Activity Feed Section */}
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>Recent Activities</Text>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('AdminActivityDetailsScreen')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.viewAllText}>View All</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Activity Items List (Matching Blue Icon Circles in Figma Design) */}
+        {activitiesLoading && recentActivities.length === 0 ? (
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="small" color={colors.lettersAndIcons} />
+            <Text style={styles.loadingText}>Loading activities...</Text>
+          </View>
+        ) : filteredActivities.length === 0 ? (
+          <View style={styles.emptyBox}>
+            <Feather name="inbox" size={m(28)} color={colors.textSecondary} />
+            <Text style={styles.emptyText}>No recent activity events found</Text>
+          </View>
+        ) : (
+          filteredActivities.map((act, index) => {
+            const cfg = getActivityConfig(act.type);
+            return (
+              <TouchableOpacity
+                key={act._id || act.id || index}
+                style={styles.activityItemCard}
+                activeOpacity={0.75}
+                onPress={() => navigation.navigate('AdminActivityDetailsScreen')}
+              >
+                {/* Vibrant Blue Circle Icon */}
+                <View style={styles.activityIconCircle}>
+                  <Feather name={cfg.icon} size={m(18)} color={colors.white} />
+                </View>
+
+                {/* Event Name & Timestamp */}
+                <View style={styles.activityMainCol}>
+                  <Text style={styles.activityTitleText} numberOfLines={1}>
+                    {act.description || act.title || cfg.label}
+                  </Text>
+                  <Text style={styles.activityTimeText}>
+                    {formatRelativeTime(act.createdAt)}
+                  </Text>
+                </View>
+
+                {/* Category Pill Tag */}
+                <View style={styles.categoryTag}>
+                  <Text style={styles.categoryTagText}>{cfg.tag}</Text>
+                </View>
+
+                {/* Status or Amount */}
+                <View style={styles.activityStatusCol}>
+                  <Text style={styles.activityStatusText}>
+                    {act.metadata?.amount
+                      ? formatCurrency(act.metadata.amount)
+                      : 'Logged'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })
+        )}
+
+        {/* Core Management Hub Shortcuts */}
+        <View style={[styles.sectionHeaderRow, { marginTop: m(22) }]}>
+          <Text style={styles.sectionTitle}>Management Directory</Text>
+        </View>
+
+        <View style={styles.hubGrid}>
+          {/* Hub 1: Lenders */}
+          <TouchableOpacity
+            style={styles.hubCard}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('Lenders')}
+          >
+            <View style={styles.hubCardTop}>
+              <View style={[styles.hubIconCircle, { backgroundColor: '#E6F2FF' }]}>
+                <Feather name="users" size={m(17)} color={colors.blueButton} />
+              </View>
+              <Feather name="arrow-up-right" size={m(15)} color={colors.textSecondary} />
+            </View>
+            <Text style={styles.hubTitle}>Lenders</Text>
+            <Text style={styles.hubSubtitle}>Institutions</Text>
+          </TouchableOpacity>
+
+          {/* Hub 2: Borrowers */}
+          <TouchableOpacity
+            style={styles.hubCard}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('Borrowers')}
+          >
+            <View style={styles.hubCardTop}>
+              <View style={[styles.hubIconCircle, { backgroundColor: '#E6F2FF' }]}>
+                <Feather name="shield" size={m(17)} color={colors.blueButton} />
+              </View>
+              <Feather name="arrow-up-right" size={m(15)} color={colors.textSecondary} />
+            </View>
+            <Text style={styles.hubTitle}>Borrowers</Text>
+            <Text style={styles.hubSubtitle}>KYC Dossiers</Text>
+          </TouchableOpacity>
+
+          {/* Hub 3: Plans */}
+          <TouchableOpacity
+            style={styles.hubCard}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('Plans')}
+          >
+            <View style={styles.hubCardTop}>
+              <View style={[styles.hubIconCircle, { backgroundColor: '#E6F2FF' }]}>
+                <Feather name="layers" size={m(17)} color={colors.blueButton} />
+              </View>
+              <Feather name="arrow-up-right" size={m(15)} color={colors.textSecondary} />
+            </View>
+            <Text style={styles.hubTitle}>Plans</Text>
+            <Text style={styles.hubSubtitle}>SaaS Pricing</Text>
+          </TouchableOpacity>
+
+          {/* Hub 4: Revenue */}
+          <TouchableOpacity
+            style={styles.hubCard}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('Revenue')}
+          >
+            <View style={styles.hubCardTop}>
+              <View style={[styles.hubIconCircle, { backgroundColor: '#E6F2FF' }]}>
+                <Feather name="trending-up" size={m(17)} color={colors.blueButton} />
+              </View>
+              <Feather name="arrow-up-right" size={m(15)} color={colors.textSecondary} />
+            </View>
+            <Text style={styles.hubTitle}>Revenue</Text>
+            <Text style={styles.hubSubtitle}>Analytics</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+      </View>
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
+  // ==========================================
+  // TOP GREEN SECTION
+  // ==========================================
+  pageGreenWrapper: {
+    backgroundColor: colors.primary,
   },
-  scrollView: {
-    flex: 1,
+  topSection: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: m(20),
+    paddingTop: m(14),
+    paddingBottom: m(22),
   },
-  scrollContent: {
-    padding: m(16),
-    paddingBottom: m(90),
-  },
-  heroBanner: {
-    borderRadius: m(16),
-    padding: m(18),
-    marginBottom: m(16),
-    borderWidth: 1,
-    borderColor: '#1e293b',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  heroBadgeRow: {
+  greetingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: m(10),
-  },
-  consoleBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(37, 99, 235, 0.2)',
-    paddingHorizontal: m(8),
-    paddingVertical: m(3),
-    borderRadius: m(12),
-    borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.4)',
-    gap: m(5),
-  },
-  pulseDot: {
-    width: m(6),
-    height: m(6),
-    borderRadius: m(3),
-    backgroundColor: '#60a5fa',
-  },
-  consoleBadgeText: {
-    fontSize: m(10),
-    fontWeight: '700',
-    color: '#93c5fd',
-    letterSpacing: 0.3,
-  },
-  enterpriseTag: {
-    fontSize: m(11),
-    fontWeight: '600',
-    color: '#94a3b8',
-  },
-  heroTitle: {
-    fontSize: m(20),
-    fontWeight: '800',
-    color: '#ffffff',
-    letterSpacing: -0.3,
-    marginBottom: m(4),
-  },
-  heroSubtitle: {
-    fontSize: m(12),
-    color: '#cbd5e1',
-    lineHeight: m(17),
-    marginBottom: m(14),
-  },
-  heroActionsRow: {
-    flexDirection: 'row',
-    gap: m(10),
-  },
-  heroPrimaryBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#2563eb',
-    paddingHorizontal: m(14),
-    paddingVertical: m(8),
-    borderRadius: m(8),
-    gap: m(6),
-  },
-  heroPrimaryBtnText: {
-    fontSize: m(12),
-    fontWeight: '700',
-    color: '#ffffff',
-  },
-  heroSecondaryBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.18)',
-    paddingHorizontal: m(14),
-    paddingVertical: m(8),
-    borderRadius: m(8),
-    gap: m(6),
-  },
-  heroSecondaryBtnText: {
-    fontSize: m(12),
-    fontWeight: '600',
-    color: '#e2e8f0',
-  },
-  kpiGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: m(10),
     marginBottom: m(18),
   },
-  kpiCard: {
-    width: '48.5%',
-    backgroundColor: '#ffffff',
-    borderRadius: m(12),
-    padding: m(12),
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 3,
-    elevation: 1,
+  greetingTextContainer: {
+    flex: 1,
+    paddingRight: m(12),
   },
-  kpiHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  greetingTitle: {
+    fontSize: m(22),
+    lineHeight: m(28),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    letterSpacing: -0.2,
+  },
+  greetingSubtitle: {
+    fontSize: m(13),
+    lineHeight: m(18),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
+    marginTop: m(2),
+    opacity: 0.9,
+  },
+  notificationBtn: {
+    width: m(44),
+    height: m(44),
+    borderRadius: m(22),
+    backgroundColor: colors.white,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: m(8),
+    elevation: 3,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
   },
-  kpiLabel: {
-    fontSize: m(10),
-    fontWeight: '700',
-    color: '#64748b',
-    letterSpacing: 0.3,
+  notificationDot: {
+    position: 'absolute',
+    top: m(10),
+    right: m(11),
+    width: m(8),
+    height: m(8),
+    borderRadius: m(4),
+    backgroundColor: colors.blueButton,
+  },
+
+  // 2-Column Summary Stats on Green
+  topMetricsCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: m(18),
+  },
+  metricColumn: {
     flex: 1,
   },
-  kpiIconBox: {
-    width: m(28),
-    height: m(28),
-    borderRadius: m(6),
+  metricLabelRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: m(4),
-  },
-  kpiValue: {
-    fontSize: m(18),
-    fontWeight: '800',
-    color: '#0f172a',
-    letterSpacing: -0.3,
-  },
-  sectionHeading: {
-    fontSize: m(14),
-    fontWeight: '700',
-    color: '#334155',
-    marginBottom: m(10),
-    marginLeft: m(2),
-  },
-  hubGrid: {
-    gap: m(12),
-    marginBottom: m(20),
-  },
-  hubCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: m(14),
-    padding: m(16),
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  hubIconBox: {
-    width: m(40),
-    height: m(40),
-    borderRadius: m(10),
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: m(10),
-  },
-  hubTitle: {
-    fontSize: m(15),
-    fontWeight: '700',
-    color: '#0f172a',
+    gap: m(6),
     marginBottom: m(4),
   },
-  hubDesc: {
+  metricLabelText: {
     fontSize: m(12),
-    color: '#64748b',
-    lineHeight: m(17),
-    marginBottom: m(12),
+    lineHeight: m(16),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
+    opacity: 0.9,
   },
-  hubButton: {
+  metricValueWhite: {
+    fontSize: m(24),
+    lineHeight: m(30),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
+    letterSpacing: -0.3,
+  },
+  metricValueBlue: {
+    fontSize: m(22),
+    lineHeight: m(28),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.oceanBlueButton,
+    letterSpacing: -0.3,
+  },
+  metricDivider: {
+    width: 1,
+    height: m(40),
+    backgroundColor: 'rgba(9, 48, 48, 0.2)',
+    marginHorizontal: m(16),
+  },
+
+  // Target Progress Pill
+  progressContainer: {
+    marginTop: m(2),
+  },
+  progressBarPill: {
     flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    borderRadius: m(20),
+    overflow: 'hidden',
+    height: m(36),
+  },
+  progressDarkTag: {
+    backgroundColor: colors.lettersAndIcons,
+    paddingHorizontal: m(14),
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  progressDarkText: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
+  },
+  progressWhiteBar: {
+    flex: 1,
+    paddingHorizontal: m(12),
+    justifyContent: 'center',
+  },
+  progressWhiteText: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primarySemiBold,
+    color: colors.lettersAndIcons,
+  },
+  progressCaptionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: m(8),
+    gap: m(6),
+  },
+  progressCaptionText: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
+    opacity: 0.9,
+  },
+
+  // ==========================================
+  // MAIN CURVED SHEET SECTION
+  // ==========================================
+  sheetSection: {
+    flex: 1,
+    backgroundColor: colors.backgroundGreenWhite,
+    borderTopLeftRadius: m(40),
+    borderTopRightRadius: m(40),
+    paddingHorizontal: m(18),
+    paddingTop: m(24),
+    paddingBottom: m(110),
+  },
+
+  // Feature Green Card
+  featureCard: {
+    backgroundColor: colors.primary,
+    borderRadius: m(24),
+    padding: m(18),
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: m(20),
+    elevation: 3,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+  },
+  featureLeftCol: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: m(8),
-    paddingHorizontal: m(12),
-    borderRadius: m(8),
-    borderWidth: 1,
-    gap: m(6),
-    alignSelf: 'flex-start',
+    paddingRight: m(14),
   },
-  hubButtonText: {
-    fontSize: m(12),
-    fontWeight: '700',
+  featureRingWrapper: {
+    width: m(54),
+    height: m(54),
+    borderRadius: m(27),
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    borderWidth: 2,
+    borderColor: colors.lettersAndIcons,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: m(6),
   },
-  auditSection: {
-    backgroundColor: '#ffffff',
-    borderRadius: m(14),
-    padding: m(16),
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    marginBottom: m(16),
+  featureRingLabel: {
+    fontSize: m(11.5),
+    lineHeight: m(15),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    textAlign: 'center',
   },
-  auditHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-    paddingBottom: m(12),
-    marginBottom: m(10),
+  featureRingSub: {
+    fontSize: m(10),
+    lineHeight: m(13),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.lettersAndIcons,
+    textAlign: 'center',
+    opacity: 0.85,
   },
-  auditHeaderLeft: {
+  featureDivider: {
+    width: 1,
+    height: '80%',
+    backgroundColor: 'rgba(9, 48, 48, 0.2)',
+    marginRight: m(16),
+  },
+  featureRightCol: {
     flex: 1,
-    marginRight: m(10),
+    justifyContent: 'center',
   },
-  auditTitleRow: {
+  featureStatItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(6),
   },
-  auditTitle: {
-    fontSize: m(13),
-    fontWeight: '700',
-    color: '#0f172a',
+  featureStatIconBox: {
+    width: m(34),
+    height: m(34),
+    borderRadius: m(10),
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: m(10),
   },
-  auditSubtitle: {
+  featureStatTexts: {
+    flex: 1,
+  },
+  featureStatLabel: {
     fontSize: m(11),
-    color: '#94a3b8',
-    marginTop: m(2),
     lineHeight: m(15),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
+    opacity: 0.85,
   },
-  viewLogsBtn: {
-    paddingHorizontal: m(10),
-    paddingVertical: m(5),
-    borderRadius: m(6),
-    backgroundColor: '#eff6ff',
-    borderWidth: 1,
-    borderColor: '#bfdbfe',
+  featureStatValue: {
+    fontSize: m(15),
+    lineHeight: m(20),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
-  viewLogsText: {
-    fontSize: m(11),
-    fontWeight: '700',
-    color: '#1d4ed8',
-  },
-  activityList: {
-    gap: m(2),
-  },
-  activityRow: {
+
+  // Period Tabs Capsule
+  periodCapsuleRow: {
     flexDirection: 'row',
-    paddingVertical: m(10),
-    alignItems: 'flex-start',
+    backgroundColor: colors.white,
+    borderRadius: m(24),
+    padding: m(4),
+    marginBottom: m(20),
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.08)',
   },
-  activityRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#f8fafc',
+  periodTab: {
+    flex: 1,
+    paddingVertical: m(8),
+    borderRadius: m(20),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  periodTabActive: {
+    backgroundColor: colors.primary,
+  },
+  periodTabText: {
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
+  },
+  periodTabTextActive: {
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+
+  // Section Headers
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: m(12),
+  },
+  sectionTitle: {
+    fontSize: m(16),
+    lineHeight: m(22),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  viewAllText: {
+    fontSize: m(13),
+    fontFamily: FontFamily.primarySemiBold,
+    color: colors.blueButton,
+  },
+
+  // Activity Feed Items (Matching Blue Circle Rows)
+  activityItemCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    borderRadius: m(18),
+    paddingVertical: m(12),
+    paddingHorizontal: m(14),
+    marginBottom: m(10),
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.06)',
+    elevation: 2,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
   },
   activityIconCircle: {
+    width: m(40),
+    height: m(40),
+    borderRadius: m(20),
+    backgroundColor: colors.blueButton, // #3299FF matching screenshot
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: m(12),
+  },
+  activityMainCol: {
+    flex: 1,
+    paddingRight: m(8),
+  },
+  activityTitleText: {
+    fontSize: m(13.5),
+    lineHeight: m(18),
+    fontFamily: FontFamily.primarySemiBold,
+    color: colors.lettersAndIcons,
+  },
+  activityTimeText: {
+    fontSize: m(11),
+    lineHeight: m(15),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+    marginTop: m(2),
+  },
+  categoryTag: {
+    paddingHorizontal: m(8),
+    paddingVertical: m(3),
+    borderRadius: m(8),
+    backgroundColor: colors.lightGreen,
+    marginRight: m(8),
+  },
+  categoryTagText: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
+  },
+  activityStatusCol: {
+    alignItems: 'flex-end',
+  },
+  activityStatusText: {
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+
+  // Loading & Empty States
+  loadingBox: {
+    paddingVertical: m(24),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+    marginTop: m(6),
+  },
+  emptyBox: {
+    paddingVertical: m(28),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.white,
+    borderRadius: m(18),
+  },
+  emptyText: {
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+    marginTop: m(8),
+  },
+
+  // Management Directory Grid - Compact Modern Cards
+  hubGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: m(10),
+  },
+  hubCard: {
+    width: '48.5%',
+    backgroundColor: colors.white,
+    borderRadius: m(16),
+    padding: m(12),
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.08)',
+    elevation: 2,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    minHeight: m(88),
+    justifyContent: 'space-between',
+  },
+  hubCardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: m(8),
+  },
+  hubIconCircle: {
     width: m(32),
     height: m(32),
     borderRadius: m(16),
-    alignItems: 'center',
     justifyContent: 'center',
-    marginRight: m(10),
-    marginTop: m(2),
-  },
-  activityBody: {
-    flex: 1,
-  },
-  activityMetaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  activityItemTitle: {
-    fontSize: m(12),
-    fontWeight: '700',
-    color: '#0f172a',
-    flex: 1,
+  hubTitle: {
+    fontSize: m(14),
+    lineHeight: m(18),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
-  activityItemTime: {
-    fontSize: m(10),
-    color: '#94a3b8',
-    marginLeft: m(6),
-  },
-  activityItemDesc: {
+  hubSubtitle: {
     fontSize: m(11),
-    color: '#64748b',
-    marginTop: m(2),
     lineHeight: m(15),
-  },
-  activityLoadingBox: {
-    paddingVertical: m(24),
-    alignItems: 'center',
-    gap: m(8),
-  },
-  activityLoadingText: {
-    fontSize: m(12),
-    color: '#64748b',
-  },
-  emptyActivityBox: {
-    paddingVertical: m(24),
-    alignItems: 'center',
-    gap: m(6),
-  },
-  emptyActivityText: {
-    fontSize: m(12),
-    color: '#94a3b8',
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+    marginTop: m(1),
   },
 });
