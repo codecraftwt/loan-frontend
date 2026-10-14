@@ -81,8 +81,22 @@ import LenderSettingsScreen from '../Screens/Lender/Settings/LenderSettingsScree
 const Navigation = () => {
   const Stack = createNativeStackNavigator();
   return (
-    <Stack.Navigator screenOptions={{headerShown: false}}>
-      <Stack.Screen name="SplashScreen" component={SplashScreen} />
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+        animation: 'slide_from_right',
+        animationDuration: 220,
+        gestureEnabled: true,
+        gestureDirection: 'horizontal',
+        freezeOnBlur: true,
+        detachInactiveScreens: true,
+      }}
+    >
+      <Stack.Screen
+        name="SplashScreen"
+        component={SplashScreen}
+        options={{ animation: 'fade' }}
+      />
       <Stack.Screen name="Login" component={Login} />
       <Stack.Screen name="Register" component={Register} />
       <Stack.Screen name="CreatePin" component={CreatePin} />

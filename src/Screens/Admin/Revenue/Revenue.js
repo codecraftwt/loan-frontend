@@ -418,7 +418,7 @@ export default function Revenue() {
             onPress={() => navigation.goBack()}
             activeOpacity={0.7}
           >
-            <Feather name="arrow-left" size={m(20)} color={colors.lettersAndIcons} />
+            <Feather name="arrow-left" size={m(20)} color={colors.white} />
           </TouchableOpacity>
 
           <Text style={styles.headerTitle}>Revenue Report</Text>

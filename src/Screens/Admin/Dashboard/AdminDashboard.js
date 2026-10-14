@@ -235,7 +235,7 @@ export default function AdminDashboard() {
             <Text style={styles.featureRingSub}>Lenders Active</Text>
           </View>
 
-          {/* Vertical Divider */}
+          {/* Vertical White Divider */}
           <View style={styles.featureDivider} />
 
           {/* Right Metrics Stack */}
@@ -253,8 +253,11 @@ export default function AdminDashboard() {
               </View>
             </View>
 
+            {/* Horizontal White Divider */}
+            <View style={styles.featureHorizontalDivider} />
+
             {/* Row 2: Total Purchases */}
-            <View style={[styles.featureStatItem, { marginTop: m(12) }]}>
+            <View style={styles.featureStatItem}>
               <View style={styles.featureStatIconBox}>
                 <Feather name="shopping-bag" size={m(16)} color={colors.lettersAndIcons} />
               </View>
@@ -535,9 +538,9 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   metricDivider: {
-    width: 1,
+    width: 1.5,
     height: m(40),
-    backgroundColor: 'rgba(9, 48, 48, 0.2)',
+    backgroundColor: colors.white,
     marginHorizontal: m(16),
   },
 
@@ -618,15 +621,15 @@ const styles = StyleSheet.create({
   featureLeftCol: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingRight: m(14),
+    paddingHorizontal: m(2),
   },
   featureRingWrapper: {
     width: m(54),
     height: m(54),
     borderRadius: m(27),
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-    borderWidth: 2,
-    borderColor: colors.lettersAndIcons,
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
+    borderWidth: 2.5,
+    borderColor: colors.blueButton,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: m(6),
@@ -647,10 +650,16 @@ const styles = StyleSheet.create({
     opacity: 0.85,
   },
   featureDivider: {
-    width: 1,
-    height: '80%',
-    backgroundColor: 'rgba(9, 48, 48, 0.2)',
-    marginRight: m(16),
+    width: 1.5,
+    height: '85%',
+    backgroundColor: colors.white,
+    marginHorizontal: m(12),
+  },
+  featureHorizontalDivider: {
+    height: 1.5,
+    backgroundColor: colors.white,
+    marginVertical: m(8),
+    width: '100%',
   },
   featureRightCol: {
     flex: 1,

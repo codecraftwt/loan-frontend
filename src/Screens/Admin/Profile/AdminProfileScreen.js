@@ -13,7 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
 import { m } from '../../../Utils/responsive';
 import { colors, FontFamily } from '../../../constants';
-import { ScreenWrapper } from '../../../Components/common';
+import { ScreenWrapper, showCustomAlert } from '../../../Components/common';
 import { logout } from '../../../Redux/Slices/authslice';
 
 export default function AdminProfileScreen() {
@@ -37,24 +37,20 @@ export default function AdminProfileScreen() {
     .slice(0, 2) || 'JS';
 
   const handleLogout = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out of the Admin Console?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Sign Out',
-          style: 'destructive',
-          onPress: async () => {
-            await dispatch(logout());
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'Login' }],
-            });
-          },
-        },
-      ]
-    );
+    showCustomAlert({
+      title: 'Sign Out',
+      subtitle: 'Are you sure you want to log out?',
+      message: 'Are you sure you want to sign out of the Admin Console?',
+      confirmText: 'Sign Out',
+      cancelText: 'Cancel',
+      onConfirm: async () => {
+        await dispatch(logout());
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        });
+      },
+    });
   };
 
   const menuItems = [
@@ -110,9 +106,8 @@ export default function AdminProfileScreen() {
       scrollable={false}
     >
       <View style={styles.pageWrapper}>
-        {/* Fixed Header Bar with Centered Profile Title & Edit Profile Button */}
+        {/* Fixed Header Bar with Left-aligned Profile Title & Edit Profile Button */}
         <View style={styles.headerBar}>
-          <View style={styles.headerPlaceholder} />
           <Text style={styles.headerTitle}>Profile</Text>
           <TouchableOpacity
             style={styles.editHeaderBtn}
@@ -207,7 +202,7 @@ const styles = StyleSheet.create({
     fontSize: m(19),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
-    textAlign: 'center',
+    textAlign: 'left',
   },
   editHeaderBtn: {
     width: m(36),

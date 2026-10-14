@@ -6,6 +6,7 @@ import {NavigationContainer} from '@react-navigation/native';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import {toastConfig} from './src/Utils/toastConfig';
+import {CustomAlertModal} from './src/Components/common';
 import {Provider, useSelector, useDispatch} from 'react-redux';
 import store from './src/Redux/store/store';
 import NotificationService from './src/Services/NotificationService';
@@ -96,6 +97,7 @@ function AppContent() {
       <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
       <Navigation />
       <Toast config={toastConfig} />
+      <CustomAlertModal />
     </NavigationContainer>
   );
 }

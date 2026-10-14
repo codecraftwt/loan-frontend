@@ -1,4 +1,4 @@
-import { Platform, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View, Dimensions, TouchableOpacity } from 'react-native';
 import React, { useMemo } from 'react';
 import Feather from 'react-native-vector-icons/Feather';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -54,18 +54,52 @@ export default function BottomNavigation() {
 
   // Get safe area values
   const insets = useSafeAreaInsets();
+  const bottomInset =
+    Platform.OS === 'ios'
+      ? Math.max(insets.bottom, m(12))
+      : Math.max(insets.bottom, m(8));
+  const barHeight = m(66) + bottomInset;
 
   const renderIcon = (name, color, size, focused) => {
     return (
       <View style={[styles.iconWrapper, focused && styles.activeIconWrapper]}>
         <Feather
           name={name}
-          size={focused ? m(22) : m(21)}
-          color={focused ? colors.white : colors.lettersAndIcons}
+          size={m(23)}
+          color={colors.lettersAndIcons}
         />
       </View>
     );
   };
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+// Smooth horizontal slide animation between tabs (right-to-left forward, left-to-right backward)
+const tabSlideInterpolator = ({ current }) => {
+  return {
+    sceneStyle: {
+      opacity: current.progress.interpolate({
+        inputRange: [-1, -0.6, 0, 0.6, 1],
+        outputRange: [0, 0.7, 1, 0.7, 0],
+      }),
+      transform: [
+        {
+          translateX: current.progress.interpolate({
+            inputRange: [-1, 0, 1],
+            outputRange: [-SCREEN_WIDTH, 0, SCREEN_WIDTH],
+          }),
+        },
+      ],
+    },
+  };
+};
+
+const tabTransitionSpec = {
+  animation: 'timing',
+  config: {
+    duration: 220,
+  },
+};
 
   const tabScreenOptions = {
     headerShown: false,
@@ -75,15 +109,24 @@ export default function BottomNavigation() {
     tabBarInactiveTintColor: colors.lettersAndIcons,
     tabBarIconStyle: styles.tabBarIcon,
     tabBarItemStyle: styles.tabBarItem,
+    tabBarButton: props => (
+      <TouchableOpacity
+        {...props}
+        activeOpacity={0.8}
+      />
+    ),
+    sceneStyle: { backgroundColor: colors.backgroundGreenWhite },
+    lazy: true,
+    freezeOnBlur: true,
+    detachInactiveScreens: true,
+    animation: 'shift',
+    sceneStyleInterpolator: tabSlideInterpolator,
+    transitionSpec: tabTransitionSpec,
     tabBarStyle: [
       styles.tabBar,
       {
-        paddingTop: 0,
-        paddingBottom: 0,
-        bottom:
-          Platform.OS === 'ios'
-            ? Math.max(insets.bottom, m(12))
-            : Math.max(insets.bottom + m(8), m(16)),
+        height: barHeight,
+        paddingBottom: bottomInset,
       },
     ],
   };
@@ -261,29 +304,30 @@ export default function BottomNavigation() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: colors.backgroundGreenWhite,
   },
   tabBar: {
     position: 'absolute',
-    left: m(18),
-    right: m(18),
-    height: m(64),
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: colors.lightGreen,
+    borderTopLeftRadius: m(36),
+    borderTopRightRadius: m(36),
     borderTopWidth: 0,
-    borderRadius: m(32),
-    paddingHorizontal: m(6),
-    paddingTop: 0,
-    paddingBottom: 0,
-    elevation: 14,
+    borderWidth: 0,
+    paddingHorizontal: m(10),
+    elevation: 16,
     shadowColor: colors.lettersAndIcons,
     shadowOffset: {
       width: 0,
-      height: m(6),
+      height: -m(4),
     },
-    shadowOpacity: 0.15,
-    shadowRadius: m(12),
+    shadowOpacity: 0.08,
+    shadowRadius: m(10),
   },
   tabBarItem: {
-    height: m(64),
+    height: m(66),
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: 0,
@@ -300,13 +344,14 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   iconWrapper: {
-    width: m(44),
-    height: m(44),
-    borderRadius: m(22),
+    width: m(48),
+    height: m(48),
+    borderRadius: m(16),
     justifyContent: 'center',
     alignItems: 'center',
   },
   activeIconWrapper: {
-    backgroundColor: colors.lettersAndIcons,
+    backgroundColor: colors.primary,
+    borderRadius: m(16),
   },
 });

@@ -1,9 +1,11 @@
-/**
- * @format
- */
 import { AppRegistry } from 'react-native';
+import { enableScreens, enableFreeze } from 'react-native-screens';
 import App from './App';
 import { name as appName } from './app.json';
+
+// Optimize performance: use native view hierarchies and freeze background screens
+enableScreens(true);
+enableFreeze(true);
 
 // Import Firebase app first to ensure it's initialized
 import '@react-native-firebase/app';

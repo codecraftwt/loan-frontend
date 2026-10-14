@@ -5,3 +5,9 @@ export { default as StatCard } from './StatCard';
 export { default as SearchFilterBar } from './SearchFilterBar';
 export { default as StatusBadge } from './StatusBadge';
 export { default as CustomButton } from './CustomButton';
+export {
+  default as CustomAlertModal,
+  showCustomAlert,
+  closeCustomAlert,
+  alertService,
+} from './CustomAlertModal';
