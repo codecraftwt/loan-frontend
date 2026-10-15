@@ -11,7 +11,7 @@ import {
 import Feather from 'react-native-vector-icons/Feather';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { colors, FontFamily } from '../../../constants';
-import { m } from '../../../Utils/responsive';
+import { m, vms, spacing, radius, typography } from '../../../Utils/responsive';
 import { ScreenWrapper } from '../../../Components/common';
 import { adminAPI } from '../../../Services/adminService';
 
@@ -408,13 +408,28 @@ export default function LenderDetailsScreen() {
                   {/* 2. Active Deals */}
                   <View style={[styles.portfolioMetricCard, styles.portfolioDualCol]}>
                     <View style={styles.portfolioMetricTop}>
-                      <Feather name="activity" size={m(14)} color={colors.blueButton} />
-                      <Text style={styles.portfolioMetricLabel}>ACTIVE DEALS</Text>
+                      <Feather name="activity" size={m(13)} color={colors.blueButton} />
+                      <Text
+                        style={styles.portfolioMetricLabel}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit={true}
+                        minimumFontScale={0.75}
+                      >
+                        ACTIVE DEALS
+                      </Text>
                     </View>
-                    <Text style={styles.portfolioMetricValue}>
+                    <Text
+                      style={styles.portfolioMetricValue}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit={true}
+                      minimumFontScale={0.8}
+                    >
                       {activeLoans} Active
                     </Text>
-                    <Text style={[styles.portfolioMetricSub, { color: '#00D09E' }]}>
+                    <Text
+                      style={[styles.portfolioMetricSub, { color: '#00D09E' }]}
+                      numberOfLines={1}
+                    >
                       {paidLoans} closed & repaid
                     </Text>
                   </View>
@@ -422,13 +437,28 @@ export default function LenderDetailsScreen() {
                   {/* 3. Recovered Capital */}
                   <View style={[styles.portfolioMetricCard, styles.portfolioDualCol]}>
                     <View style={styles.portfolioMetricTop}>
-                      <Feather name="check-circle" size={m(14)} color="#8B5CF6" />
-                      <Text style={styles.portfolioMetricLabel}>RECOVERED CAPITAL</Text>
+                      <Feather name="check-circle" size={m(13)} color="#8B5CF6" />
+                      <Text
+                        style={styles.portfolioMetricLabel}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit={true}
+                        minimumFontScale={0.75}
+                      >
+                        RECOVERED CAPITAL
+                      </Text>
                     </View>
-                    <Text style={styles.portfolioMetricValue}>
+                    <Text
+                      style={styles.portfolioMetricValue}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit={true}
+                      minimumFontScale={0.8}
+                    >
                       {formatCurrency(totalPaid)}
                     </Text>
-                    <Text style={styles.portfolioMetricSub}>
+                    <Text
+                      style={styles.portfolioMetricSub}
+                      numberOfLines={1}
+                    >
                       {formatCurrency(totalRemaining)} remaining
                     </Text>
                   </View>
@@ -898,37 +928,44 @@ const styles = StyleSheet.create({
   portfolioMetricCard: {
     backgroundColor: '#F8FAFC',
     borderRadius: m(12),
-    padding: m(12),
+    paddingVertical: m(10),
+    paddingHorizontal: m(10),
     borderWidth: 1,
     borderColor: 'rgba(9, 48, 48, 0.06)',
+    overflow: 'hidden',
   },
   portfolioMetricTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(5),
+    gap: m(4),
     marginBottom: m(4),
   },
   portfolioMetricLabel: {
-    fontSize: m(10),
+    flex: 1,
+    fontSize: m(9),
     fontFamily: FontFamily.primaryBold,
     color: colors.textSecondary,
-    letterSpacing: 0.3,
+    letterSpacing: 0.1,
+    includeFontPadding: false,
   },
   portfolioMetricValue: {
-    fontSize: m(16),
-    lineHeight: m(22),
+    fontSize: m(15),
+    lineHeight: m(20),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
+    includeFontPadding: false,
   },
   portfolioMetricSub: {
-    fontSize: m(10.5),
+    fontSize: m(10),
+    lineHeight: m(14),
     fontFamily: FontFamily.primaryMedium,
     color: colors.textSecondary,
     marginTop: m(2),
+    includeFontPadding: false,
   },
   portfolioDualRow: {
     flexDirection: 'row',
-    gap: m(10),
+    gap: m(8),
   },
   portfolioDualCol: {
     flex: 1,

@@ -1,25 +1,27 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   Image,
+  Modal,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { m } from '../../../Utils/responsive';
 import { colors, FontFamily } from '../../../constants';
-import { ScreenWrapper, showCustomAlert } from '../../../Components/common';
+import { ScreenWrapper } from '../../../Components/common';
 import { logout } from '../../../Redux/Slices/authslice';
 
 export default function AdminProfileScreen() {
   const navigation = useNavigation();
   const dispatch = useDispatch();
   const user = useSelector((state) => state.auth.user);
+  const [logoutModalVisible, setLogoutModalVisible] = useState(false);
 
   const displayName = user?.name || user?.userName || 'John Smith';
   const displayId =
@@ -36,21 +38,26 @@ export default function AdminProfileScreen() {
     .toUpperCase()
     .slice(0, 2) || 'JS';
 
-  const handleLogout = () => {
-    showCustomAlert({
-      title: 'Sign Out',
-      subtitle: 'Are you sure you want to log out?',
-      message: 'Are you sure you want to sign out of the Admin Console?',
-      confirmText: 'Sign Out',
-      cancelText: 'Cancel',
-      onConfirm: async () => {
-        await dispatch(logout());
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'Login' }],
-        });
-      },
-    });
+  const handleLogoutPress = () => {
+    setLogoutModalVisible(true);
+  };
+
+  const handleConfirmLogout = async () => {
+    try {
+      setLogoutModalVisible(false);
+      await dispatch(logout());
+      await AsyncStorage.clear();
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
+    } catch (e) {
+      console.error('Logout error:', e);
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
+    }
   };
 
   const menuItems = [
@@ -92,7 +99,7 @@ export default function AdminProfileScreen() {
       id: 'logout',
       title: 'Logout',
       icon: 'log-out',
-      onPress: handleLogout,
+      onPress: handleLogoutPress,
     },
   ];
 
@@ -173,6 +180,48 @@ export default function AdminProfileScreen() {
             )}
           </TouchableOpacity>
         </View>
+
+        {/* Guaranteed Full-Screen Logout Confirmation Modal */}
+        <Modal
+          visible={logoutModalVisible}
+          transparent={true}
+          animationType="fade"
+          statusBarTranslucent={true}
+          onRequestClose={() => setLogoutModalVisible(false)}
+        >
+          <View style={styles.modalBackdrop}>
+            <TouchableOpacity
+              style={StyleSheet.absoluteFill}
+              activeOpacity={1}
+              onPress={() => setLogoutModalVisible(false)}
+            />
+            <View style={styles.modalCard}>
+              <View style={styles.modalIconCircle}>
+                <Feather name="log-out" size={m(26)} color={colors.lettersAndIcons} />
+              </View>
+              <Text style={styles.modalTitle}>Sign Out</Text>
+              <Text style={styles.modalSubtitle}>
+                Are you sure you want to sign out of the Admin Console?
+              </Text>
+              <View style={styles.modalActionButtons}>
+                <TouchableOpacity
+                  style={styles.modalConfirmBtn}
+                  activeOpacity={0.8}
+                  onPress={handleConfirmLogout}
+                >
+                  <Text style={styles.modalConfirmBtnText}>Sign Out</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.modalCancelBtn}
+                  activeOpacity={0.8}
+                  onPress={() => setLogoutModalVisible(false)}
+                >
+                  <Text style={styles.modalCancelBtnText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </View>
     </ScreenWrapper>
   );
@@ -340,5 +389,85 @@ const styles = StyleSheet.create({
     color: '#7E9D86',
     textAlign: 'center',
     marginTop: m(28),
+  },
+
+  // Modal Dialog Styles
+  modalBackdrop: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(9, 48, 48, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: m(24),
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: m(320),
+    backgroundColor: colors.white,
+    borderRadius: m(28),
+    paddingHorizontal: m(24),
+    paddingTop: m(28),
+    paddingBottom: m(22),
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 25,
+  },
+  modalIconCircle: {
+    width: m(54),
+    height: m(54),
+    borderRadius: m(27),
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: m(14),
+  },
+  modalTitle: {
+    fontSize: m(20),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    textAlign: 'center',
+  },
+  modalSubtitle: {
+    fontSize: m(13.5),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#4B6358',
+    textAlign: 'center',
+    marginTop: m(8),
+    marginBottom: m(22),
+    lineHeight: m(20),
+  },
+  modalActionButtons: {
+    width: '100%',
+    gap: m(10),
+  },
+  modalConfirmBtn: {
+    width: '100%',
+    height: m(46),
+    borderRadius: m(23),
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalConfirmBtnText: {
+    fontSize: m(14.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  modalCancelBtn: {
+    width: '100%',
+    height: m(46),
+    borderRadius: m(23),
+    backgroundColor: colors.lightGreen,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCancelBtnText: {
+    fontSize: m(14.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
 });

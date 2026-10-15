@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "android": "react-native run-android",
+    "reverse": "node scripts/reverse.js",
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "react-native start",

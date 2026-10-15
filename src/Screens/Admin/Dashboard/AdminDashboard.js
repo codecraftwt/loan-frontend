@@ -149,291 +149,297 @@ export default function AdminDashboard() {
         {/* 1. TOP GREEN SECTION (Matching Figma Design)             */}
         {/* ======================================================== */}
         <View style={styles.topSection}>
-        {/* Greeting & Notification Row */}
-        <View style={styles.greetingRow}>
-          <View style={styles.greetingTextContainer}>
-            <Text style={styles.greetingTitle}>Hi, Welcome Back</Text>
-            <Text style={styles.greetingSubtitle}>
-              {getGreeting()}, {displayName}
-            </Text>
+          {/* Greeting & Notification Row */}
+          <View style={styles.greetingRow}>
+            <View style={styles.greetingTextContainer}>
+              <Text style={styles.greetingTitle}>Hi, Welcome Back</Text>
+              <Text style={styles.greetingSubtitle}>
+                {getGreeting()}, {displayName}
+              </Text>
+            </View>
+
+            {/* White Circular Notification Button */}
+            <TouchableOpacity
+              style={styles.notificationBtn}
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate('AdminActivityDetailsScreen')}
+            >
+              <Feather name="bell" size={m(20)} color={colors.lettersAndIcons} />
+              <View style={styles.notificationDot} />
+            </TouchableOpacity>
           </View>
 
-          {/* White Circular Notification Button */}
-          <TouchableOpacity
-            style={styles.notificationBtn}
-            activeOpacity={0.8}
-            onPress={() => navigation.navigate('AdminActivityDetailsScreen')}
-          >
-            <Feather name="bell" size={m(20)} color={colors.lettersAndIcons} />
-            <View style={styles.notificationDot} />
-          </TouchableOpacity>
-        </View>
-
-        {/* 2-Column Summary Stats on Green */}
-        <View style={styles.topMetricsCard}>
-          {/* Left Column: Total SaaS Revenue */}
-          <View style={styles.metricColumn}>
-            <View style={styles.metricLabelRow}>
-              <Feather name="credit-card" size={m(13)} color={colors.lettersAndIcons} />
-              <Text style={styles.metricLabelText}>Total SaaS Revenue</Text>
+          {/* 2-Column Summary Stats on Green */}
+          <View style={styles.topMetricsCard}>
+            {/* Left Column: Total SaaS Revenue */}
+            <View style={styles.metricColumn}>
+              <View style={styles.metricLabelRow}>
+                <Feather name="credit-card" size={m(13)} color={colors.lettersAndIcons} />
+                <Text style={styles.metricLabelText}>Total SaaS Revenue</Text>
+              </View>
+              <Text style={styles.metricValueWhite} numberOfLines={1}>
+                {formatCurrency(summary.totalRevenue)}
+              </Text>
             </View>
-            <Text style={styles.metricValueWhite} numberOfLines={1}>
-              {formatCurrency(summary.totalRevenue)}
-            </Text>
-          </View>
 
-          {/* Vertical Divider Line */}
-          <View style={styles.metricDivider} />
+            {/* Vertical Divider Line */}
+            <View style={styles.metricDivider} />
 
-          {/* Right Column: Active Plans */}
-          <View style={styles.metricColumn}>
-            <View style={styles.metricLabelRow}>
-              <Feather name="layers" size={m(13)} color={colors.lettersAndIcons} />
-              <Text style={styles.metricLabelText}>Active Plans</Text>
-            </View>
-            <Text style={styles.metricValueBlue} numberOfLines={1}>
-              {summary.activePlans} Tiers
-            </Text>
-          </View>
-        </View>
-
-        {/* Target Progress Pill */}
-        <View style={styles.progressContainer}>
-          <View style={styles.progressBarPill}>
-            <View style={styles.progressDarkTag}>
-              <Text style={styles.progressDarkText}>100%</Text>
-            </View>
-            <View style={styles.progressWhiteBar}>
-              <Text style={styles.progressWhiteText}>
-                {summary.totalPurchases} Subscriptions Active
+            {/* Right Column: Active Plans */}
+            <View style={styles.metricColumn}>
+              <View style={styles.metricLabelRow}>
+                <Feather name="layers" size={m(13)} color={colors.lettersAndIcons} />
+                <Text style={styles.metricLabelText}>Active Plans</Text>
+              </View>
+              <Text style={styles.metricValueBlue} numberOfLines={1}>
+                {summary.activePlans} Tiers
               </Text>
             </View>
           </View>
 
-          {/* Target caption */}
-          <View style={styles.progressCaptionRow}>
-            <Feather name="check-circle" size={m(14)} color={colors.lettersAndIcons} />
-            <Text style={styles.progressCaptionText}>
-              Platform SaaS operations active & healthy.
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      {/* ======================================================== */}
-      {/* 2. MAIN CURVED SHEET SECTION (#F1FFF3)                   */}
-      {/* ======================================================== */}
-      <View style={styles.sheetSection}>
-        {/* Feature Green Highlight Card */}
-        <View style={styles.featureCard}>
-          {/* Left Donut / Quota Circle */}
-          <View style={styles.featureLeftCol}>
-            <View style={styles.featureRingWrapper}>
-              <Feather name="briefcase" size={m(22)} color={colors.lettersAndIcons} />
-            </View>
-            <Text style={styles.featureRingLabel}>Institutional</Text>
-            <Text style={styles.featureRingSub}>Lenders Active</Text>
-          </View>
-
-          {/* Vertical White Divider */}
-          <View style={styles.featureDivider} />
-
-          {/* Right Metrics Stack */}
-          <View style={styles.featureRightCol}>
-            {/* Row 1: Avg Deal Size */}
-            <View style={styles.featureStatItem}>
-              <View style={styles.featureStatIconBox}>
-                <Feather name="dollar-sign" size={m(16)} color={colors.lettersAndIcons} />
+          {/* Target Progress Pill */}
+          <View style={styles.progressContainer}>
+            <View style={styles.progressBarPill}>
+              <View style={styles.progressDarkTag}>
+                <Text style={styles.progressDarkText}>100%</Text>
               </View>
-              <View style={styles.featureStatTexts}>
-                <Text style={styles.featureStatLabel}>Average Deal Size</Text>
-                <Text style={styles.featureStatValue}>
-                  {formatCurrency(Math.round(summary.avgRevenue))}
+              <View style={styles.progressWhiteBar}>
+                <Text style={styles.progressWhiteText}>
+                  {summary.totalPurchases} Subscriptions Active
                 </Text>
               </View>
             </View>
 
-            {/* Horizontal White Divider */}
-            <View style={styles.featureHorizontalDivider} />
-
-            {/* Row 2: Total Purchases */}
-            <View style={styles.featureStatItem}>
-              <View style={styles.featureStatIconBox}>
-                <Feather name="shopping-bag" size={m(16)} color={colors.lettersAndIcons} />
-              </View>
-              <View style={styles.featureStatTexts}>
-                <Text style={styles.featureStatLabel}>Total Purchases</Text>
-                <Text style={styles.featureStatValue}>
-                  {summary.totalPurchases} Deals
-                </Text>
-              </View>
+            {/* Target caption */}
+            <View style={styles.progressCaptionRow}>
+              <Feather name="check-circle" size={m(14)} color={colors.lettersAndIcons} />
+              <Text style={styles.progressCaptionText}>
+                Platform SaaS operations active & healthy.
+              </Text>
             </View>
           </View>
         </View>
 
-        {/* Period Filter Capsule Tabs */}
-        <View style={styles.periodCapsuleRow}>
-          {['All', 'Plans', 'Lenders'].map(period => {
-            const isSelected = selectedPeriod === period;
-            return (
-              <TouchableOpacity
-                key={period}
-                style={[
-                  styles.periodTab,
-                  isSelected && styles.periodTabActive,
-                ]}
-                onPress={() => setSelectedPeriod(period)}
-                activeOpacity={0.8}
-              >
-                <Text
+        {/* ======================================================== */}
+        {/* 2. MAIN CURVED SHEET SECTION (#F1FFF3)                   */}
+        {/* ======================================================== */}
+        <View style={styles.sheetSection}>
+          {/* Feature Green Highlight Card */}
+          <View style={styles.featureCard}>
+            {/* Left Donut / Quota Circle */}
+            <View style={styles.featureLeftCol}>
+              <View style={styles.featureRingWrapper}>
+                <Feather name="briefcase" size={m(22)} color={colors.lettersAndIcons} />
+              </View>
+              <Text style={styles.featureRingLabel}>Institutional</Text>
+              <Text style={styles.featureRingSub}>Lenders Active</Text>
+            </View>
+
+            {/* Vertical White Divider */}
+            <View style={styles.featureDivider} />
+
+            {/* Right Metrics Stack */}
+            <View style={styles.featureRightCol}>
+              {/* Row 1: Avg Deal Size */}
+              <View style={styles.featureStatItem}>
+                <View style={styles.featureStatIconBox}>
+                  <Feather name="dollar-sign" size={m(16)} color={colors.lettersAndIcons} />
+                </View>
+                <View style={styles.featureStatTexts}>
+                  <Text style={styles.featureStatLabel}>Average Deal Size</Text>
+                  <Text style={styles.featureStatValue}>
+                    {formatCurrency(Math.round(summary.avgRevenue))}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Horizontal White Divider */}
+              <View style={styles.featureHorizontalDivider} />
+
+              {/* Row 2: Total Purchases */}
+              <View style={styles.featureStatItem}>
+                <View style={styles.featureStatIconBox}>
+                  <Feather name="shopping-bag" size={m(16)} color={colors.lettersAndIcons} />
+                </View>
+                <View style={styles.featureStatTexts}>
+                  <Text style={styles.featureStatLabel}>Total Purchases</Text>
+                  <Text style={styles.featureStatValue}>
+                    {summary.totalPurchases} Deals
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {/* Period Filter Capsule Tabs */}
+          <View style={styles.periodCapsuleRow}>
+            {['All', 'Plans', 'Lenders'].map(period => {
+              const isSelected = selectedPeriod === period;
+              return (
+                <TouchableOpacity
+                  key={period}
                   style={[
-                    styles.periodTabText,
-                    isSelected && styles.periodTabTextActive,
+                    styles.periodTab,
+                    isSelected && styles.periodTabActive,
                   ]}
+                  onPress={() => setSelectedPeriod(period)}
+                  activeOpacity={0.8}
                 >
-                  {period}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {/* Activity Feed Section */}
-        <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Recent Activities</Text>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('AdminActivityDetailsScreen')}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.viewAllText}>View All</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Activity Items List (Matching Blue Icon Circles in Figma Design) */}
-        {activitiesLoading && recentActivities.length === 0 ? (
-          <View style={styles.loadingBox}>
-            <ActivityIndicator size="small" color={colors.lettersAndIcons} />
-            <Text style={styles.loadingText}>Loading activities...</Text>
+                  <Text
+                    style={[
+                      styles.periodTabText,
+                      isSelected && styles.periodTabTextActive,
+                    ]}
+                  >
+                    {period}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
-        ) : filteredActivities.length === 0 ? (
-          <View style={styles.emptyBox}>
-            <Feather name="inbox" size={m(28)} color={colors.textSecondary} />
-            <Text style={styles.emptyText}>No recent activity events found</Text>
+
+          {/* Activity Feed Section */}
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Recent Activities</Text>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('AdminActivityDetailsScreen')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.viewAllText}>View All</Text>
+            </TouchableOpacity>
           </View>
-        ) : (
-          filteredActivities.map((act, index) => {
-            const cfg = getActivityConfig(act.type);
-            return (
+
+          {/* Activity Items List (Matching Blue Icon Circles in Figma Design) */}
+          {activitiesLoading && recentActivities.length === 0 ? (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator size="small" color={colors.lettersAndIcons} />
+              <Text style={styles.loadingText}>Loading activities...</Text>
+            </View>
+          ) : filteredActivities.length === 0 ? (
+            <View style={styles.emptyBox}>
+              <Feather name="inbox" size={m(28)} color={colors.textSecondary} />
+              <Text style={styles.emptyText}>No recent activity events found</Text>
+            </View>
+          ) : (
+            filteredActivities.map((act, index) => {
+              const cfg = getActivityConfig(act.type);
+              return (
+                <TouchableOpacity
+                  key={act._id || act.id || index}
+                  style={styles.activityItemCard}
+                  activeOpacity={0.75}
+                  onPress={() => navigation.navigate('AdminActivityDetailsScreen')}
+                >
+                  {/* Vibrant Blue Circle Icon */}
+                  <View style={styles.activityIconCircle}>
+                    <Feather name={cfg.icon} size={m(18)} color={colors.white} />
+                  </View>
+
+                  {/* Event Name & Timestamp */}
+                  <View style={styles.activityMainCol}>
+                    <Text style={styles.activityTitleText} numberOfLines={1}>
+                      {act.description || act.title || cfg.label}
+                    </Text>
+                    <Text style={styles.activityTimeText}>
+                      {formatRelativeTime(act.createdAt)}
+                    </Text>
+                  </View>
+
+                  {/* Category Pill Tag */}
+                  <View style={styles.categoryTag}>
+                    <Text style={styles.categoryTagText}>{cfg.tag}</Text>
+                  </View>
+
+                  {/* Status or Amount */}
+                  <View style={styles.activityStatusCol}>
+                    <Text style={styles.activityStatusText}>
+                      {act.metadata?.amount
+                        ? formatCurrency(act.metadata.amount)
+                        : 'Logged'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })
+          )}
+
+          {/* Core Management Hub Shortcuts */}
+          <View style={[styles.sectionHeaderRow, { marginTop: m(22) }]}>
+            <Text style={styles.sectionTitle}>Management Directory</Text>
+          </View>
+
+          <View style={styles.hubGrid}>
+            {/* Row 1: Lenders & Borrowers */}
+            <View style={styles.hubRow}>
+              {/* Hub 1: Lenders */}
               <TouchableOpacity
-                key={act._id || act.id || index}
-                style={styles.activityItemCard}
-                activeOpacity={0.75}
-                onPress={() => navigation.navigate('AdminActivityDetailsScreen')}
+                style={styles.hubCard}
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate('Lenders')}
               >
-                {/* Vibrant Blue Circle Icon */}
-                <View style={styles.activityIconCircle}>
-                  <Feather name={cfg.icon} size={m(18)} color={colors.white} />
+                <View style={styles.hubCardTop}>
+                  <View style={[styles.hubIconCircle, { backgroundColor: '#E6F2FF' }]}>
+                    <Feather name="users" size={m(17)} color={colors.blueButton} />
+                  </View>
+                  <Feather name="arrow-up-right" size={m(15)} color={colors.textSecondary} />
                 </View>
-
-                {/* Event Name & Timestamp */}
-                <View style={styles.activityMainCol}>
-                  <Text style={styles.activityTitleText} numberOfLines={1}>
-                    {act.description || act.title || cfg.label}
-                  </Text>
-                  <Text style={styles.activityTimeText}>
-                    {formatRelativeTime(act.createdAt)}
-                  </Text>
-                </View>
-
-                {/* Category Pill Tag */}
-                <View style={styles.categoryTag}>
-                  <Text style={styles.categoryTagText}>{cfg.tag}</Text>
-                </View>
-
-                {/* Status or Amount */}
-                <View style={styles.activityStatusCol}>
-                  <Text style={styles.activityStatusText}>
-                    {act.metadata?.amount
-                      ? formatCurrency(act.metadata.amount)
-                      : 'Logged'}
-                  </Text>
-                </View>
+                <Text style={styles.hubTitle}>Lenders</Text>
+                <Text style={styles.hubSubtitle}>Institutions</Text>
               </TouchableOpacity>
-            );
-          })
-        )}
 
-        {/* Core Management Hub Shortcuts */}
-        <View style={[styles.sectionHeaderRow, { marginTop: m(22) }]}>
-          <Text style={styles.sectionTitle}>Management Directory</Text>
+              {/* Hub 2: Borrowers */}
+              <TouchableOpacity
+                style={styles.hubCard}
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate('Borrowers')}
+              >
+                <View style={styles.hubCardTop}>
+                  <View style={[styles.hubIconCircle, { backgroundColor: '#E6F2FF' }]}>
+                    <Feather name="shield" size={m(17)} color={colors.blueButton} />
+                  </View>
+                  <Feather name="arrow-up-right" size={m(15)} color={colors.textSecondary} />
+                </View>
+                <Text style={styles.hubTitle}>Borrowers</Text>
+                <Text style={styles.hubSubtitle}>KYC Dossiers</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Row 2: Plans & Revenue */}
+            <View style={styles.hubRow}>
+              {/* Hub 3: Plans */}
+              <TouchableOpacity
+                style={styles.hubCard}
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate('Plans')}
+              >
+                <View style={styles.hubCardTop}>
+                  <View style={[styles.hubIconCircle, { backgroundColor: '#E6F2FF' }]}>
+                    <Feather name="layers" size={m(17)} color={colors.blueButton} />
+                  </View>
+                  <Feather name="arrow-up-right" size={m(15)} color={colors.textSecondary} />
+                </View>
+                <Text style={styles.hubTitle}>Plans</Text>
+                <Text style={styles.hubSubtitle}>SaaS Pricing</Text>
+              </TouchableOpacity>
+
+              {/* Hub 4: Revenue */}
+              <TouchableOpacity
+                style={styles.hubCard}
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate('Revenue')}
+              >
+                <View style={styles.hubCardTop}>
+                  <View style={[styles.hubIconCircle, { backgroundColor: '#E6F2FF' }]}>
+                    <Feather name="trending-up" size={m(17)} color={colors.blueButton} />
+                  </View>
+                  <Feather name="arrow-up-right" size={m(15)} color={colors.textSecondary} />
+                </View>
+                <Text style={styles.hubTitle}>Revenue</Text>
+                <Text style={styles.hubSubtitle}>Analytics</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
-
-        <View style={styles.hubGrid}>
-          {/* Hub 1: Lenders */}
-          <TouchableOpacity
-            style={styles.hubCard}
-            activeOpacity={0.8}
-            onPress={() => navigation.navigate('Lenders')}
-          >
-            <View style={styles.hubCardTop}>
-              <View style={[styles.hubIconCircle, { backgroundColor: '#E6F2FF' }]}>
-                <Feather name="users" size={m(17)} color={colors.blueButton} />
-              </View>
-              <Feather name="arrow-up-right" size={m(15)} color={colors.textSecondary} />
-            </View>
-            <Text style={styles.hubTitle}>Lenders</Text>
-            <Text style={styles.hubSubtitle}>Institutions</Text>
-          </TouchableOpacity>
-
-          {/* Hub 2: Borrowers */}
-          <TouchableOpacity
-            style={styles.hubCard}
-            activeOpacity={0.8}
-            onPress={() => navigation.navigate('Borrowers')}
-          >
-            <View style={styles.hubCardTop}>
-              <View style={[styles.hubIconCircle, { backgroundColor: '#E6F2FF' }]}>
-                <Feather name="shield" size={m(17)} color={colors.blueButton} />
-              </View>
-              <Feather name="arrow-up-right" size={m(15)} color={colors.textSecondary} />
-            </View>
-            <Text style={styles.hubTitle}>Borrowers</Text>
-            <Text style={styles.hubSubtitle}>KYC Dossiers</Text>
-          </TouchableOpacity>
-
-          {/* Hub 3: Plans */}
-          <TouchableOpacity
-            style={styles.hubCard}
-            activeOpacity={0.8}
-            onPress={() => navigation.navigate('Plans')}
-          >
-            <View style={styles.hubCardTop}>
-              <View style={[styles.hubIconCircle, { backgroundColor: '#E6F2FF' }]}>
-                <Feather name="layers" size={m(17)} color={colors.blueButton} />
-              </View>
-              <Feather name="arrow-up-right" size={m(15)} color={colors.textSecondary} />
-            </View>
-            <Text style={styles.hubTitle}>Plans</Text>
-            <Text style={styles.hubSubtitle}>SaaS Pricing</Text>
-          </TouchableOpacity>
-
-          {/* Hub 4: Revenue */}
-          <TouchableOpacity
-            style={styles.hubCard}
-            activeOpacity={0.8}
-            onPress={() => navigation.navigate('Revenue')}
-          >
-            <View style={styles.hubCardTop}>
-              <View style={[styles.hubIconCircle, { backgroundColor: '#E6F2FF' }]}>
-                <Feather name="trending-up" size={m(17)} color={colors.blueButton} />
-              </View>
-              <Feather name="arrow-up-right" size={m(15)} color={colors.textSecondary} />
-            </View>
-            <Text style={styles.hubTitle}>Revenue</Text>
-            <Text style={styles.hubSubtitle}>Analytics</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
       </View>
     </ScreenWrapper>
   );
@@ -836,13 +842,14 @@ const styles = StyleSheet.create({
 
   // Management Directory Grid - Compact Modern Cards
   hubGrid: {
+    gap: m(10),
+  },
+  hubRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
     gap: m(10),
   },
   hubCard: {
-    width: '48.5%',
+    flex: 1,
     backgroundColor: colors.white,
     borderRadius: m(16),
     padding: m(12),

@@ -90,15 +90,17 @@ function AppContent() {
   }, [user?._id, authToken]);
 
   return (
-    <NavigationContainer 
-      ref={navigationRef}
-      onReady={onNavigationReady}>
-      {/* Set the StatusBar color here */}
-      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
-      <Navigation />
+    <>
+      <NavigationContainer 
+        ref={navigationRef}
+        onReady={onNavigationReady}>
+        {/* Set the StatusBar color here */}
+        <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
+        <Navigation />
+      </NavigationContainer>
       <Toast config={toastConfig} />
       <CustomAlertModal />
-    </NavigationContainer>
+    </>
   );
 }
 

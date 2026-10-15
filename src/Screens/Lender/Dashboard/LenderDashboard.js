@@ -59,6 +59,7 @@ export default function LenderDashboard() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   const fetchAllDashboardData = useCallback(async () => {
+    if (!user?._id || user?.roleId !== 1) return;
     try {
       setLoading(true);
       const [statsRes, loansRes, planRes] = await Promise.allSettled([
@@ -81,15 +82,18 @@ export default function LenderDashboard() {
         setActivePlan(planRes.value.data || planRes.value.plan || null);
       }
     } catch (err) {
-      console.error('Error fetching dashboard data:', err);
+      if (err?.response?.status !== 401) {
+        console.error('Error fetching dashboard data:', err);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [user?._id, user?.roleId]);
 
   useFocusEffect(
     useCallback(() => {
+      if (!user?._id || user?.roleId !== 1) return;
       fetchAllDashboardData();
       fadeAnim.setValue(0);
       Animated.timing(fadeAnim, {
@@ -97,7 +101,7 @@ export default function LenderDashboard() {
         duration: 450,
         useNativeDriver: true,
       }).start();
-    }, [fetchAllDashboardData, fadeAnim])
+    }, [user?._id, user?.roleId, fetchAllDashboardData, fadeAnim])
   );
 
   const onRefresh = () => {

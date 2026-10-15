@@ -15,6 +15,7 @@ import {
   Platform,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useSelector } from 'react-redux';
 import Feather from 'react-native-vector-icons/Feather';
 import { m } from 'walstar-rn-responsive';
 import { FontFamily, colors } from '../../../constants';
@@ -22,6 +23,7 @@ import lenderFlowService from '../../../Services/lenderFlowService';
 
 export default function LenderLoansPortfolio() {
   const navigation = useNavigation();
+  const user = useSelector(state => state.auth?.user);
   const [loans, setLoans] = useState([]);
   const [metrics, setMetrics] = useState({
     totalDisbursed: 0,
@@ -39,6 +41,7 @@ export default function LenderLoansPortfolio() {
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'active' | 'overdue' | 'closed'
 
   const fetchPortfolio = useCallback(async () => {
+    if (!user?._id || user?.roleId !== 1) return;
     try {
       setLoading(true);
       const res = await lenderFlowService.getLoansPortfolio({
@@ -55,17 +58,20 @@ export default function LenderLoansPortfolio() {
         setLoans([]);
       }
     } catch (err) {
-      console.error('Error fetching lender loans portfolio:', err);
+      if (err?.response?.status !== 401) {
+        console.error('Error fetching lender loans portfolio:', err);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [activeTab, search]);
+  }, [user?._id, user?.roleId, activeTab, search]);
 
   useFocusEffect(
     useCallback(() => {
+      if (!user?._id || user?.roleId !== 1) return;
       fetchPortfolio();
-    }, [fetchPortfolio])
+    }, [user?._id, user?.roleId, fetchPortfolio])
   );
 
   const onRefresh = () => {

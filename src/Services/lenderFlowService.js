@@ -131,7 +131,9 @@ export const lenderFlowService = {
       const response = await axiosInstance.get(url);
       return response.data;
     } catch (error) {
-      console.error('Error fetching lender loans portfolio:', error);
+      if (error?.response?.status !== 401) {
+        console.error('Error fetching lender loans portfolio:', error);
+      }
       throw error;
     }
   },
@@ -270,7 +272,9 @@ export const lenderFlowService = {
       const response = await axiosInstance.get('plans/active');
       return response.data;
     } catch (error) {
-      console.error('Error fetching active lender plan:', error);
+      if (error?.response?.status !== 401) {
+        console.error('Error fetching active lender plan:', error);
+      }
       throw error;
     }
   },
