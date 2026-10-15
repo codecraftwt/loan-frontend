@@ -10,7 +10,7 @@ import {
   Animated,
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
-import { m } from 'walstar-rn-responsive';
+import { m } from '../../../Utils/responsive';
 import { FontFamily, colors } from '../../../constants';
 import lenderFlowService from '../../../Services/lenderFlowService';
 

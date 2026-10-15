@@ -1,10 +1,8 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
-  StatusBar,
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
@@ -12,13 +10,15 @@ import {
   TextInput,
   Linking,
   Alert,
-  Platform,
+  Modal,
+  ScrollView,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import Feather from 'react-native-vector-icons/Feather';
-import { m } from 'walstar-rn-responsive';
-import { FontFamily, colors } from '../../../constants';
+import { colors, FontFamily } from '../../../constants';
+import { m } from '../../../Utils/responsive';
+import { ScreenWrapper } from '../../../Components/common';
 import lenderFlowService from '../../../Services/lenderFlowService';
 
 export default function LenderLoansPortfolio() {
@@ -39,6 +39,15 @@ export default function LenderLoansPortfolio() {
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'active' | 'overdue' | 'closed'
+
+  // Quick Repayment Modal State
+  const [repaymentModalVisible, setRepaymentModalVisible] = useState(false);
+  const [selectedLoanForPayment, setSelectedLoanForPayment] = useState(null);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentMode, setPaymentMode] = useState('bank_transfer'); // 'bank_transfer' | 'upi' | 'cheque' | 'cash'
+  const [transactionRef, setTransactionRef] = useState('');
+  const [paymentNotes, setPaymentNotes] = useState('');
+  const [recordingPayment, setRecordingPayment] = useState(false);
 
   const fetchPortfolio = useCallback(async () => {
     if (!user?._id || user?.roleId !== 1) return;
@@ -83,7 +92,7 @@ export default function LenderLoansPortfolio() {
     if (!val && val !== 0) return '₹0';
     const num = Number(val) || 0;
     if (num >= 10000000) return `₹${(num / 10000000).toFixed(2)} Cr`;
-    if (num >= 100000) return `₹${(num / 100000).toFixed(2)} Lakh`;
+    if (num >= 100000) return `₹${(num / 100000).toFixed(2)} L`;
     return `₹${num.toLocaleString('en-IN')}`;
   };
 
@@ -96,7 +105,16 @@ export default function LenderLoansPortfolio() {
     });
   };
 
-  // WhatsApp shortcut
+  // Calculate total overdue amount across loans
+  const overdueTotalAmount = useMemo(() => {
+    return loans.reduce((sum, loan) => {
+      const overdues = (loan.installments || []).filter(i => i.status === 'overdue');
+      const oSum = overdues.reduce((s, i) => s + (i.installmentAmount || i.amount || 0), 0);
+      return sum + oSum;
+    }, 0);
+  }, [loans]);
+
+  // WhatsApp outreach shortcut
   const handleOpenWhatsApp = (mobileNo, borrowerName, amount) => {
     if (!mobileNo) {
       Alert.alert('No Contact', 'No mobile number recorded for this borrower.');
@@ -125,6 +143,55 @@ export default function LenderLoansPortfolio() {
       });
   };
 
+  // Open Quick Record Repayment Modal
+  const handleOpenRecordPayment = (loanItem) => {
+    setSelectedLoanForPayment(loanItem);
+    const defaultAmount = loanItem.monthlyEmi || loanItem.emiAmount || '';
+    setPaymentAmount(defaultAmount ? String(defaultAmount) : '');
+    setPaymentMode('bank_transfer');
+    setTransactionRef('');
+    setPaymentNotes('');
+    setRepaymentModalVisible(true);
+  };
+
+  // Submit Repayment
+  const handleSubmitPayment = async () => {
+    if (!paymentAmount || Number(paymentAmount) <= 0) {
+      Alert.alert('Invalid Amount', 'Please enter a valid repayment amount.');
+      return;
+    }
+    if (!selectedLoanForPayment?._id) return;
+
+    try {
+      setRecordingPayment(true);
+      const payload = {
+        paymentAmount: Number(paymentAmount),
+        paymentMode,
+        transactionReference: transactionRef.trim() || undefined,
+        paymentDate: new Date().toISOString(),
+        notes: paymentNotes.trim() || undefined,
+      };
+
+      const res = await lenderFlowService.recordLoanPayment(selectedLoanForPayment._id, payload);
+      if (res?.success) {
+        Alert.alert(
+          'Repayment Recorded! 🎉',
+          res.message || 'Payment has been applied to the facility amortization schedule.'
+        );
+        setRepaymentModalVisible(false);
+        fetchPortfolio();
+      } else {
+        Alert.alert('Error', res?.message || 'Could not post payment.');
+      }
+    } catch (err) {
+      console.error('Error posting repayment:', err);
+      const msg = err.response?.data?.message || 'Failed to post payment.';
+      Alert.alert('Payment Error', msg);
+    } finally {
+      setRecordingPayment(false);
+    }
+  };
+
   const renderItem = ({ item }) => {
     const borrowerName =
       item.borrowerId?.companyName ||
@@ -145,6 +212,17 @@ export default function LenderLoansPortfolio() {
       (item.disbursalVerification && !item.disbursalVerification.isVerified);
     const isClosed = item.status === 'closed' || item.paymentStatus === 'paid' || remaining <= 0;
 
+    // Find next upcoming or overdue installment for EMI due date
+    const nextInstallment = (item.installments || []).find(
+      (inst) => inst.status === 'pending' || inst.status === 'overdue'
+    );
+    const nextDueDate = nextInstallment?.dueDate
+      ? formatDate(nextInstallment.dueDate)
+      : item.loanEndDate
+      ? formatDate(item.loanEndDate)
+      : 'N/A';
+    const isNextOverdue = nextInstallment?.status === 'overdue' || hasOverdue;
+
     return (
       <TouchableOpacity
         style={styles.card}
@@ -154,18 +232,19 @@ export default function LenderLoansPortfolio() {
             loan: item,
           })
         }
-        activeOpacity={0.7}
+        activeOpacity={0.8}
       >
-        {/* Card Header */}
-        <View style={styles.cardHeader}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{borrowerName.charAt(0).toUpperCase()}</Text>
+        {/* Top Header Row */}
+        <View style={styles.cardHeaderRow}>
+          <View style={styles.activityIconCircle}>
+            <Feather name="credit-card" size={m(16)} color={colors.white} />
           </View>
-          <View style={{ flex: 1, marginRight: m(8) }}>
-            <Text style={styles.borrowerName} numberOfLines={1}>
+
+          <View style={styles.headerInfoCol}>
+            <Text style={styles.borrowerNameText} numberOfLines={1}>
               {borrowerName}
             </Text>
-            <Text style={styles.loanIdText}>
+            <Text style={styles.facilitySubtitle} numberOfLines={1}>
               Facility #{item._id.slice(-6).toUpperCase()} • {item.interestRate || 12}% p.a.
             </Text>
           </View>
@@ -196,7 +275,7 @@ export default function LenderLoansPortfolio() {
               ]}
             >
               {isClosed
-                ? 'SETTLED'
+                ? 'CLOSED'
                 : isPendingDisbursal
                 ? 'OTP PENDING'
                 : hasOverdue
@@ -206,479 +285,769 @@ export default function LenderLoansPortfolio() {
           </View>
         </View>
 
-        {/* Financial Metrics Strip */}
-        <View style={styles.metricsStrip}>
-          <View>
-            <Text style={styles.metricLabel}>Sanctioned Principal</Text>
-            <Text style={styles.metricValBold}>{formatINR(principal)}</Text>
+        {/* Compact Financial Metrics Strip */}
+        <View style={styles.metricsBox}>
+          <View style={styles.metricItem}>
+            <Text style={styles.metricLabel}>Sanctioned</Text>
+            <Text style={styles.metricValueBold}>{formatINR(principal)}</Text>
           </View>
-          <View style={{ alignItems: 'center' }}>
+
+          <View style={styles.metricDivider} />
+
+          <View style={styles.metricItem}>
             <Text style={styles.metricLabel}>Outstanding</Text>
-            <Text style={styles.metricValBold}>{formatINR(remaining)}</Text>
+            <Text style={styles.metricValueBlue}>{formatINR(remaining)}</Text>
           </View>
-          <View style={{ alignItems: 'flex-end' }}>
-            <Text style={styles.metricLabel}>Next Due EMI</Text>
-            <Text style={styles.metricVal}>
-              {formatINR(item.monthlyEmi || item.emiAmount || 0)}
+
+          <View style={styles.metricDivider} />
+
+          <View style={styles.metricItem}>
+            <Text style={styles.metricLabel}>
+              {isClosed ? 'Status' : isNextOverdue ? 'Overdue Due' : 'Next EMI'}
             </Text>
+            <Text
+              style={[styles.metricValueBold, isNextOverdue && styles.metricValueOverdue]}
+              numberOfLines={1}
+            >
+              {isClosed ? 'Paid Off' : formatINR(item.monthlyEmi || item.emiAmount || 0)}
+            </Text>
+            {!isClosed && nextDueDate !== 'N/A' && (
+              <Text
+                style={[styles.metricSubDate, isNextOverdue && styles.metricSubDateOverdue]}
+                numberOfLines={1}
+              >
+                {nextDueDate}
+              </Text>
+            )}
           </View>
-        </View>
 
-        {/* Repayment Progress Bar */}
-        <View style={styles.progressContainer}>
-          <View style={styles.progressHeaderRow}>
-            <Text style={styles.progressLabel}>Repayment Progress</Text>
-            <Text style={styles.progressValueText}>{progressPercent}% collected</Text>
+          <View style={styles.chevronWrap}>
+            <Feather name="chevron-right" size={m(16)} color={colors.textSecondary} />
           </View>
-          <View style={styles.progressTrack}>
-            <View
-              style={[
-                styles.progressFill,
-                {
-                  width: `${progressPercent}%`,
-                  backgroundColor: isClosed ? '#10b981' : hasOverdue ? '#ef4444' : '#2563eb',
-                },
-              ]}
-            />
-          </View>
-        </View>
-
-        {/* Card Footer: WhatsApp & Manage */}
-        <View style={styles.cardFooter}>
-          <TouchableOpacity
-            style={styles.whatsappBtn}
-            onPress={() => handleOpenWhatsApp(phone, borrowerName, principal)}
-          >
-            <Feather name="message-circle" size={m(14)} color="#15803d" />
-            <Text style={styles.whatsappBtnText}>WhatsApp</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.manageBtn}
-            onPress={() =>
-              navigation.navigate('LenderLoanDetails', {
-                loanId: item._id,
-                loan: item,
-              })
-            }
-          >
-            <Text style={styles.manageBtnText}>Manage Facility</Text>
-            <Feather name="chevron-right" size={m(14)} color="#ffffff" />
-          </TouchableOpacity>
         </View>
       </TouchableOpacity>
     );
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
-
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>Active Loan Facilities</Text>
-          <Text style={styles.subtitle}>Institutional Debt Portfolio & Collections</Text>
-        </View>
-        <TouchableOpacity style={styles.refreshBtn} onPress={onRefresh} disabled={loading}>
-          <Feather name="refresh-cw" size={m(16)} color="#0f172a" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Macro Portfolio KPI Grid */}
-      <View style={styles.macroKpiGrid}>
-        <View style={styles.macroCard}>
-          <View style={styles.macroTop}>
-            <Text style={styles.macroTag}>TOTAL DISBURSED</Text>
-            <Feather name="dollar-sign" size={m(14)} color="#2563eb" />
+    <ScreenWrapper
+      backgroundColor={colors.backgroundGreenWhite}
+      topInsetBg={colors.primary}
+      statusBarColor={colors.primary}
+      statusBarStyle="dark-content"
+      includeTabBarClearance={true}
+      scrollable={false}
+    >
+      {/* ── 1. Top Green Banner with Unified 4-Metrics Bar ── */}
+      <View style={styles.topBanner}>
+        <View style={styles.headerRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.headerTag}>INSTITUTIONAL DEBT BOOK</Text>
+            <Text style={styles.headerTitle}>Loans Portfolio</Text>
+            <Text style={styles.headerSubtitle}>
+              Live portfolio, repayment schedules & collections
+            </Text>
           </View>
-          <Text style={styles.macroVal}>{formatINR(metrics.totalDisbursed)}</Text>
-          <Text style={styles.macroSub}>{metrics.totalLoans} Total Deals</Text>
-        </View>
 
-        <View style={styles.macroCard}>
-          <View style={styles.macroTop}>
-            <Text style={[styles.macroTag, { color: '#16a34a' }]}>RECOVERED CAPITAL</Text>
-            <Feather name="check-circle" size={m(14)} color="#16a34a" />
-          </View>
-          <Text style={styles.macroVal}>{formatINR(metrics.totalCollected)}</Text>
-          <Text style={styles.macroSub}>{metrics.closedCount} Settled</Text>
-        </View>
-
-        <View style={styles.macroCard}>
-          <View style={styles.macroTop}>
-            <Text style={[styles.macroTag, { color: '#7c3aed' }]}>OUTSTANDING BOOK</Text>
-            <Feather name="trending-up" size={m(14)} color="#7c3aed" />
-          </View>
-          <Text style={styles.macroVal}>{formatINR(metrics.totalOutstanding)}</Text>
-          <Text style={styles.macroSub}>{metrics.activeCount} Active Loans</Text>
-        </View>
-
-        <View style={styles.macroCard}>
-          <View style={styles.macroTop}>
-            <Text style={[styles.macroTag, { color: '#d97706' }]}>EXPECTED YIELD</Text>
-            <Feather name="credit-card" size={m(14)} color="#d97706" />
-          </View>
-          <Text style={styles.macroVal}>{formatINR(metrics.totalInterestExpected)}</Text>
-          <Text style={styles.macroSub}>Gross Portfolio ARR</Text>
-        </View>
-      </View>
-
-      {/* Search Input */}
-      <View style={styles.searchBox}>
-        <Feather name="search" size={m(18)} color="#94a3b8" />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search by company, deal name, or phone..."
-          placeholderTextColor="#94a3b8"
-          value={search}
-          onChangeText={setSearch}
-          onSubmitEditing={fetchPortfolio}
-          returnKeyType="search"
-        />
-        {search.length > 0 && (
-          <TouchableOpacity onPress={() => setSearch('')}>
-            <Feather name="x" size={m(16)} color="#94a3b8" />
+          <TouchableOpacity
+            style={styles.refreshBtn}
+            onPress={onRefresh}
+            disabled={loading}
+            activeOpacity={0.8}
+          >
+            <Feather name="refresh-cw" size={m(17)} color={colors.lettersAndIcons} />
           </TouchableOpacity>
+        </View>
+
+        {/* Unified 4-Tile Portfolio Metrics Bar */}
+        <View style={styles.unifiedMetricsGrid}>
+          {/* Tile 1: Total Disbursed */}
+          <View style={styles.metricTile}>
+            <View style={styles.tileHeaderRow}>
+              <Feather name="arrow-up-right" size={m(12)} color={colors.lettersAndIcons} />
+              <Text style={styles.tileLabel}>Disbursed</Text>
+            </View>
+            <Text style={styles.tileValueWhite} numberOfLines={1}>
+              {formatINR(metrics.totalDisbursed)}
+            </Text>
+          </View>
+
+          {/* Tile 2: Collected */}
+          <View style={styles.metricTile}>
+            <View style={styles.tileHeaderRow}>
+              <Feather name="check-circle" size={m(12)} color={colors.lettersAndIcons} />
+              <Text style={styles.tileLabel}>Collected</Text>
+            </View>
+            <Text style={styles.tileValueBlue} numberOfLines={1}>
+              {formatINR(metrics.totalCollected)}
+            </Text>
+          </View>
+
+          {/* Tile 3: Outstanding */}
+          <View style={styles.metricTile}>
+            <View style={styles.tileHeaderRow}>
+              <Feather name="clock" size={m(12)} color={colors.lettersAndIcons} />
+              <Text style={styles.tileLabel}>Outstanding</Text>
+            </View>
+            <Text style={styles.tileValueDark} numberOfLines={1}>
+              {formatINR(metrics.totalOutstanding)}
+            </Text>
+          </View>
+
+          {/* Tile 4: Overdue */}
+          <View style={styles.metricTile}>
+            <View style={styles.tileHeaderRow}>
+              <Feather name="alert-circle" size={m(12)} color="#b91c1c" />
+              <Text style={[styles.tileLabel, { color: '#7f1d1d' }]}>Overdue</Text>
+            </View>
+            <Text style={styles.tileValueRed} numberOfLines={1}>
+              {overdueTotalAmount > 0
+                ? formatINR(overdueTotalAmount)
+                : `${metrics.overdueCount || 0} Deals`}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* ── 2. Main Curved Body Section ── */}
+      <View style={styles.sheetSection}>
+        {/* Search Input Bar */}
+        <View style={styles.searchContainer}>
+          <Feather name="search" size={m(16)} color={colors.textSecondary} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by company, facility ID, or borrower..."
+            placeholderTextColor={colors.textMuted}
+            value={search}
+            onChangeText={setSearch}
+            onSubmitEditing={fetchPortfolio}
+            returnKeyType="search"
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch('')}>
+              <Feather name="x" size={m(16)} color={colors.textSecondary} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Lifecycle Status Filter: Capsule Pills (All, Active, Overdue, Closed) */}
+        <View style={styles.periodCapsuleRow}>
+          {[
+            { key: 'all', label: 'All', count: metrics.totalLoans || loans.length },
+            { key: 'active', label: 'Active', count: metrics.activeCount || 0 },
+            { key: 'overdue', label: 'Overdue', count: metrics.overdueCount || 0 },
+            { key: 'closed', label: 'Closed', count: metrics.closedCount || 0 },
+          ].map((tab) => {
+            const isSelected = activeTab === tab.key;
+            return (
+              <TouchableOpacity
+                key={tab.key}
+                style={[styles.periodTab, isSelected && styles.periodTabActive]}
+                onPress={() => setActiveTab(tab.key)}
+                activeOpacity={0.8}
+              >
+                <Text
+                  style={[
+                    styles.periodTabText,
+                    isSelected && styles.periodTabTextActive,
+                  ]}
+                >
+                  {tab.label}
+                  {tab.count > 0 ? ` (${tab.count})` : ''}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* List Content */}
+        {loading && !refreshing ? (
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="small" color={colors.lettersAndIcons} />
+            <Text style={styles.loadingText}>Syncing debt portfolio...</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={loans}
+            keyExtractor={(item) => item._id}
+            renderItem={renderItem}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={[colors.lettersAndIcons]}
+              />
+            }
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Feather name="credit-card" size={m(42)} color={colors.textMuted} />
+                <Text style={styles.emptyTitle}>No Loan Facilities Found</Text>
+                <Text style={styles.emptySubtitle}>
+                  {activeTab === 'all'
+                    ? 'Sanctioned loans and active facilities will appear here.'
+                    : `No facilities in the '${activeTab}' category.`}
+                </Text>
+              </View>
+            }
+          />
         )}
       </View>
 
-      {/* Filter Tabs */}
-      <View style={styles.tabsRow}>
-        {[
-          { key: 'all', label: 'All Facilities' },
-          { key: 'active', label: 'Active' },
-          { key: 'overdue', label: 'Overdue' },
-          { key: 'closed', label: 'Settled' },
-        ].map((tab) => (
-          <TouchableOpacity
-            key={tab.key}
-            style={[styles.tabBtn, activeTab === tab.key && styles.activeTabBtn]}
-            onPress={() => setActiveTab(tab.key)}
-          >
-            <Text style={[styles.tabText, activeTab === tab.key && styles.activeTabText]}>
-              {tab.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {loading && !refreshing ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0f172a" />
-          <Text style={styles.loadingText}>Loading debt portfolio...</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={loans}
-          keyExtractor={(item) => item._id}
-          renderItem={renderItem}
-          contentContainerStyle={styles.listContent}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0f172a']} />
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Feather name="credit-card" size={m(48)} color="#cbd5e1" />
-              <Text style={styles.emptyTitle}>No Loan Facilities Found</Text>
-              <Text style={styles.emptySubtitle}>
-                {activeTab === 'all'
-                  ? 'Sanctioned loans and active facilities will be managed here.'
-                  : `No facilities in the '${activeTab}' category.`}
-              </Text>
+      {/* ── 3. Quick Record Repayment Modal ── */}
+      <Modal
+        visible={repaymentModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setRepaymentModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <View style={styles.modalIconWrap}>
+                <Feather name="credit-card" size={m(20)} color={colors.oceanBlueButton} />
+              </View>
+              <View style={{ flex: 1, marginLeft: m(10) }}>
+                <Text style={styles.modalTitle}>Record Repayment</Text>
+                <Text style={styles.modalSub} numberOfLines={1}>
+                  {selectedLoanForPayment?.borrowerId?.companyName ||
+                    selectedLoanForPayment?.borrowerId?.userName ||
+                    selectedLoanForPayment?.name ||
+                    'Commercial Facility'}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setRepaymentModalVisible(false)}>
+                <Feather name="x" size={m(20)} color={colors.textSecondary} />
+              </TouchableOpacity>
             </View>
-          }
-        />
-      )}
-    </SafeAreaView>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={styles.inputLabel}>Payment Amount (₹) *</Text>
+              <TextInput
+                style={styles.inputField}
+                placeholder="e.g. 25000"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="number-pad"
+                value={paymentAmount}
+                onChangeText={setPaymentAmount}
+              />
+
+              <Text style={styles.inputLabel}>Payment Channel</Text>
+              <View style={styles.modeGrid}>
+                {[
+                  { key: 'bank_transfer', label: 'Bank / RTGS' },
+                  { key: 'upi', label: 'UPI' },
+                  { key: 'cheque', label: 'Cheque' },
+                  { key: 'cash', label: 'Cash' },
+                ].map((mItem) => (
+                  <TouchableOpacity
+                    key={mItem.key}
+                    style={[
+                      styles.modeChip,
+                      paymentMode === mItem.key && styles.activeModeChip,
+                    ]}
+                    onPress={() => setPaymentMode(mItem.key)}
+                  >
+                    <Text
+                      style={[
+                        styles.modeText,
+                        paymentMode === mItem.key && styles.activeModeText,
+                      ]}
+                    >
+                      {mItem.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={styles.inputLabel}>Transaction Reference / UTR</Text>
+              <TextInput
+                style={styles.inputField}
+                placeholder="e.g. UTR-9823482734 or Cheque #"
+                placeholderTextColor={colors.textMuted}
+                value={transactionRef}
+                onChangeText={setTransactionRef}
+              />
+
+              <Text style={styles.inputLabel}>Repayment Narration</Text>
+              <TextInput
+                style={[styles.inputField, { height: m(60), textAlignVertical: 'top' }]}
+                placeholder="Optional repayment notes"
+                placeholderTextColor={colors.textMuted}
+                value={paymentNotes}
+                onChangeText={setPaymentNotes}
+                multiline
+              />
+
+              <View style={styles.modalActionsRow}>
+                <TouchableOpacity
+                  style={styles.modalCancelBtn}
+                  onPress={() => setRepaymentModalVisible(false)}
+                >
+                  <Text style={styles.modalCancelText}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.modalSubmitBtn}
+                  onPress={handleSubmitPayment}
+                  disabled={recordingPayment}
+                >
+                  {recordingPayment ? (
+                    <ActivityIndicator size="small" color={colors.white} />
+                  ) : (
+                    <Text style={styles.modalSubmitText}>Post Repayment</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
+  // Top Green Banner
+  topBanner: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: m(18),
+    paddingTop: m(10),
+    paddingBottom: m(16),
   },
-  header: {
+  headerRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: m(16),
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || m(24)) + m(8) : m(16),
-    paddingBottom: m(10),
+    justifyContent: 'space-between',
+    marginBottom: m(12),
   },
-  title: {
-    fontSize: m(22),
-    fontWeight: '800',
-    color: '#0f172a',
+  headerTag: {
+    fontSize: m(10),
     fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    letterSpacing: 0.8,
+    opacity: 0.85,
+    marginBottom: m(2),
   },
-  subtitle: {
+  headerTitle: {
+    fontSize: m(22),
+    lineHeight: m(28),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  headerSubtitle: {
     fontSize: m(12),
-    color: '#64748b',
+    lineHeight: m(16),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.lettersAndIcons,
+    opacity: 0.9,
     marginTop: m(2),
   },
   refreshBtn: {
-    width: m(36),
-    height: m(36),
-    borderRadius: m(18),
-    backgroundColor: '#ffffff',
-    alignItems: 'center',
+    width: m(40),
+    height: m(40),
+    borderRadius: m(20),
+    backgroundColor: colors.white,
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  macroKpiGrid: {
+
+  // Unified 4-Tile Metrics Grid
+  unifiedMetricsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    paddingHorizontal: m(16),
-    marginBottom: m(12),
-  },
-  macroCard: {
-    width: '48%',
-    backgroundColor: '#ffffff',
-    borderRadius: m(14),
-    padding: m(12),
-    marginBottom: m(8),
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    elevation: 2,
-  },
-  macroTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  macroTag: {
-    fontSize: m(9),
-    fontWeight: '800',
-    color: '#64748b',
-    letterSpacing: 0.5,
-  },
-  macroVal: {
-    fontSize: m(17),
-    fontWeight: '800',
-    color: '#0f172a',
-    marginTop: m(4),
-  },
-  macroSub: {
-    fontSize: m(10),
-    color: '#64748b',
+    gap: m(8),
     marginTop: m(2),
   },
-  searchBox: {
+  metricTile: {
+    width: '48.5%',
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    borderRadius: m(14),
+    paddingHorizontal: m(12),
+    paddingVertical: m(9),
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.08)',
+  },
+  tileHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: m(12),
-    marginHorizontal: m(16),
+    gap: m(5),
+    marginBottom: m(3),
+  },
+  tileLabel: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
+    opacity: 0.85,
+  },
+  tileValueWhite: {
+    fontSize: m(16),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  tileValueBlue: {
+    fontSize: m(16),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.oceanBlueButton,
+  },
+  tileValueDark: {
+    fontSize: m(16),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  tileValueRed: {
+    fontSize: m(16),
+    fontFamily: FontFamily.primaryBold,
+    color: '#b91c1c',
+  },
+
+  // Main Curved Sheet
+  sheetSection: {
+    flex: 1,
+    backgroundColor: colors.backgroundGreenWhite,
+    borderTopLeftRadius: m(30),
+    borderTopRightRadius: m(30),
+    paddingTop: m(16),
+  },
+
+  // Search Input Container
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    borderRadius: m(16),
+    marginHorizontal: m(18),
     marginBottom: m(10),
-    paddingHorizontal: m(12),
+    paddingHorizontal: m(14),
     height: m(44),
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: 'rgba(9, 48, 48, 0.08)',
   },
   searchInput: {
     flex: 1,
     marginLeft: m(8),
     fontSize: m(13),
-    color: '#0f172a',
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.lettersAndIcons,
   },
-  tabsRow: {
+
+  // Capsule Filter Tabs
+  periodCapsuleRow: {
     flexDirection: 'row',
-    paddingHorizontal: m(16),
+    backgroundColor: colors.white,
+    borderRadius: m(24),
+    padding: m(4),
+    marginHorizontal: m(18),
     marginBottom: m(12),
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.08)',
   },
-  tabBtn: {
-    paddingHorizontal: m(12),
+  periodTab: {
+    flex: 1,
     paddingVertical: m(6),
-    borderRadius: m(18),
-    backgroundColor: '#f1f5f9',
-    marginRight: m(6),
+    borderRadius: m(20),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  activeTabBtn: {
-    backgroundColor: '#0f172a',
+  periodTabActive: {
+    backgroundColor: colors.primary,
   },
-  tabText: {
-    fontSize: m(11),
-    fontWeight: '700',
-    color: '#64748b',
+  periodTabText: {
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
   },
-  activeTabText: {
-    color: '#ffffff',
+  periodTabTextActive: {
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
+
   listContent: {
-    paddingHorizontal: m(16),
-    paddingBottom: m(100),
+    paddingHorizontal: m(18),
+    paddingBottom: m(30),
   },
-  loadingContainer: {
+  loadingBox: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
   loadingText: {
     fontSize: m(12),
-    color: '#64748b',
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
     marginTop: m(8),
   },
+
+  // Short Compact Deal Card
   card: {
-    backgroundColor: '#ffffff',
-    borderRadius: m(16),
-    padding: m(16),
-    marginBottom: m(12),
+    backgroundColor: colors.white,
+    borderRadius: m(14),
+    padding: m(12),
+    marginBottom: m(10),
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: 'rgba(9, 48, 48, 0.06)',
     elevation: 2,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
   },
-  cardHeader: {
+  cardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: m(12),
+    marginBottom: m(8),
   },
-  avatar: {
+  activityIconCircle: {
+    width: m(36),
+    height: m(36),
+    borderRadius: m(18),
+    backgroundColor: colors.blueButton,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: m(10),
+  },
+  headerInfoCol: {
+    flex: 1,
+    marginRight: m(8),
+  },
+  borrowerNameText: {
+    fontSize: m(14),
+    lineHeight: m(18),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  facilitySubtitle: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.blueButton,
+    marginTop: m(1),
+  },
+
+  // Status Badges
+  statusBadge: {
+    paddingHorizontal: m(8),
+    paddingVertical: m(3),
+    borderRadius: m(8),
+  },
+  badgeActive: {
+    backgroundColor: colors.lightGreen,
+  },
+  badgePending: {
+    backgroundColor: '#fef3c7',
+  },
+  badgeOverdue: {
+    backgroundColor: '#fee2e2',
+  },
+  badgeClosed: {
+    backgroundColor: '#f1f5f9',
+  },
+  statusBadgeText: {
+    fontSize: m(9.5),
+    fontFamily: FontFamily.primaryBold,
+  },
+  textActive: {
+    color: colors.lettersAndIcons,
+  },
+  textPending: {
+    color: '#d97706',
+  },
+  textOverdue: {
+    color: '#dc2626',
+  },
+  textClosed: {
+    color: '#64748b',
+  },
+
+  // Compact Metrics Box
+  metricsBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.backgroundGreenWhite,
+    borderRadius: m(10),
+    paddingVertical: m(6),
+    paddingHorizontal: m(10),
+  },
+  metricItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  metricLabel: {
+    fontSize: m(9.5),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.textSecondary,
+    marginBottom: m(1),
+  },
+  metricValueBold: {
+    fontSize: m(12.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  metricValueBlue: {
+    fontSize: m(12.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.oceanBlueButton,
+  },
+  metricValueOverdue: {
+    color: '#dc2626',
+  },
+  metricSubDate: {
+    fontSize: m(9.5),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+    marginTop: m(1),
+  },
+  metricSubDateOverdue: {
+    color: '#dc2626',
+    fontFamily: FontFamily.primaryMedium,
+  },
+  metricDivider: {
+    width: 1,
+    height: m(20),
+    backgroundColor: '#cbd5e1',
+  },
+  chevronWrap: {
+    marginLeft: m(6),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  emptyContainer: {
+    paddingVertical: m(50),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyTitle: {
+    fontSize: m(15),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    marginTop: m(10),
+  },
+  emptySubtitle: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: m(4),
+    paddingHorizontal: m(20),
+  },
+
+  // Repayment Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    justifyContent: 'flex-end',
+  },
+  modalCard: {
+    backgroundColor: colors.white,
+    borderTopLeftRadius: m(24),
+    borderTopRightRadius: m(24),
+    padding: m(20),
+    maxHeight: '85%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: m(16),
+  },
+  modalIconWrap: {
     width: m(38),
     height: m(38),
     borderRadius: m(19),
     backgroundColor: '#eff6ff',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: m(10),
   },
-  avatarText: {
+  modalTitle: {
     fontSize: m(16),
-    fontWeight: '800',
-    color: '#2563eb',
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
-  borrowerName: {
-    fontSize: m(15),
-    fontWeight: '800',
-    color: '#0f172a',
+  modalSub: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+    marginTop: m(1),
   },
-  loanIdText: {
-    fontSize: m(11),
-    color: '#64748b',
-    marginTop: m(2),
+  inputLabel: {
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    marginBottom: m(6),
+    marginTop: m(10),
   },
-  statusBadge: {
-    paddingHorizontal: m(8),
-    paddingVertical: m(3),
-    borderRadius: m(8),
-  },
-  badgeActive: { backgroundColor: '#eff6ff' },
-  textActive: { color: '#2563eb', fontSize: m(10), fontWeight: '800' },
-  badgePending: { backgroundColor: '#fef3c7' },
-  textPending: { color: '#b45309', fontSize: m(10), fontWeight: '800' },
-  badgeOverdue: { backgroundColor: '#fee2e2' },
-  textOverdue: { color: '#ef4444', fontSize: m(10), fontWeight: '800' },
-  badgeClosed: { backgroundColor: '#ecfdf5' },
-  textClosed: { color: '#047857', fontSize: m(10), fontWeight: '800' },
-  metricsStrip: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  inputField: {
     backgroundColor: '#f8fafc',
-    borderRadius: m(12),
-    padding: m(12),
-    marginBottom: m(12),
-  },
-  metricLabel: {
-    fontSize: m(10),
-    color: '#64748b',
-    fontWeight: '600',
-  },
-  metricValBold: {
-    fontSize: m(15),
-    fontWeight: '800',
-    color: '#0f172a',
-    marginTop: m(2),
-  },
-  metricVal: {
-    fontSize: m(13),
-    fontWeight: '700',
-    color: '#0f172a',
-    marginTop: m(2),
-  },
-  progressContainer: {
-    marginBottom: m(12),
-  },
-  progressHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: m(4),
-  },
-  progressLabel: {
-    fontSize: m(11),
-    color: '#64748b',
-    fontWeight: '600',
-  },
-  progressValueText: {
-    fontSize: m(11),
-    fontWeight: '700',
-    color: '#0f172a',
-  },
-  progressTrack: {
-    height: m(6),
-    backgroundColor: '#f1f5f9',
-    borderRadius: m(3),
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: m(3),
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderColor: '#f1f5f9',
-    paddingTop: m(10),
-  },
-  whatsappBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f0fdf4',
     borderWidth: 1,
-    borderColor: '#bbf7d0',
+    borderColor: '#e2e8f0',
+    borderRadius: m(12),
     paddingHorizontal: m(12),
-    paddingVertical: m(6),
-    borderRadius: m(8),
+    paddingVertical: m(10),
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
   },
-  whatsappBtnText: {
-    fontSize: m(11),
-    fontWeight: '700',
-    color: '#15803d',
-    marginLeft: m(4),
-  },
-  manageBtn: {
+  modeGrid: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#0f172a',
+    flexWrap: 'wrap',
+    gap: m(8),
+  },
+  modeChip: {
     paddingHorizontal: m(12),
     paddingVertical: m(7),
-    borderRadius: m(8),
+    borderRadius: m(16),
+    backgroundColor: '#f1f5f9',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
-  manageBtnText: {
+  activeModeChip: {
+    backgroundColor: colors.oceanBlueButton,
+    borderColor: colors.oceanBlueButton,
+  },
+  modeText: {
     fontSize: m(11),
-    fontWeight: '700',
-    color: '#ffffff',
-    marginRight: m(4),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.textSecondary,
   },
-  emptyContainer: {
+  activeModeText: {
+    color: colors.white,
+    fontFamily: FontFamily.primaryBold,
+  },
+  modalActionsRow: {
+    flexDirection: 'row',
+    gap: m(10),
+    marginTop: m(20),
+    marginBottom: m(10),
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: m(12),
+    borderRadius: m(12),
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    fontSize: m(13),
+    fontFamily: FontFamily.primarySemiBold,
+    color: colors.textSecondary,
+  },
+  modalSubmitBtn: {
+    flex: 2,
+    backgroundColor: colors.oceanBlueButton,
+    paddingVertical: m(12),
+    borderRadius: m(12),
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: m(60),
   },
-  emptyTitle: {
-    fontSize: m(16),
-    fontWeight: '700',
-    color: '#0f172a',
-    marginTop: m(12),
-  },
-  emptySubtitle: {
-    fontSize: m(12),
-    color: '#64748b',
-    marginTop: m(4),
-    textAlign: 'center',
+  modalSubmitText: {
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
   },
 });

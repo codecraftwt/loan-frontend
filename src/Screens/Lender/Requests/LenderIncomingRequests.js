@@ -3,8 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
-  StatusBar,
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
@@ -12,18 +10,17 @@ import {
   TextInput,
   Modal,
   Alert,
-  Platform,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
-import { m } from 'walstar-rn-responsive';
-import { FontFamily, colors } from '../../../constants';
+import { colors, FontFamily } from '../../../constants';
+import { m } from '../../../Utils/responsive';
+import { ScreenWrapper } from '../../../Components/common';
 import lenderFlowService from '../../../Services/lenderFlowService';
 
 export default function LenderIncomingRequests() {
   const navigation = useNavigation();
   const [requests, setRequests] = useState([]);
-  const [allRequests, setAllRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
@@ -47,11 +44,6 @@ export default function LenderIncomingRequests() {
         setRequests(res.requests);
       } else {
         setRequests([]);
-      }
-
-      // Also fetch un-filtered count for tab counters if possible
-      if (activeTab === 'all' && !search.trim()) {
-        setAllRequests(res.requests || []);
       }
     } catch (err) {
       console.error('Error fetching incoming requests:', err);
@@ -88,7 +80,7 @@ export default function LenderIncomingRequests() {
     const diff = expiresAt - Date.now();
 
     if (diff <= 0) {
-      return { text: 'Expired', urgent: true };
+      return { text: 'Review Window Expired', urgent: true };
     }
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -155,148 +147,97 @@ export default function LenderIncomingRequests() {
             request: item,
           })
         }
-        activeOpacity={0.7}
+        activeOpacity={0.8}
       >
-        {/* Top Header */}
-        <View style={styles.cardHeader}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{borrowerName.charAt(0).toUpperCase()}</Text>
+        {/* Top Header Row */}
+        <View style={styles.cardHeaderRow}>
+          <View style={styles.activityIconCircle}>
+            <Feather name="briefcase" size={m(16)} color={colors.white} />
           </View>
-          <View style={{ flex: 1, marginRight: m(8) }}>
-            <Text style={styles.borrowerName} numberOfLines={1}>
+
+          <View style={styles.headerInfoCol}>
+            <Text style={styles.borrowerNameText} numberOfLines={1}>
               {borrowerName}
             </Text>
-            <Text style={styles.businessType}>
-              {item.borrowerSnapshot?.businessType ||
-                item.borrowerId?.borrowerProfile?.businessType ||
-                'Private Entity'}
+            <Text style={styles.purposeText} numberOfLines={1}>
+              {item.purpose || 'Working Capital'} • {item.tenureMonths || 12} Mo
             </Text>
           </View>
 
-          {/* Risk Score Pill */}
+          {/* Status Badge */}
           <View
             style={[
-              styles.riskPill,
-              creditScore >= 750 ? styles.riskPillGreen : styles.riskPillAmber,
-            ]}
-          >
-            <Text
-              style={[
-                styles.riskPillText,
-                creditScore >= 750 ? styles.riskTextGreen : styles.riskTextAmber,
-              ]}
-            >
-              Score: {creditScore} ({riskGrade})
-            </Text>
-          </View>
-        </View>
-
-        {/* 48-Hour Countdown Urgency Banner */}
-        {countdown && (
-          <View
-            style={[
-              styles.countdownBanner,
-              countdown.urgent ? styles.countdownUrgent : styles.countdownNormal,
-            ]}
-          >
-            <Feather
-              name="clock"
-              size={m(12)}
-              color={countdown.urgent ? '#dc2626' : '#d97706'}
-            />
-            <Text
-              style={[
-                styles.countdownText,
-                countdown.urgent ? styles.countdownTextUrgent : styles.countdownTextNormal,
-              ]}
-            >
-              ⏱ {countdown.text}
-            </Text>
-          </View>
-        )}
-
-        {/* Amount & Terms Metrics */}
-        <View style={styles.termsRow}>
-          <View>
-            <Text style={styles.termLabel}>Requested Capital</Text>
-            <Text style={styles.termValLarge}>{formatINR(item.amount)}</Text>
-          </View>
-          <View style={{ alignItems: 'center' }}>
-            <Text style={styles.termLabel}>Tenure / Type</Text>
-            <Text style={styles.termVal}>
-              {item.tenureMonths || 12} Mo • {item.repaymentType === 'ONE_TIME' || item.repaymentType === 'bullet' ? 'Bullet' : 'EMI'}
-            </Text>
-          </View>
-          <View style={{ alignItems: 'flex-end' }}>
-            <Text style={styles.termLabel}>Requested Rate</Text>
-            <Text style={styles.termVal}>{item.requestedRate || 12}% p.a.</Text>
-          </View>
-        </View>
-
-        {/* Purpose & Security info */}
-        <View style={styles.infoRow}>
-          <Text style={styles.infoText} numberOfLines={1}>
-            🎯 <Text style={{ fontWeight: '700', color: '#334155' }}>Purpose:</Text>{' '}
-            {item.purpose || 'Working Capital'}
-          </Text>
-          {item.pledgedSecurity ? (
-            <Text style={styles.securityText} numberOfLines={1}>
-              🛡️ {item.pledgedSecurity}
-            </Text>
-          ) : null}
-        </View>
-
-        {/* Footer & Actions */}
-        <View style={styles.cardFooter}>
-          <View
-            style={[
-              styles.statusBadge,
+              styles.statusPill,
               item.status === 'pending'
-                ? styles.badgePending
+                ? styles.pillPending
                 : item.status === 'accepted'
-                ? styles.badgeAccepted
-                : styles.badgeRejected,
+                ? styles.pillAccepted
+                : styles.pillRejected,
             ]}
           >
             <Text
               style={[
-                styles.statusBadgeText,
+                styles.statusPillText,
                 item.status === 'pending'
-                  ? styles.badgeTextPending
+                  ? styles.pillTextPending
                   : item.status === 'accepted'
-                  ? styles.badgeTextAccepted
-                  : styles.badgeTextRejected,
+                  ? styles.pillTextAccepted
+                  : styles.pillTextRejected,
               ]}
             >
-              {item.status.toUpperCase()}
+              {item.status === 'pending'
+                ? 'IN REVIEW'
+                : item.status === 'accepted'
+                ? 'ACCEPTED'
+                : 'DECLINED'}
+            </Text>
+          </View>
+        </View>
+
+        {/* Compact Metrics Row */}
+        <View style={styles.metricsBox}>
+          <View style={styles.metricItem}>
+            <Text style={styles.metricLabel}>Facility Amount</Text>
+            <Text style={styles.metricValueBold}>{formatINR(item.amount)}</Text>
+          </View>
+
+          <View style={styles.metricDivider} />
+
+          <View style={styles.metricItem}>
+            <Text style={styles.metricLabel}>Tenure / Rate</Text>
+            <Text style={styles.metricValue}>
+              {item.tenureMonths || 12} Mo • {item.requestedRate || 12}%
             </Text>
           </View>
 
-          <View style={styles.actionButtonsRow}>
-            {item.status === 'pending' && (
-              <TouchableOpacity
-                style={styles.declineBtn}
-                onPress={() => {
-                  setSelectedRequest(item);
-                  setRejectModalVisible(true);
-                }}
-              >
-                <Text style={styles.declineBtnText}>Decline</Text>
-              </TouchableOpacity>
-            )}
+          <View style={styles.metricDivider} />
 
-            <TouchableOpacity
-              style={styles.reviewBtn}
-              onPress={() =>
-                navigation.navigate('LenderRequestDetails', {
-                  requestId: item._id,
-                  request: item,
-                })
-              }
+          <View style={styles.metricItem}>
+            <Text style={styles.metricLabel}>Credit Score</Text>
+            <Text
+              style={[
+                styles.metricScoreValue,
+                creditScore >= 750 ? styles.scoreTextGreen : styles.scoreTextAmber,
+              ]}
+              numberOfLines={1}
             >
-              <Text style={styles.reviewBtnText}>Underwrite Deal</Text>
-              <Feather name="arrow-right" size={m(13)} color="#ffffff" />
-            </TouchableOpacity>
+              {creditScore} ({riskGrade})
+            </Text>
+            {countdown && item.status === 'pending' && (
+              <Text
+                style={[
+                  styles.metricCountdownSub,
+                  countdown.urgent && styles.metricCountdownUrgent,
+                ]}
+                numberOfLines={1}
+              >
+                ⏱ {countdown.text}
+              </Text>
+            )}
+          </View>
+
+          <View style={styles.chevronWrap}>
+            <Feather name="chevron-right" size={m(16)} color={colors.textSecondary} />
           </View>
         </View>
       </TouchableOpacity>
@@ -304,94 +245,122 @@ export default function LenderIncomingRequests() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
+    <ScreenWrapper
+      backgroundColor={colors.backgroundGreenWhite}
+      topInsetBg={colors.primary}
+      statusBarColor={colors.primary}
+      statusBarStyle="dark-content"
+      includeTabBarClearance={true}
+      scrollable={false}
+    >
+      {/* Top Green Banner Section (Matching Figma Admin & Dashboard) */}
+      <View style={styles.topBanner}>
+        <View style={styles.headerRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.headerTag}>DEAL DESK WORKSPACE</Text>
+            <Text style={styles.headerTitle}>Inward Inquiries</Text>
+            <Text style={styles.headerSubtitle}>
+              Review, assess risk & underwrite facility requests
+            </Text>
+          </View>
 
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>Inward Deal Desk</Text>
-          <Text style={styles.subtitle}>Review & Underwrite Commercial Inquiries</Text>
+          <TouchableOpacity
+            style={styles.refreshBtn}
+            onPress={onRefresh}
+            disabled={loading}
+            activeOpacity={0.8}
+          >
+            <Feather name="refresh-cw" size={m(17)} color={colors.lettersAndIcons} />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          style={styles.refreshIconBtn}
-          onPress={onRefresh}
-          disabled={loading}
-        >
-          <Feather name="refresh-cw" size={m(16)} color="#0f172a" />
-        </TouchableOpacity>
       </View>
 
-      {/* Search Input */}
-      <View style={styles.searchBox}>
-        <Feather name="search" size={m(18)} color="#94a3b8" />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search by borrower entity, purpose, or ID..."
-          placeholderTextColor="#94a3b8"
-          value={search}
-          onChangeText={setSearch}
-          onSubmitEditing={fetchRequests}
-          returnKeyType="search"
-        />
-        {search.length > 0 && (
-          <TouchableOpacity onPress={() => setSearch('')}>
-            <Feather name="x" size={m(16)} color="#94a3b8" />
-          </TouchableOpacity>
+      {/* Main Curved Body Section */}
+      <View style={styles.sheetSection}>
+        {/* Search Input Bar */}
+        <View style={styles.searchContainer}>
+          <Feather name="search" size={m(16)} color={colors.textSecondary} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search borrower entity, purpose, or ID..."
+            placeholderTextColor={colors.textMuted}
+            value={search}
+            onChangeText={setSearch}
+            onSubmitEditing={fetchRequests}
+            returnKeyType="search"
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch('')}>
+              <Feather name="x" size={m(16)} color={colors.textSecondary} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Capsule Filter Tabs (All / In Review / Accepted / Declined) */}
+        <View style={styles.periodCapsuleRow}>
+          {[
+            { key: 'pending', label: 'Pending' },
+            { key: 'accepted', label: 'Accepted' },
+            { key: 'rejected', label: 'Declined' },
+            { key: 'all', label: 'All Inflow' },
+          ].map((tab) => {
+            const isSelected = activeTab === tab.key;
+            return (
+              <TouchableOpacity
+                key={tab.key}
+                style={[styles.periodTab, isSelected && styles.periodTabActive]}
+                onPress={() => setActiveTab(tab.key)}
+                activeOpacity={0.8}
+              >
+                <Text
+                  style={[
+                    styles.periodTabText,
+                    isSelected && styles.periodTabTextActive,
+                  ]}
+                >
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* List Content */}
+        {loading && !refreshing ? (
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="small" color={colors.lettersAndIcons} />
+            <Text style={styles.loadingText}>Syncing deal inflow...</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={requests}
+            keyExtractor={(item) => item._id}
+            renderItem={renderItem}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={[colors.lettersAndIcons]}
+              />
+            }
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Feather name="inbox" size={m(42)} color={colors.textMuted} />
+                <Text style={styles.emptyTitle}>No Loan Requests Found</Text>
+                <Text style={styles.emptySubtitle}>
+                  {activeTab === 'pending'
+                    ? 'All incoming loan applications have been reviewed.'
+                    : 'No requests match the selected filter.'}
+                </Text>
+              </View>
+            }
+          />
         )}
       </View>
 
-      {/* Filter Tabs */}
-      <View style={styles.tabsRow}>
-        {[
-          { key: 'pending', label: 'Pending Review' },
-          { key: 'accepted', label: 'Accepted' },
-          { key: 'rejected', label: 'Declined' },
-          { key: 'all', label: 'All Requests' },
-        ].map((tab) => (
-          <TouchableOpacity
-            key={tab.key}
-            style={[styles.tabButton, activeTab === tab.key && styles.activeTabButton]}
-            onPress={() => setActiveTab(tab.key)}
-          >
-            <Text
-              style={[styles.tabButtonText, activeTab === tab.key && styles.activeTabButtonText]}
-            >
-              {tab.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {loading && !refreshing ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0f172a" />
-          <Text style={styles.loadingText}>Loading deal inflow...</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={requests}
-          keyExtractor={(item) => item._id}
-          renderItem={renderItem}
-          contentContainerStyle={styles.listContent}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0f172a']} />
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Feather name="inbox" size={m(48)} color="#cbd5e1" />
-              <Text style={styles.emptyTitle}>No Loan Requests Found</Text>
-              <Text style={styles.emptySubtitle}>
-                {activeTab === 'pending'
-                  ? 'All incoming loan applications have been assessed.'
-                  : 'No requests match the selected criteria.'}
-              </Text>
-            </View>
-          }
-        />
-      )}
-
-      {/* Structured Decline Modal */}
+      {/* Decline Underwriting Modal */}
       <Modal
         visible={rejectModalVisible}
         transparent
@@ -401,20 +370,20 @@ export default function LenderIncomingRequests() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
-              <View style={[styles.modalIconWrap, { backgroundColor: '#fee2e2' }]}>
-                <Feather name="x-circle" size={m(20)} color="#ef4444" />
+              <View style={styles.modalIconWrap}>
+                <Feather name="x-circle" size={m(18)} color="#ef4444" />
               </View>
               <Text style={styles.modalTitle}>Decline Loan Request</Text>
               <TouchableOpacity onPress={() => setRejectModalVisible(false)}>
-                <Feather name="x" size={m(20)} color="#64748b" />
+                <Feather name="x" size={m(20)} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
             <Text style={styles.modalSubtitle}>
-              Please select or enter the primary underwriting reason for rejecting this application:
+              Select or specify the primary reason for declining this borrower's inquiry:
             </Text>
 
-            {/* Quick Reasons Chips */}
+            {/* Reason Chips */}
             <View style={styles.reasonsChipGrid}>
               {[
                 'Credit score below policy cut-off',
@@ -476,423 +445,401 @@ export default function LenderIncomingRequests() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
+  // Top Green Banner
+  topBanner: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: m(20),
+    paddingTop: m(12),
+    paddingBottom: m(20),
   },
-  header: {
+  headerRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: m(16),
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || m(24)) + m(8) : m(16),
-    paddingBottom: m(10),
+    justifyContent: 'space-between',
   },
-  title: {
-    fontSize: m(22),
-    fontWeight: '800',
-    color: '#0f172a',
+  headerTag: {
+    fontSize: m(10),
     fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    letterSpacing: 0.8,
+    opacity: 0.85,
+    marginBottom: m(2),
   },
-  subtitle: {
+  headerTitle: {
+    fontSize: m(22),
+    lineHeight: m(28),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  headerSubtitle: {
     fontSize: m(12),
-    color: '#64748b',
+    lineHeight: m(16),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.lettersAndIcons,
+    opacity: 0.9,
     marginTop: m(2),
   },
-  refreshIconBtn: {
-    width: m(36),
-    height: m(36),
-    borderRadius: m(18),
-    backgroundColor: '#ffffff',
-    alignItems: 'center',
+  refreshBtn: {
+    width: m(42),
+    height: m(42),
+    borderRadius: m(21),
+    backgroundColor: colors.white,
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  searchBox: {
+
+  // Main Curved Sheet
+  sheetSection: {
+    flex: 1,
+    backgroundColor: colors.backgroundGreenWhite,
+    borderTopLeftRadius: m(32),
+    borderTopRightRadius: m(32),
+    paddingTop: m(16),
+  },
+
+  // Search Input Container
+  searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: m(12),
-    marginHorizontal: m(16),
-    marginBottom: m(10),
-    paddingHorizontal: m(12),
+    backgroundColor: colors.white,
+    borderRadius: m(16),
+    marginHorizontal: m(18),
+    marginBottom: m(12),
+    paddingHorizontal: m(14),
     height: m(44),
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: 'rgba(9, 48, 48, 0.08)',
   },
   searchInput: {
     flex: 1,
     marginLeft: m(8),
     fontSize: m(13),
-    color: '#0f172a',
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.lettersAndIcons,
   },
-  tabsRow: {
+
+  // Capsule Filter Tabs
+  periodCapsuleRow: {
     flexDirection: 'row',
-    paddingHorizontal: m(16),
-    marginBottom: m(12),
+    backgroundColor: colors.white,
+    borderRadius: m(24),
+    padding: m(4),
+    marginHorizontal: m(18),
+    marginBottom: m(14),
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.08)',
   },
-  tabButton: {
-    paddingHorizontal: m(12),
-    paddingVertical: m(6),
-    borderRadius: m(18),
-    backgroundColor: '#f1f5f9',
-    marginRight: m(6),
+  periodTab: {
+    flex: 1,
+    paddingVertical: m(7),
+    borderRadius: m(20),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  activeTabButton: {
-    backgroundColor: '#0f172a',
+  periodTabActive: {
+    backgroundColor: colors.primary,
   },
-  tabButtonText: {
-    fontSize: m(11),
-    fontWeight: '700',
-    color: '#64748b',
+  periodTabText: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
   },
-  activeTabButtonText: {
-    color: '#ffffff',
+  periodTabTextActive: {
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
+
   listContent: {
-    paddingHorizontal: m(16),
-    paddingBottom: m(100),
+    paddingHorizontal: m(18),
+    paddingBottom: m(30),
   },
-  loadingContainer: {
+  loadingBox: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
   loadingText: {
     fontSize: m(12),
-    color: '#64748b',
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
     marginTop: m(8),
   },
+
+  // Short Compact Deal Card
   card: {
-    backgroundColor: '#ffffff',
-    borderRadius: m(16),
-    padding: m(16),
-    marginBottom: m(12),
+    backgroundColor: colors.white,
+    borderRadius: m(14),
+    padding: m(12),
+    marginBottom: m(10),
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: 'rgba(9, 48, 48, 0.06)',
     elevation: 2,
-    shadowColor: '#000000',
+    shadowColor: colors.lettersAndIcons,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 4,
   },
-  cardHeader: {
+  cardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: m(10),
+    marginBottom: m(8),
   },
-  avatar: {
-    width: m(38),
-    height: m(38),
-    borderRadius: m(19),
-    backgroundColor: '#eff6ff',
-    alignItems: 'center',
+  activityIconCircle: {
+    width: m(36),
+    height: m(36),
+    borderRadius: m(18),
+    backgroundColor: colors.blueButton,
     justifyContent: 'center',
+    alignItems: 'center',
     marginRight: m(10),
   },
-  avatarText: {
-    fontSize: m(16),
-    fontWeight: '800',
-    color: '#2563eb',
+  headerInfoCol: {
+    flex: 1,
+    marginRight: m(8),
   },
-  borrowerName: {
-    fontSize: m(15),
-    fontWeight: '800',
-    color: '#0f172a',
+  borrowerNameText: {
+    fontSize: m(14),
+    lineHeight: m(18),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
-  businessType: {
+  purposeText: {
     fontSize: m(11),
-    color: '#64748b',
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.blueButton,
     marginTop: m(1),
   },
-  riskPill: {
-    paddingHorizontal: m(8),
-    paddingVertical: m(3),
-    borderRadius: m(8),
-    borderWidth: 1,
-  },
-  riskPillGreen: {
-    backgroundColor: '#ecfdf5',
-    borderColor: '#bbf7d0',
-  },
-  riskTextGreen: {
-    color: '#16a34a',
-    fontSize: m(10),
-    fontWeight: '800',
-  },
-  riskPillAmber: {
-    backgroundColor: '#fef3c7',
-    borderColor: '#fde68a',
-  },
-  riskTextAmber: {
-    color: '#d97706',
-    fontSize: m(10),
-    fontWeight: '800',
-  },
-  countdownBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: m(10),
-    paddingVertical: m(5),
-    borderRadius: m(8),
-    marginBottom: m(10),
-  },
-  countdownNormal: {
-    backgroundColor: '#fffbeb',
-  },
-  countdownTextNormal: {
-    color: '#b45309',
-    fontSize: m(11),
-    fontWeight: '700',
-    marginLeft: m(6),
-  },
-  countdownUrgent: {
-    backgroundColor: '#fef2f2',
-  },
-  countdownTextUrgent: {
-    color: '#dc2626',
-    fontSize: m(11),
-    fontWeight: '800',
-    marginLeft: m(6),
-  },
-  termsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
-    borderRadius: m(12),
-    padding: m(12),
-    marginBottom: m(10),
-  },
-  termLabel: {
-    fontSize: m(10),
-    color: '#64748b',
-    fontWeight: '600',
-  },
-  termValLarge: {
-    fontSize: m(16),
-    fontWeight: '800',
-    color: '#0f172a',
-    marginTop: m(2),
-  },
-  termVal: {
-    fontSize: m(12),
-    fontWeight: '700',
-    color: '#0f172a',
-    marginTop: m(2),
-  },
-  infoRow: {
-    marginBottom: m(10),
-  },
-  infoText: {
-    fontSize: m(11),
-    color: '#64748b',
-  },
-  securityText: {
-    fontSize: m(11),
-    color: '#475569',
-    marginTop: m(3),
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderColor: '#f1f5f9',
-    paddingTop: m(10),
-  },
-  statusBadge: {
+  statusPill: {
     paddingHorizontal: m(8),
     paddingVertical: m(3),
     borderRadius: m(6),
   },
-  badgePending: {
+  pillPending: {
     backgroundColor: '#fef3c7',
   },
-  badgeTextPending: {
-    color: '#b45309',
-    fontSize: m(10),
-    fontWeight: '800',
-  },
-  badgeAccepted: {
+  pillAccepted: {
     backgroundColor: '#ecfdf5',
   },
-  badgeTextAccepted: {
-    color: '#047857',
-    fontSize: m(10),
-    fontWeight: '800',
+  pillRejected: {
+    backgroundColor: '#fee2e2',
   },
-  badgeRejected: {
-    backgroundColor: '#f1f5f9',
+  statusPillText: {
+    fontSize: m(9.5),
+    fontFamily: FontFamily.primaryBold,
   },
-  badgeTextRejected: {
-    color: '#64748b',
-    fontSize: m(10),
-    fontWeight: '800',
+  pillTextPending: {
+    color: '#d97706',
   },
-  actionButtonsRow: {
+  pillTextAccepted: {
+    color: '#059669',
+  },
+  pillTextRejected: {
+    color: '#dc2626',
+  },
+
+  // Compact Metrics Box
+  metricsBox: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  declineBtn: {
-    paddingHorizontal: m(10),
+    backgroundColor: colors.backgroundGreenWhite,
+    borderRadius: m(10),
     paddingVertical: m(6),
-    borderRadius: m(8),
-    backgroundColor: '#f1f5f9',
-    marginRight: m(8),
+    paddingHorizontal: m(10),
   },
-  declineBtnText: {
-    fontSize: m(11),
-    fontWeight: '700',
-    color: '#ef4444',
-  },
-  reviewBtn: {
-    flexDirection: 'row',
+  metricItem: {
+    flex: 1,
     alignItems: 'center',
-    backgroundColor: '#0f172a',
-    paddingHorizontal: m(12),
-    paddingVertical: m(7),
-    borderRadius: m(8),
   },
-  reviewBtnText: {
+  metricLabel: {
+    fontSize: m(9.5),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.textSecondary,
+    marginBottom: m(1),
+  },
+  metricValueBold: {
+    fontSize: m(12.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  metricValue: {
     fontSize: m(11),
-    fontWeight: '700',
-    color: '#ffffff',
-    marginRight: m(4),
+    fontFamily: FontFamily.primarySemiBold,
+    color: colors.lettersAndIcons,
   },
+  metricScoreValue: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryBold,
+  },
+  scoreTextGreen: {
+    color: '#059669',
+  },
+  scoreTextAmber: {
+    color: '#d97706',
+  },
+  metricCountdownSub: {
+    fontSize: m(9),
+    fontFamily: FontFamily.primaryMedium,
+    color: '#d97706',
+    marginTop: m(1),
+  },
+  metricCountdownUrgent: {
+    color: '#dc2626',
+  },
+  metricDivider: {
+    width: 1,
+    height: m(20),
+    backgroundColor: '#cbd5e1',
+  },
+  chevronWrap: {
+    marginLeft: m(6),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
   emptyContainer: {
+    paddingVertical: m(50),
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: m(60),
   },
   emptyTitle: {
-    fontSize: m(16),
-    fontWeight: '700',
-    color: '#0f172a',
-    marginTop: m(12),
+    fontSize: m(15),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    marginTop: m(10),
   },
   emptySubtitle: {
     fontSize: m(12),
-    color: '#64748b',
-    marginTop: m(4),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
     textAlign: 'center',
-    paddingHorizontal: m(30),
+    marginTop: m(4),
+    paddingHorizontal: m(20),
   },
+
+  // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    backgroundColor: 'rgba(9, 48, 48, 0.65)',
     justifyContent: 'center',
     padding: m(20),
   },
   modalCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: m(20),
+    backgroundColor: colors.white,
+    borderRadius: m(24),
     padding: m(20),
     elevation: 8,
   },
   modalHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: m(8),
   },
   modalIconWrap: {
-    width: m(36),
-    height: m(36),
-    borderRadius: m(10),
+    width: m(34),
+    height: m(34),
+    borderRadius: m(17),
+    backgroundColor: '#fee2e2',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: m(10),
   },
   modalTitle: {
     fontSize: m(16),
-    fontWeight: '800',
-    color: '#0f172a',
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
     flex: 1,
+    marginLeft: m(10),
   },
   modalSubtitle: {
     fontSize: m(12),
-    color: '#64748b',
-    marginBottom: m(14),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+    marginBottom: m(12),
     lineHeight: m(16),
   },
   reasonsChipGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    gap: m(6),
     marginBottom: m(12),
   },
   reasonChip: {
     paddingHorizontal: m(10),
     paddingVertical: m(6),
-    borderRadius: m(10),
+    borderRadius: m(8),
     backgroundColor: '#f8fafc',
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    marginRight: m(6),
-    marginBottom: m(6),
   },
   activeReasonChip: {
-    backgroundColor: '#fef2f2',
-    borderColor: '#fca5a5',
+    backgroundColor: '#fee2e2',
+    borderColor: '#ef4444',
   },
   reasonChipText: {
     fontSize: m(11),
-    color: '#475569',
-    fontWeight: '600',
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.textSecondary,
   },
   activeReasonChipText: {
-    color: '#b91c1c',
-    fontWeight: '700',
+    color: '#dc2626',
+    fontFamily: FontFamily.primaryBold,
   },
   inputLabel: {
-    fontSize: m(11),
-    fontWeight: '700',
-    color: '#475569',
-    marginBottom: m(4),
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primarySemiBold,
+    color: colors.lettersAndIcons,
+    marginBottom: m(6),
   },
   modalInput: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.backgroundGreenWhite,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    borderRadius: m(10),
+    borderColor: '#cbd5e1',
+    borderRadius: m(12),
     padding: m(10),
     fontSize: m(12),
-    color: '#0f172a',
-    marginBottom: m(14),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.lettersAndIcons,
     textAlignVertical: 'top',
+    height: m(70),
+    marginBottom: m(14),
   },
   modalActionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: m(8),
   },
   modalCancelBtn: {
     flex: 1,
     paddingVertical: m(12),
-    borderRadius: m(10),
-    backgroundColor: '#f1f5f9',
+    borderRadius: m(12),
     alignItems: 'center',
-    marginRight: m(8),
+    backgroundColor: '#f1f5f9',
   },
   modalCancelText: {
-    fontSize: m(12),
-    fontWeight: '700',
-    color: '#64748b',
+    fontSize: m(13),
+    fontFamily: FontFamily.primarySemiBold,
+    color: colors.textSecondary,
   },
   modalRejectBtn: {
     flex: 2,
     paddingVertical: m(12),
-    borderRadius: m(10),
-    backgroundColor: '#ef4444',
+    borderRadius: m(12),
     alignItems: 'center',
+    backgroundColor: '#ef4444',
   },
   modalRejectText: {
-    fontSize: m(12),
-    fontWeight: '700',
-    color: '#ffffff',
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
   },
 });

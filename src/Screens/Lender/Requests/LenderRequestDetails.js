@@ -15,8 +15,9 @@ import {
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
-import { m } from 'walstar-rn-responsive';
+import { m } from '../../../Utils/responsive';
 import { FontFamily, colors } from '../../../constants';
+import { ScreenWrapper } from '../../../Components/common';
 import lenderFlowService from '../../../Services/lenderFlowService';
 import DisbursalOtpModal from '../Components/DisbursalOtpModal';
 
@@ -258,12 +259,16 @@ export default function LenderRequestDetails() {
 
   if (loading || !request) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <ScreenWrapper
+        backgroundColor={colors.backgroundGreenWhite}
+        statusBarStyle="dark-content"
+        includeTabBarClearance={false}
+      >
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0f172a" />
+          <ActivityIndicator size="large" color={colors.lettersAndIcons} />
           <Text style={styles.loadingText}>Loading underwriting workspace...</Text>
         </View>
-      </SafeAreaView>
+      </ScreenWrapper>
     );
   }
 
@@ -275,256 +280,314 @@ export default function LenderRequestDetails() {
   const businessName = b.businessName || bProfile.businessName || bUser.companyName || borrowerName;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
+    <ScreenWrapper
+      backgroundColor={colors.backgroundGreenWhite}
+      topInsetBg={colors.primary}
+      statusBarColor={colors.primary}
+      statusBarStyle="dark-content"
+      includeTabBarClearance={false}
+      scrollable={false}
+    >
 
-      {/* App Bar */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Feather name="arrow-left" size={m(20)} color="#0f172a" />
-        </TouchableOpacity>
-        <View style={{ flex: 1, marginHorizontal: m(10) }}>
-          <Text style={styles.headerTitle} numberOfLines={1}>
-            {businessName}
-          </Text>
-          <Text style={styles.headerSubtitle}>App ID: #{request._id.slice(-6).toUpperCase()}</Text>
-        </View>
-        <View
-          style={[
-            styles.statusPill,
-            request.status === 'pending'
-              ? styles.pillPending
-              : request.status === 'accepted'
-              ? styles.pillAccepted
-              : styles.pillRejected,
-          ]}
-        >
-          <Text
+      {/* ── 1. Top Green Header Banner ── */}
+      <View style={styles.topBanner}>
+        <View style={styles.headerRow}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backBtn}
+            activeOpacity={0.8}
+          >
+            <Feather name="arrow-left" size={m(18)} color={colors.lettersAndIcons} />
+          </TouchableOpacity>
+
+          <View style={styles.headerTitleWrap}>
+            <Text style={styles.headerTag}>COMMERCIAL FACILITY UNDERWRITING</Text>
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              {businessName}
+            </Text>
+            <Text style={styles.headerSubtitle}>
+              App ID: #{request._id.slice(-6).toUpperCase()}
+            </Text>
+          </View>
+
+          {/* Status Badge */}
+          <View
             style={[
-              styles.statusPillText,
+              styles.statusPill,
               request.status === 'pending'
-                ? styles.textPending
+                ? styles.pillPending
                 : request.status === 'accepted'
-                ? styles.textAccepted
-                : styles.textRejected,
+                ? styles.pillAccepted
+                : styles.pillRejected,
             ]}
           >
-            {request.status.toUpperCase()}
-          </Text>
+            <Text
+              style={[
+                styles.statusPillText,
+                request.status === 'pending'
+                  ? styles.textPending
+                  : request.status === 'accepted'
+                  ? styles.textAccepted
+                  : styles.textRejected,
+              ]}
+            >
+              {request.status.toUpperCase()}
+            </Text>
+          </View>
+        </View>
+
+        {/* Unified 3-Column Telemetry Strip on Green */}
+        <View style={styles.topMetricsCard}>
+          <View style={styles.topMetricColumn}>
+            <Text style={styles.topMetricLabel}>Principal</Text>
+            <Text style={styles.topMetricValueWhite}>{formatINR(request.amount)}</Text>
+          </View>
+          <View style={styles.topMetricDivider} />
+          <View style={styles.topMetricColumn}>
+            <Text style={styles.topMetricLabel}>Tenure / Rate</Text>
+            <Text style={styles.topMetricValueBlue}>
+              {request.tenureMonths || 12}M • {request.requestedRate || 12}%
+            </Text>
+          </View>
+          <View style={styles.topMetricDivider} />
+          <View style={styles.topMetricColumn}>
+            <Text style={styles.topMetricLabel}>CIBIL Score</Text>
+            <Text style={styles.topMetricValueDark}>
+              {underwritingData?.creditScore || 750} ({underwritingData?.riskGrade || 'A'})
+            </Text>
+          </View>
         </View>
       </View>
 
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-        {/* ── 1. Requested Financing Facility Card ── */}
-        <View style={styles.sectionCard}>
-          <View style={styles.cardHeader}>
-            <Feather name="dollar-sign" size={m(16)} color="#2563eb" />
-            <Text style={styles.cardTitle}>Application Facility</Text>
-          </View>
-
-          <View style={styles.facilityHighlight}>
-            <Text style={styles.facilityLabel}>Requested Principal</Text>
-            <Text style={styles.facilityAmount}>{formatINR(request.amount)}</Text>
-            <Text style={styles.facilitySub}>₹{Number(request.amount || 0).toLocaleString('en-IN')} INR</Text>
-          </View>
-
-          <View style={styles.grid2}>
-            <View style={styles.gridBox}>
-              <Text style={styles.gridBoxLabel}>Tenure</Text>
-              <Text style={styles.gridBoxVal}>{request.tenureMonths || 12} Months</Text>
-            </View>
-            <View style={styles.gridBox}>
-              <Text style={styles.gridBoxLabel}>Repayment Mode</Text>
-              <Text style={styles.gridBoxVal}>
-                {request.repaymentType === 'ONE_TIME' || request.repaymentType === 'bullet'
-                  ? 'One-Time Bullet'
-                  : 'Monthly EMI'}
-              </Text>
-            </View>
-            <View style={styles.gridBox}>
-              <Text style={styles.gridBoxLabel}>Requested Rate</Text>
-              <Text style={styles.gridBoxVal}>{request.requestedRate || 12}% p.a.</Text>
-            </View>
-            <View style={styles.gridBox}>
-              <Text style={styles.gridBoxLabel}>Loan Purpose</Text>
-              <Text style={styles.gridBoxVal}>{request.purpose || 'Working Capital'}</Text>
-            </View>
-          </View>
-
-          {/* Pledged Security / Collateral */}
-          <View style={styles.securityBanner}>
-            <Feather name="shield" size={m(16)} color="#d97706" style={{ marginTop: m(2) }} />
-            <View style={{ flex: 1, marginLeft: m(8) }}>
-              <Text style={styles.securityTitle}>Pledged Security / Collateral</Text>
-              <Text style={styles.securityVal}>
-                {request.pledgedSecurity || 'Unsecured Commercial Facility'}
-              </Text>
-            </View>
-          </View>
-
-          {request.notes ? (
-            <View style={styles.notesBox}>
-              <Text style={styles.notesLabel}>Borrower Note:</Text>
-              <Text style={styles.notesVal}>{request.notes}</Text>
-            </View>
-          ) : null}
-        </View>
-
-        {/* ── 2. AI Underwriting & Credit Risk Hub ── */}
-        <View style={styles.sectionCard}>
-          <View style={styles.cardHeader}>
-            <Feather name="cpu" size={m(16)} color="#16a34a" />
-            <Text style={styles.cardTitle}>AI Credit Underwriting Hub</Text>
-          </View>
-
-          <View style={styles.underwritingGrid}>
-            {/* Credit Score & Grade */}
-            <View style={styles.metricCard}>
-              <Text style={styles.metricLabel}>Credit Score</Text>
-              <Text style={[styles.metricVal, { color: '#16a34a' }]}>
-                {underwritingData?.creditScore || 750} / 900
-              </Text>
-              <Text style={styles.metricSub}>Grade {underwritingData?.riskGrade} (Low Risk)</Text>
-            </View>
-
-            {/* DSCR Gauge */}
-            <View style={styles.metricCard}>
-              <Text style={styles.metricLabel}>DSCR Ratio</Text>
-              <Text
-                style={[
-                  styles.metricVal,
-                  { color: (underwritingData?.dscr || 1) >= 1.3 ? '#16a34a' : '#d97706' },
-                ]}
-              >
-                {underwritingData?.dscr || 1.45}x
-              </Text>
-              <Text style={styles.metricSub}>
-                {(underwritingData?.dscr || 1) >= 1.3 ? 'Healthy Coverage' : 'Moderate Coverage'}
-              </Text>
-            </View>
-
-            {/* Max Recommended Cap */}
-            <View style={styles.metricCard}>
-              <Text style={styles.metricLabel}>Recommended Cap</Text>
-              <Text style={[styles.metricVal, { color: '#2563eb' }]}>
-                {formatINR(underwritingData?.recommendedMaxCap || 500000)}
-              </Text>
-              <Text style={styles.metricSub}>Based on 35% turnover</Text>
-            </View>
-
-            {/* Monthly Net Inflow */}
-            <View style={styles.metricCard}>
-              <Text style={styles.metricLabel}>Monthly Cashflow</Text>
-              <Text style={styles.metricVal}>
-                {formatINR(underwritingData?.monthlyIncome || 85000)}
-              </Text>
-              <Text style={styles.metricSub}>Verified Bank Inflow</Text>
-            </View>
-          </View>
-
-          {/* Statutory Checklist */}
-          <Text style={styles.checklistTitle}>Statutory Verification Checklist</Text>
-          <View style={styles.checklist}>
-            <View style={styles.checkItem}>
-              <Feather name="check-circle" size={m(14)} color="#16a34a" />
-              <Text style={styles.checkText}>PAN Card Authenticated via NSDL</Text>
-            </View>
-            <View style={styles.checkItem}>
-              <Feather name="check-circle" size={m(14)} color="#16a34a" />
-              <Text style={styles.checkText}>Aadhaar DigiLocker e-KYC Verified</Text>
-            </View>
-            <View style={styles.checkItem}>
-              <Feather name="check-circle" size={m(14)} color="#16a34a" />
-              <Text style={styles.checkText}>Active GST Registration & Filing History</Text>
-            </View>
-            <View style={styles.checkItem}>
-              <Feather name="check-circle" size={m(14)} color="#16a34a" />
-              <Text style={styles.checkText}>Bank Account Mandate Ready</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* ── 3. Borrower & Enterprise Details ── */}
-        <View style={styles.sectionCard}>
-          <View style={styles.cardHeader}>
-            <Feather name="briefcase" size={m(16)} color="#0f172a" />
-            <Text style={styles.cardTitle}>Borrower Profile</Text>
-          </View>
-
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Borrower Name</Text>
-            <Text style={styles.detailValBold}>{borrowerName}</Text>
-          </View>
-
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Company / Trade Name</Text>
-            <Text style={styles.detailValBold}>{businessName}</Text>
-          </View>
-
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Business Type</Text>
-            <Text style={styles.detailVal}>{b.businessType || bProfile.businessType || 'Private Limited'}</Text>
-          </View>
-
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Years in Business</Text>
-            <Text style={styles.detailVal}>{b.yearsInBusiness || bProfile.yearsInBusiness || 4} Years</Text>
-          </View>
-
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>PAN Number</Text>
-            <Text style={styles.detailValMono}>{b.panCardNumber || bUser.panCardNumber || 'Disclosed'}</Text>
-          </View>
-
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>GSTIN</Text>
-            <Text style={styles.detailValMono}>{b.gstNumber || bProfile.gstNumber || 'Disclosed'}</Text>
-          </View>
-
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Mobile & Email</Text>
-            <Text style={styles.detailVal}>{b.mobileNo || bUser.mobileNo || 'N/A'}</Text>
-          </View>
-        </View>
-
-        {/* ── 4. Disbursal OTP Status Card (when Accepted) ── */}
-        {request.status === 'accepted' && (
-          <View style={styles.disbursalCard}>
-            <View style={styles.disbursalHeader}>
-              <View style={styles.disbursalIconWrap}>
-                <Feather name="key" size={m(18)} color="#d97706" />
+      {/* ── 2. Curved Main Body Section ── */}
+      <View style={styles.sheetSection}>
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={[
+            styles.scrollContent,
+            request.status === 'pending' && { paddingBottom: m(100) },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Card 1: Application Facility */}
+          <View style={styles.card}>
+            <View style={styles.cardHeaderRow}>
+              <View style={styles.iconCircleBlue}>
+                <Feather name="dollar-sign" size={m(16)} color={colors.white} />
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.disbursalTitle}>Disbursal OTP Verification</Text>
-                <Text style={styles.disbursalSubtitle}>
-                  {request.disbursalVerification?.isVerified
-                    ? 'Funds verified & released successfully.'
-                    : 'Awaiting borrower 6-digit release code.'}
+              <View style={{ flex: 1, marginLeft: m(10) }}>
+                <Text style={styles.cardSectionTitle}>Application Facility</Text>
+                <Text style={styles.cardSectionSub}>Financing terms & collateral specification</Text>
+              </View>
+            </View>
+
+            <View style={styles.detailsList}>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Repayment Mode</Text>
+                <Text style={styles.detailValBold}>
+                  {request.repaymentType === 'ONE_TIME' || request.repaymentType === 'bullet'
+                    ? 'One-Time Bullet'
+                    : 'Monthly EMI'}
+                </Text>
+              </View>
+
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Loan Purpose</Text>
+                <Text style={styles.detailValBold}>{request.purpose || 'Working Capital'}</Text>
+              </View>
+
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Pledged Collateral</Text>
+                <View style={styles.securityTag}>
+                  <Feather name="shield" size={m(11)} color="#b45309" />
+                  <Text style={styles.securityTagText}>
+                    {request.pledgedSecurity || 'Unsecured Commercial Facility'}
+                  </Text>
+                </View>
+              </View>
+
+              {request.notes ? (
+                <View style={styles.notesBox}>
+                  <Text style={styles.notesLabel}>Borrower Note:</Text>
+                  <Text style={styles.notesVal}>{request.notes}</Text>
+                </View>
+              ) : null}
+            </View>
+          </View>
+
+          {/* Card 2: AI Credit Underwriting Hub */}
+          <View style={styles.card}>
+            <View style={styles.cardHeaderRow}>
+              <View style={styles.iconCircleGreen}>
+                <Feather name="cpu" size={m(16)} color={colors.white} />
+              </View>
+              <View style={{ flex: 1, marginLeft: m(10) }}>
+                <Text style={styles.cardSectionTitle}>AI Credit Underwriting Hub</Text>
+                <Text style={styles.cardSectionSub}>Automated solvency & risk analysis</Text>
+              </View>
+            </View>
+
+            <View style={styles.underwritingGrid}>
+              {/* Credit Score & Grade */}
+              <View style={styles.metricTile}>
+                <Text style={styles.uwMetricLabel}>Credit Score</Text>
+                <Text style={[styles.uwMetricVal, { color: '#16a34a' }]}>
+                  {underwritingData?.creditScore || 750} / 900
+                </Text>
+                <Text style={styles.uwMetricSub}>Grade {underwritingData?.riskGrade} (Low Risk)</Text>
+              </View>
+
+              {/* DSCR Gauge */}
+              <View style={styles.metricTile}>
+                <Text style={styles.uwMetricLabel}>DSCR Ratio</Text>
+                <Text
+                  style={[
+                    styles.uwMetricVal,
+                    { color: (underwritingData?.dscr || 1) >= 1.3 ? '#16a34a' : '#d97706' },
+                  ]}
+                >
+                  {underwritingData?.dscr || 1.45}x
+                </Text>
+                <Text style={styles.uwMetricSub}>
+                  {(underwritingData?.dscr || 1) >= 1.3 ? 'Healthy Coverage' : 'Moderate Coverage'}
+                </Text>
+              </View>
+
+              {/* Max Recommended Cap */}
+              <View style={styles.metricTile}>
+                <Text style={styles.uwMetricLabel}>Recommended Cap</Text>
+                <Text style={[styles.uwMetricVal, { color: colors.oceanBlueButton }]}>
+                  {formatINR(underwritingData?.recommendedMaxCap || 500000)}
+                </Text>
+                <Text style={styles.uwMetricSub}>Based on 35% turnover</Text>
+              </View>
+
+              {/* Monthly Net Inflow */}
+              <View style={styles.metricTile}>
+                <Text style={styles.uwMetricLabel}>Monthly Cashflow</Text>
+                <Text style={styles.uwMetricVal}>
+                  {formatINR(underwritingData?.monthlyIncome || 85000)}
+                </Text>
+                <Text style={styles.uwMetricSub}>Verified Bank Inflow</Text>
+              </View>
+            </View>
+
+            {/* Statutory Checklist */}
+            <View style={styles.checklistCard}>
+              <Text style={styles.checklistTitle}>Statutory Verification Checklist</Text>
+              <View style={styles.checkItem}>
+                <Feather name="check-circle" size={m(13)} color="#16a34a" />
+                <Text style={styles.checkText}>PAN Card Authenticated via NSDL</Text>
+              </View>
+              <View style={styles.checkItem}>
+                <Feather name="check-circle" size={m(13)} color="#16a34a" />
+                <Text style={styles.checkText}>Aadhaar DigiLocker e-KYC Verified</Text>
+              </View>
+              <View style={styles.checkItem}>
+                <Feather name="check-circle" size={m(13)} color="#16a34a" />
+                <Text style={styles.checkText}>Active GST Registration & Filing History</Text>
+              </View>
+              <View style={styles.checkItem}>
+                <Feather name="check-circle" size={m(13)} color="#16a34a" />
+                <Text style={styles.checkText}>Bank Account Mandate Ready</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Card 3: Borrower Profile */}
+          <View style={styles.card}>
+            <View style={styles.cardHeaderRow}>
+              <View style={styles.iconCircleDark}>
+                <Feather name="briefcase" size={m(16)} color={colors.white} />
+              </View>
+              <View style={{ flex: 1, marginLeft: m(10) }}>
+                <Text style={styles.cardSectionTitle}>Borrower Profile</Text>
+                <Text style={styles.cardSectionSub}>Corporate KYC & contact records</Text>
+              </View>
+            </View>
+
+            <View style={styles.detailsList}>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Authorized Person</Text>
+                <Text style={styles.detailValBold}>{borrowerName}</Text>
+              </View>
+
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Constitution</Text>
+                <Text style={styles.detailValBold}>
+                  {b.businessType || bProfile.businessType || 'Private Limited'}
+                </Text>
+              </View>
+
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Years in Business</Text>
+                <Text style={styles.detailValBold}>
+                  {b.yearsInBusiness || bProfile.yearsInBusiness || 4} Years
+                </Text>
+              </View>
+
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>PAN Number</Text>
+                <Text style={styles.detailValMono}>
+                  {b.panCardNumber || bUser.panCardNumber || 'Disclosed'}
+                </Text>
+              </View>
+
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>GSTIN</Text>
+                <Text style={styles.detailValMono}>
+                  {b.gstNumber || bProfile.gstNumber || 'Disclosed'}
+                </Text>
+              </View>
+
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Contact</Text>
+                <Text style={styles.detailValBold}>
+                  {b.mobileNo || bUser.mobileNo || 'N/A'}
                 </Text>
               </View>
             </View>
-
-            {!request.disbursalVerification?.isVerified && (
-              <View style={styles.disbursalActionRow}>
-                <TouchableOpacity
-                  style={styles.resendOtpBtn}
-                  onPress={handleResendOtp}
-                  disabled={otpLoading}
-                >
-                  <Text style={styles.resendOtpText}>Resend Code</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.verifyOtpBtn}
-                  onPress={() => setShowOtpModal(true)}
-                >
-                  <Text style={styles.verifyOtpText}>Enter 6-Digit OTP</Text>
-                </TouchableOpacity>
-              </View>
-            )}
           </View>
-        )}
-      </ScrollView>
+
+          {/* Card 4: Disbursal OTP Status Card (when Accepted) */}
+          {request.status === 'accepted' && (
+            <View style={styles.disbursalCard}>
+              <View style={styles.disbursalHeader}>
+                <View style={styles.disbursalIconWrap}>
+                  <Feather name="key" size={m(18)} color="#d97706" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.disbursalTitle}>Disbursal OTP Verification</Text>
+                  <Text style={styles.disbursalSubtitle}>
+                    {request.disbursalVerification?.isVerified
+                      ? 'Funds verified & released successfully.'
+                      : 'Awaiting borrower 6-digit release code.'}
+                  </Text>
+                </View>
+              </View>
+
+              {!request.disbursalVerification?.isVerified && (
+                <View style={styles.disbursalActionRow}>
+                  <TouchableOpacity
+                    style={styles.resendOtpBtn}
+                    onPress={handleResendOtp}
+                    disabled={otpLoading}
+                  >
+                    <Text style={styles.resendOtpText}>Resend Code</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.verifyOtpBtn}
+                    onPress={() => setShowOtpModal(true)}
+                  >
+                    <Text style={styles.verifyOtpText}>Enter 6-Digit OTP</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          )}
+        </ScrollView>
+      </View>
 
       {/* ── Fixed Bottom Decision Action Bar ── */}
       {request.status === 'pending' && (
@@ -809,41 +872,60 @@ export default function LenderRequestDetails() {
           fetchRequestDetails();
         }}
       />
-    </SafeAreaView>
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
+  // Top Green Banner
+  topBanner: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: m(18),
+    paddingTop: m(10),
+    paddingBottom: m(16),
   },
-  header: {
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: m(16),
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || m(24)) + m(10) : m(12),
-    paddingBottom: m(12),
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderColor: '#e2e8f0',
+    marginBottom: m(12),
   },
   backBtn: {
     width: m(38),
     height: m(38),
     borderRadius: m(19),
-    backgroundColor: '#f1f5f9',
-    alignItems: 'center',
+    backgroundColor: colors.white,
     justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    marginRight: m(10),
+  },
+  headerTitleWrap: {
+    flex: 1,
+    marginRight: m(8),
+  },
+  headerTag: {
+    fontSize: m(9.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    letterSpacing: 0.8,
+    opacity: 0.85,
+    marginBottom: m(1),
   },
   headerTitle: {
-    fontSize: m(16),
-    fontWeight: '800',
-    color: '#0f172a',
+    fontSize: m(18),
+    lineHeight: m(24),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
   headerSubtitle: {
     fontSize: m(11),
-    color: '#64748b',
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.lettersAndIcons,
+    opacity: 0.85,
     marginTop: m(1),
   },
   statusPill: {
@@ -852,15 +934,67 @@ const styles = StyleSheet.create({
     borderRadius: m(8),
   },
   pillPending: { backgroundColor: '#fef3c7' },
-  textPending: { color: '#b45309', fontSize: m(10), fontWeight: '800' },
+  textPending: { color: '#b45309', fontSize: m(10), fontFamily: FontFamily.primaryBold },
   pillAccepted: { backgroundColor: '#ecfdf5' },
-  textAccepted: { color: '#047857', fontSize: m(10), fontWeight: '800' },
-  pillRejected: { backgroundColor: '#f1f5f9' },
-  textRejected: { color: '#64748b', fontSize: m(10), fontWeight: '800' },
+  textAccepted: { color: '#047857', fontSize: m(10), fontFamily: FontFamily.primaryBold },
+  pillRejected: { backgroundColor: '#fee2e2' },
+  textRejected: { color: '#dc2626', fontSize: m(10), fontFamily: FontFamily.primaryBold },
+
+  // 3-Column Telemetry Strip on Green
+  topMetricsCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    borderRadius: m(14),
+    paddingVertical: m(9),
+    paddingHorizontal: m(14),
+    marginTop: m(2),
+  },
+  topMetricColumn: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  topMetricLabel: {
+    fontSize: m(10),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
+    opacity: 0.8,
+    marginBottom: m(2),
+  },
+  topMetricValueWhite: {
+    fontSize: m(15),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  topMetricValueBlue: {
+    fontSize: m(13.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.oceanBlueButton,
+  },
+  topMetricValueDark: {
+    fontSize: m(13.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  topMetricDivider: {
+    width: 1,
+    height: m(22),
+    backgroundColor: 'rgba(9, 48, 48, 0.15)',
+  },
+
+  // Main Curved Sheet
+  sheetSection: {
+    flex: 1,
+    backgroundColor: colors.backgroundGreenWhite,
+    borderTopLeftRadius: m(28),
+    borderTopRightRadius: m(28),
+    paddingTop: m(14),
+  },
   container: { flex: 1 },
   scrollContent: {
-    padding: m(16),
-    paddingBottom: m(120),
+    paddingHorizontal: m(18),
+    paddingBottom: m(40),
   },
   loadingContainer: {
     flex: 1,
@@ -869,258 +1003,255 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: m(13),
-    color: '#64748b',
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
     marginTop: m(10),
   },
-  sectionCard: {
-    backgroundColor: '#ffffff',
+
+  // Sleek Cards
+  card: {
+    backgroundColor: colors.white,
     borderRadius: m(16),
-    padding: m(16),
-    marginBottom: m(14),
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    elevation: 2,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: m(12),
-  },
-  cardTitle: {
-    fontSize: m(14),
-    fontWeight: '800',
-    color: '#0f172a',
-    marginLeft: m(6),
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  facilityHighlight: {
-    backgroundColor: '#eff6ff',
-    borderRadius: m(12),
     padding: m(14),
     marginBottom: m(12),
     borderWidth: 1,
-    borderColor: '#bfdbfe',
+    borderColor: 'rgba(9, 48, 48, 0.06)',
+    elevation: 2,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
   },
-  facilityLabel: {
-    fontSize: m(11),
-    color: '#2563eb',
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  facilityAmount: {
-    fontSize: m(24),
-    fontWeight: '900',
-    color: '#1e40af',
-    marginTop: m(2),
-  },
-  facilitySub: {
-    fontSize: m(11),
-    color: '#60a5fa',
-    marginTop: m(2),
-  },
-  grid2: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginBottom: m(10),
-  },
-  gridBox: {
-    width: '48%',
-    backgroundColor: '#f8fafc',
-    borderRadius: m(10),
-    padding: m(10),
-    marginBottom: m(8),
-  },
-  gridBoxLabel: {
-    fontSize: m(10),
-    color: '#64748b',
-    fontWeight: '600',
-  },
-  gridBoxVal: {
-    fontSize: m(13),
-    fontWeight: '700',
-    color: '#0f172a',
-    marginTop: m(2),
-  },
-  securityBanner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: '#fffbeb',
-    padding: m(12),
-    borderRadius: m(10),
-    borderWidth: 1,
-    borderColor: '#fde68a',
-    marginBottom: m(8),
-  },
-  securityTitle: {
-    fontSize: m(11),
-    fontWeight: '700',
-    color: '#b45309',
-  },
-  securityVal: {
-    fontSize: m(12),
-    fontWeight: '700',
-    color: '#78350f',
-    marginTop: m(2),
-  },
-  notesBox: {
-    backgroundColor: '#f8fafc',
-    padding: m(10),
-    borderRadius: m(8),
-  },
-  notesLabel: {
-    fontSize: m(11),
-    fontWeight: '700',
-    color: '#334155',
-  },
-  notesVal: {
-    fontSize: m(11),
-    color: '#64748b',
-    marginTop: m(2),
-  },
-  underwritingGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginBottom: m(12),
-  },
-  metricCard: {
-    width: '48%',
-    backgroundColor: '#f8fafc',
-    borderRadius: m(12),
-    padding: m(12),
-    marginBottom: m(8),
-    borderWidth: 1,
-    borderColor: '#f1f5f9',
-  },
-  metricLabel: {
-    fontSize: m(10),
-    fontWeight: '600',
-    color: '#64748b',
-  },
-  metricVal: {
-    fontSize: m(17),
-    fontWeight: '800',
-    color: '#0f172a',
-    marginTop: m(2),
-  },
-  metricSub: {
-    fontSize: m(10),
-    color: '#64748b',
-    marginTop: m(2),
-  },
-  checklistTitle: {
-    fontSize: m(12),
-    fontWeight: '700',
-    color: '#334155',
-    marginBottom: m(8),
-  },
-  checklist: {
-    backgroundColor: '#f8fafc',
-    borderRadius: m(10),
-    padding: m(10),
-  },
-  checkItem: {
+  cardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: m(4),
+    marginBottom: m(12),
   },
-  checkText: {
-    fontSize: m(11),
-    color: '#334155',
-    fontWeight: '600',
-    marginLeft: m(6),
+  iconCircleBlue: {
+    width: m(34),
+    height: m(34),
+    borderRadius: m(17),
+    backgroundColor: colors.blueButton,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iconCircleGreen: {
+    width: m(34),
+    height: m(34),
+    borderRadius: m(17),
+    backgroundColor: '#16a34a',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iconCircleDark: {
+    width: m(34),
+    height: m(34),
+    borderRadius: m(17),
+    backgroundColor: colors.lettersAndIcons,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardSectionTitle: {
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    letterSpacing: 0.2,
+  },
+  cardSectionSub: {
+    fontSize: m(10.5),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+    marginTop: m(1),
+  },
+
+  // Key-Value Rows
+  detailsList: {
+    backgroundColor: colors.backgroundGreenWhite,
+    borderRadius: m(12),
+    paddingHorizontal: m(12),
+    paddingVertical: m(6),
   },
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: m(8),
     borderBottomWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: 'rgba(9, 48, 48, 0.06)',
   },
   detailLabel: {
-    fontSize: m(12),
-    color: '#64748b',
-  },
-  detailVal: {
-    fontSize: m(12),
-    color: '#0f172a',
-    fontWeight: '600',
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
   },
   detailValBold: {
-    fontSize: m(13),
-    color: '#0f172a',
-    fontWeight: '700',
+    fontSize: m(12.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
   detailValMono: {
     fontSize: m(12),
-    color: '#0f172a',
-    fontWeight: '700',
-    fontFamily: 'monospace',
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
+  securityTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fffbeb',
+    paddingHorizontal: m(8),
+    paddingVertical: m(3.5),
+    borderRadius: m(6),
+    gap: m(4),
+  },
+  securityTagText: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryBold,
+    color: '#b45309',
+  },
+  notesBox: {
+    backgroundColor: colors.white,
+    padding: m(10),
+    borderRadius: m(8),
+    marginTop: m(8),
+    marginBottom: m(4),
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.08)',
+  },
+  notesLabel: {
+    fontSize: m(10.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  notesVal: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+    marginTop: m(2),
+  },
+
+  // 4-Tile Underwriting Grid
+  underwritingGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: m(8),
+    marginBottom: m(10),
+  },
+  metricTile: {
+    width: '48.5%',
+    backgroundColor: colors.backgroundGreenWhite,
+    borderRadius: m(12),
+    paddingHorizontal: m(12),
+    paddingVertical: m(10),
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.06)',
+  },
+  uwMetricLabel: {
+    fontSize: m(10),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.textSecondary,
+    marginBottom: m(2),
+  },
+  uwMetricVal: {
+    fontSize: m(15),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  uwMetricSub: {
+    fontSize: m(9.5),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+    marginTop: m(2),
+  },
+
+  // Statutory Checklist
+  checklistCard: {
+    backgroundColor: '#f8fafc',
+    borderRadius: m(12),
+    padding: m(12),
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  checklistTitle: {
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    marginBottom: m(8),
+  },
+  checkItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: m(3.5),
+    gap: m(6),
+  },
+  checkText: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
+  },
+
+  // Disbursal Card
   disbursalCard: {
     backgroundColor: '#fffbeb',
-    borderRadius: m(16),
-    padding: m(16),
-    marginBottom: m(16),
+    borderRadius: m(14),
+    padding: m(14),
+    marginBottom: m(14),
     borderWidth: 1,
     borderColor: '#fde68a',
   },
   disbursalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: m(12),
+    marginBottom: m(10),
   },
   disbursalIconWrap: {
-    width: m(36),
-    height: m(36),
-    borderRadius: m(10),
+    width: m(34),
+    height: m(34),
+    borderRadius: m(17),
     backgroundColor: '#fef3c7',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: m(10),
   },
   disbursalTitle: {
-    fontSize: m(14),
-    fontWeight: '800',
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryBold,
     color: '#b45309',
   },
   disbursalSubtitle: {
-    fontSize: m(11),
+    fontSize: m(10.5),
+    fontFamily: FontFamily.primaryRegular,
     color: '#92400e',
-    marginTop: m(2),
+    marginTop: m(1),
   },
   disbursalActionRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: m(8),
   },
   resendOtpBtn: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: '#fde68a',
-    borderRadius: m(10),
-    paddingVertical: m(10),
+    borderRadius: m(8),
+    paddingVertical: m(9),
     alignItems: 'center',
-    marginRight: m(8),
   },
   resendOtpText: {
-    fontSize: m(12),
-    fontWeight: '700',
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryBold,
     color: '#b45309',
   },
   verifyOtpBtn: {
-    flex: 1.5,
+    flex: 1.4,
     backgroundColor: '#d97706',
-    borderRadius: m(10),
-    paddingVertical: m(10),
+    borderRadius: m(8),
+    paddingVertical: m(9),
     alignItems: 'center',
   },
   verifyOtpText: {
-    fontSize: m(12),
-    fontWeight: '700',
-    color: '#ffffff',
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
   },
   bottomBar: {
     position: 'absolute',

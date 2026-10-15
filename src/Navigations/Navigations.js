@@ -76,6 +76,8 @@ import LenderAvailableBorrowers from '../Screens/Lender/Borrowers/LenderAvailabl
 import LenderBorrowerDetails from '../Screens/Lender/Borrowers/LenderBorrowerDetails';
 import LenderSubscriptionScreen from '../Screens/Lender/Subscription/LenderSubscriptionScreen';
 import LenderProfileScreen from '../Screens/Lender/Profile/LenderProfileScreen';
+import LenderEditProfileScreen from '../Screens/Lender/Profile/LenderEditProfileScreen';
+import LenderOfficeJurisdictionScreen from '../Screens/Lender/Profile/LenderOfficeJurisdictionScreen';
 import LenderSettingsScreen from '../Screens/Lender/Settings/LenderSettingsScreen';
 
 const Navigation = () => {
@@ -186,6 +188,8 @@ const Navigation = () => {
       <Stack.Screen name="LenderBorrowerDetails" component={LenderBorrowerDetails} />
       <Stack.Screen name="LenderSubscriptionScreen" component={LenderSubscriptionScreen} />
       <Stack.Screen name="LenderProfileScreen" component={LenderProfileScreen} />
+      <Stack.Screen name="LenderEditProfileScreen" component={LenderEditProfileScreen} />
+      <Stack.Screen name="LenderOfficeJurisdictionScreen" component={LenderOfficeJurisdictionScreen} />
       <Stack.Screen name="LenderSettingsScreen" component={LenderSettingsScreen} />
 
     </Stack.Navigator>

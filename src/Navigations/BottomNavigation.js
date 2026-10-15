@@ -1,5 +1,5 @@
-import { Platform, StyleSheet, View, Dimensions, TouchableOpacity } from 'react-native';
-import React, { useMemo } from 'react';
+import { Platform, StyleSheet, View, Text, Dimensions, TouchableOpacity } from 'react-native';
+import React, { useMemo, useState, useEffect } from 'react';
 import Feather from 'react-native-vector-icons/Feather';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,6 +14,8 @@ import LenderIncomingRequests from '../Screens/Lender/Requests/LenderIncomingReq
 import LenderLoansPortfolio from '../Screens/Lender/Loans/LenderLoansPortfolio';
 import LenderAvailableBorrowers from '../Screens/Lender/Borrowers/LenderAvailableBorrowers';
 import LenderSubscriptionScreen from '../Screens/Lender/Subscription/LenderSubscriptionScreen';
+import LenderProfileScreen from '../Screens/Lender/Profile/LenderProfileScreen';
+import lenderFlowService from '../Services/lenderFlowService';
 import Home from '../Screens/Lender/Dashboard/Home';
 import Outward from '../Screens/Shared/Loans/Outward';
 import Inward from '../Screens/Shared/Loans/Inward';
@@ -52,6 +54,31 @@ export default function BottomNavigation() {
     return undefined;
   }, [user?.roleId]);
 
+  // Live badge counter for incoming borrower requests (roleId === 1)
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+
+  useEffect(() => {
+    if (roleId === 1) {
+      let isMounted = true;
+      const fetchBadge = () => {
+        lenderFlowService
+          .getDashboardStats()
+          .then(res => {
+            if (isMounted && res?.success && res.stats?.pendingRequests !== undefined) {
+              setPendingRequestsCount(res.stats.pendingRequests);
+            }
+          })
+          .catch(() => {});
+      };
+      fetchBadge();
+      const interval = setInterval(fetchBadge, 25000);
+      return () => {
+        isMounted = false;
+        clearInterval(interval);
+      };
+    }
+  }, [roleId]);
+
   // Get safe area values
   const insets = useSafeAreaInsets();
   const bottomInset =
@@ -60,7 +87,7 @@ export default function BottomNavigation() {
       : Math.max(insets.bottom, m(8));
   const barHeight = m(66) + bottomInset;
 
-  const renderIcon = (name, color, size, focused) => {
+  const renderIcon = (name, color, size, focused, badgeCount = 0) => {
     return (
       <View style={[styles.iconWrapper, focused && styles.activeIconWrapper]}>
         <Feather
@@ -68,6 +95,13 @@ export default function BottomNavigation() {
           size={m(23)}
           color={colors.lettersAndIcons}
         />
+        {badgeCount > 0 ? (
+          <View style={styles.badgeContainer}>
+            <Text style={styles.badgeText}>
+              {badgeCount > 99 ? '99+' : badgeCount}
+            </Text>
+          </View>
+        ) : null}
       </View>
     );
   };
@@ -266,7 +300,7 @@ const tabTransitionSpec = {
           options={{
             tabBarLabel: 'Requests',
             tabBarIcon: ({ color, size, focused }) =>
-              renderIcon('inbox', color, size, focused),
+              renderIcon('inbox', color, size, focused, pendingRequestsCount),
           }}
         />
         <Tab.Screen
@@ -288,12 +322,12 @@ const tabTransitionSpec = {
           }}
         />
         <Tab.Screen
-          name="LenderSubscription"
-          component={LenderSubscriptionScreen}
+          name="LenderProfile"
+          component={LenderProfileScreen}
           options={{
-            tabBarLabel: 'Plan',
+            tabBarLabel: 'Profile',
             tabBarIcon: ({ color, size, focused }) =>
-              renderIcon('star', color, size, focused),
+              renderIcon('user', color, size, focused),
           }}
         />
       </Tab.Navigator>
@@ -349,9 +383,29 @@ const styles = StyleSheet.create({
     borderRadius: m(16),
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
   },
   activeIconWrapper: {
     backgroundColor: colors.primary,
     borderRadius: m(16),
+  },
+  badgeContainer: {
+    position: 'absolute',
+    top: m(4),
+    right: m(4),
+    backgroundColor: '#ef4444',
+    minWidth: m(16),
+    height: m(16),
+    borderRadius: m(8),
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: m(3),
+    borderWidth: 1.5,
+    borderColor: colors.white,
+  },
+  badgeText: {
+    fontSize: m(9),
+    fontWeight: '800',
+    color: '#ffffff',
   },
 });
