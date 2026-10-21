@@ -855,10 +855,12 @@ const styles = StyleSheet.create({
   },
   paramItem: {
     width: '48.5%',
-    backgroundColor: colors.backgroundGreenWhite,
+    backgroundColor: '#f8fafc',
     padding: m(10),
     borderRadius: m(10),
     marginBottom: m(8),
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   paramLabel: {
     fontSize: m(10),

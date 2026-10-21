@@ -6,15 +6,12 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  SafeAreaView,
-  StatusBar,
-  Alert,
-  Platform,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
-import { m } from 'walstar-rn-responsive';
-import { colors } from '../../../constants';
+import { colors, FontFamily } from '../../../constants';
+import { m } from '../../../Utils/responsive';
+import { ScreenWrapper } from '../../../Components/common';
 import borrowerFlowService from '../../../Services/borrowerFlowService';
 
 export default function BorrowerLenderDetails() {
@@ -67,20 +64,36 @@ export default function BorrowerLenderDetails() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, styles.center]}>
-        <ActivityIndicator size="large" color="#2563EB" />
-      </SafeAreaView>
+      <ScreenWrapper
+        backgroundColor={colors.backgroundGreenWhite}
+        topInsetBg={colors.primary}
+        statusBarColor={colors.primary}
+        statusBarStyle="dark-content"
+      >
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={colors.lettersAndIcons} />
+          <Text style={styles.loadingText}>Loading institution details...</Text>
+        </View>
+      </ScreenWrapper>
     );
   }
 
   if (!lender) {
     return (
-      <SafeAreaView style={[styles.container, styles.center]}>
-        <Text style={styles.notFoundText}>Lender details could not be loaded.</Text>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Text style={styles.backBtnText}>Return to Lenders</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
+      <ScreenWrapper
+        backgroundColor={colors.backgroundGreenWhite}
+        topInsetBg={colors.primary}
+        statusBarColor={colors.primary}
+        statusBarStyle="dark-content"
+      >
+        <View style={styles.centerContainer}>
+          <Feather name="alert-circle" size={m(36)} color={colors.textSecondary} />
+          <Text style={styles.notFoundText}>Institution details could not be loaded.</Text>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Text style={styles.backButtonText}>Return to Lenders</Text>
+          </TouchableOpacity>
+        </View>
+      </ScreenWrapper>
     );
   }
 
@@ -91,410 +104,646 @@ export default function BorrowerLenderDetails() {
   const maxTenure = lp.maxTenureMonths || 36;
   const isFav = !!lender.isFavorite;
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
+  const companyTitle = lender.companyName || lender.userName || 'Institutional Lender';
 
-      {/* Top Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backIcon} onPress={() => navigation.goBack()}>
-          <Feather name="arrow-left" size={m(22)} color="#0F172A" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Institutional Lender Profile</Text>
-        <TouchableOpacity style={styles.favHeaderBtn} onPress={handleToggleFavorite}>
-          <Feather
-            name="heart"
-            size={m(20)}
-            color={isFav ? '#EF4444' : '#64748B'}
-          />
-        </TouchableOpacity>
+  return (
+    <ScreenWrapper
+      backgroundColor={colors.backgroundGreenWhite}
+      topInsetBg={colors.primary}
+      statusBarColor={colors.primary}
+      statusBarStyle="dark-content"
+      includeTabBarClearance={false}
+      scrollable={false}
+    >
+      {/* Top Green Banner */}
+      <View style={styles.topBanner}>
+        <View style={styles.headerRow}>
+          <TouchableOpacity
+            style={styles.backCircularBtn}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.8}
+          >
+            <Feather name="arrow-left" size={m(18)} color={colors.lettersAndIcons} />
+          </TouchableOpacity>
+
+          <View style={styles.headerTitleWrap}>
+            <Text style={styles.headerTag}>INSTITUTIONAL PARTNER</Text>
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              {companyTitle}
+            </Text>
+          </View>
+
+          {/* Bookmark Toggle Button */}
+          <TouchableOpacity
+            style={[styles.favHeaderBtn, isFav && styles.favHeaderBtnActive]}
+            onPress={handleToggleFavorite}
+            activeOpacity={0.8}
+          >
+            <Feather
+              name="bookmark"
+              size={m(17)}
+              color={colors.lettersAndIcons}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        {/* Profile Card */}
-        <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Feather name="shield" size={m(32)} color="#2563EB" />
-          </View>
-          <Text style={styles.companyName}>
-            {lender.companyName || lender.userName || 'Institutional Lender'}
-          </Text>
-          <View style={styles.badgeRow}>
-            <View style={styles.verifiedBadge}>
-              <Feather name="check" size={m(12)} color="#16A34A" />
-              <Text style={styles.verifiedText}>Verified Commercial Lender</Text>
+      {/* Main Curved Sheet */}
+      <View style={styles.sheetSection}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Institution Header Card */}
+          <View style={styles.profileCard}>
+            <View style={styles.avatarCircle}>
+              <Feather name="briefcase" size={m(28)} color={colors.white} />
             </View>
-          </View>
 
-          {/* Quick Metrics Strip */}
-          <View style={styles.metricsRow}>
-            <View style={styles.metricBox}>
-              <Text style={styles.metricLabel}>Max Facility</Text>
-              <Text style={styles.metricVal}>{formatINR(maxAmount)}</Text>
-            </View>
-            <View style={styles.metricBox}>
-              <Text style={styles.metricLabel}>Interest Rate</Text>
-              <Text style={styles.metricVal}>{minRate}% - {maxRate}%</Text>
-            </View>
-            <View style={styles.metricBox}>
-              <Text style={styles.metricLabel}>Tenure</Text>
-              <Text style={styles.metricVal}>{maxTenure} Mo</Text>
-            </View>
-          </View>
-        </View>
+            <Text style={styles.companyNameText}>{companyTitle}</Text>
 
-        {/* Tab Switcher */}
-        <View style={styles.tabSwitcher}>
-          <TouchableOpacity
-            style={[styles.switcherBtn, activeTab === 'financial' && styles.activeSwitcherBtn]}
-            onPress={() => setActiveTab('financial')}
-          >
-            <Text
-              style={[
-                styles.switcherBtnText,
-                activeTab === 'financial' && styles.activeSwitcherBtnText,
-              ]}
-            >
-              Financing Terms
+            <View style={styles.verifiedRow}>
+              <View style={styles.verifiedBadge}>
+                <Feather name="check-circle" size={m(12)} color="#059669" />
+                <Text style={styles.verifiedText}>Verified Commercial Lender</Text>
+              </View>
+            </View>
+
+            <Text style={styles.locationSubtitle}>
+              {lender.city ? `${lender.city}, ${lender.state || 'India'}` : 'Pan-India Operations'}
             </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.switcherBtn, activeTab === 'profile' && styles.activeSwitcherBtn]}
-            onPress={() => setActiveTab('profile')}
-          >
-            <Text
-              style={[
-                styles.switcherBtnText,
-                activeTab === 'profile' && styles.activeSwitcherBtnText,
-              ]}
-            >
-              Institution Profile
-            </Text>
-          </TouchableOpacity>
-        </View>
 
-        {activeTab === 'financial' ? (
-          <>
-            {/* Financing Terms Section */}
-            <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>Lending Terms & Parameters</Text>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Repayment Mode:</Text>
-                <Text style={styles.infoValue}>Monthly EMI / Amortizing</Text>
+            {/* Quick Metrics Strip - Neutral Slate-50 (#F8FAFC) */}
+            <View style={styles.metricsBox}>
+              <View style={styles.metricItem}>
+                <Text style={styles.metricLabel}>Max Facility</Text>
+                <Text style={styles.metricValueBold}>{formatINR(maxAmount)}</Text>
               </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Max Ticket Cap:</Text>
-                <Text style={styles.infoValue}>{formatINR(maxAmount)}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Annual Interest Rate:</Text>
-                <Text style={styles.infoValue}>{minRate}% – {maxRate}% p.a.</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Max Facility Tenure:</Text>
-                <Text style={styles.infoValue}>{maxTenure} Months</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Disbursal Verification:</Text>
-                <Text style={styles.infoValue}>Mutual 6-Digit OTP</Text>
-              </View>
-            </View>
 
-            {/* Criteria & Eligibility Section */}
-            <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>Eligibility & Supported Purposes</Text>
-              <View style={styles.chipsContainer}>
-                {[
-                  'Working Capital Line',
-                  'Machinery & Equipment',
-                  'Business Expansion',
-                  'Inventory Financing',
-                  'Debt Refinancing',
-                ].map((item) => (
-                  <View key={item} style={styles.purposeChip}>
-                    <Feather name="check" size={m(12)} color="#2563EB" />
-                    <Text style={styles.purposeChipText}>{item}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          </>
-        ) : (
-          <>
-            {/* Institution Profile & Contact */}
-            <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>Official Contact & Compliance</Text>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Official Email:</Text>
-                <Text style={styles.infoValue}>{lender.email || 'partner@loanhub.in'}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Verified Phone:</Text>
-                <Text style={styles.infoValue}>{lender.mobileNo || '+91-XXXXXXXXXX'}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Operational Location:</Text>
-                <Text style={styles.infoValue}>
-                  {lender.city ? `${lender.city}, ${lender.state || 'India'}` : 'Pan-India Operations'}
+              <View style={styles.metricDivider} />
+
+              <View style={styles.metricItem}>
+                <Text style={styles.metricLabel}>Interest Rate</Text>
+                <Text style={styles.metricValue}>
+                  {minRate}% - {maxRate}%
                 </Text>
               </View>
-              {lender.licenseNumber ? (
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>NBFC / License No:</Text>
-                  <Text style={styles.infoValue}>{lender.licenseNumber}</Text>
-                </View>
-              ) : null}
-            </View>
 
-            <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>Operational Integrity</Text>
-              <Text style={styles.bioText}>
-                {lp.bio ||
-                  'Institutional capital provider specializing in credit lines, merchant loans, and structured debt for SMEs.'}
+              <View style={styles.metricDivider} />
+
+              <View style={styles.metricItem}>
+                <Text style={styles.metricLabel}>Tenure</Text>
+                <Text style={styles.metricValue}>{maxTenure} Mo</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Tab Switcher Capsule */}
+          <View style={styles.tabSwitcher}>
+            <TouchableOpacity
+              style={[
+                styles.switcherBtn,
+                activeTab === 'financial' && styles.activeSwitcherBtn,
+              ]}
+              onPress={() => setActiveTab('financial')}
+              activeOpacity={0.8}
+            >
+              <Text
+                style={[
+                  styles.switcherBtnText,
+                  activeTab === 'financial' && styles.activeSwitcherBtnText,
+                ]}
+              >
+                Financing Terms
               </Text>
-            </View>
-          </>
-        )}
-      </ScrollView>
+            </TouchableOpacity>
 
-      {/* Sticky Bottom Action Bar */}
-      <View style={styles.bottomBar}>
-        <TouchableOpacity
-          style={styles.applyNowBtn}
-          onPress={() => navigation.navigate('BorrowerApply', { preselectedLender: lender })}
-        >
-          <Text style={styles.applyNowBtnText}>Apply for Loan with this Institution</Text>
-          <Feather name="arrow-right" size={m(16)} color={colors.white} />
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.switcherBtn,
+                activeTab === 'profile' && styles.activeSwitcherBtn,
+              ]}
+              onPress={() => setActiveTab('profile')}
+              activeOpacity={0.8}
+            >
+              <Text
+                style={[
+                  styles.switcherBtnText,
+                  activeTab === 'profile' && styles.activeSwitcherBtnText,
+                ]}
+              >
+                Institution Profile
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {activeTab === 'financial' ? (
+            <>
+              {/* Card 1: Lending Terms & Parameters */}
+              <View style={styles.sectionCard}>
+                <Text style={styles.sectionTitle}>Lending Terms & Parameters</Text>
+                <Text style={styles.sectionSubtitle}>
+                  Institutional underwriting guidelines & limits
+                </Text>
+
+                <View style={styles.detailsList}>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Repayment Mode</Text>
+                    <Text style={styles.detailValBold}>Monthly EMI / Amortizing</Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Max Ticket Cap</Text>
+                    <Text style={styles.detailValBold}>{formatINR(maxAmount)}</Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Annual Interest Rate</Text>
+                    <Text style={styles.detailValBold}>
+                      {minRate}% – {maxRate}% p.a.
+                    </Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Max Facility Tenure</Text>
+                    <Text style={styles.detailValBold}>{maxTenure} Months</Text>
+                  </View>
+
+                  <View style={[styles.detailRow, { borderBottomWidth: 0 }]}>
+                    <Text style={styles.detailLabel}>Disbursal Verification</Text>
+                    <Text style={styles.detailValBold}>Mutual 6-Digit OTP</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Card 2: Supported Purposes */}
+              <View style={styles.sectionCard}>
+                <Text style={styles.sectionTitle}>Supported Facility Purposes</Text>
+                <Text style={styles.sectionSubtitle}>
+                  Eligible commercial loan categories
+                </Text>
+
+                <View style={styles.chipsContainer}>
+                  {[
+                    'Working Capital Line',
+                    'Machinery & Equipment',
+                    'Business Expansion',
+                    'Inventory Financing',
+                    'Debt Refinancing',
+                  ].map((item) => (
+                    <View key={item} style={styles.purposeChip}>
+                      <Feather name="check" size={m(12)} color={colors.blueButton} />
+                      <Text style={styles.purposeChipText}>{item}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            </>
+          ) : (
+            <>
+              {/* Card 1: Official Contact & Compliance */}
+              <View style={styles.sectionCard}>
+                <Text style={styles.sectionTitle}>Official Contact & Compliance</Text>
+                <Text style={styles.sectionSubtitle}>
+                  Corporate identity & regulatory information
+                </Text>
+
+                <View style={styles.detailsList}>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Official Email</Text>
+                    <Text style={styles.detailValBold}>
+                      {lender.email || 'partner@loanhub.in'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Verified Phone</Text>
+                    <Text style={styles.detailValBold}>
+                      {lender.mobileNo || '+91-XXXXXXXXXX'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Jurisdiction</Text>
+                    <Text style={styles.detailValBold}>
+                      {lender.city ? `${lender.city}, ${lender.state || 'India'}` : 'Pan-India Operations'}
+                    </Text>
+                  </View>
+
+                  {lender.licenseNumber ? (
+                    <View style={[styles.detailRow, { borderBottomWidth: 0 }]}>
+                      <Text style={styles.detailLabel}>NBFC / License No</Text>
+                      <Text style={styles.detailValMono}>{lender.licenseNumber}</Text>
+                    </View>
+                  ) : (
+                    <View style={[styles.detailRow, { borderBottomWidth: 0 }]}>
+                      <Text style={styles.detailLabel}>Regulatory Status</Text>
+                      <Text style={styles.detailValBold}>Verified Institutional Partner</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+
+              {/* Card 2: Operational Integrity */}
+              <View style={styles.sectionCard}>
+                <Text style={styles.sectionTitle}>Operational Integrity</Text>
+                <Text style={styles.sectionSubtitle}>
+                  Overview of capital underwriting scope
+                </Text>
+
+                <View style={styles.bioCard}>
+                  <Text style={styles.bioText}>
+                    {lp.bio ||
+                      'Institutional capital provider specializing in credit lines, merchant loans, and structured debt for SMEs.'}
+                  </Text>
+                </View>
+              </View>
+            </>
+          )}
+        </ScrollView>
+
+        {/* Sticky Bottom Apply Bar */}
+        <View style={styles.bottomBar}>
+          <TouchableOpacity
+            style={styles.applyNowBtn}
+            activeOpacity={0.85}
+            onPress={() =>
+              navigation.navigate('BorrowerApply', { preselectedLender: lender })
+            }
+          >
+            {/* <Feather name="send" size={m(15)} color={colors.white} /> */}
+            <Text style={styles.applyNowBtnText}>Apply with this Institution</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </SafeAreaView>
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  centerContainer: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  center: {
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
+    padding: m(20),
   },
-  header: {
+  loadingText: {
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.textSecondary,
+    marginTop: m(10),
+  },
+  notFoundText: {
+    fontSize: m(14),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.textSecondary,
+    marginTop: m(10),
+    marginBottom: m(14),
+  },
+  backButton: {
+    backgroundColor: colors.lettersAndIcons,
+    paddingHorizontal: m(16),
+    paddingVertical: m(8),
+    borderRadius: m(10),
+  },
+  backButtonText: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
+  },
+
+  // Top Green Banner
+  topBanner: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: m(18),
+    paddingTop: m(10),
+    paddingBottom: m(18),
+  },
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: m(16),
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || m(24)) + m(10) : m(14),
-    paddingBottom: m(14),
+  },
+  backCircularBtn: {
+    width: m(38),
+    height: m(38),
+    borderRadius: m(19),
     backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  headerTitleWrap: {
+    flex: 1,
+    marginLeft: m(12),
+    marginRight: m(8),
+  },
+  headerTag: {
+    fontSize: m(9.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    letterSpacing: 0.8,
+    opacity: 0.85,
   },
   headerTitle: {
-    fontSize: m(15),
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  backIcon: {
-    padding: m(4),
+    fontSize: m(17),
+    lineHeight: m(22),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
   favHeaderBtn: {
-    padding: m(4),
+    width: m(38),
+    height: m(38),
+    borderRadius: m(19),
+    backgroundColor: colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
   },
-  content: {
-    padding: m(16),
-    gap: m(14),
+  favHeaderBtnActive: {
+    backgroundColor: '#bbf7d0',
+  },
+
+  // Main Curved Sheet
+  sheetSection: {
+    flex: 1,
+    backgroundColor: colors.backgroundGreenWhite,
+    borderTopLeftRadius: m(32),
+    borderTopRightRadius: m(32),
+    paddingTop: m(16),
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: m(18),
     paddingBottom: m(100),
   },
+
+  // Header Profile Card
   profileCard: {
     backgroundColor: colors.white,
-    borderRadius: m(16),
-    padding: m(20),
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  avatar: {
-    width: m(64),
-    height: m(64),
     borderRadius: m(20),
-    backgroundColor: '#EFF6FF',
+    padding: m(18),
+    alignItems: 'center',
+    marginBottom: m(14),
     borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderColor: 'rgba(9, 48, 48, 0.06)',
+    elevation: 2,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+  },
+  avatarCircle: {
+    width: m(58),
+    height: m(58),
+    borderRadius: m(29),
+    backgroundColor: colors.blueButton,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: m(12),
+    marginBottom: m(10),
+    elevation: 2,
+    shadowColor: colors.blueButton,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
   },
-  companyName: {
+  companyNameText: {
     fontSize: m(17),
-    fontWeight: '800',
-    color: '#0F172A',
+    lineHeight: m(22),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
     textAlign: 'center',
   },
-  badgeRow: {
+  verifiedRow: {
     marginTop: m(4),
   },
   verifiedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: m(4),
-    backgroundColor: '#DCFCE7',
+    backgroundColor: '#ecfdf5',
     paddingHorizontal: m(8),
     paddingVertical: m(3),
-    borderRadius: m(6),
+    borderRadius: m(8),
   },
   verifiedText: {
-    fontSize: m(11),
-    color: '#16A34A',
-    fontWeight: '700',
+    fontSize: m(10.5),
+    fontFamily: FontFamily.primaryBold,
+    color: '#059669',
   },
-  metricsRow: {
+  locationSubtitle: {
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+    marginTop: m(4),
+  },
+
+  // Compact Metrics Box inside Card - Neutral Slate-50 (#F8FAFC)
+  metricsBox: {
     flexDirection: 'row',
-    width: '100%',
-    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
     borderRadius: m(12),
-    padding: m(14),
-    marginTop: m(16),
-    justifyContent: 'space-between',
+    paddingVertical: m(10),
+    paddingHorizontal: m(12),
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: '#e2e8f0',
+    marginTop: m(14),
+    width: '100%',
   },
-  metricBox: {
+  metricItem: {
+    flex: 1,
     alignItems: 'center',
   },
   metricLabel: {
-    fontSize: m(9),
-    color: '#64748B',
-    textTransform: 'uppercase',
-    fontWeight: '600',
+    fontSize: m(10),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.textSecondary,
+    marginBottom: m(2),
   },
-  metricVal: {
-    fontSize: m(13),
-    fontWeight: '800',
-    color: '#0F172A',
-    marginTop: m(3),
+  metricValueBold: {
+    fontSize: m(13.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
+  metricValue: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primarySemiBold,
+    color: colors.lettersAndIcons,
+  },
+  metricDivider: {
+    width: 1,
+    height: m(24),
+    backgroundColor: '#e2e8f0',
+  },
+
+  // Tab Switcher
   tabSwitcher: {
     flexDirection: 'row',
     backgroundColor: colors.white,
-    borderRadius: m(12),
+    borderRadius: m(24),
     padding: m(4),
+    marginBottom: m(14),
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    gap: m(4),
+    borderColor: 'rgba(9, 48, 48, 0.08)',
   },
   switcherBtn: {
     flex: 1,
     paddingVertical: m(8),
+    borderRadius: m(20),
     alignItems: 'center',
-    borderRadius: m(8),
+    justifyContent: 'center',
   },
   activeSwitcherBtn: {
-    backgroundColor: '#0F172A',
+    backgroundColor: colors.primary,
   },
   switcherBtnText: {
-    fontSize: m(12),
-    fontWeight: '600',
-    color: '#64748B',
+    fontSize: m(12.5),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
   },
   activeSwitcherBtnText: {
-    color: colors.white,
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
+
+  // Section Cards
   sectionCard: {
     backgroundColor: colors.white,
-    borderRadius: m(14),
-    padding: m(16),
+    borderRadius: m(16),
+    padding: m(14),
+    marginBottom: m(12),
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    gap: m(10),
+    borderColor: 'rgba(9, 48, 48, 0.06)',
+    elevation: 2,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
   },
   sectionTitle: {
-    fontSize: m(14),
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: m(4),
+    fontSize: m(13.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
-  infoRow: {
+  sectionSubtitle: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+    marginTop: m(1),
+    marginBottom: m(10),
+  },
+
+  // Key-Value Rows List - Neutral Slate-50 (#F8FAFC)
+  detailsList: {
+    backgroundColor: '#f8fafc',
+    borderRadius: m(12),
+    paddingHorizontal: m(12),
+    paddingVertical: m(6),
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: m(2),
+    paddingVertical: m(9),
+    borderBottomWidth: 1,
+    borderColor: '#f1f5f9',
   },
-  infoLabel: {
+  detailLabel: {
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+  },
+  detailValBold: {
+    fontSize: m(12.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  detailValMono: {
     fontSize: m(12),
-    color: '#64748B',
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
-  infoValue: {
-    fontSize: m(12),
-    fontWeight: '700',
-    color: '#0F172A',
-  },
+
+  // Purpose Chips
   chipsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: m(8),
-    marginTop: m(4),
   },
   purposeChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(4),
-    backgroundColor: '#EFF6FF',
+    gap: m(6),
+    backgroundColor: '#f8fafc',
+    borderRadius: m(10),
     paddingHorizontal: m(10),
-    paddingVertical: m(6),
-    borderRadius: m(8),
+    paddingVertical: m(7),
     borderWidth: 1,
-    borderColor: '#DBEAFE',
+    borderColor: '#e2e8f0',
   },
   purposeChipText: {
-    fontSize: m(11),
-    fontWeight: '600',
-    color: '#1E40AF',
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
+  },
+
+  // Bio Card
+  bioCard: {
+    backgroundColor: '#f8fafc',
+    borderRadius: m(12),
+    padding: m(12),
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   bioText: {
     fontSize: m(12),
-    color: '#475569',
     lineHeight: m(18),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.lettersAndIcons,
   },
+
+  // Sticky Bottom Bar
   bottomBar: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
     backgroundColor: colors.white,
-    paddingHorizontal: m(16),
-    paddingVertical: m(14),
+    paddingHorizontal: m(18),
+    paddingVertical: m(12),
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: 'rgba(9, 48, 48, 0.08)',
+    elevation: 8,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
   },
   applyNowBtn: {
-    backgroundColor: '#2563EB',
+    backgroundColor: colors.lettersAndIcons,
+    borderRadius: m(14),
+    paddingVertical: m(13),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: m(13),
-    borderRadius: m(12),
     gap: m(8),
   },
   applyNowBtnText: {
-    fontSize: m(14),
-    fontWeight: '700',
+    fontSize: m(13.5),
+    fontFamily: FontFamily.primaryBold,
     color: colors.white,
-  },
-  notFoundText: {
-    fontSize: m(14),
-    color: '#64748B',
-  },
-  backBtn: {
-    marginTop: m(12),
-    paddingHorizontal: m(16),
-    paddingVertical: m(8),
-    backgroundColor: '#2563EB',
-    borderRadius: m(8),
-  },
-  backBtnText: {
-    color: colors.white,
-    fontWeight: '600',
   },
 });

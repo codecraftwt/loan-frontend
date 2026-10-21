@@ -9,11 +9,11 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/Feather';
+import Feather from 'react-native-vector-icons/Feather';
 import { useDispatch, useSelector } from 'react-redux';
-import { m } from 'walstar-rn-responsive';
-import Header from '../../../Components/Header';
-import { colors, FontFamily, FontSizes } from '../../../constants';
+import { colors, FontFamily } from '../../../constants';
+import { m } from '../../../Utils/responsive';
+import { ScreenWrapper } from '../../../Components/common';
 import { getBorrowerLoans } from '../../../Redux/Slices/borrowerLoanSlice';
 import { getBorrowerRecentActivities } from '../../../Redux/Slices/borrowerActivitiesSlice';
 
@@ -24,44 +24,44 @@ const getActivityProperties = activity => {
     case 'payment_made':
       return {
         icon: 'dollar-sign',
-        color: '#4CAF50',
-        gradient: ['#4CAF50', '#66BB6A'],
+        color: '#059669',
+        bgColor: '#DCFCE7',
       };
     case 'loan_paid':
       return {
         icon: 'check-circle',
-        color: '#10B981',
-        gradient: ['#10B981', '#34D399'],
+        color: '#059669',
+        bgColor: '#DCFCE7',
       };
     case 'loan_accepted':
       return {
         icon: 'check-circle',
-        color: '#2196F3',
-        gradient: ['#2196F3', '#42A5F5'],
+        color: '#0284C7',
+        bgColor: '#E0F2FE',
       };
     case 'loan_rejected':
       return {
         icon: 'x-circle',
-        color: '#EF4444',
-        gradient: ['#EF4444', '#F87171'],
+        color: '#DC2626',
+        bgColor: '#FEE2E2',
       };
     case 'loan_received':
       return {
         icon: 'arrow-down',
-        color: '#FF9800',
-        gradient: ['#FF9800', '#FFA726'],
+        color: '#D97706',
+        bgColor: '#FEF3C7',
       };
     case 'loan_overdue':
       return {
         icon: 'alert-circle',
-        color: '#F44336',
-        gradient: ['#F44336', '#EF5350'],
+        color: '#DC2626',
+        bgColor: '#FEE2E2',
       };
     default:
       return {
-        icon: 'activity',
-        color: '#666',
-        gradient: ['#9E9E9E', '#BDBDBD'],
+        icon: 'bell',
+        color: colors.lettersAndIcons,
+        bgColor: '#F1F5F9',
       };
   }
 };
@@ -72,7 +72,7 @@ export default function BorrowerRecentActivity() {
   const user = useSelector(state => state.auth.user);
   const { loans } = useSelector(state => state.borrowerLoans);
   const {
-    activities: recentActivities,
+    activities: recentActivities = [],
     loading,
     error,
   } = useSelector(state => state.borrowerActivities);
@@ -80,7 +80,6 @@ export default function BorrowerRecentActivity() {
 
   const loadActivities = useCallback(async () => {
     if (!user?._id) return;
-
     await Promise.all([
       dispatch(getBorrowerLoans({ borrowerId: user._id })),
       dispatch(getBorrowerRecentActivities({ limit: 50 })),
@@ -105,8 +104,7 @@ export default function BorrowerRecentActivity() {
         return;
       }
     }
-
-    navigation.navigate('MyLoans');
+    navigation.navigate('BorrowerLoansPortfolio');
   };
 
   const totalAmount = recentActivities.reduce(
@@ -115,7 +113,7 @@ export default function BorrowerRecentActivity() {
   );
   const loanLinkedCount = recentActivities.filter(activity => activity.loanId).length;
 
-  const renderActivity = ({ item, index }) => (
+  const renderActivity = ({ item }) => (
     <BorrowerActivityItem
       activity={item}
       activityProps={getActivityProperties(item)}
@@ -124,298 +122,347 @@ export default function BorrowerRecentActivity() {
   );
 
   return (
-    <View style={styles.container}>
-      <Header title="Recent Activity" showBackButton />
+    <ScreenWrapper
+      backgroundColor={colors.backgroundGreenWhite}
+      topInsetBg={colors.primary}
+      statusBarColor={colors.primary}
+      statusBarStyle="dark-content"
+      scrollable={false}
+    >
+      {/* Top Green Banner */}
+      <View style={styles.topBanner}>
+        <View style={styles.headerRow}>
+          <TouchableOpacity
+            style={styles.backCircularBtn}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.8}
+          >
+            <Feather name="arrow-left" size={m(18)} color={colors.lettersAndIcons} />
+          </TouchableOpacity>
 
-      <FlatList
-        data={recentActivities}
-        renderItem={renderActivity}
-        keyExtractor={(activity, index) => {
-          if (activity._id) return `${activity._id}-${index}`;
-          if (activity.loanId) return `${activity.loanId}-${index}`;
-          return `activity-${index}-${activity.type || 'unknown'}`;
-        }}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[colors.ink]}
-            tintColor={colors.ink}
-          />
-        }
-        ListHeaderComponent={
-          <>
-            <View style={styles.screenIntro}>
-              <View style={styles.introIconWrap}>
-                <Icon name="activity" size={22} color={colors.ink} />
+          <View style={styles.headerTitleWrap}>
+            <Text style={styles.headerTag}>NOTIFICATIONS & EVENT TRAIL</Text>
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              Recent Activity
+            </Text>
+          </View>
+
+          <View style={{ width: m(38) }} />
+        </View>
+      </View>
+
+      {/* Main Curved Body Section */}
+      <View style={styles.sheetSection}>
+        <FlatList
+          data={recentActivities}
+          renderItem={renderActivity}
+          keyExtractor={(activity, index) => {
+            if (activity._id) return `${activity._id}-${index}`;
+            if (activity.loanId) return `${activity.loanId}-${index}`;
+            return `activity-${index}-${activity.type || 'unknown'}`;
+          }}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[colors.lettersAndIcons]}
+              tintColor={colors.lettersAndIcons}
+            />
+          }
+          ListHeaderComponent={
+            <>
+              {/* Neutral #F8FAFC Telemetry Box (No Green Overload) */}
+              <View style={styles.metricsBox}>
+                <View style={styles.metricItem}>
+                  <Text style={styles.metricLabel}>Total Updates</Text>
+                  <Text style={styles.metricValue}>{recentActivities.length}</Text>
+                </View>
+                <View style={styles.metricDivider} />
+                <View style={styles.metricItem}>
+                  <Text style={styles.metricLabel}>Linked Deals</Text>
+                  <Text style={styles.metricValue}>{loanLinkedCount}</Text>
+                </View>
+                <View style={styles.metricDivider} />
+                <View style={styles.metricItem}>
+                  <Text style={styles.metricLabel}>Volume</Text>
+                  <Text style={[styles.metricValue, { color: '#059669' }]}>
+                    ₹{totalAmount >= 100000 ? `${(totalAmount / 100000).toFixed(1)}L` : totalAmount.toLocaleString('en-IN')}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.introText}>
-                <Text style={styles.screenTitle}>Recent Activity</Text>
-                <Text style={styles.screenSubtitle}>
-                  Track loan offers, payments, overdue updates, and repayment events.
+            </>
+          }
+          ListEmptyComponent={
+            loading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color={colors.lettersAndIcons} />
+                <Text style={styles.loadingText}>Fetching notification trail...</Text>
+              </View>
+            ) : (
+              <View style={styles.emptyContainer}>
+                <View style={styles.emptyIconCircle}>
+                  <Feather name={error ? 'alert-circle' : 'bell'} size={m(28)} color="#94A3B8" />
+                </View>
+                <Text style={styles.emptyTitle}>
+                  {error ? 'Unable to Load Updates' : 'All Caught Up!'}
+                </Text>
+                <Text style={styles.emptySubtitle}>
+                  {error || 'No pending notifications, repayment alerts, or facility events at this time.'}
                 </Text>
               </View>
-            </View>
-
-            <View style={styles.summaryRow}>
-              <View style={[styles.summaryItem, { backgroundColor: colors.sky }]}>
-                <Text style={styles.summaryValue}>{recentActivities.length}</Text>
-                <Text style={styles.summaryLabel}>Updates</Text>
-              </View>
-              <View style={[styles.summaryItem, { backgroundColor: colors.mint }]}>
-                <Text style={styles.summaryValue}>{loanLinkedCount}</Text>
-                <Text style={styles.summaryLabel}>Linked Loans</Text>
-              </View>
-              <View style={[styles.summaryItem, { backgroundColor: colors.butter }]}>
-                <Text style={styles.summaryValue}>
-                  Rs {totalAmount.toLocaleString('en-IN')}
-                </Text>
-                <Text style={styles.summaryLabel}>Amount</Text>
-              </View>
-            </View>
-          </>
-        }
-        ListEmptyComponent={
-          loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color="#ff6700" />
-              <Text style={styles.loadingText}>Loading activities...</Text>
-            </View>
-          ) : (
-            <View style={styles.emptyContainer}>
-              <Icon name={error ? 'alert-circle' : 'inbox'} size={42} color={colors.border} />
-              <Text style={styles.emptyText}>
-                {error || 'No recent activities'}
-              </Text>
-            </View>
-          )
-        }
-      />
-    </View>
+            )
+          }
+        />
+      </View>
+    </ScreenWrapper>
   );
 }
 
-const BorrowerActivityItem = memo(
-  ({ activity, activityProps, onPress }) => {
-    const activityLabel = (activity.type || 'activity')
-      .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
+const BorrowerActivityItem = memo(({ activity, activityProps, onPress }) => {
+  const activityLabel = (activity.type || 'activity')
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
 
-    return (
-    <TouchableOpacity activeOpacity={0.78} onPress={onPress}>
-      <View style={styles.activityItem}>
-        <View style={styles.activityTopRow}>
-          <View
-            style={[
-              styles.activityIconShell,
-              { backgroundColor: `${activityProps.color}18` },
-            ]}>
-            <Icon name={activityProps.icon} size={18} color={activityProps.color} />
-          </View>
-          <View style={styles.activityText}>
-            <Text style={styles.activityTitle} numberOfLines={1}>
-              {activity.shortMessage || activityLabel}
-            </Text>
-            <Text style={styles.activityDescription} numberOfLines={2}>
-              {activity.message || ''}
-            </Text>
-          </View>
-          <Icon name="chevron-right" size={18} color={colors.textMuted} />
+  return (
+    <TouchableOpacity activeOpacity={0.85} onPress={onPress} style={styles.activityCard}>
+      <View style={styles.activityTopRow}>
+        <View style={[styles.activityIconBox, { backgroundColor: activityProps.bgColor }]}>
+          <Feather name={activityProps.icon} size={m(18)} color={activityProps.color} />
+        </View>
+        <View style={styles.activityContentCol}>
+          <Text style={styles.activityTitle} numberOfLines={1}>
+            {activity.shortMessage || activityLabel}
+          </Text>
+          <Text style={styles.activityDescription} numberOfLines={2}>
+            {activity.message || ''}
+          </Text>
+        </View>
+        <Feather name="chevron-right" size={m(16)} color="#CBD5E1" />
+      </View>
+
+      <View style={styles.activityFooterRow}>
+        <View style={styles.timeTag}>
+          <Feather name="clock" size={m(11)} color="#64748B" />
+          <Text style={styles.timeText}>
+            {activity.relativeTime || 'Recently'}
+          </Text>
         </View>
 
-        <View style={styles.activityMetaRow}>
-          <View style={styles.timeContainer}>
-            <Icon name="clock" size={12} color="#7f8c8d" />
-            <Text style={styles.activityTime}>
-              {activity.relativeTime || 'Recently'}
+        {activity.amount ? (
+          <View style={styles.amountPill}>
+            <Text style={[styles.amountPillText, { color: activityProps.color }]}>
+              ₹{Number(activity.amount).toLocaleString('en-IN')}
             </Text>
           </View>
-
-          {activity.amount ? (
-            <View style={styles.activityAmountContainer}>
-              <Text
-                style={[
-                  styles.activityAmount,
-                  { color: activityProps.color },
-                ]}>
-                Rs {activity.amount.toLocaleString('en-IN')}
-              </Text>
-            </View>
-          ) : null}
-        </View>
+        ) : null}
       </View>
     </TouchableOpacity>
-    );
-  },
-);
+  );
+});
 
 const styles = StyleSheet.create({
-  container: {
+  topBanner: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: m(16),
+    paddingTop: m(8),
+    paddingBottom: m(22),
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  backCircularBtn: {
+    width: m(38),
+    height: m(38),
+    borderRadius: m(19),
+    backgroundColor: 'rgba(255, 255, 255, 0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitleWrap: {
     flex: 1,
-    backgroundColor: '#F1F0ED',
+    marginHorizontal: m(12),
+  },
+  headerTag: {
+    fontSize: m(10),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  headerTitle: {
+    fontSize: m(18),
+    fontFamily: FontFamily.primaryExtraBold,
+    color: colors.lettersAndIcons,
+  },
+  sheetSection: {
+    flex: 1,
+    backgroundColor: colors.backgroundGreenWhite,
+    borderTopLeftRadius: m(26),
+    borderTopRightRadius: m(26),
+    marginTop: -m(12),
+    overflow: 'hidden',
   },
   listContent: {
     padding: m(16),
-    paddingBottom: m(100),
+    paddingBottom: m(80),
   },
-  screenIntro: {
+
+  // Neutral #F8FAFC Telemetry Box (No Green Overload)
+  metricsBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: m(20),
-    padding: m(16),
-    marginBottom: m(16),
-    backgroundColor: colors.navyFaint,
+    backgroundColor: '#F8FAFC',
+    borderRadius: m(14),
     borderWidth: 1,
-    borderColor: colors.navyBorder,
-  },
-  introIconWrap: {
-    width: m(48),
-    height: m(48),
-    borderRadius: m(15),
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.mint,
-    marginRight: m(12),
-  },
-  introText: {
-    flex: 1,
-  },
-  screenTitle: {
-    fontSize: m(20),
-    lineHeight: m(26),
-    fontFamily: FontFamily.primaryExtraBold,
-    color: colors.ink,
-    marginBottom: m(4),
-  },
-  screenSubtitle: {
-    fontSize: m(12),
-    color: colors.textSecondary,
-    fontFamily: FontFamily.primaryRegular,
-    lineHeight: m(17),
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    borderColor: '#E2E8F0',
+    paddingVertical: m(14),
+    paddingHorizontal: m(12),
     marginBottom: m(16),
-    gap: m(10),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  summaryItem: {
+  metricItem: {
     flex: 1,
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-    minHeight: m(78),
-    borderRadius: m(16),
-    padding: m(12),
+    alignItems: 'center',
   },
-  summaryValue: {
-    fontSize: m(15),
-    lineHeight: m(20),
-    fontFamily: FontFamily.primaryExtraBold,
-    color: colors.ink,
-    marginBottom: m(4),
-  },
-  summaryLabel: {
+  metricLabel: {
     fontSize: m(10),
-    lineHeight: m(14),
-    fontFamily: FontFamily.primarySemiBold,
-    color: colors.inkSoft,
-    textTransform: 'uppercase',
+    fontFamily: FontFamily.bodyRegular,
+    color: '#64748B',
+    marginBottom: m(2),
   },
-  activityItem: {
-    backgroundColor: colors.surface,
-    borderRadius: m(18),
+  metricValue: {
+    fontSize: m(14),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  metricDivider: {
+    width: 1,
+    height: m(24),
+    backgroundColor: '#E2E8F0',
+  },
+
+  // Activity Cards
+  activityCard: {
+    backgroundColor: colors.white,
+    borderRadius: m(16),
     marginBottom: m(12),
     padding: m(14),
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
   },
   activityTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: m(10),
   },
-  activityIconShell: {
-    width: m(42),
-    height: m(42),
-    borderRadius: m(14),
+  activityIconBox: {
+    width: m(38),
+    height: m(38),
+    borderRadius: m(12),
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: m(12),
   },
-  activityText: {
+  activityContentCol: {
     flex: 1,
+    marginRight: m(8),
   },
   activityTitle: {
-    fontSize: m(14),
-    lineHeight: m(19),
-    fontFamily: FontFamily.primarySemiBold,
-    color: colors.ink,
-    marginBottom: m(3),
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    marginBottom: m(2),
   },
   activityDescription: {
-    fontSize: m(12),
-    color: colors.textSecondary,
-    fontFamily: FontFamily.primaryRegular,
-    lineHeight: m(17),
+    fontSize: m(11),
+    color: '#64748B',
+    fontFamily: FontFamily.bodyRegular,
+    lineHeight: m(16),
   },
-  activityMetaRow: {
+  activityFooterRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: m(8),
+    paddingTop: m(8),
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
   },
-  activityAmountContainer: {
-    backgroundColor: colors.white,
-    paddingHorizontal: m(9),
-    paddingVertical: m(5),
-    borderRadius: m(999),
-  },
-  activityAmount: {
-    fontSize: m(12),
-    fontFamily: FontFamily.primaryBold,
-  },
-  timeContainer: {
+  timeTag: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: m(4),
   },
-  activityTime: {
+  timeText: {
     fontSize: m(11),
-    color: colors.textMuted,
-    fontFamily: FontFamily.primaryRegular,
-    marginLeft: m(4),
+    color: '#64748B',
+    fontFamily: FontFamily.bodyRegular,
   },
+  amountPill: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: m(8),
+    paddingVertical: m(3),
+    borderRadius: m(6),
+  },
+  amountPillText: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryBold,
+  },
+
+  // Empty & Loading
   loadingContainer: {
-    padding: m(34),
+    padding: m(32),
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: m(16),
-    borderWidth: 1,
-    borderColor: colors.borderLight,
+    gap: m(10),
   },
   loadingText: {
-    marginTop: m(10),
-    fontSize: FontSizes.sm,
-    color: colors.textSecondary,
-    fontFamily: FontFamily.primaryRegular,
+    fontSize: m(12),
+    color: '#64748B',
+    fontFamily: FontFamily.bodyRegular,
   },
   emptyContainer: {
-    padding: m(42),
+    padding: m(32),
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: m(16),
-    borderWidth: 1,
-    borderColor: colors.borderLight,
   },
-  emptyText: {
-    marginTop: m(12),
-    fontSize: FontSizes.base,
-    color: colors.textMuted,
-    fontFamily: FontFamily.primaryRegular,
+  emptyIconCircle: {
+    width: m(54),
+    height: m(54),
+    borderRadius: m(27),
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: m(12),
+  },
+  emptyTitle: {
+    fontSize: m(15),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    marginBottom: m(4),
+  },
+  emptySubtitle: {
+    fontSize: m(12),
+    color: '#64748B',
+    fontFamily: FontFamily.bodyRegular,
     textAlign: 'center',
+    lineHeight: m(17),
   },
 });

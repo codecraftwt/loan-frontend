@@ -651,10 +651,12 @@ const styles = StyleSheet.create({
   metricsBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.backgroundGreenWhite,
+    backgroundColor: '#F8FAFC',
     borderRadius: m(10),
-    paddingVertical: m(6),
+    paddingVertical: m(8),
     paddingHorizontal: m(10),
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   metricItem: {
     flex: 1,
@@ -698,7 +700,7 @@ const styles = StyleSheet.create({
   metricDivider: {
     width: 1,
     height: m(20),
-    backgroundColor: '#cbd5e1',
+    backgroundColor: '#e2e8f0',
   },
   chevronWrap: {
     marginLeft: m(6),

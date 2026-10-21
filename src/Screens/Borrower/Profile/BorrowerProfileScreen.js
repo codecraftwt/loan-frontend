@@ -1,98 +1,38 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  SafeAreaView,
-  StatusBar,
-  Alert,
-  Platform,
+  Modal,
+  Image,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { m } from 'walstar-rn-responsive';
-import { colors } from '../../../constants';
+import { FontFamily, colors } from '../../../constants';
+import { m } from '../../../Utils/responsive';
+import { ScreenWrapper } from '../../../Components/common';
 import borrowerFlowService from '../../../Services/borrowerFlowService';
 import { logout } from '../../../Redux/Slices/authslice';
-
-const BUSINESS_TYPES = [
-  'Private Limited Company',
-  'Sole Proprietorship',
-  'Partnership Firm',
-  'Limited Liability Partnership (LLP)',
-  'Public Limited',
-];
-
-const EMPLOYMENT_TYPES = [
-  'Business Owner / Self-Employed',
-  'Corporate Executive',
-  'Salaried Professional',
-  'Partner / Director',
-];
 
 export default function BorrowerProfileScreen() {
   const navigation = useNavigation();
   const dispatch = useDispatch();
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [activeSection, setActiveSection] = useState('all'); // 'all' | 'personal' | 'business' | 'address'
+  const authUser = useSelector(state => state.auth.user);
 
-  const handleLogout = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out from Borrower Workspace?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Sign Out',
-          style: 'destructive',
-          onPress: async () => {
-            dispatch(logout());
-            await AsyncStorage.clear();
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'Login' }],
-            });
-          },
-        },
-      ]
-    );
-  };
+  const [loading, setLoading] = useState(true);
+  const [logoutModalVisible, setLogoutModalVisible] = useState(false);
 
   const [profile, setProfile] = useState({
     userName: '',
+    companyName: '',
+    panCardNumber: '',
     email: '',
     mobileNo: '',
-    altMobileNo: '',
-    panCardNumber: '',
-    aadharCardNo: '',
-    address: '',
-    city: '',
-    taluka: '',
-    district: '',
-    state: 'Maharashtra',
-    pincode: '',
-    companyName: '',
-    businessType: 'Private Limited Company',
-    employmentType: 'Business Owner / Self-Employed',
-    annualRevenue: '',
-    monthlyIncome: '',
-    creditScore: '750',
-    gstNumber: '',
-    yearsInBusiness: '3',
-  });
-
-  const [digilockerKyc, setDigilockerKyc] = useState(null);
-  const [completion, setCompletion] = useState({
-    percentage: 100,
-    isComplete: true,
-    missingFields: [],
   });
 
   const fetchProfile = useCallback(async () => {
@@ -101,713 +41,483 @@ export default function BorrowerProfileScreen() {
       const res = await borrowerFlowService.getProfile();
       if (res?.success && res.borrower) {
         const b = res.borrower;
-        const bp = b.borrowerProfile || {};
-        setDigilockerKyc(b.digilockerKyc || null);
-
         setProfile({
-          userName: b.userName || '',
-          email: b.email || '',
-          mobileNo: b.mobileNo || '',
-          altMobileNo: b.altMobileNo || '',
+          userName: b.userName || authUser?.userName || '',
+          companyName: b.companyName || b.borrowerProfile?.businessName || authUser?.companyName || '',
           panCardNumber: b.panCardNumber || '',
-          aadharCardNo: b.aadharCardNo || '',
-          address: b.address || '',
-          city: b.city || '',
-          taluka: b.taluka || '',
-          district: b.district || '',
-          state: b.state || 'Maharashtra',
-          pincode: b.pincode || '',
-          companyName: b.companyName || bp.businessName || '',
-          businessType: bp.businessType || 'Private Limited Company',
-          employmentType: bp.employmentType || 'Business Owner / Self-Employed',
-          annualRevenue: bp.annualRevenue ? String(bp.annualRevenue) : '',
-          monthlyIncome: bp.monthlyIncome ? String(bp.monthlyIncome) : '',
-          creditScore: bp.creditScore ? String(bp.creditScore) : '750',
-          gstNumber: bp.gstNumber || '',
-          yearsInBusiness: bp.yearsInBusiness ? String(bp.yearsInBusiness) : '3',
+          email: b.email || authUser?.email || '',
+          mobileNo: b.mobileNo || authUser?.mobileNo || '',
         });
-
-        if (res.profileCompletion) {
-          setCompletion(res.profileCompletion);
-        }
       }
     } catch (err) {
       console.error('Error fetching borrower profile:', err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authUser]);
 
-  useEffect(() => {
-    fetchProfile();
-  }, [fetchProfile]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchProfile();
+    }, [fetchProfile])
+  );
 
-  // Local live completion calculation
-  const computedCompletion = useMemo(() => {
-    const checks = [
-      { name: 'Full Name', valid: Boolean(profile.userName?.trim()) },
-      { name: 'Email Address', valid: Boolean(profile.email?.trim()) },
-      { name: 'Primary Mobile', valid: Boolean(profile.mobileNo?.trim()) },
-      { name: 'Alternative Mobile', valid: Boolean(profile.altMobileNo?.trim()) },
-      { name: 'PAN Card', valid: Boolean(profile.panCardNumber?.trim()) },
-      { name: 'Aadhaar Card', valid: Boolean(profile.aadharCardNo?.trim()) },
-      { name: 'Address', valid: Boolean(profile.address?.trim()) },
-      { name: 'City', valid: Boolean(profile.city?.trim()) },
-      { name: 'District', valid: Boolean(profile.district?.trim()) },
-      { name: 'State', valid: Boolean(profile.state?.trim()) },
-      { name: 'Pincode', valid: Boolean(profile.pincode?.trim()) },
-      { name: 'Company Name', valid: Boolean(profile.companyName?.trim()) },
-      { name: 'Annual Turnover', valid: Boolean(Number(profile.annualRevenue) > 0) },
-      { name: 'Monthly Income', valid: Boolean(Number(profile.monthlyIncome) > 0) },
-      { name: 'Credit Score', valid: Boolean(Number(profile.creditScore) >= 300) },
-    ];
-    const done = checks.filter((c) => c.valid).length;
-    const pct = Math.round((done / checks.length) * 100);
-    const missing = checks.filter((c) => !c.valid).map((c) => c.name);
-    return { percentage: pct, isComplete: pct === 100, missingFields: missing };
-  }, [profile]);
-
-  const handleSave = async () => {
+  const handleConfirmLogout = async () => {
     try {
-      setSaving(true);
-      const payload = {
-        userName: profile.userName,
-        altMobileNo: profile.altMobileNo,
-        panCardNumber: profile.panCardNumber,
-        aadharCardNo: profile.aadharCardNo,
-        address: profile.address,
-        city: profile.city,
-        taluka: profile.taluka,
-        district: profile.district,
-        state: profile.state,
-        pincode: profile.pincode,
-        companyName: profile.companyName,
-        businessName: profile.companyName,
-        businessType: profile.businessType,
-        employmentType: profile.employmentType,
-        annualRevenue: Number(profile.annualRevenue) || 0,
-        monthlyIncome: Number(profile.monthlyIncome) || 0,
-        creditScore: Number(profile.creditScore) || 750,
-        gstNumber: profile.gstNumber,
-        yearsInBusiness: Number(profile.yearsInBusiness) || 3,
-      };
-
-      const res = await borrowerFlowService.updateProfile(payload);
-      if (res?.success) {
-        Alert.alert(
-          'Profile Saved!',
-          `Your borrower profile is now ${res.profileCompletion?.percentage || computedCompletion.percentage}% complete.`
-        );
-        if (res.profileCompletion) {
-          setCompletion(res.profileCompletion);
-        }
-      }
-    } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to update profile details.';
-      Alert.alert('Save Error', msg);
-    } finally {
-      setSaving(false);
+      setLogoutModalVisible(false);
+      await dispatch(logout());
+      await AsyncStorage.clear();
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
+    } catch (e) {
+      console.error('Logout error:', e);
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
     }
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
+  const displayName =
+    profile.userName ||
+    profile.companyName ||
+    authUser?.userName ||
+    authUser?.name ||
+    'Borrower Account';
 
-      {/* Header */}
-      <View style={styles.topHeader}>
-        <TouchableOpacity style={styles.backIcon} onPress={() => navigation.goBack()}>
-          <Feather name="arrow-left" size={m(22)} color="#0F172A" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Borrower Profile & KYC</Text>
-        <TouchableOpacity
-          style={styles.securityShortcut}
-          onPress={() => navigation.navigate('BorrowerSecurityScreen')}
-        >
-          <Feather name="lock" size={m(18)} color="#2563EB" />
-        </TouchableOpacity>
-      </View>
+  const displayId =
+    profile.panCardNumber ||
+    (authUser?._id ? authUser._id.slice(-8).toUpperCase() : '25030024');
 
-      {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color="#2563EB" />
+  const avatarUrl = authUser?.profileImage || authUser?.avatar;
+
+  const initials =
+    displayName
+      .split(' ')
+      .filter(Boolean)
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2) || 'BP';
+
+  // 6 Primary Menu options matching Lender Profile layout
+  const menuItems = [
+    {
+      id: 'edit_profile',
+      title: 'Edit Profile & Statutory KYC',
+      icon: 'user',
+      onPress: () => navigation.navigate('BorrowerEditProfileScreen', { section: 'kyc' }),
+    },
+    {
+      id: 'entity_info',
+      title: 'Corporate Entity & Constitution',
+      icon: 'briefcase',
+      onPress: () => navigation.navigate('BorrowerEditProfileScreen', { section: 'entity' }),
+    },
+    {
+      id: 'security',
+      title: 'Security & PIN Governance',
+      icon: 'shield',
+      onPress: () => navigation.navigate('BorrowerSecurityScreen'),
+    },
+    {
+      id: 'office_address',
+      title: 'Registered Office Address',
+      icon: 'map-pin',
+      onPress: () => navigation.navigate('BorrowerEditProfileScreen', { section: 'address' }),
+    },
+    {
+      id: 'help',
+      title: 'Help & Support',
+      icon: 'headphones',
+      onPress: () => navigation.navigate('HelpAndSupportScreen'),
+    },
+    {
+      id: 'logout',
+      title: 'Logout',
+      icon: 'log-out',
+      onPress: () => setLogoutModalVisible(true),
+    },
+  ];
+
+  if (loading && !profile.userName && !authUser?.userName) {
+    return (
+      <ScreenWrapper
+        backgroundColor={colors.backgroundGreenWhite}
+        topInsetBg={colors.primary}
+        statusBarColor={colors.primary}
+        statusBarStyle="dark-content"
+      >
+        <View style={styles.loaderCenter}>
+          <ActivityIndicator size="large" color={colors.lettersAndIcons} />
+          <Text style={styles.loaderText}>Loading borrower profile...</Text>
         </View>
-      ) : (
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          {/* Profile Completion Meter Card */}
-          <View style={styles.meterCard}>
-            <View style={styles.meterHeader}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.meterTag}>PROFILE COMPLETION</Text>
-                <Text style={styles.meterPctText}>{computedCompletion.percentage}% Complete</Text>
+      </ScreenWrapper>
+    );
+  }
+
+  return (
+    <ScreenWrapper
+      backgroundColor={colors.backgroundGreenWhite}
+      topInsetBg={colors.primary}
+      statusBarColor={colors.primary}
+      statusBarStyle="dark-content"
+      includeTabBarClearance={false}
+      scrollable={false}
+    >
+      <View style={styles.pageWrapper}>
+        {/* ── 1. Top Green Header Bar ── */}
+        <View style={styles.headerBar}>
+          <Text style={styles.headerTitle}>Profile</Text>
+        </View>
+
+        {/* Green Backdrop Segment (hosts top half of the 92px floating avatar) */}
+        <View style={styles.greenBackdrop} />
+
+        {/* ── 2. Curved Sheet Section ── */}
+        <View style={styles.sheetSection}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+          >
+            {/* User / Enterprise Name & ID */}
+            <Text style={styles.userName}>{displayName}</Text>
+            <Text style={styles.userIdText}>ID: {displayId}</Text>
+
+            {/* Verified Badge */}
+            <View style={styles.badgeWrapper}>
+              <View style={styles.verifiedPill}>
+                <Feather name="check-circle" size={m(12)} color="#059669" />
+                <Text style={styles.verifiedPillText}>DigiLocker & NSDL Verified</Text>
               </View>
-              {digilockerKyc?.isAadhaarVerified ? (
-                <View style={styles.kycVerifiedBadge}>
-                  <Feather name="shield" size={m(12)} color="#16A34A" />
-                  <Text style={styles.kycVerifiedText}>DigiLocker Verified</Text>
-                </View>
-              ) : (
-                <View style={styles.kycPendingBadge}>
-                  <Feather name="info" size={m(12)} color="#D97706" />
-                  <Text style={styles.kycPendingText}>Self-Declared</Text>
-                </View>
-              )}
             </View>
 
-            <View style={styles.meterTrack}>
-              <View style={[styles.meterFill, { width: `${computedCompletion.percentage}%` }]} />
+            {/* Figma-Style Blue Circle Menu Items (Matching Lender Profile) */}
+            <View style={styles.menuList}>
+              {menuItems.map(item => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={styles.menuRow}
+                  activeOpacity={0.75}
+                  onPress={item.onPress}
+                >
+                  <View style={styles.menuIconCircle}>
+                    <Feather name={item.icon} size={m(20)} color={colors.white} />
+                  </View>
+                  <Text style={styles.menuTitle}>{item.title}</Text>
+                  <Feather
+                    name="chevron-right"
+                    size={m(18)}
+                    color="#94A3B8"
+                    style={{ marginLeft: 'auto' }}
+                  />
+                </TouchableOpacity>
+              ))}
             </View>
 
-            {computedCompletion.missingFields.length > 0 ? (
-              <View style={styles.missingBox}>
-                <Text style={styles.missingLabel}>Pending Verification:</Text>
-                <Text style={styles.missingText}>
-                  {computedCompletion.missingFields.slice(0, 4).join(', ')}
-                  {computedCompletion.missingFields.length > 4 ? ` +${computedCompletion.missingFields.length - 4} more` : ''}
-                </Text>
-              </View>
+            {/* Platform Version Subtitle */}
+            <Text style={styles.versionText}>LoanHub Borrower Terminal v2.4.0</Text>
+          </ScrollView>
+        </View>
+
+        {/* Floating Circular Avatar Perfectly Positioned at the Seam */}
+        <View style={styles.avatarFloatingWrapper} pointerEvents="box-none">
+          <TouchableOpacity
+            style={styles.avatarCircle}
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('BorrowerEditProfileScreen', { section: 'kyc' })}
+          >
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={styles.avatarImage} resizeMode="cover" />
             ) : (
-              <Text style={styles.completeNotice}>
-                100% verified. You are fully eligible to apply for institutional financing.
+              <View style={styles.avatarFallback}>
+                <Text style={styles.avatarInitials}>{initials}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* ── 3. Full-Screen Logout Confirmation Modal ── */}
+        <Modal
+          visible={logoutModalVisible}
+          transparent={true}
+          animationType="fade"
+          statusBarTranslucent={true}
+          onRequestClose={() => setLogoutModalVisible(false)}
+        >
+          <View style={styles.modalBackdrop}>
+            <TouchableOpacity
+              style={StyleSheet.absoluteFill}
+              activeOpacity={1}
+              onPress={() => setLogoutModalVisible(false)}
+            />
+            <View style={styles.modalCard}>
+              <View style={styles.modalIconCircle}>
+                <Feather name="log-out" size={m(24)} color={colors.lettersAndIcons} />
+              </View>
+              <Text style={styles.modalSignOutTitle}>Sign Out</Text>
+              <Text style={styles.modalSignOutSubtitle}>
+                Are you sure you want to exit the Borrower Enterprise Workspace?
               </Text>
-            )}
-          </View>
-
-          {/* Section 1: Personal & Statutory KYC */}
-          <View style={styles.sectionCard}>
-            <View style={styles.sectionTitleRow}>
-              <Feather name="user" size={m(16)} color="#2563EB" />
-              <Text style={styles.sectionTitle}>Personal & Statutory KYC</Text>
-            </View>
-
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Full Legal Name</Text>
-              <TextInput
-                style={styles.textInput}
-                value={profile.userName}
-                onChangeText={(t) => setProfile({ ...profile, userName: t })}
-                placeholder="Authorized Signatory Name"
-              />
-            </View>
-
-            <View style={styles.rowTwo}>
-              <View style={[styles.fieldGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Primary Mobile (Registered)</Text>
-                <TextInput
-                  style={[styles.textInput, styles.readOnlyInput]}
-                  value={profile.mobileNo}
-                  editable={false}
-                />
-              </View>
-              <View style={[styles.fieldGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Alt Mobile</Text>
-                <TextInput
-                  style={styles.textInput}
-                  keyboardType="phone-pad"
-                  value={profile.altMobileNo}
-                  onChangeText={(t) => setProfile({ ...profile, altMobileNo: t })}
-                  placeholder="Optional alternate"
-                />
-              </View>
-            </View>
-
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Email Address</Text>
-              <TextInput
-                style={[styles.textInput, styles.readOnlyInput]}
-                value={profile.email}
-                editable={false}
-              />
-            </View>
-
-            <View style={styles.rowTwo}>
-              <View style={[styles.fieldGroup, { flex: 1 }]}>
-                <Text style={styles.label}>PAN Card Number</Text>
-                <TextInput
-                  style={[styles.textInput, { textTransform: 'uppercase' }]}
-                  autoCapitalize="characters"
-                  value={profile.panCardNumber}
-                  onChangeText={(t) => setProfile({ ...profile, panCardNumber: t.toUpperCase() })}
-                  placeholder="ABCDE1234F"
-                />
-              </View>
-              <View style={[styles.fieldGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Aadhaar Number</Text>
-                <TextInput
-                  style={styles.textInput}
-                  keyboardType="numeric"
-                  value={profile.aadharCardNo}
-                  onChangeText={(t) => setProfile({ ...profile, aadharCardNo: t })}
-                  placeholder="12-digit UID"
-                />
+              <View style={styles.modalActionButtons}>
+                <TouchableOpacity
+                  style={styles.modalConfirmBtn}
+                  activeOpacity={0.8}
+                  onPress={handleConfirmLogout}
+                >
+                  <Text style={styles.modalConfirmBtnText}>Sign Out</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.modalCancelBtn}
+                  activeOpacity={0.8}
+                  onPress={() => setLogoutModalVisible(false)}
+                >
+                  <Text style={styles.modalCancelBtnText}>Cancel</Text>
+                </TouchableOpacity>
               </View>
             </View>
           </View>
-
-          {/* Section 2: Commercial & Business Profile */}
-          <View style={styles.sectionCard}>
-            <View style={styles.sectionTitleRow}>
-              <Feather name="briefcase" size={m(16)} color="#2563EB" />
-              <Text style={styles.sectionTitle}>Commercial & Business Entity</Text>
-            </View>
-
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Company / Trade Name</Text>
-              <TextInput
-                style={styles.textInput}
-                value={profile.companyName}
-                onChangeText={(t) => setProfile({ ...profile, companyName: t })}
-                placeholder="Enterprise Registered Name"
-              />
-            </View>
-
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Entity Constitution</Text>
-              <View style={styles.chipsWrap}>
-                {BUSINESS_TYPES.map((bt) => (
-                  <TouchableOpacity
-                    key={bt}
-                    style={[styles.chip, profile.businessType === bt && styles.activeChip]}
-                    onPress={() => setProfile({ ...profile, businessType: bt })}
-                  >
-                    <Text
-                      style={[
-                        styles.chipText,
-                        profile.businessType === bt && styles.activeChipText,
-                      ]}
-                    >
-                      {bt}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Source of Income / Employment Type</Text>
-              <View style={styles.chipsWrap}>
-                {EMPLOYMENT_TYPES.map((et) => (
-                  <TouchableOpacity
-                    key={et}
-                    style={[styles.chip, profile.employmentType === et && styles.activeChip]}
-                    onPress={() => setProfile({ ...profile, employmentType: et })}
-                  >
-                    <Text
-                      style={[
-                        styles.chipText,
-                        profile.employmentType === et && styles.activeChipText,
-                      ]}
-                    >
-                      {et}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.rowTwo}>
-              <View style={[styles.fieldGroup, { flex: 1 }]}>
-                <Text style={styles.label}>GSTIN Number (Optional)</Text>
-                <TextInput
-                  style={[styles.textInput, { textTransform: 'uppercase' }]}
-                  autoCapitalize="characters"
-                  value={profile.gstNumber}
-                  onChangeText={(t) => setProfile({ ...profile, gstNumber: t.toUpperCase() })}
-                  placeholder="27AAAAA0000A1Z5"
-                />
-              </View>
-              <View style={[styles.fieldGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Vintage (Years)</Text>
-                <TextInput
-                  style={styles.textInput}
-                  keyboardType="numeric"
-                  value={profile.yearsInBusiness}
-                  onChangeText={(t) => setProfile({ ...profile, yearsInBusiness: t })}
-                  placeholder="3"
-                />
-              </View>
-            </View>
-
-            <View style={styles.rowTwo}>
-              <View style={[styles.fieldGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Annual Turnover (₹)</Text>
-                <TextInput
-                  style={styles.textInput}
-                  keyboardType="numeric"
-                  value={profile.annualRevenue}
-                  onChangeText={(t) => setProfile({ ...profile, annualRevenue: t })}
-                  placeholder="e.g. 5000000"
-                />
-              </View>
-              <View style={[styles.fieldGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Monthly Income (₹)</Text>
-                <TextInput
-                  style={styles.textInput}
-                  keyboardType="numeric"
-                  value={profile.monthlyIncome}
-                  onChangeText={(t) => setProfile({ ...profile, monthlyIncome: t })}
-                  placeholder="e.g. 200000"
-                />
-              </View>
-            </View>
-
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>CIBIL / Credit Score</Text>
-              <TextInput
-                style={styles.textInput}
-                keyboardType="numeric"
-                value={profile.creditScore}
-                onChangeText={(t) => setProfile({ ...profile, creditScore: t })}
-                placeholder="750"
-              />
-            </View>
-          </View>
-
-          {/* Section 3: Registered Physical Address */}
-          <View style={styles.sectionCard}>
-            <View style={styles.sectionTitleRow}>
-              <Feather name="map-pin" size={m(16)} color="#2563EB" />
-              <Text style={styles.sectionTitle}>Registered Physical Address</Text>
-            </View>
-
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Street Address / Premise</Text>
-              <TextInput
-                style={styles.textInput}
-                value={profile.address}
-                onChangeText={(t) => setProfile({ ...profile, address: t })}
-                placeholder="Shop No., Commercial Complex, Industrial Estate"
-              />
-            </View>
-
-            <View style={styles.rowTwo}>
-              <View style={[styles.fieldGroup, { flex: 1 }]}>
-                <Text style={styles.label}>City / Town</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={profile.city}
-                  onChangeText={(t) => setProfile({ ...profile, city: t })}
-                  placeholder="Mumbai"
-                />
-              </View>
-              <View style={[styles.fieldGroup, { flex: 1 }]}>
-                <Text style={styles.label}>District</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={profile.district}
-                  onChangeText={(t) => setProfile({ ...profile, district: t })}
-                  placeholder="Mumbai City"
-                />
-              </View>
-            </View>
-
-            <View style={styles.rowTwo}>
-              <View style={[styles.fieldGroup, { flex: 1 }]}>
-                <Text style={styles.label}>State</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={profile.state}
-                  onChangeText={(t) => setProfile({ ...profile, state: t })}
-                  placeholder="Maharashtra"
-                />
-              </View>
-              <View style={[styles.fieldGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Pincode</Text>
-                <TextInput
-                  style={styles.textInput}
-                  keyboardType="numeric"
-                  value={profile.pincode}
-                  onChangeText={(t) => setProfile({ ...profile, pincode: t })}
-                  placeholder="400001"
-                />
-              </View>
-            </View>
-          </View>
-
-          {/* Save Action Button */}
-          <TouchableOpacity
-            style={[styles.saveBtn, saving && styles.disabledBtn]}
-            onPress={handleSave}
-            disabled={saving}
-          >
-            {saving ? (
-              <ActivityIndicator color={colors.white} />
-            ) : (
-              <>
-                <Feather name="check" size={m(16)} color={colors.white} />
-                <Text style={styles.saveBtnText}>Save Profile Changes</Text>
-              </>
-            )}
-          </TouchableOpacity>
-
-          {/* Security & Password Link */}
-          <TouchableOpacity
-            style={styles.securityBtn}
-            onPress={() => navigation.navigate('BorrowerSecurityScreen')}
-            activeOpacity={0.8}
-          >
-            <Feather name="lock" size={m(15)} color="#2563EB" />
-            <Text style={styles.securityBtnText}>Security & Change Password</Text>
-            <Feather name="chevron-right" size={m(15)} color="#94A3B8" />
-          </TouchableOpacity>
-
-          {/* Sign Out Button */}
-          <TouchableOpacity
-            style={styles.logoutBtn}
-            onPress={handleLogout}
-            activeOpacity={0.8}
-          >
-            <Feather name="log-out" size={m(16)} color="#DC2626" />
-            <Text style={styles.logoutBtnText}>Sign Out of Borrower Portal</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      )}
-    </SafeAreaView>
+        </Modal>
+      </View>
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  pageWrapper: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.primary,
   },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  topHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: m(16),
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || m(24)) + m(10) : m(14),
-    paddingBottom: m(14),
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+
+  // Fixed Top Header
+  headerBar: {
+    paddingHorizontal: m(20),
+    paddingTop: m(14),
+    paddingBottom: m(10),
+    backgroundColor: colors.primary,
   },
   headerTitle: {
-    fontSize: m(16),
-    fontWeight: '800',
-    color: '#0F172A',
+    fontSize: m(22),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    textAlign: 'left',
   },
-  backIcon: {
-    padding: m(4),
+
+  // Green Backdrop Segment
+  greenBackdrop: {
+    height: m(46),
+    backgroundColor: colors.primary,
   },
-  securityShortcut: {
-    padding: m(4),
+
+  // Curved Sheet
+  sheetSection: {
+    flex: 1,
+    backgroundColor: colors.backgroundGreenWhite,
+    borderTopLeftRadius: m(36),
+    borderTopRightRadius: m(36),
   },
   scrollContent: {
-    padding: m(16),
-    gap: m(14),
-    paddingBottom: m(80),
+    paddingTop: m(52), // Space for bottom half of the floating avatar
+    paddingBottom: m(100),
   },
-  meterCard: {
-    backgroundColor: '#0F172A',
-    borderRadius: m(16),
-    padding: m(16),
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    gap: m(10),
-  },
-  meterHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+
+  // Floating Avatar (over the seam between header & curved sheet)
+  avatarFloatingWrapper: {
+    position: 'absolute',
+    top: m(60),
+    left: 0,
+    right: 0,
     alignItems: 'center',
+    zIndex: 20,
+    elevation: 6,
   },
-  meterTag: {
-    fontSize: m(9),
-    fontWeight: '800',
-    color: '#94A3B8',
-    letterSpacing: 0.5,
-  },
-  meterPctText: {
-    fontSize: m(18),
-    fontWeight: '900',
-    color: colors.white,
-    marginTop: m(2),
-  },
-  kycVerifiedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(4),
-    backgroundColor: '#14532D',
-    paddingHorizontal: m(8),
-    paddingVertical: m(4),
-    borderRadius: m(6),
-  },
-  kycVerifiedText: {
-    fontSize: m(10),
-    fontWeight: '700',
-    color: '#86EFAC',
-  },
-  kycPendingBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(4),
-    backgroundColor: '#78350F',
-    paddingHorizontal: m(8),
-    paddingVertical: m(4),
-    borderRadius: m(6),
-  },
-  kycPendingText: {
-    fontSize: m(10),
-    fontWeight: '700',
-    color: '#FDE68A',
-  },
-  meterTrack: {
-    height: m(6),
-    backgroundColor: '#1E293B',
-    borderRadius: m(3),
+  avatarCircle: {
+    width: m(92),
+    height: m(92),
+    borderRadius: m(46),
+    borderWidth: m(3.5),
+    borderColor: colors.white,
+    backgroundColor: colors.white,
     overflow: 'hidden',
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.16,
+    shadowRadius: 8,
+    elevation: 6,
   },
-  meterFill: {
+  avatarImage: {
+    width: '100%',
     height: '100%',
-    backgroundColor: '#38BDF8',
+    borderRadius: m(46),
   },
-  missingBox: {
-    backgroundColor: '#1E293B',
-    borderRadius: m(8),
-    padding: m(8),
+  avatarFallback: {
+    width: '100%',
+    height: '100%',
+    borderRadius: m(46),
+    backgroundColor: colors.oceanBlueButton,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  missingLabel: {
-    fontSize: m(9),
-    color: '#94A3B8',
-    fontWeight: '700',
-    textTransform: 'uppercase',
+  avatarInitials: {
+    fontSize: m(28),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
   },
-  missingText: {
-    fontSize: m(10),
-    color: '#F8FAFC',
+
+  // User Header Text
+  userName: {
+    fontSize: m(20),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    textAlign: 'center',
+    paddingHorizontal: m(20),
+  },
+  userIdText: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryBold,
+    color: '#4B6358',
+    textAlign: 'center',
     marginTop: m(2),
+    marginBottom: m(8),
   },
-  completeNotice: {
-    fontSize: m(11),
-    color: '#86EFAC',
-    fontWeight: '600',
+
+  badgeWrapper: {
+    alignItems: 'center',
+    marginBottom: m(16),
   },
-  sectionCard: {
-    backgroundColor: colors.white,
-    borderRadius: m(16),
-    padding: m(16),
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    gap: m(12),
-  },
-  sectionTitleRow: {
+  verifiedPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(8),
-    marginBottom: m(2),
-  },
-  sectionTitle: {
-    fontSize: m(14),
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-  fieldGroup: {
-    gap: m(4),
-  },
-  rowTwo: {
-    flexDirection: 'row',
-    gap: m(10),
-  },
-  label: {
-    fontSize: m(11),
-    fontWeight: '600',
-    color: '#475569',
-  },
-  textInput: {
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: m(10),
-    paddingHorizontal: m(12),
-    paddingVertical: m(9),
-    fontSize: m(13),
-    color: '#0F172A',
-  },
-  readOnlyInput: {
-    backgroundColor: '#F1F5F9',
-    color: '#64748B',
-  },
-  chipsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: m(6),
-  },
-  chip: {
+    gap: m(5),
+    backgroundColor: '#DCFCE7',
     paddingHorizontal: m(10),
-    paddingVertical: m(6),
-    borderRadius: m(8),
-    backgroundColor: '#F8FAFC',
+    paddingVertical: m(4),
+    borderRadius: m(20),
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#BBF7D0',
   },
-  activeChip: {
-    backgroundColor: '#0F172A',
-    borderColor: '#0F172A',
+  verifiedPillText: {
+    fontSize: m(10),
+    fontFamily: FontFamily.primaryBold,
+    color: '#166534',
   },
-  chipText: {
-    fontSize: m(11),
-    fontWeight: '600',
-    color: '#64748B',
+
+  // Figma-Style Blue Circle Menu Items
+  menuList: {
+    paddingHorizontal: m(18),
+    marginBottom: m(20),
   },
-  activeChipText: {
-    color: colors.white,
-  },
-  saveBtn: {
+  menuRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: m(10),
+    paddingHorizontal: m(8),
+  },
+  menuIconCircle: {
+    width: m(44),
+    height: m(44),
+    borderRadius: m(22),
+    backgroundColor: colors.blueButton,
+    alignItems: 'center',
     justifyContent: 'center',
-    gap: m(8),
-    backgroundColor: '#2563EB',
-    borderRadius: m(14),
-    paddingVertical: m(14),
-    marginTop: m(8),
+    marginRight: m(16),
+    elevation: 2,
+    shadowColor: colors.blueButton,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
   },
-  disabledBtn: {
-    opacity: 0.6,
-  },
-  saveBtnText: {
+  menuTitle: {
     fontSize: m(15),
-    fontWeight: '700',
-    color: colors.white,
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
-  securityBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.white,
-    borderRadius: m(14),
-    paddingVertical: m(14),
-    paddingHorizontal: m(16),
-    marginTop: m(12),
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    gap: m(10),
+
+  versionText: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: m(10),
   },
-  securityBtnText: {
+
+  loaderCenter: {
     flex: 1,
-    fontSize: m(13),
-    fontWeight: '700',
-    color: '#1E293B',
-  },
-  logoutBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FEE2E2',
-    borderRadius: m(14),
-    paddingVertical: m(14),
-    marginTop: m(12),
-    borderWidth: 1,
-    borderColor: '#FCA5A5',
+    alignItems: 'center',
+  },
+  loaderText: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.lettersAndIcons,
+    marginTop: m(10),
+  },
+
+  // Logout Modal
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(9, 48, 48, 0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: m(24),
+  },
+  modalCard: {
+    width: '100%',
+    backgroundColor: colors.white,
+    borderRadius: m(24),
+    padding: m(22),
+    alignItems: 'center',
+    elevation: 10,
+  },
+  modalIconCircle: {
+    width: m(54),
+    height: m(54),
+    borderRadius: m(27),
+    backgroundColor: colors.lightGreen,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: m(14),
+  },
+  modalSignOutTitle: {
+    fontSize: m(18),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    marginBottom: m(6),
+  },
+  modalSignOutSubtitle: {
+    fontSize: m(12.5),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: m(20),
+  },
+  modalActionButtons: {
+    width: '100%',
     gap: m(8),
   },
-  logoutBtnText: {
-    fontSize: m(14),
-    fontWeight: '700',
-    color: '#DC2626',
+  modalConfirmBtn: {
+    backgroundColor: colors.oceanBlueButton,
+    paddingVertical: m(12),
+    borderRadius: m(12),
+    alignItems: 'center',
+  },
+  modalConfirmBtnText: {
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
+  },
+  modalCancelBtn: {
+    paddingVertical: m(12),
+    borderRadius: m(12),
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  modalCancelBtnText: {
+    fontSize: m(13),
+    fontFamily: FontFamily.primarySemiBold,
+    color: colors.textSecondary,
   },
 });

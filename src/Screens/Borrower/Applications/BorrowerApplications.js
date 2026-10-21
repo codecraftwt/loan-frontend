@@ -8,19 +8,15 @@ import {
   TextInput,
   RefreshControl,
   ActivityIndicator,
-  SafeAreaView,
-  StatusBar,
   Alert,
   Linking,
-  Platform,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
-import { m } from 'walstar-rn-responsive';
-import { colors } from '../../../constants';
+import { colors, FontFamily } from '../../../constants';
+import { m } from '../../../Utils/responsive';
+import { ScreenWrapper } from '../../../Components/common';
 import borrowerFlowService from '../../../Services/borrowerFlowService';
-import DigitalAgreementModal from './DigitalAgreementModal';
-
 export default function BorrowerApplications() {
   const navigation = useNavigation();
   const [applications, setApplications] = useState([]);
@@ -28,10 +24,6 @@ export default function BorrowerApplications() {
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'pending' | 'accepted' | 'closed'
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Agreement modal state
-  const [selectedAppForAgreement, setSelectedAppForAgreement] = useState(null);
-  const [agreementModalVisible, setAgreementModalVisible] = useState(false);
 
   const fetchApplications = useCallback(async () => {
     try {
@@ -68,7 +60,7 @@ export default function BorrowerApplications() {
   };
 
   const formatDate = (iso) => {
-    if (!iso) return 'N/A';
+    if (!iso) return 'Recently';
     return new Date(iso).toLocaleDateString('en-IN', {
       day: '2-digit',
       month: 'short',
@@ -116,7 +108,7 @@ export default function BorrowerApplications() {
   const copyOtpToClipboard = (otp) => {
     Alert.alert(
       'Disbursal OTP',
-      `Your 6-digit Disbursal Verification Code is:\n\n${otp}\n\nShare this code with your lender to execute fund transfer.`,
+      `Your 6-digit Disbursal Verification Code is:\n\n${otp}\n\nShare this code with your lender representative to authorize instant RTGS funds release.`,
       [{ text: 'Got it' }]
     );
   };
@@ -160,77 +152,72 @@ export default function BorrowerApplications() {
       item.activeLoan?.disbursalVerification?.isVerified;
 
     return (
-      <View style={[styles.card, isAccepted && styles.acceptedCard, isPending && styles.pendingCard]}>
-        {/* Card Header */}
-        <View style={styles.cardHeader}>
-          <View style={styles.headerInfo}>
-            <View style={styles.lenderRow}>
-              <View
-                style={[
-                  styles.lenderIconBox,
-                  isAccepted && { backgroundColor: '#DCFCE7' },
-                  isPending && { backgroundColor: '#FEF3C7' },
-                ]}
-              >
-                <Feather
-                  name={isAccepted ? 'check-circle' : isPending ? 'clock' : 'x-circle'}
-                  size={m(16)}
-                  color={isAccepted ? '#16A34A' : isPending ? '#D97706' : '#64748B'}
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.lenderName} numberOfLines={1}>
-                  {lenderName}
-                </Text>
-                <Text style={styles.dateSub}>Submitted {formatDate(item.createdAt)}</Text>
-              </View>
-            </View>
+      <View style={styles.card}>
+        {/* Card Header Row */}
+        <View style={styles.cardHeaderRow}>
+          <View style={styles.activityIconCircle}>
+            <Feather name="briefcase" size={m(16)} color={colors.white} />
+          </View>
+
+          <View style={styles.headerInfoCol}>
+            <Text style={styles.lenderNameText} numberOfLines={1}>
+              {lenderName}
+            </Text>
+            <Text style={styles.purposeSubText} numberOfLines={1}>
+              {item.purpose || 'Working Capital Line'} • {formatDate(item.createdAt)}
+            </Text>
           </View>
 
           {/* Status Badge */}
           {isPending ? (
-            <View style={styles.pendingBadge}>
-              <Feather name="clock" size={m(10)} color="#D97706" />
-              <Text style={styles.pendingBadgeText}>
-                {item.remainingHours != null ? `${item.remainingHours}h left` : 'Reviewing'}
+            <View style={styles.pillPending}>
+              <Feather name="clock" size={m(10)} color="#d97706" />
+              <Text style={styles.pillTextPending}>
+                {item.remainingHours != null ? `${item.remainingHours}h left` : 'IN REVIEW'}
               </Text>
             </View>
           ) : isLenderSigned ? (
-            <View style={styles.signBadge}>
-              <Feather name="edit-3" size={m(10)} color="#2563EB" />
-              <Text style={styles.signBadgeText}>Sign Contract</Text>
+            <View style={styles.pillSign}>
+              <Feather name="edit-3" size={m(10)} color={colors.blueButton} />
+              <Text style={styles.pillTextSign}>SIGN CONTRACT</Text>
             </View>
           ) : isAccepted ? (
-            <View style={styles.acceptedBadge}>
-              <Feather name="check" size={m(10)} color="#16A34A" />
-              <Text style={styles.acceptedBadgeText}>Sanctioned</Text>
+            <View style={styles.pillAccepted}>
+              <Feather name="check" size={m(10)} color="#059669" />
+              <Text style={styles.pillTextAccepted}>SANCTIONED</Text>
             </View>
           ) : (
-            <View style={styles.closedBadge}>
-              <Text style={styles.closedBadgeText}>
-                {item.status === 'auto_rejected' ? 'Auto-Expired' : 'Declined'}
+            <View style={styles.pillRejected}>
+              <Text style={styles.pillTextRejected}>
+                {item.status === 'auto_rejected' ? 'EXPIRED' : 'DECLINED'}
               </Text>
             </View>
           )}
         </View>
 
-        {/* 4-Column Metric Strip */}
-        <View style={styles.metricStrip}>
+        {/* Compact Metrics Strip - Neutral Slate-50 (#F8FAFC) */}
+        <View style={styles.metricsBox}>
           <View style={styles.metricItem}>
-            <Text style={styles.mLabel}>Amount</Text>
-            <Text style={styles.mVal}>{formatINR(item.amount)}</Text>
+            <Text style={styles.metricLabel}>Facility Amount</Text>
+            <Text style={styles.metricValueBold}>{formatINR(item.amount)}</Text>
           </View>
+
+          <View style={styles.metricDivider} />
+
           <View style={styles.metricItem}>
-            <Text style={styles.mLabel}>Type</Text>
-            <Text style={styles.mVal}>{item.repaymentType === 'ONE_TIME' ? 'Bullet' : 'EMI'}</Text>
+            <Text style={styles.metricLabel}>Tenure / Rate</Text>
+            <Text style={styles.metricValue}>
+              {item.tenureMonths || 24} Mo • {item.requestedRate || 10.5}%
+            </Text>
           </View>
+
+          <View style={styles.metricDivider} />
+
           <View style={styles.metricItem}>
-            <Text style={styles.mLabel}>Tenure</Text>
-            <Text style={styles.mVal}>{item.tenureMonths || 24} Mo</Text>
-          </View>
-          <View style={styles.metricItem}>
-            <Text style={styles.mLabel}>Purpose</Text>
-            <Text style={styles.mVal} numberOfLines={1}>{item.purpose || 'Working Cap'}</Text>
+            <Text style={styles.metricLabel}>Repayment</Text>
+            <Text style={styles.metricValue}>
+              {item.repaymentType === 'ONE_TIME' ? 'Bullet' : 'Monthly EMI'}
+            </Text>
           </View>
         </View>
 
@@ -238,19 +225,21 @@ export default function BorrowerApplications() {
         {isLenderSigned ? (
           <View style={styles.signActionBox}>
             <View style={styles.signActionLeft}>
-              <Feather name="file-text" size={m(16)} color="#2563EB" />
+              <View style={styles.signIconCircle}>
+                <Feather name="file-text" size={m(15)} color={colors.blueButton} />
+              </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.signActionTitle}>Facility Contract Ready to Sign</Text>
                 <Text style={styles.signActionSub}>
-                  Lender has approved terms. Review and countersign to unlock disbursal.
+                  Lender has approved facility terms. Review and countersign to unlock disbursal.
                 </Text>
               </View>
             </View>
             <TouchableOpacity
               style={styles.reviewSignBtn}
+              activeOpacity={0.85}
               onPress={() => {
-                setSelectedAppForAgreement(item);
-                setAgreementModalVisible(true);
+                navigation.navigate('BorrowerContractTermsScreen', { application: item });
               }}
             >
               <Text style={styles.reviewSignBtnText}>Review & E-Sign</Text>
@@ -259,12 +248,12 @@ export default function BorrowerApplications() {
           </View>
         ) : null}
 
-        {/* Disbursal OTP Reveal Card (if accepted & OTP active) */}
+        {/* Disbursal OTP Card (if accepted & OTP active) */}
         {isAccepted && otp && !isDisbursed ? (
           <View style={styles.otpCard}>
             <View style={styles.otpHeader}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: m(4) }}>
-                <Feather name="lock" size={m(12)} color="#D97706" />
+                <Feather name="key" size={m(13)} color="#d97706" />
                 <Text style={styles.otpTitle}>DISBURSAL VERIFICATION OTP</Text>
               </View>
               <Text style={styles.otpShareNotice}>Share with Lender</Text>
@@ -274,9 +263,10 @@ export default function BorrowerApplications() {
               <Text style={styles.otpCodeText}>{otp}</Text>
               <TouchableOpacity
                 style={styles.copyOtpBtn}
+                activeOpacity={0.8}
                 onPress={() => copyOtpToClipboard(otp)}
               >
-                <Feather name="copy" size={m(12)} color="#D97706" />
+                <Feather name="copy" size={m(12)} color="#b45309" />
                 <Text style={styles.copyOtpBtnText}>View / Copy</Text>
               </TouchableOpacity>
             </View>
@@ -286,55 +276,57 @@ export default function BorrowerApplications() {
           </View>
         ) : null}
 
-        {/* Active Facility Footer Details */}
+        {/* Active Facility Connected Loan */}
         {isAccepted && item.activeLoan ? (
           <View style={styles.activeLoanRow}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: m(4) }}>
-              <Feather name="credit-card" size={m(12)} color="#16A34A" />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: m(6) }}>
+              <Feather name="credit-card" size={m(13)} color="#059669" />
               <Text style={styles.activeLoanText}>
-                Active Loan · EMI: {formatINR(item.activeLoan.monthlyEmi)}
+                Active Facility · EMI: {formatINR(item.activeLoan.monthlyEmi || 0)}
               </Text>
             </View>
             <TouchableOpacity
               style={styles.viewScheduleBtn}
+              activeOpacity={0.8}
               onPress={() =>
                 navigation.navigate('BorrowerLoanDetails', { id: item.activeLoan._id })
               }
             >
               <Text style={styles.viewScheduleBtnText}>Repayment Schedule</Text>
-              <Feather name="chevron-right" size={m(12)} color="#2563EB" />
+              <Feather name="chevron-right" size={m(13)} color={colors.blueButton} />
             </TouchableOpacity>
           </View>
         ) : null}
 
-        {/* Rejection / Expiration note */}
+        {/* Rejection / Expiration Notice */}
         {item.rejectionReason ? (
           <View style={styles.reasonBox}>
             <Text style={styles.reasonText}>
-              <Text style={{ fontWeight: '700' }}>Reason: </Text>
+              <Text style={{ fontFamily: FontFamily.primaryBold }}>Decision Note: </Text>
               {item.rejectionReason}
             </Text>
           </View>
         ) : null}
 
-        {/* Card Footer Actions */}
-        <View style={styles.cardFooter}>
+        {/* Card Actions Row */}
+        <View style={styles.cardActionsRow}>
           <TouchableOpacity
             style={styles.agreementBtn}
+            activeOpacity={0.8}
             onPress={() => {
-              setSelectedAppForAgreement(item);
-              setAgreementModalVisible(true);
+              navigation.navigate('BorrowerContractTermsScreen', { application: item });
             }}
           >
-            <Feather name="file-text" size={m(12)} color="#334155" />
+            <Feather name="file-text" size={m(13)} color={colors.lettersAndIcons} />
             <Text style={styles.agreementBtnText}>Contract Terms</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.chatBtn}
-            onPress={() => openLenderChat(item.lenderSnapshot?.mobileNo)}
+            activeOpacity={0.85}
+            onPress={() => openLenderChat(item.lenderSnapshot?.mobileNo || item.lenderId?.mobileNo)}
           >
-            <Feather name="message-square" size={m(12)} color={colors.white} />
+            <Feather name="message-square" size={m(13)} color={colors.white} />
             <Text style={styles.chatBtnText}>Chat Lender</Text>
           </TouchableOpacity>
         </View>
@@ -343,417 +335,530 @@ export default function BorrowerApplications() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
-
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>My Loan Applications</Text>
-          <Text style={styles.headerSubtitle}>
-            Track review status, 48-hour countdowns, and active facilities.
-          </Text>
-        </View>
-      </View>
-
-      {/* Search Input Bar */}
-      <View style={styles.searchContainer}>
-        <Feather name="search" size={m(16)} color="#94A3B8" style={{ marginRight: m(8) }} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search by institution name or purpose..."
-          placeholderTextColor="#94A3B8"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-        {searchQuery ? (
-          <TouchableOpacity onPress={() => setSearchQuery('')}>
-            <Feather name="x" size={m(16)} color="#94A3B8" />
-          </TouchableOpacity>
-        ) : null}
-      </View>
-
-      {/* Status Filter Tabs */}
-      <View style={styles.tabsContainer}>
-        {[
-          { key: 'all', label: `All (${counts.all})` },
-          { key: 'pending', label: `Pending (${counts.pending})` },
-          { key: 'accepted', label: `Accepted (${counts.accepted})` },
-          { key: 'closed', label: `Closed (${counts.closed})` },
-        ].map((tab) => (
-          <TouchableOpacity
-            key={tab.key}
-            style={[styles.tabBtn, activeTab === tab.key && styles.activeTabBtn]}
-            onPress={() => setActiveTab(tab.key)}
-          >
-            <Text style={[styles.tabBtnText, activeTab === tab.key && styles.activeTabBtnText]}>
-              {tab.label}
+    <ScreenWrapper
+      backgroundColor={colors.backgroundGreenWhite}
+      topInsetBg={colors.primary}
+      statusBarColor={colors.primary}
+      statusBarStyle="dark-content"
+      includeTabBarClearance={true}
+      scrollable={false}
+    >
+      {/* Top Green Banner */}
+      <View style={styles.topBanner}>
+        <View style={styles.headerRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.headerTag}>APPLICATION PIPELINE</Text>
+            <Text style={styles.headerTitle}>Track Inquiries</Text>
+            <Text style={styles.headerSubtitle}>
+              Review status, 48-hour countdowns & active term sheets
             </Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.refreshBtn}
+            onPress={onRefresh}
+            disabled={loading}
+            activeOpacity={0.8}
+          >
+            <Feather name="refresh-cw" size={m(17)} color={colors.lettersAndIcons} />
           </TouchableOpacity>
-        ))}
+        </View>
       </View>
 
-      {/* List */}
-      {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color="#2563EB" />
+      {/* Main Curved Body Section */}
+      <View style={styles.sheetSection}>
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <Feather name="search" size={m(16)} color={colors.textSecondary} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by institution name or purpose..."
+            placeholderTextColor={colors.textMuted}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery ? (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Feather name="x" size={m(16)} color={colors.textSecondary} />
+            </TouchableOpacity>
+          ) : null}
         </View>
-      ) : (
-        <FlatList
-          data={filteredApps}
-          keyExtractor={(item) => item._id}
-          renderItem={renderApplicationCard}
-          contentContainerStyle={styles.listContent}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#2563EB" />}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Feather name="inbox" size={m(42)} color="#94A3B8" />
-              <Text style={styles.emptyTitle}>No Applications</Text>
-              <Text style={styles.emptyText}>
-                {activeTab === 'pending'
-                  ? 'No applications currently awaiting lender review.'
-                  : activeTab === 'accepted'
-                  ? 'No approved loan facilities yet.'
-                  : 'You have not submitted any applications yet.'}
-              </Text>
-              <TouchableOpacity
-                style={styles.applyPromptBtn}
-                onPress={() => navigation.navigate('BorrowerApply')}
-              >
-                <Feather name="send" size={m(14)} color={colors.white} />
-                <Text style={styles.applyPromptBtnText}>Apply for New Loan</Text>
-              </TouchableOpacity>
-            </View>
-          }
-        />
-      )}
 
-      {/* Digital Agreement Modal */}
-      <DigitalAgreementModal
-        visible={agreementModalVisible}
-        onClose={() => setAgreementModalVisible(false)}
-        application={selectedAppForAgreement}
-        onSignedSuccess={fetchApplications}
-      />
-    </SafeAreaView>
+        {/* Capsule Filter Tabs */}
+        <View style={styles.periodCapsuleRow}>
+          {[
+            { key: 'all', label: `All (${counts.all})` },
+            { key: 'pending', label: `Pending (${counts.pending})` },
+            { key: 'accepted', label: `Accepted (${counts.accepted})` },
+            { key: 'closed', label: `Closed (${counts.closed})` },
+          ].map((tab) => {
+            const isSelected = activeTab === tab.key;
+            return (
+              <TouchableOpacity
+                key={tab.key}
+                style={[styles.periodTab, isSelected && styles.periodTabActive]}
+                onPress={() => setActiveTab(tab.key)}
+                activeOpacity={0.8}
+              >
+                <Text
+                  style={[
+                    styles.periodTabText,
+                    isSelected && styles.periodTabTextActive,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* Applications List */}
+        {loading && !refreshing ? (
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="small" color={colors.lettersAndIcons} />
+            <Text style={styles.loadingText}>Fetching active pipeline...</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={filteredApps}
+            keyExtractor={(item) => item._id}
+            renderItem={renderApplicationCard}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={[colors.lettersAndIcons]}
+              />
+            }
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Feather name="inbox" size={m(36)} color={colors.primary} />
+                <Text style={styles.emptyTitle}>No Applications Found</Text>
+                <Text style={styles.emptySubtitle}>
+                  {activeTab === 'pending'
+                    ? 'No facility inquiries currently awaiting lender underwriting.'
+                    : activeTab === 'accepted'
+                    ? 'No accepted loan facilities yet.'
+                    : 'You have not submitted any commercial applications yet.'}
+                </Text>
+                <TouchableOpacity
+                  style={styles.emptyActionBtn}
+                  activeOpacity={0.8}
+                  onPress={() => navigation.navigate('BorrowerApply')}
+                >
+                  <Text style={styles.emptyActionText}>Apply for New Loan</Text>
+                </TouchableOpacity>
+              </View>
+            }
+          />
+        )}
+      </View>
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
+  // Top Green Banner
+  topBanner: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: m(20),
+    paddingTop: m(12),
+    paddingBottom: m(20),
   },
-  center: {
-    flex: 1,
+  headerRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
   },
-  header: {
-    paddingHorizontal: m(16),
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || m(24)) + m(8) : m(14),
-    paddingBottom: m(8),
+  headerTag: {
+    fontSize: m(10),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    letterSpacing: 0.8,
+    opacity: 0.85,
+    marginBottom: m(2),
   },
   headerTitle: {
-    fontSize: m(18),
-    fontWeight: '800',
-    color: '#0F172A',
+    fontSize: m(22),
+    lineHeight: m(28),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
   headerSubtitle: {
     fontSize: m(12),
-    color: '#64748B',
+    lineHeight: m(16),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.lettersAndIcons,
+    opacity: 0.9,
     marginTop: m(2),
   },
+  refreshBtn: {
+    width: m(42),
+    height: m(42),
+    borderRadius: m(21),
+    backgroundColor: colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+
+  // Main Curved Sheet
+  sheetSection: {
+    flex: 1,
+    backgroundColor: colors.backgroundGreenWhite,
+    borderTopLeftRadius: m(32),
+    borderTopRightRadius: m(32),
+    paddingTop: m(16),
+  },
+
+  // Search Input Container
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.white,
-    marginHorizontal: m(16),
-    marginTop: m(6),
-    paddingHorizontal: m(12),
-    paddingVertical: m(8),
-    borderRadius: m(12),
+    borderRadius: m(16),
+    marginHorizontal: m(18),
+    marginBottom: m(12),
+    paddingHorizontal: m(14),
+    height: m(44),
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: 'rgba(9, 48, 48, 0.08)',
   },
   searchInput: {
     flex: 1,
+    marginLeft: m(8),
     fontSize: m(13),
-    color: '#0F172A',
-    padding: 0,
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.lettersAndIcons,
   },
-  tabsContainer: {
+
+  // Capsule Filter Tabs
+  periodCapsuleRow: {
     flexDirection: 'row',
-    marginHorizontal: m(16),
-    marginTop: m(10),
-    gap: m(6),
-  },
-  tabBtn: {
-    paddingHorizontal: m(10),
-    paddingVertical: m(6),
-    borderRadius: m(16),
     backgroundColor: colors.white,
+    borderRadius: m(24),
+    padding: m(3),
+    marginHorizontal: m(18),
+    marginBottom: m(14),
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: 'rgba(9, 48, 48, 0.08)',
   },
-  activeTabBtn: {
-    backgroundColor: '#0F172A',
-    borderColor: '#0F172A',
-  },
-  tabBtnText: {
-    fontSize: m(11),
-    fontWeight: '600',
-    color: '#64748B',
-  },
-  activeTabBtnText: {
-    color: colors.white,
-  },
-  listContent: {
-    padding: m(16),
-    gap: m(12),
-    paddingBottom: m(90),
-  },
-  card: {
-    backgroundColor: colors.white,
-    borderRadius: m(16),
-    padding: m(16),
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    gap: m(12),
-  },
-  acceptedCard: {
-    borderColor: '#BBF7D0',
-    borderLeftWidth: 3,
-    borderLeftColor: '#16A34A',
-  },
-  pendingCard: {
-    borderColor: '#FDE68A',
-    borderLeftWidth: 3,
-    borderLeftColor: '#F59E0B',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  headerInfo: {
+  periodTab: {
     flex: 1,
-  },
-  lenderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(8),
-  },
-  lenderIconBox: {
-    width: m(34),
-    height: m(34),
-    borderRadius: m(10),
-    backgroundColor: '#F1F5F9',
+    paddingVertical: m(7),
+    borderRadius: m(20),
     alignItems: 'center',
     justifyContent: 'center',
   },
-  lenderName: {
-    fontSize: m(14),
-    fontWeight: '700',
-    color: '#0F172A',
+  periodTabActive: {
+    backgroundColor: colors.primary,
   },
-  dateSub: {
-    fontSize: m(10),
-    color: '#94A3B8',
+  periodTabText: {
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
+  },
+  periodTabTextActive: {
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+
+  listContent: {
+    paddingHorizontal: m(18),
+    paddingBottom: m(30),
+  },
+  loadingBox: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: m(60),
+  },
+  loadingText: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+    marginTop: m(8),
+  },
+
+  // Card
+  card: {
+    backgroundColor: colors.white,
+    borderRadius: m(16),
+    padding: m(14),
+    marginBottom: m(12),
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.06)',
+    elevation: 2,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+  },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: m(10),
+  },
+  activityIconCircle: {
+    width: m(38),
+    height: m(38),
+    borderRadius: m(19),
+    backgroundColor: colors.blueButton,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: m(10),
+  },
+  headerInfoCol: {
+    flex: 1,
+    marginRight: m(6),
+  },
+  lenderNameText: {
+    fontSize: m(14),
+    lineHeight: m(18),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  purposeSubText: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.blueButton,
     marginTop: m(1),
   },
-  pendingBadge: {
+
+  // Status Badges
+  pillPending: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: m(4),
-    backgroundColor: '#FEF3C7',
+    backgroundColor: '#fef3c7',
     paddingHorizontal: m(8),
     paddingVertical: m(4),
-    borderRadius: m(8),
+    borderRadius: m(6),
   },
-  pendingBadgeText: {
-    fontSize: m(10),
-    fontWeight: '700',
-    color: '#D97706',
+  pillTextPending: {
+    fontSize: m(9.5),
+    fontFamily: FontFamily.primaryBold,
+    color: '#d97706',
   },
-  signBadge: {
+  pillSign: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: m(4),
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#eff6ff',
     paddingHorizontal: m(8),
     paddingVertical: m(4),
-    borderRadius: m(8),
+    borderRadius: m(6),
   },
-  signBadgeText: {
-    fontSize: m(10),
-    fontWeight: '700',
-    color: '#2563EB',
+  pillTextSign: {
+    fontSize: m(9.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.blueButton,
   },
-  acceptedBadge: {
+  pillAccepted: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: m(4),
-    backgroundColor: '#DCFCE7',
+    backgroundColor: '#ecfdf5',
     paddingHorizontal: m(8),
     paddingVertical: m(4),
-    borderRadius: m(8),
+    borderRadius: m(6),
   },
-  acceptedBadgeText: {
-    fontSize: m(10),
-    fontWeight: '700',
-    color: '#16A34A',
+  pillTextAccepted: {
+    fontSize: m(9.5),
+    fontFamily: FontFamily.primaryBold,
+    color: '#059669',
   },
-  closedBadge: {
-    backgroundColor: '#F1F5F9',
+  pillRejected: {
+    backgroundColor: '#fee2e2',
     paddingHorizontal: m(8),
     paddingVertical: m(4),
-    borderRadius: m(8),
+    borderRadius: m(6),
   },
-  closedBadgeText: {
-    fontSize: m(10),
-    fontWeight: '600',
-    color: '#64748B',
+  pillTextRejected: {
+    fontSize: m(9.5),
+    fontFamily: FontFamily.primaryBold,
+    color: '#dc2626',
   },
-  metricStrip: {
+
+  // Compact Metrics Box - Clean Neutral Slate-50 (#F8FAFC)
+  metricsBox: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: '#F8FAFC',
-    borderRadius: m(12),
-    padding: m(10),
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderRadius: m(10),
+    paddingVertical: m(8),
+    paddingHorizontal: m(10),
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: '#e2e8f0',
+    marginBottom: m(10),
   },
   metricItem: {
+    flex: 1,
     alignItems: 'center',
   },
-  mLabel: {
-    fontSize: m(9),
-    color: '#64748B',
-    textTransform: 'uppercase',
+  metricLabel: {
+    fontSize: m(9.5),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.textSecondary,
+    marginBottom: m(1),
   },
-  mVal: {
-    fontSize: m(12),
-    fontWeight: '700',
-    color: '#0F172A',
-    marginTop: m(2),
+  metricValueBold: {
+    fontSize: m(12.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
+  metricValue: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primarySemiBold,
+    color: colors.lettersAndIcons,
+  },
+  metricDivider: {
+    width: 1,
+    height: m(20),
+    backgroundColor: '#e2e8f0',
+  },
+
+  // Sign Action Box
   signActionBox: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#eff6ff',
     borderRadius: m(12),
     padding: m(12),
     borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderColor: '#bfdbfe',
+    marginBottom: m(10),
     gap: m(8),
   },
   signActionLeft: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: m(8),
+  },
+  signIconCircle: {
+    width: m(30),
+    height: m(30),
+    borderRadius: m(15),
+    backgroundColor: '#dbeafe',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   signActionTitle: {
     fontSize: m(12),
-    fontWeight: '700',
-    color: '#1E40AF',
+    fontFamily: FontFamily.primaryBold,
+    color: '#1e40af',
   },
   signActionSub: {
-    fontSize: m(10),
-    color: '#3B82F6',
-    marginTop: m(2),
+    fontSize: m(10.5),
+    lineHeight: m(14),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#3b82f6',
+    marginTop: m(1),
   },
   reviewSignBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: m(6),
-    backgroundColor: '#2563EB',
+    backgroundColor: colors.blueButton,
     paddingVertical: m(8),
+    paddingHorizontal: m(12),
     borderRadius: m(10),
+    alignSelf: 'flex-start',
   },
   reviewSignBtnText: {
-    fontSize: m(12),
-    fontWeight: '700',
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryBold,
     color: colors.white,
   },
+
+  // Disbursal OTP Card
   otpCard: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: '#fffbeb',
     borderRadius: m(12),
     padding: m(12),
     borderWidth: 1,
-    borderColor: '#FDE68A',
-    gap: m(8),
+    borderColor: '#fde68a',
+    marginBottom: m(10),
   },
   otpHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: m(6),
   },
   otpTitle: {
-    fontSize: m(9),
-    fontWeight: '800',
-    color: '#D97706',
+    fontSize: m(10),
+    fontFamily: FontFamily.primaryBold,
+    color: '#92400e',
     letterSpacing: 0.5,
   },
   otpShareNotice: {
-    fontSize: m(9),
-    fontWeight: '700',
-    color: '#B45309',
-    backgroundColor: '#FEF3C7',
-    paddingHorizontal: m(6),
-    paddingVertical: m(2),
-    borderRadius: m(4),
+    fontSize: m(9.5),
+    fontFamily: FontFamily.primaryBold,
+    color: '#b45309',
   },
   otpCodeRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: colors.white,
-    paddingHorizontal: m(12),
+    borderRadius: m(10),
     paddingVertical: m(8),
-    borderRadius: m(8),
+    paddingHorizontal: m(12),
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: '#fef08a',
+    marginBottom: m(6),
   },
   otpCodeText: {
-    fontSize: m(18),
-    fontWeight: '900',
-    color: '#0F172A',
+    fontSize: m(20),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
     letterSpacing: 4,
-    fontFamily: 'monospace',
   },
   copyOtpBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: m(4),
-    backgroundColor: '#FEF3C7',
-    paddingHorizontal: m(8),
-    paddingVertical: m(4),
-    borderRadius: m(6),
+    backgroundColor: '#fef3c7',
+    paddingHorizontal: m(10),
+    paddingVertical: m(6),
+    borderRadius: m(8),
   },
   copyOtpBtnText: {
-    fontSize: m(10),
-    fontWeight: '700',
-    color: '#D97706',
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryBold,
+    color: '#92400e',
   },
   otpFooterText: {
-    fontSize: m(10),
-    color: '#78350F',
+    fontSize: m(10.5),
     lineHeight: m(14),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#78350f',
   },
+
+  // Connected Active Loan
   activeLoanRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#F0FDF4',
+    justifyContent: 'space-between',
+    backgroundColor: '#f0fdf4',
     padding: m(10),
     borderRadius: m(10),
     borderWidth: 1,
-    borderColor: '#BBF7D0',
+    borderColor: '#bbf7d0',
+    marginBottom: m(10),
   },
   activeLoanText: {
     fontSize: m(11),
-    fontWeight: '700',
-    color: '#16A34A',
+    fontFamily: FontFamily.primaryBold,
+    color: '#166534',
   },
   viewScheduleBtn: {
     flexDirection: 'row',
@@ -762,87 +867,96 @@ const styles = StyleSheet.create({
   },
   viewScheduleBtnText: {
     fontSize: m(11),
-    fontWeight: '700',
-    color: '#2563EB',
+    fontFamily: FontFamily.primarySemiBold,
+    color: colors.blueButton,
   },
+
+  // Reason Box
   reasonBox: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#fef2f2',
     padding: m(8),
     borderRadius: m(8),
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    marginBottom: m(10),
   },
   reasonText: {
-    fontSize: m(10),
-    color: '#64748B',
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#991b1b',
   },
-  cardFooter: {
+
+  // Card Actions Row
+  cardActionsRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
     alignItems: 'center',
     gap: m(8),
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-    paddingTop: m(10),
+    marginTop: m(2),
   },
   agreementBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(4),
-    paddingHorizontal: m(12),
-    paddingVertical: m(6),
-    borderRadius: m(8),
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
+    flex: 1,
     backgroundColor: colors.white,
-  },
-  agreementBtnText: {
-    fontSize: m(11),
-    fontWeight: '600',
-    color: '#334155',
-  },
-  chatBtn: {
+    paddingVertical: m(8),
+    borderRadius: m(10),
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(4),
-    paddingHorizontal: m(12),
-    paddingVertical: m(6),
-    borderRadius: m(8),
-    backgroundColor: '#16A34A',
-  },
-  chatBtnText: {
-    fontSize: m(11),
-    fontWeight: '700',
-    color: colors.white,
-  },
-  emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: m(60),
-    gap: m(8),
+    gap: m(4),
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.12)',
+  },
+  agreementBtnText: {
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primarySemiBold,
+    color: colors.lettersAndIcons,
+  },
+  chatBtn: {
+    flex: 1,
+    backgroundColor: colors.lettersAndIcons,
+    paddingVertical: m(8),
+    borderRadius: m(10),
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: m(4),
+  },
+  chatBtnText: {
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
+  },
+
+  // Empty State
+  emptyContainer: {
+    paddingVertical: m(50),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyTitle: {
     fontSize: m(15),
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  emptyText: {
-    fontSize: m(12),
-    color: '#64748B',
-    textAlign: 'center',
-    paddingHorizontal: m(30),
-  },
-  applyPromptBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(6),
-    backgroundColor: '#2563EB',
-    paddingHorizontal: m(16),
-    paddingVertical: m(10),
-    borderRadius: m(12),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
     marginTop: m(10),
   },
-  applyPromptBtnText: {
-    fontSize: m(13),
-    fontWeight: '700',
-    color: colors.white,
+  emptySubtitle: {
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: m(4),
+    paddingHorizontal: m(20),
+    lineHeight: m(16),
+  },
+  emptyActionBtn: {
+    marginTop: m(14),
+    backgroundColor: colors.primary,
+    paddingHorizontal: m(16),
+    paddingVertical: m(8),
+    borderRadius: m(12),
+  },
+  emptyActionText: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
 });

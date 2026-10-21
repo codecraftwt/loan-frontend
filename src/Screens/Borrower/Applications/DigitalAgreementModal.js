@@ -11,8 +11,8 @@ import {
   Alert,
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
-import { m } from 'walstar-rn-responsive';
-import { colors } from '../../../constants';
+import { colors, FontFamily } from '../../../constants';
+import { m } from '../../../Utils/responsive';
 import borrowerFlowService from '../../../Services/borrowerFlowService';
 
 export default function DigitalAgreementModal({
@@ -80,10 +80,15 @@ export default function DigitalAgreementModal({
         Alert.alert(
           'Agreement Countersigned!',
           'Loan contract mutually executed! Your 6-digit disbursal OTP is now active. Share this OTP with the lender to execute funds transfer.',
-          [{ text: 'View Disbursal OTP', onPress: () => {
-            onClose();
-            if (onSignedSuccess) onSignedSuccess();
-          }}]
+          [
+            {
+              text: 'View Disbursal OTP',
+              onPress: () => {
+                onClose();
+                if (onSignedSuccess) onSignedSuccess();
+              },
+            },
+          ]
         );
       }
     } catch (err) {
@@ -99,21 +104,30 @@ export default function DigitalAgreementModal({
       <View style={styles.container}>
         {/* Top App Bar */}
         <View style={styles.topBar}>
-          <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-            <Feather name="x" size={m(22)} color="#0F172A" />
+          <TouchableOpacity style={styles.closeCircularBtn} onPress={onClose} activeOpacity={0.8}>
+            <Feather name="x" size={m(18)} color={colors.lettersAndIcons} />
           </TouchableOpacity>
+
           <View style={styles.titleBox}>
-            <Text style={styles.topBarTitle}>Master Commercial Facility Agreement</Text>
+            <Text style={styles.headerTag}>DIGITAL CREDIT FACILITY CONTRACT</Text>
+            <Text style={styles.topBarTitle} numberOfLines={1}>
+              Master Facility Agreement
+            </Text>
             <Text style={styles.docIdText}>Doc ID: {docId}</Text>
           </View>
-          <View style={{ width: m(22) }} />
+
+          <View style={{ width: m(38) }} />
         </View>
 
         {signingStep === 'review' ? (
-          <ScrollView contentContainerStyle={styles.scrollContent}>
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
             {/* Agreement Notice Banner */}
             <View style={styles.noticeBanner}>
-              <Feather name="shield" size={m(16)} color="#2563EB" />
+              <Feather name="shield" size={m(16)} color="#059669" />
               <Text style={styles.noticeText}>
                 Digitally legally binding credit contract governed by the Indian Contract Act, 1872 & IT Act, 2000.
               </Text>
@@ -123,35 +137,42 @@ export default function DigitalAgreementModal({
             <View style={styles.card}>
               <Text style={styles.cardHeaderTitle}>Schedule A: Facility Covenants</Text>
 
-              <View style={styles.termRow}>
-                <Text style={styles.termLabel}>Sanctioned Facility Amount:</Text>
-                <Text style={styles.termValueBold}>{formatINR(terms.amount)}</Text>
-              </View>
+              <View style={styles.detailsList}>
+                <View style={styles.termRow}>
+                  <Text style={styles.termLabel}>Sanctioned Facility Amount</Text>
+                  <Text style={styles.termValueBold}>{formatINR(terms.amount)}</Text>
+                </View>
 
-              <View style={styles.termRow}>
-                <Text style={styles.termLabel}>Annual Interest Rate:</Text>
-                <Text style={styles.termValue}>{terms.interestRate}% p.a.</Text>
-              </View>
+                <View style={styles.termRow}>
+                  <Text style={styles.termLabel}>Annual Interest Rate</Text>
+                  <Text style={styles.termValue}>{terms.interestRate}% p.a.</Text>
+                </View>
 
-              <View style={styles.termRow}>
-                <Text style={styles.termLabel}>Facility Tenure:</Text>
-                <Text style={styles.termValue}>{terms.tenureMonths} Months</Text>
-              </View>
+                <View style={styles.termRow}>
+                  <Text style={styles.termLabel}>Facility Tenure</Text>
+                  <Text style={styles.termValue}>{terms.tenureMonths} Months</Text>
+                </View>
 
-              <View style={styles.termRow}>
-                <Text style={styles.termLabel}>Repayment Mode:</Text>
-                <Text style={styles.termValue}>{terms.repaymentType === 'ONE_TIME' ? 'Bullet Repayment' : 'Monthly Amortizing EMI'}</Text>
-              </View>
+                <View style={styles.termRow}>
+                  <Text style={styles.termLabel}>Repayment Mode</Text>
+                  <Text style={styles.termValue}>
+                    {terms.repaymentType === 'ONE_TIME' ? 'Bullet Repayment' : 'Monthly Amortizing EMI'}
+                  </Text>
+                </View>
 
-              <View style={styles.termRow}>
-                <Text style={styles.termLabel}>Pledged Collateral / Security:</Text>
-                <Text style={styles.termValue}>{application.pledgedSecurity || 'Commercial hypothecation / Unsecured'}</Text>
+                <View style={[styles.termRow, { borderBottomWidth: 0 }]}>
+                  <Text style={styles.termLabel}>Pledged Collateral</Text>
+                  <Text style={styles.termValue}>
+                    {application.pledgedSecurity || 'Commercial Hypothecation / Unsecured'}
+                  </Text>
+                </View>
               </View>
             </View>
 
             {/* Contracting Parties */}
             <View style={styles.card}>
               <Text style={styles.cardHeaderTitle}>Contracting Entities</Text>
+
               <View style={styles.partyBox}>
                 <Text style={styles.partyRole}>1. Institutional Lender</Text>
                 <Text style={styles.partyName}>{lenderName}</Text>
@@ -175,11 +196,11 @@ export default function DigitalAgreementModal({
                 2. <Text style={styles.boldText}>Repayment Obligation:</Text> The borrower unconditionally covenants to repay each monthly EMI on or before the due date.
               </Text>
               <Text style={styles.clauseText}>
-                3. <Text style={styles.boldText}>Prepayment & Charges:</Text> Foreclosure and partial prepayment will adhere to the agreed master terms.
+                3. <Text style={styles.boldText}>Prepayment & Charges:</Text> Foreclosure and partial prepayment will adhere to agreed institutional master terms.
               </Text>
             </View>
 
-            {/* Existing Signatures Status */}
+            {/* Signatures Status */}
             <View style={styles.card}>
               <Text style={styles.cardHeaderTitle}>Signatures & Execution</Text>
 
@@ -188,7 +209,7 @@ export default function DigitalAgreementModal({
                 <View style={styles.sigStatusHeader}>
                   <Text style={styles.sigPartyLabel}>Lender Representative</Text>
                   <View style={styles.signedTag}>
-                    <Feather name="check-circle" size={m(12)} color="#16A34A" />
+                    <Feather name="check-circle" size={m(12)} color="#059669" />
                     <Text style={styles.signedTagText}>Digitally Executed</Text>
                   </View>
                 </View>
@@ -204,13 +225,13 @@ export default function DigitalAgreementModal({
                   <Text style={styles.sigPartyLabel}>Borrower Signatory</Text>
                   {borrowerSig?.signedAt ? (
                     <View style={styles.signedTag}>
-                      <Feather name="check-circle" size={m(12)} color="#16A34A" />
+                      <Feather name="check-circle" size={m(12)} color="#059669" />
                       <Text style={styles.signedTagText}>Countersigned</Text>
                     </View>
                   ) : (
-                    <View style={[styles.signedTag, { backgroundColor: '#FEF3C7' }]}>
-                      <Feather name="clock" size={m(12)} color="#D97706" />
-                      <Text style={[styles.signedTagText, { color: '#D97706' }]}>Pending Signature</Text>
+                    <View style={[styles.signedTag, { backgroundColor: '#fef3c7' }]}>
+                      <Feather name="clock" size={m(12)} color="#d97706" />
+                      <Text style={[styles.signedTagText, { color: '#d97706' }]}>Pending Signature</Text>
                     </View>
                   )}
                 </View>
@@ -229,6 +250,7 @@ export default function DigitalAgreementModal({
             {canSign ? (
               <TouchableOpacity
                 style={styles.proceedSignBtn}
+                activeOpacity={0.85}
                 onPress={() => {
                   setSignerName(borrowerName);
                   setSigningStep('sign');
@@ -241,7 +263,11 @@ export default function DigitalAgreementModal({
           </ScrollView>
         ) : (
           /* Step 2: Digital Signature Input */
-          <ScrollView contentContainerStyle={styles.scrollContent}>
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
             <View style={styles.card}>
               <Text style={styles.cardHeaderTitle}>Apply Electronic Countersignature</Text>
               <Text style={styles.signSubtitle}>
@@ -255,7 +281,7 @@ export default function DigitalAgreementModal({
                   value={signerName}
                   onChangeText={setSignerName}
                   placeholder="Enter your legal full name"
-                  placeholderTextColor="#94A3B8"
+                  placeholderTextColor={colors.textMuted}
                 />
               </View>
 
@@ -263,7 +289,7 @@ export default function DigitalAgreementModal({
               <View style={styles.sigPadBox}>
                 <View style={styles.sigPadHeader}>
                   <Text style={styles.sigPadTitle}>ELECTRONIC SIGNATURE PREVIEW</Text>
-                  <Feather name="check" size={m(14)} color="#16A34A" />
+                  <Feather name="check" size={m(14)} color="#059669" />
                 </View>
                 <View style={styles.sigPadContent}>
                   <Text style={styles.scriptSignature}>
@@ -278,6 +304,7 @@ export default function DigitalAgreementModal({
               <View style={styles.actionButtonsRow}>
                 <TouchableOpacity
                   style={styles.cancelBtn}
+                  activeOpacity={0.8}
                   onPress={() => setSigningStep('review')}
                 >
                   <Text style={styles.cancelBtnText}>Back to Review</Text>
@@ -285,6 +312,7 @@ export default function DigitalAgreementModal({
 
                 <TouchableOpacity
                   style={[styles.confirmSignBtn, signing && styles.disabledBtn]}
+                  activeOpacity={0.85}
                   onPress={handleExecuteSignature}
                   disabled={signing}
                 >
@@ -309,275 +337,327 @@ export default function DigitalAgreementModal({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.backgroundGreenWhite,
   },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: m(16),
-    paddingVertical: m(14),
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    paddingHorizontal: m(18),
+    paddingTop: m(14),
+    paddingBottom: m(16),
+    backgroundColor: colors.primary,
   },
-  closeBtn: {
-    padding: m(4),
+  closeCircularBtn: {
+    width: m(38),
+    height: m(38),
+    borderRadius: m(19),
+    backgroundColor: colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
   },
   titleBox: {
     alignItems: 'center',
     flex: 1,
     paddingHorizontal: m(10),
   },
+  headerTag: {
+    fontSize: m(9),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    letterSpacing: 0.7,
+    opacity: 0.85,
+  },
   topBarTitle: {
-    fontSize: m(14),
-    fontWeight: '800',
-    color: '#0F172A',
+    fontSize: m(15),
+    lineHeight: m(20),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
     textAlign: 'center',
   },
   docIdText: {
     fontSize: m(10),
-    color: '#64748B',
-    marginTop: m(2),
-    fontFamily: 'monospace',
+    color: colors.lettersAndIcons,
+    opacity: 0.8,
+    marginTop: m(1),
+    fontFamily: FontFamily.primaryMedium,
+  },
+  scrollView: {
+    flex: 1,
   },
   scrollContent: {
-    padding: m(16),
-    gap: m(14),
+    padding: m(18),
+    gap: m(12),
     paddingBottom: m(60),
   },
   noticeBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: m(10),
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#ecfdf5',
     padding: m(12),
-    borderRadius: m(12),
+    borderRadius: m(14),
     borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderColor: '#a7f3d0',
   },
   noticeText: {
     flex: 1,
     fontSize: m(11),
-    color: '#1E40AF',
     lineHeight: m(16),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#065f46',
   },
   card: {
     backgroundColor: colors.white,
-    borderRadius: m(16),
+    borderRadius: m(18),
     padding: m(16),
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: 'rgba(9, 48, 48, 0.06)',
+    elevation: 2,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
     gap: m(10),
   },
   cardHeaderTitle: {
     fontSize: m(14),
-    fontWeight: '800',
-    color: '#0F172A',
-    marginBottom: m(4),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    marginBottom: m(2),
+  },
+  detailsList: {
+    backgroundColor: '#f8fafc',
+    borderRadius: m(12),
+    paddingHorizontal: m(12),
+    paddingVertical: m(6),
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   termRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: m(3),
+    paddingVertical: m(8),
+    borderBottomWidth: 1,
+    borderColor: '#f1f5f9',
   },
   termLabel: {
-    fontSize: m(12),
-    color: '#64748B',
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
   },
   termValue: {
     fontSize: m(12),
-    fontWeight: '600',
-    color: '#0F172A',
+    fontFamily: FontFamily.primarySemiBold,
+    color: colors.lettersAndIcons,
   },
   termValueBold: {
-    fontSize: m(14),
-    fontWeight: '800',
-    color: '#2563EB',
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
   partyBox: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: m(10),
+    backgroundColor: '#f8fafc',
+    borderRadius: m(12),
     padding: m(12),
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: '#e2e8f0',
   },
   partyRole: {
     fontSize: m(10),
-    textTransform: 'uppercase',
-    fontWeight: '700',
-    color: '#64748B',
+    fontFamily: FontFamily.primaryBold,
+    color: colors.textSecondary,
+    letterSpacing: 0.4,
   },
   partyName: {
-    fontSize: m(13),
-    fontWeight: '700',
-    color: '#0F172A',
+    fontSize: m(13.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
     marginTop: m(2),
   },
   partyDetails: {
     fontSize: m(11),
-    color: '#94A3B8',
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
     marginTop: m(2),
   },
   clauseText: {
-    fontSize: m(11),
-    color: '#475569',
+    fontSize: m(11.5),
     lineHeight: m(17),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
   },
   boldText: {
-    fontWeight: '700',
-    color: '#0F172A',
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
   sigStatusBox: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: m(10),
+    backgroundColor: '#f8fafc',
+    borderRadius: m(12),
     padding: m(12),
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#e2e8f0',
   },
   sigStatusHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: m(4),
   },
   sigPartyLabel: {
     fontSize: m(11),
-    fontWeight: '600',
-    color: '#64748B',
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.textSecondary,
   },
   signedTag: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: m(4),
-    backgroundColor: '#DCFCE7',
-    paddingHorizontal: m(6),
-    paddingVertical: m(2),
+    backgroundColor: '#ecfdf5',
+    paddingHorizontal: m(8),
+    paddingVertical: m(3),
     borderRadius: m(6),
   },
   signedTagText: {
-    fontSize: m(10),
-    fontWeight: '700',
-    color: '#16A34A',
+    fontSize: m(9.5),
+    fontFamily: FontFamily.primaryBold,
+    color: '#059669',
   },
   sigNameText: {
     fontSize: m(13),
-    fontWeight: '700',
-    color: '#0F172A',
-    marginTop: m(4),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
   sigDateText: {
-    fontSize: m(10),
-    color: '#94A3B8',
+    fontSize: m(10.5),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
     marginTop: m(2),
   },
   proceedSignBtn: {
+    backgroundColor: colors.lettersAndIcons,
+    borderRadius: m(16),
+    paddingVertical: m(14),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: m(8),
-    backgroundColor: '#2563EB',
-    paddingVertical: m(14),
-    borderRadius: m(14),
     marginTop: m(6),
+    elevation: 3,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 5,
   },
   proceedSignBtnText: {
-    fontSize: m(14),
-    fontWeight: '700',
+    fontSize: m(13.5),
+    fontFamily: FontFamily.primaryBold,
     color: colors.white,
   },
   signSubtitle: {
-    fontSize: m(12),
-    color: '#64748B',
-    lineHeight: m(17),
-    marginBottom: m(8),
+    fontSize: m(11.5),
+    lineHeight: m(16),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
   },
   inputGroup: {
-    gap: m(6),
+    marginTop: m(8),
   },
   label: {
-    fontSize: m(12),
-    fontWeight: '600',
-    color: '#334155',
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
+    marginBottom: m(6),
   },
   textInput: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#f8fafc',
+    borderRadius: m(12),
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: m(10),
+    borderColor: '#e2e8f0',
     paddingHorizontal: m(12),
     paddingVertical: m(10),
     fontSize: m(13),
-    color: '#0F172A',
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.lettersAndIcons,
   },
   sigPadBox: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: m(12),
+    backgroundColor: '#f8fafc',
+    borderRadius: m(14),
     padding: m(14),
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    marginTop: m(8),
+    borderColor: '#e2e8f0',
+    marginTop: m(10),
   },
   sigPadHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: m(8),
   },
   sigPadTitle: {
-    fontSize: m(9),
-    fontWeight: '700',
-    color: '#64748B',
+    fontSize: m(9.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.textSecondary,
+    letterSpacing: 0.5,
   },
   sigPadContent: {
     alignItems: 'center',
-    paddingVertical: m(20),
+    paddingVertical: m(14),
   },
   scriptSignature: {
-    fontSize: m(24),
-    fontWeight: '700',
+    fontSize: m(22),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
     fontStyle: 'italic',
-    color: '#1E3A8A',
+    letterSpacing: 1,
   },
   sigMetaLine: {
-    fontSize: m(9),
-    color: '#94A3B8',
+    fontSize: m(10),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
     marginTop: m(8),
   },
   actionButtonsRow: {
     flexDirection: 'row',
     gap: m(10),
-    marginTop: m(10),
+    marginTop: m(14),
   },
   cancelBtn: {
     flex: 1,
+    backgroundColor: colors.white,
     paddingVertical: m(12),
-    borderRadius: m(12),
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderRadius: m(14),
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.12)',
   },
   cancelBtnText: {
-    fontSize: m(13),
-    fontWeight: '600',
-    color: '#475569',
+    fontSize: m(12.5),
+    fontFamily: FontFamily.primarySemiBold,
+    color: colors.lettersAndIcons,
   },
   confirmSignBtn: {
-    flex: 1.5,
-    flexDirection: 'row',
-    backgroundColor: '#16A34A',
-    borderRadius: m(12),
+    flex: 1.4,
+    backgroundColor: colors.lettersAndIcons,
     paddingVertical: m(12),
+    borderRadius: m(14),
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: m(6),
   },
+  confirmSignBtnText: {
+    fontSize: m(12.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
+  },
   disabledBtn: {
     opacity: 0.6,
-  },
-  confirmSignBtnText: {
-    fontSize: m(13),
-    fontWeight: '700',
-    color: colors.white,
   },
 });

@@ -34,14 +34,16 @@ import BorrowerExploreLenders from '../Screens/Borrower/Lenders/BorrowerExploreL
 import BorrowerApply from '../Screens/Borrower/Applications/BorrowerApply';
 import BorrowerApplications from '../Screens/Borrower/Applications/BorrowerApplications';
 import BorrowerLoansPortfolio from '../Screens/Borrower/Loans/BorrowerLoansPortfolio';
+import BorrowerProfileScreen from '../Screens/Borrower/Profile/BorrowerProfileScreen';
 import MyLoans from '../Screens/Borrower/Loans/MyLoans';
 import BorrowerAnalyticsScreen from '../Screens/Borrower/Analytics/BorrowerAnalyticsScreen';
 
 // Shared screens
 import Profile from '../Screens/Shared/Profile/Profile';
 
+const Tab = createBottomTabNavigator();
+
 export default function BottomNavigation() {
-  const Tab = createBottomTabNavigator();
   const user = useSelector(state => state.auth.user);
   // Memoize roleId to prevent unnecessary re-renders
   const roleId = useMemo(() => {
@@ -223,7 +225,7 @@ const tabTransitionSpec = {
     );
   }
 
-  // Borrower Dashboard (roleId === 2) - Streamlined commercial flows matching webapp
+  // Borrower Dashboard (roleId === 2) - Streamlined commercial flows matching Lender & Admin 5-tab architecture
   if (roleId === 2) {
     return (
       <View style={styles.container}>
@@ -250,15 +252,6 @@ const tabTransitionSpec = {
             }}
           />
           <Tab.Screen
-            name="BorrowerApply"
-            component={BorrowerApply}
-            options={{
-              tabBarLabel: 'Apply',
-              tabBarIcon: ({ color, size, focused }) =>
-                renderIcon('send', color, size, focused),
-            }}
-          />
-          <Tab.Screen
             name="BorrowerApplications"
             component={BorrowerApplications}
             options={{
@@ -274,6 +267,15 @@ const tabTransitionSpec = {
               tabBarLabel: 'Loans & EMI',
               tabBarIcon: ({ color, size, focused }) =>
                 renderIcon('credit-card', color, size, focused),
+            }}
+          />
+          <Tab.Screen
+            name="BorrowerProfile"
+            component={BorrowerProfileScreen}
+            options={{
+              tabBarLabel: 'Profile',
+              tabBarIcon: ({ color, size, focused }) =>
+                renderIcon('user', color, size, focused),
             }}
           />
         </Tab.Navigator>

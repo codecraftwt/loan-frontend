@@ -1066,10 +1066,12 @@ const styles = StyleSheet.create({
 
   // Key-Value Rows
   detailsList: {
-    backgroundColor: colors.backgroundGreenWhite,
+    backgroundColor: '#f8fafc',
     borderRadius: m(12),
     paddingHorizontal: m(12),
     paddingVertical: m(6),
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   detailRow: {
     flexDirection: 'row',
@@ -1077,7 +1079,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: m(8),
     borderBottomWidth: 1,
-    borderColor: 'rgba(9, 48, 48, 0.06)',
+    borderColor: '#f1f5f9',
   },
   detailLabel: {
     fontSize: m(11.5),
@@ -1138,12 +1140,12 @@ const styles = StyleSheet.create({
   },
   metricTile: {
     width: '48.5%',
-    backgroundColor: colors.backgroundGreenWhite,
+    backgroundColor: '#f8fafc',
     borderRadius: m(12),
     paddingHorizontal: m(12),
     paddingVertical: m(10),
     borderWidth: 1,
-    borderColor: 'rgba(9, 48, 48, 0.06)',
+    borderColor: '#e2e8f0',
   },
   uwMetricLabel: {
     fontSize: m(10),

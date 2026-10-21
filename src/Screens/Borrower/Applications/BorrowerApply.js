@@ -7,15 +7,13 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
-  SafeAreaView,
-  StatusBar,
   Alert,
-  Platform,
 } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
-import { m } from 'walstar-rn-responsive';
-import { colors } from '../../../constants';
+import { colors, FontFamily } from '../../../constants';
+import { m } from '../../../Utils/responsive';
+import { ScreenWrapper } from '../../../Components/common';
 import borrowerFlowService from '../../../Services/borrowerFlowService';
 
 const PURPOSE_OPTIONS = [
@@ -36,7 +34,7 @@ export default function BorrowerApply() {
   const { preselectedLender } = route.params || {};
 
   // Form states
-  const [selectedLender, setSelectedLender] = useState(null);
+  const [selectedLender, setSelectedLender] = useState(preselectedLender || null);
   const [availableLenders, setAvailableLenders] = useState([]);
   const [amount, setAmount] = useState('500000');
   const [tenureMonths, setTenureMonths] = useState('24');
@@ -69,12 +67,17 @@ export default function BorrowerApply() {
       if (lendersRes.status === 'fulfilled' && lendersRes.value?.success) {
         const list = lendersRes.value.lenders || [];
         setAvailableLenders(list);
-        if (preselectedLender) {
-          const found = list.find((l) => l._id === preselectedLender._id);
-          setSelectedLender(found || preselectedLender);
-        } else if (list.length > 0 && !selectedLender) {
-          setSelectedLender(list[0]);
-        }
+        setSelectedLender((prev) => {
+          if (prev) {
+            const found = list.find((l) => l._id === prev._id);
+            return found || prev;
+          }
+          if (preselectedLender) {
+            const found = list.find((l) => l._id === preselectedLender._id);
+            return found || preselectedLender;
+          }
+          return list.length > 0 ? list[0] : null;
+        });
       }
 
       // Profile Completion
@@ -95,7 +98,7 @@ export default function BorrowerApply() {
     } finally {
       setLoadingPrereqs(false);
     }
-  }, [preselectedLender, selectedLender]);
+  }, [preselectedLender]);
 
   useFocusEffect(
     useCallback(() => {
@@ -103,7 +106,7 @@ export default function BorrowerApply() {
     }, [fetchPrerequisites])
   );
 
-  // Real-time EMI Calculator
+  // Real-time Dynamic EMI Calculator
   const emiCalculation = useMemo(() => {
     const p = Number(amount) || 0;
     const rAnnual = Number(requestedRate) || 10.5;
@@ -155,7 +158,7 @@ export default function BorrowerApply() {
         'your selected lender';
       Alert.alert(
         'Active Application in Review',
-        `You already have an active loan application with ${lenderName}. In accordance with commercial lending rules, borrowers can have 1 active application under review at a time. Please wait for a decision or view status in My Applications.`,
+        `You currently have an active loan application with ${lenderName}. In accordance with commercial lending rules, borrowers can have 1 active application under review at a time. Please wait for a decision or view status in My Applications.`,
         [
           { text: 'View Applications', onPress: () => navigation.navigate('BorrowerApplications') },
           { text: 'Cancel', style: 'cancel' },
@@ -224,707 +227,891 @@ export default function BorrowerApply() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
+    <ScreenWrapper
+      backgroundColor={colors.backgroundGreenWhite}
+      topInsetBg={colors.primary}
+      statusBarColor={colors.primary}
+      statusBarStyle="dark-content"
+      includeTabBarClearance={true}
+      scrollable={false}
+    >
+      {/* Top Green Banner */}
+      <View style={styles.topBanner}>
+        <View style={styles.headerRow}>
+          <TouchableOpacity
+            style={styles.backCircularBtn}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.8}
+          >
+            <Feather name="arrow-left" size={m(18)} color={colors.lettersAndIcons} />
+          </TouchableOpacity>
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backIcon} onPress={() => navigation.goBack()}>
-          <Feather name="arrow-left" size={m(22)} color="#0F172A" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Apply for Commercial Loan</Text>
-        <View style={{ width: m(22) }} />
+          <View style={styles.headerTitleWrap}>
+            <Text style={styles.headerTag}>FINANCING FACILITY</Text>
+            <Text style={styles.headerTitle}>Apply for Capital</Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.refreshBtn}
+            onPress={fetchPrerequisites}
+            disabled={loadingPrereqs}
+            activeOpacity={0.8}
+          >
+            <Feather name="refresh-cw" size={m(17)} color={colors.lettersAndIcons} />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {loadingPrereqs ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color="#2563EB" />
-          <Text style={styles.loadingText}>Checking prerequisites & lending limits...</Text>
-        </View>
-      ) : (
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          {/* Active Pending Application Warning */}
-          {activePendingApp ? (
-            <View style={styles.pendingAlertCard}>
-              <View style={styles.alertHeader}>
-                <Feather name="clock" size={m(16)} color="#D97706" />
-                <Text style={styles.alertTitle}>Active Application in Review</Text>
-              </View>
-              <Text style={styles.alertDesc}>
-                You currently have an application under review with{' '}
-                <Text style={styles.boldText}>
-                  {activePendingApp.lenderSnapshot?.companyName ||
-                    activePendingApp.lenderSnapshot?.userName ||
-                    activePendingApp.lenderId?.companyName ||
-                    'an institutional lender'}
-                </Text>
-                . Single-lender review protocol is active.
-              </Text>
-              <TouchableOpacity
-                style={styles.alertBtn}
-                onPress={() => navigation.navigate('BorrowerApplications')}
-              >
-                <Text style={styles.alertBtnText}>Go to My Applications</Text>
-                <Feather name="arrow-right" size={m(12)} color="#D97706" />
-              </TouchableOpacity>
-            </View>
-          ) : null}
-
-          {/* Profile Completion Warning */}
-          {!profileCompletion.isComplete ? (
-            <View style={styles.profileAlertCard}>
-              <View style={styles.alertHeader}>
-                <Feather name="alert-triangle" size={m(16)} color="#DC2626" />
-                <Text style={[styles.alertTitle, { color: '#DC2626' }]}>
-                  Profile {profileCompletion.percentage}% Complete
-                </Text>
-              </View>
-              <Text style={styles.alertDesc}>
-                Complete statutory business and address details before applying for financing.
-              </Text>
-              <TouchableOpacity
-                style={[styles.alertBtn, { borderColor: '#DC2626' }]}
-                onPress={() => navigation.navigate('BorrowerProfileScreen')}
-              >
-                <Text style={[styles.alertBtnText, { color: '#DC2626' }]}>Complete Profile Details</Text>
-                <Feather name="arrow-right" size={m(12)} color="#DC2626" />
-              </TouchableOpacity>
-            </View>
-          ) : null}
-
-          {/* Real-time Dynamic EMI Calculator Card */}
-          <View style={styles.calculatorCard}>
-            <View style={styles.calcHeader}>
-              <Text style={styles.calcTag}>ESTIMATED REPAYMENT SCHEDULE</Text>
-              <View style={styles.calcTypeBadge}>
-                <Text style={styles.calcTypeBadgeText}>{repaymentType}</Text>
-              </View>
-            </View>
-
-            <View style={styles.emiHighlightRow}>
-              <Text style={styles.emiAmount}>
-                ₹{emiCalculation.monthlyEmi.toLocaleString('en-IN')}
-              </Text>
-              <Text style={styles.emiPerMonth}>/ month</Text>
-            </View>
-
-            <View style={styles.calcBreakdownRow}>
-              <View style={styles.calcBreakdownItem}>
-                <Text style={styles.calcBLabel}>Principal</Text>
-                <Text style={styles.calcBVal}>{formatINR(amount)}</Text>
-              </View>
-              <View style={styles.calcBreakdownItem}>
-                <Text style={styles.calcBLabel}>Total Interest</Text>
-                <Text style={styles.calcBVal}>
-                  ₹{emiCalculation.totalInterest.toLocaleString('en-IN')}
-                </Text>
-              </View>
-              <View style={styles.calcBreakdownItem}>
-                <Text style={styles.calcBLabel}>Total Repayable</Text>
-                <Text style={styles.calcBVal}>
-                  ₹{emiCalculation.totalPayable.toLocaleString('en-IN')}
-                </Text>
-              </View>
-            </View>
+      {/* Main Curved Body Section */}
+      <View style={styles.sheetSection}>
+        {loadingPrereqs ? (
+          <View style={styles.centerContainer}>
+            <ActivityIndicator size="small" color={colors.lettersAndIcons} />
+            <Text style={styles.loadingText}>Checking prerequisites & lending limits...</Text>
           </View>
+        ) : (
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Active Pending Application Warning */}
+            {activePendingApp ? (
+              <View style={styles.pendingAlertCard}>
+                <View style={styles.alertHeader}>
+                  <View style={styles.alertIconBadge}>
+                    <Feather name="clock" size={m(15)} color="#d97706" />
+                  </View>
+                  <Text style={styles.alertTitle}>Active Application in Review</Text>
+                </View>
+                <Text style={styles.alertDesc}>
+                  You currently have an application under review with{' '}
+                  <Text style={{ fontFamily: FontFamily.primaryBold }}>
+                    {activePendingApp.lenderSnapshot?.companyName ||
+                      activePendingApp.lenderSnapshot?.userName ||
+                      activePendingApp.lenderId?.companyName ||
+                      'an institutional lender'}
+                  </Text>
+                  . Single-lender review protocol is active.
+                </Text>
+                <TouchableOpacity
+                  style={styles.alertBtn}
+                  activeOpacity={0.8}
+                  onPress={() => navigation.navigate('BorrowerApplications')}
+                >
+                  <Text style={styles.alertBtnText}>Go to My Applications</Text>
+                  <Feather name="chevron-right" size={m(14)} color="#b45309" />
+                </TouchableOpacity>
+              </View>
+            ) : null}
 
-          {/* Section 1: Choose Target Institution */}
-          <View style={styles.sectionCard}>
-            <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>1. Target Institutional Lender</Text>
-              <Text style={styles.sectionSubtitle}>
-                {selectedLender ? 'Selected' : 'Choose 1 lender'}
-              </Text>
+            {/* Profile Completion Warning */}
+            {!profileCompletion.isComplete ? (
+              <View style={styles.profileAlertCard}>
+                <View style={styles.alertHeader}>
+                  <View style={[styles.alertIconBadge, { backgroundColor: '#fee2e2' }]}>
+                    <Feather name="alert-triangle" size={m(15)} color="#dc2626" />
+                  </View>
+                  <Text style={[styles.alertTitle, { color: '#dc2626' }]}>
+                    Profile {profileCompletion.percentage}% Complete
+                  </Text>
+                </View>
+                <Text style={[styles.alertDesc, { color: '#7f1d1d' }]}>
+                  Complete statutory corporate, tax and address details before applying for capital.
+                </Text>
+                <TouchableOpacity
+                  style={[styles.alertBtn, { borderColor: '#fca5a5' }]}
+                  activeOpacity={0.8}
+                  onPress={() => navigation.navigate('BorrowerProfileScreen')}
+                >
+                  <Text style={[styles.alertBtnText, { color: '#dc2626' }]}>
+                    Complete Profile Details
+                  </Text>
+                  <Feather name="chevron-right" size={m(14)} color="#dc2626" />
+                </TouchableOpacity>
+              </View>
+            ) : null}
+
+            {/* Real-time Dynamic EMI Simulator Card */}
+            <View style={styles.calculatorCard}>
+              <View style={styles.calcHeader}>
+                <Text style={styles.calcTag}>ESTIMATED REPAYMENT SCHEDULE</Text>
+                <View style={styles.calcTypeBadge}>
+                  <Text style={styles.calcTypeBadgeText}>
+                    {repaymentType === 'ONE_TIME' ? 'BULLET' : 'MONTHLY EMI'}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.emiHighlightRow}>
+                <Text style={styles.emiAmount}>
+                  ₹{emiCalculation.monthlyEmi.toLocaleString('en-IN')}
+                </Text>
+                <Text style={styles.emiPerMonth}>/ month</Text>
+              </View>
+
+              {/* Inner Neutral Breakdown Strip (#F8FAFC) */}
+              <View style={styles.calcBreakdownRow}>
+                <View style={styles.calcBreakdownItem}>
+                  <Text style={styles.calcBLabel}>Principal</Text>
+                  <Text style={styles.calcBVal}>{formatINR(amount)}</Text>
+                </View>
+                <View style={styles.calcDivider} />
+                <View style={styles.calcBreakdownItem}>
+                  <Text style={styles.calcBLabel}>Total Interest</Text>
+                  <Text style={styles.calcBVal}>
+                    ₹{emiCalculation.totalInterest.toLocaleString('en-IN')}
+                  </Text>
+                </View>
+                <View style={styles.calcDivider} />
+                <View style={styles.calcBreakdownItem}>
+                  <Text style={styles.calcBLabel}>Total Payable</Text>
+                  <Text style={styles.calcBVal}>
+                    ₹{emiCalculation.totalPayable.toLocaleString('en-IN')}
+                  </Text>
+                </View>
+              </View>
             </View>
 
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.lendersRow}>
-              {availableLenders.map((item) => {
-                const isSelected = selectedLender?._id === item._id;
-                return (
-                  <TouchableOpacity
-                    key={item._id}
-                    style={[styles.lenderSelectCard, isSelected && styles.selectedLenderCard]}
-                    onPress={() => setSelectedLender(item)}
-                  >
-                    <View style={styles.lenderCardTop}>
-                      <View style={[styles.lenderIcon, isSelected && styles.selectedLenderIcon]}>
-                        <Feather
-                          name="shield"
-                          size={m(14)}
-                          color={isSelected ? colors.white : '#2563EB'}
-                        />
-                      </View>
-                      {isSelected ? (
-                        <Feather name="check-circle" size={m(16)} color="#2563EB" />
-                      ) : null}
-                    </View>
-                    <Text
-                      style={[styles.lenderSelectName, isSelected && styles.selectedLenderName]}
-                      numberOfLines={1}
+            {/* Section 1: Target Institutional Lender */}
+            <View style={styles.sectionCard}>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionTitle}>1. Target Institutional Lender</Text>
+                <Text style={styles.sectionSubtitle}>
+                  {selectedLender ? 'Selected' : 'Choose 1 partner'}
+                </Text>
+              </View>
+
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.lendersRow}
+                contentContainerStyle={{ paddingRight: m(10) }}
+              >
+                {availableLenders.map((item) => {
+                  const isSelected = selectedLender?._id === item._id;
+                  return (
+                    <TouchableOpacity
+                      key={item._id}
+                      style={[
+                        styles.lenderSelectCard,
+                        isSelected && styles.selectedLenderCard,
+                      ]}
+                      activeOpacity={0.8}
+                      onPress={() => setSelectedLender(item)}
                     >
-                      {item.companyName || item.userName}
-                    </Text>
-                    <Text style={styles.lenderSelectRate}>
-                      From {item.lenderProfile?.minInterestRate || 10.5}% p.a.
+                      <View style={styles.lenderCardTop}>
+                        <View
+                          style={[
+                            styles.lenderIcon,
+                            isSelected && styles.selectedLenderIcon,
+                          ]}
+                        >
+                          <Feather
+                            name="briefcase"
+                            size={m(14)}
+                            color={isSelected ? colors.white : colors.blueButton}
+                          />
+                        </View>
+                        {isSelected ? (
+                          <Feather name="check-circle" size={m(16)} color="#059669" />
+                        ) : null}
+                      </View>
+                      <Text
+                        style={[
+                          styles.lenderSelectName,
+                          isSelected && styles.selectedLenderName,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {item.companyName || item.userName}
+                      </Text>
+                      <Text style={styles.lenderSelectRate}>
+                        From {item.lenderProfile?.minInterestRate || 10.5}% p.a.
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+
+            {/* Section 2: Loan Facility Details */}
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>2. Loan Facility Details</Text>
+
+              {/* Loan Amount Input & Presets */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Requested Facility Amount (₹)</Text>
+                <View style={styles.currencyInputWrap}>
+                  <Text style={styles.currencySymbol}>₹</Text>
+                  <TextInput
+                    style={styles.currencyInput}
+                    keyboardType="numeric"
+                    value={amount}
+                    onChangeText={setAmount}
+                    placeholder="e.g. 500000"
+                    placeholderTextColor={colors.textMuted}
+                  />
+                </View>
+
+                {/* Amount Quick Presets */}
+                <View style={styles.presetChipsRow}>
+                  {AMOUNT_PRESETS.map((p) => (
+                    <TouchableOpacity
+                      key={p}
+                      style={[
+                        styles.presetChip,
+                        Number(amount) === p && styles.activePresetChip,
+                      ]}
+                      activeOpacity={0.8}
+                      onPress={() => setAmount(String(p))}
+                    >
+                      <Text
+                        style={[
+                          styles.presetChipText,
+                          Number(amount) === p && styles.activePresetChipText,
+                        ]}
+                      >
+                        {formatINR(p)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Purpose Selector Chips */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Financing Purpose</Text>
+                <View style={styles.purposeGrid}>
+                  {PURPOSE_OPTIONS.map((opt) => (
+                    <TouchableOpacity
+                      key={opt}
+                      style={[
+                        styles.purposeOpt,
+                        purpose === opt && styles.activePurposeOpt,
+                      ]}
+                      activeOpacity={0.8}
+                      onPress={() => setPurpose(opt)}
+                    >
+                      <Text
+                        style={[
+                          styles.purposeOptText,
+                          purpose === opt && styles.activePurposeOptText,
+                        ]}
+                      >
+                        {opt}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Tenure Selector */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Facility Tenure (Months)</Text>
+                <View style={styles.presetChipsRow}>
+                  {TENURE_PRESETS.map((t) => (
+                    <TouchableOpacity
+                      key={t}
+                      style={[
+                        styles.presetChip,
+                        Number(tenureMonths) === t && styles.activePresetChip,
+                      ]}
+                      activeOpacity={0.8}
+                      onPress={() => setTenureMonths(String(t))}
+                    >
+                      <Text
+                        style={[
+                          styles.presetChipText,
+                          Number(tenureMonths) === t && styles.activePresetChipText,
+                        ]}
+                      >
+                        {t} Mo
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Repayment Structure Toggle */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Repayment Structure</Text>
+                <View style={styles.periodCapsuleRow}>
+                  <TouchableOpacity
+                    style={[
+                      styles.periodTab,
+                      repaymentType === 'EMI' && styles.periodTabActive,
+                    ]}
+                    activeOpacity={0.8}
+                    onPress={() => setRepaymentType('EMI')}
+                  >
+                    <Text
+                      style={[
+                        styles.periodTabText,
+                        repaymentType === 'EMI' && styles.periodTabTextActive,
+                      ]}
+                    >
+                      Monthly Amortizing EMI
                     </Text>
                   </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
 
-          {/* Section 2: Loan Amount & Facility Parameters */}
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>2. Loan Facility Details</Text>
+                  <TouchableOpacity
+                    style={[
+                      styles.periodTab,
+                      repaymentType === 'ONE_TIME' && styles.periodTabActive,
+                    ]}
+                    activeOpacity={0.8}
+                    onPress={() => setRepaymentType('ONE_TIME')}
+                  >
+                    <Text
+                      style={[
+                        styles.periodTabText,
+                        repaymentType === 'ONE_TIME' && styles.periodTabTextActive,
+                      ]}
+                    >
+                      Bullet / One-Time
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
 
-            {/* Loan Amount Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Requested Loan Amount (₹)</Text>
-              <View style={styles.currencyInputWrap}>
-                <Text style={styles.currencySymbol}>₹</Text>
+              {/* Requested Interest Rate */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Requested Annual Interest Rate (% p.a.)</Text>
                 <TextInput
-                  style={styles.currencyInput}
+                  style={styles.textInput}
                   keyboardType="numeric"
-                  value={amount}
-                  onChangeText={setAmount}
-                  placeholder="e.g. 500000"
-                  placeholderTextColor="#94A3B8"
+                  value={requestedRate}
+                  onChangeText={setRequestedRate}
+                  placeholder="10.5"
+                  placeholderTextColor={colors.textMuted}
                 />
               </View>
-              {/* Amount Quick Chips */}
-              <View style={styles.presetChipsRow}>
-                {AMOUNT_PRESETS.map((p) => (
-                  <TouchableOpacity
-                    key={p}
-                    style={[styles.presetChip, Number(amount) === p && styles.activePresetChip]}
-                    onPress={() => setAmount(String(p))}
-                  >
-                    <Text
-                      style={[
-                        styles.presetChipText,
-                        Number(amount) === p && styles.activePresetChipText,
-                      ]}
-                    >
-                      {formatINR(p)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+
+              {/* Pledged Collateral */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Pledged Collateral / Security (Optional)</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={pledgedSecurity}
+                  onChangeText={setPledgedSecurity}
+                  placeholder="e.g. Commercial inventory, receivables, equipment"
+                  placeholderTextColor={colors.textMuted}
+                />
+              </View>
+
+              {/* Business Notes */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Application Remarks / Business Notes</Text>
+                <TextInput
+                  style={[styles.textInput, styles.multilineInput]}
+                  multiline
+                  numberOfLines={3}
+                  value={notes}
+                  onChangeText={setNotes}
+                  placeholder="Provide notes on seasonal cash flows or supplier purchase order details"
+                  placeholderTextColor={colors.textMuted}
+                />
               </View>
             </View>
 
-            {/* Purpose Selector Chips */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Financing Purpose</Text>
-              <View style={styles.purposeGrid}>
-                {PURPOSE_OPTIONS.map((opt) => (
-                  <TouchableOpacity
-                    key={opt}
-                    style={[styles.purposeOpt, purpose === opt && styles.activePurposeOpt]}
-                    onPress={() => setPurpose(opt)}
-                  >
-                    <Text
-                      style={[
-                        styles.purposeOptText,
-                        purpose === opt && styles.activePurposeOptText,
-                      ]}
-                    >
-                      {opt}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Tenure Input & Presets */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Facility Tenure (Months)</Text>
-              <View style={styles.presetChipsRow}>
-                {TENURE_PRESETS.map((t) => (
-                  <TouchableOpacity
-                    key={t}
-                    style={[styles.presetChip, Number(tenureMonths) === t && styles.activePresetChip]}
-                    onPress={() => setTenureMonths(String(t))}
-                  >
-                    <Text
-                      style={[
-                        styles.presetChipText,
-                        Number(tenureMonths) === t && styles.activePresetChipText,
-                      ]}
-                    >
-                      {t} Mo
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Repayment Type Toggle */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Repayment Structure</Text>
-              <View style={styles.repaymentToggle}>
-                <TouchableOpacity
-                  style={[
-                    styles.toggleBtn,
-                    repaymentType === 'EMI' && styles.activeToggleBtn,
-                  ]}
-                  onPress={() => setRepaymentType('EMI')}
-                >
-                  <Text
-                    style={[
-                      styles.toggleBtnText,
-                      repaymentType === 'EMI' && styles.activeToggleBtnText,
-                    ]}
-                  >
-                    Monthly Amortizing EMI
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.toggleBtn,
-                    repaymentType === 'ONE_TIME' && styles.activeToggleBtn,
-                  ]}
-                  onPress={() => setRepaymentType('ONE_TIME')}
-                >
-                  <Text
-                    style={[
-                      styles.toggleBtnText,
-                      repaymentType === 'ONE_TIME' && styles.activeToggleBtnText,
-                    ]}
-                  >
-                    Bullet / One-Time
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Requested Interest Rate */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Requested Annual Interest Rate (% p.a.)</Text>
-              <TextInput
-                style={styles.textInput}
-                keyboardType="numeric"
-                value={requestedRate}
-                onChangeText={setRequestedRate}
-                placeholder="10.5"
-                placeholderTextColor="#94A3B8"
-              />
-            </View>
-
-            {/* Pledged Collateral */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Pledged Collateral / Security (Optional)</Text>
-              <TextInput
-                style={styles.textInput}
-                value={pledgedSecurity}
-                onChangeText={setPledgedSecurity}
-                placeholder="e.g. Commercial inventory, equipment hypothecation, receivables"
-                placeholderTextColor="#94A3B8"
-              />
-            </View>
-
-            {/* Business Notes */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Application Remarks / Business Notes</Text>
-              <TextInput
-                style={[styles.textInput, styles.multilineInput]}
-                multiline
-                numberOfLines={3}
-                value={notes}
-                onChangeText={setNotes}
-                placeholder="Provide notes on seasonal cash flows or supplier purchase order details"
-                placeholderTextColor="#94A3B8"
-              />
-            </View>
-          </View>
-
-          {/* Submit Action Button */}
-          <TouchableOpacity
-            style={[
-              styles.submitBtn,
-              (submitting || !!activePendingApp) && styles.disabledBtn,
-            ]}
-            onPress={handleSubmit}
-            disabled={submitting || !!activePendingApp}
-          >
-            {submitting ? (
-              <ActivityIndicator color={colors.white} />
-            ) : (
-              <>
-                <Text style={styles.submitBtnText}>Submit Loan Application</Text>
-                <Feather name="send" size={m(16)} color={colors.white} />
-              </>
-            )}
-          </TouchableOpacity>
-        </ScrollView>
-      )}
-    </SafeAreaView>
+            {/* Submit Action Button */}
+            <TouchableOpacity
+              style={[
+                styles.submitBtn,
+                (submitting || !!activePendingApp) && styles.disabledBtn,
+              ]}
+              activeOpacity={0.85}
+              onPress={handleSubmit}
+              disabled={submitting || !!activePendingApp}
+            >
+              {submitting ? (
+                <ActivityIndicator color={colors.white} />
+              ) : (
+                <>
+                  <Feather name="send" size={m(16)} color={colors.white} />
+                  <Text style={styles.submitBtnText}>Submit Loan Application</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </ScrollView>
+        )}
+      </View>
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
+  // Top Green Banner
+  topBanner: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: m(18),
+    paddingTop: m(10),
+    paddingBottom: m(18),
   },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: m(20),
-  },
-  loadingText: {
-    fontSize: m(13),
-    color: '#64748B',
-    marginTop: m(10),
-  },
-  header: {
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: m(16),
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || m(24)) + m(10) : m(14),
-    paddingBottom: m(14),
+  },
+  backCircularBtn: {
+    width: m(38),
+    height: m(38),
+    borderRadius: m(19),
     backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  headerTitleWrap: {
+    flex: 1,
+    marginLeft: m(12),
+  },
+  headerTag: {
+    fontSize: m(9.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    letterSpacing: 0.8,
+    opacity: 0.85,
   },
   headerTitle: {
-    fontSize: m(16),
-    fontWeight: '700',
-    color: '#0F172A',
+    fontSize: m(18),
+    lineHeight: m(24),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
-  backIcon: {
-    padding: m(4),
+  refreshBtn: {
+    width: m(38),
+    height: m(38),
+    borderRadius: m(19),
+    backgroundColor: colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+
+  // Main Curved Sheet
+  sheetSection: {
+    flex: 1,
+    backgroundColor: colors.backgroundGreenWhite,
+    borderTopLeftRadius: m(32),
+    borderTopRightRadius: m(32),
+    paddingTop: m(16),
+  },
+  scrollView: {
+    flex: 1,
   },
   scrollContent: {
-    padding: m(16),
-    gap: m(16),
-    paddingBottom: m(100),
+    paddingHorizontal: m(18),
+    paddingBottom: m(40),
   },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: m(30),
+  },
+  loadingText: {
+    fontSize: m(12.5),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+    marginTop: m(10),
+  },
+
+  // Alerts
   pendingAlertCard: {
-    backgroundColor: '#FEF3C7',
-    borderRadius: m(14),
+    backgroundColor: '#fffbeb',
+    borderRadius: m(16),
     padding: m(14),
+    marginBottom: m(12),
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: '#fde68a',
   },
   profileAlertCard: {
-    backgroundColor: '#FEF2F2',
-    borderRadius: m(14),
+    backgroundColor: '#fef2f2',
+    borderRadius: m(16),
     padding: m(14),
+    marginBottom: m(12),
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: '#fecaca',
   },
   alertHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: m(8),
+    marginBottom: m(6),
+  },
+  alertIconBadge: {
+    width: m(26),
+    height: m(26),
+    borderRadius: m(13),
+    backgroundColor: '#fef3c7',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   alertTitle: {
     fontSize: m(13),
-    fontWeight: '700',
-    color: '#D97706',
+    fontFamily: FontFamily.primaryBold,
+    color: '#92400e',
   },
   alertDesc: {
-    fontSize: m(11),
-    color: '#475569',
-    marginTop: m(4),
+    fontSize: m(11.5),
     lineHeight: m(16),
-  },
-  boldText: {
-    fontWeight: '700',
-    color: '#0F172A',
+    fontFamily: FontFamily.primaryRegular,
+    color: '#78350f',
   },
   alertBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(4),
-    alignSelf: 'flex-start',
-    marginTop: m(8),
-    paddingVertical: m(4),
+    justifyContent: 'space-between',
+    backgroundColor: colors.white,
+    paddingHorizontal: m(12),
+    paddingVertical: m(8),
+    borderRadius: m(10),
+    borderWidth: 1,
+    borderColor: '#fde68a',
+    marginTop: m(10),
   },
   alertBtnText: {
-    fontSize: m(11),
-    fontWeight: '700',
-    color: '#D97706',
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryBold,
+    color: '#b45309',
   },
+
+  // Dynamic EMI Simulator Card
   calculatorCard: {
-    backgroundColor: '#0F172A',
+    backgroundColor: colors.white,
     borderRadius: m(18),
-    padding: m(18),
+    padding: m(16),
+    marginBottom: m(14),
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: 'rgba(9, 48, 48, 0.06)',
+    elevation: 2,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
   },
   calcHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: m(6),
   },
   calcTag: {
-    fontSize: m(9),
-    fontWeight: '700',
-    color: '#94A3B8',
-    letterSpacing: 0.5,
+    fontSize: m(10),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.textSecondary,
+    letterSpacing: 0.6,
   },
   calcTypeBadge: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#ecfdf5',
     paddingHorizontal: m(8),
     paddingVertical: m(3),
     borderRadius: m(6),
   },
   calcTypeBadgeText: {
-    fontSize: m(10),
-    fontWeight: '700',
-    color: '#38BDF8',
+    fontSize: m(9.5),
+    fontFamily: FontFamily.primaryBold,
+    color: '#059669',
   },
   emiHighlightRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    marginTop: m(10),
-    gap: m(6),
+    marginBottom: m(12),
   },
   emiAmount: {
-    fontSize: m(28),
-    fontWeight: '800',
-    color: colors.white,
+    fontSize: m(24),
+    lineHeight: m(30),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
   emiPerMonth: {
     fontSize: m(13),
-    color: '#94A3B8',
-    fontWeight: '600',
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+    marginLeft: m(6),
   },
+
+  // Breakdown Strip - Neutral Slate-50 (#F8FAFC)
   calcBreakdownRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: '#1E293B',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
     borderRadius: m(12),
-    padding: m(12),
-    marginTop: m(14),
+    paddingVertical: m(8),
+    paddingHorizontal: m(10),
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   calcBreakdownItem: {
+    flex: 1,
     alignItems: 'center',
   },
   calcBLabel: {
-    fontSize: m(9),
-    color: '#94A3B8',
-    textTransform: 'uppercase',
+    fontSize: m(9.5),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.textSecondary,
+    marginBottom: m(2),
   },
   calcBVal: {
     fontSize: m(12),
-    fontWeight: '700',
-    color: colors.white,
-    marginTop: m(2),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
+  calcDivider: {
+    width: 1,
+    height: m(22),
+    backgroundColor: '#e2e8f0',
+  },
+
+  // Section Cards
   sectionCard: {
     backgroundColor: colors.white,
-    borderRadius: m(16),
+    borderRadius: m(18),
     padding: m(16),
+    marginBottom: m(14),
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    gap: m(14),
+    borderColor: 'rgba(9, 48, 48, 0.06)',
+    elevation: 2,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: m(10),
   },
   sectionTitle: {
-    fontSize: m(14),
-    fontWeight: '700',
-    color: '#0F172A',
+    fontSize: m(13.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    marginBottom: m(8),
   },
   sectionSubtitle: {
     fontSize: m(11),
-    color: '#64748B',
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
   },
+
+  // Lenders Horizontal List
   lendersRow: {
-    flexDirection: 'row',
-    marginTop: m(4),
+    marginTop: m(2),
   },
   lenderSelectCard: {
-    width: m(150),
-    backgroundColor: '#F8FAFC',
-    borderRadius: m(12),
+    width: m(145),
+    backgroundColor: '#f8fafc',
+    borderRadius: m(14),
     padding: m(12),
     marginRight: m(10),
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
   },
   selectedLenderCard: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#2563EB',
-    borderWidth: 2,
+    backgroundColor: '#ecfdf5',
+    borderColor: colors.primary,
   },
   lenderCardTop: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: m(8),
   },
   lenderIcon: {
     width: m(28),
     height: m(28),
-    borderRadius: m(8),
-    backgroundColor: '#EFF6FF',
+    borderRadius: m(14),
+    backgroundColor: '#eff6ff',
     alignItems: 'center',
     justifyContent: 'center',
   },
   selectedLenderIcon: {
-    backgroundColor: '#2563EB',
+    backgroundColor: colors.primary,
   },
   lenderSelectName: {
     fontSize: m(12),
-    fontWeight: '700',
-    color: '#0F172A',
-    marginTop: m(8),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    marginBottom: m(2),
   },
   selectedLenderName: {
-    color: '#2563EB',
+    color: colors.lettersAndIcons,
   },
   lenderSelectRate: {
     fontSize: m(10),
-    color: '#64748B',
-    marginTop: m(2),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
   },
+
+  // Inputs & Groups
   inputGroup: {
-    gap: m(6),
+    marginBottom: m(14),
   },
   inputLabel: {
-    fontSize: m(12),
-    fontWeight: '600',
-    color: '#334155',
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
+    marginBottom: m(6),
   },
   currencyInputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
+    backgroundColor: '#f8fafc',
     borderRadius: m(12),
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
     paddingHorizontal: m(12),
+    height: m(46),
   },
   currencySymbol: {
     fontSize: m(16),
-    fontWeight: '700',
-    color: '#64748B',
-    marginRight: m(6),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    marginRight: m(8),
   },
   currencyInput: {
     flex: 1,
     fontSize: m(15),
-    fontWeight: '700',
-    color: '#0F172A',
-    paddingVertical: m(10),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    padding: 0,
   },
+  textInput: {
+    backgroundColor: '#f8fafc',
+    borderRadius: m(12),
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    paddingHorizontal: m(12),
+    paddingVertical: m(10),
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.lettersAndIcons,
+  },
+  multilineInput: {
+    height: m(70),
+    textAlignVertical: 'top',
+  },
+
+  // Preset Chips
   presetChipsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: m(6),
-    marginTop: m(4),
+    marginTop: m(8),
   },
   presetChip: {
+    backgroundColor: '#f8fafc',
     paddingHorizontal: m(10),
     paddingVertical: m(6),
-    borderRadius: m(8),
-    backgroundColor: '#F1F5F9',
+    borderRadius: m(10),
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#e2e8f0',
   },
   activePresetChip: {
-    backgroundColor: '#2563EB',
-    borderColor: '#2563EB',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   presetChipText: {
     fontSize: m(11),
-    fontWeight: '600',
-    color: '#475569',
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
   },
   activePresetChipText: {
-    color: colors.white,
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
+
+  // Purpose Grid
   purposeGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: m(6),
   },
   purposeOpt: {
+    backgroundColor: '#f8fafc',
     paddingHorizontal: m(10),
     paddingVertical: m(7),
-    borderRadius: m(8),
-    backgroundColor: '#F8FAFC',
+    borderRadius: m(10),
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#e2e8f0',
   },
   activePurposeOpt: {
-    backgroundColor: '#0F172A',
-    borderColor: '#0F172A',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   purposeOptText: {
     fontSize: m(11),
-    fontWeight: '600',
-    color: '#475569',
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
   },
   activePurposeOptText: {
-    color: colors.white,
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
-  repaymentToggle: {
+
+  // Period / Repayment Capsule Toggle
+  periodCapsuleRow: {
     flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
-    borderRadius: m(10),
+    backgroundColor: '#f8fafc',
+    borderRadius: m(14),
     padding: m(3),
-    gap: m(4),
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
-  toggleBtn: {
+  periodTab: {
     flex: 1,
     paddingVertical: m(8),
+    borderRadius: m(12),
     alignItems: 'center',
-    borderRadius: m(8),
+    justifyContent: 'center',
   },
-  activeToggleBtn: {
-    backgroundColor: colors.white,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+  periodTabActive: {
+    backgroundColor: colors.primary,
   },
-  toggleBtnText: {
-    fontSize: m(11),
-    fontWeight: '600',
-    color: '#64748B',
+  periodTabText: {
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.textSecondary,
   },
-  activeToggleBtnText: {
-    color: '#0F172A',
-    fontWeight: '700',
+  periodTabTextActive: {
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
-  textInput: {
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: m(10),
-    paddingHorizontal: m(12),
-    paddingVertical: m(10),
-    fontSize: m(13),
-    color: '#0F172A',
-  },
-  multilineInput: {
-    minHeight: m(65),
-    textAlignVertical: 'top',
-  },
+
+  // Submit Action Button
   submitBtn: {
+    backgroundColor: colors.lettersAndIcons,
+    borderRadius: m(16),
+    paddingVertical: m(14),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: m(8),
-    backgroundColor: '#2563EB',
-    borderRadius: m(14),
-    paddingVertical: m(14),
-    marginTop: m(8),
+    marginTop: m(6),
+    marginBottom: m(20),
+    elevation: 3,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 5,
   },
   disabledBtn: {
-    opacity: 0.5,
+    opacity: 0.6,
   },
   submitBtnText: {
-    fontSize: m(15),
-    fontWeight: '700',
+    fontSize: m(14),
+    fontFamily: FontFamily.primaryBold,
     color: colors.white,
   },
 });

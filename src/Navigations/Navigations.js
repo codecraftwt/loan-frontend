@@ -63,7 +63,9 @@ import BorrowerApply from '../Screens/Borrower/Applications/BorrowerApply';
 import BorrowerApplications from '../Screens/Borrower/Applications/BorrowerApplications';
 import BorrowerLoansPortfolio from '../Screens/Borrower/Loans/BorrowerLoansPortfolio';
 import BorrowerProfileScreen from '../Screens/Borrower/Profile/BorrowerProfileScreen';
+import BorrowerEditProfileScreen from '../Screens/Borrower/Profile/BorrowerEditProfileScreen';
 import BorrowerSecurityScreen from '../Screens/Borrower/Security/BorrowerSecurityScreen';
+import BorrowerContractTermsScreen from '../Screens/Borrower/Applications/BorrowerContractTermsScreen';
 // Lender Payment Screens
 import PendingPayments from '../Screens/Lender/Payments/PendingPayments';
 // Lender Modern Flow Screens
@@ -80,8 +82,9 @@ import LenderEditProfileScreen from '../Screens/Lender/Profile/LenderEditProfile
 import LenderOfficeJurisdictionScreen from '../Screens/Lender/Profile/LenderOfficeJurisdictionScreen';
 import LenderSettingsScreen from '../Screens/Lender/Settings/LenderSettingsScreen';
 
+const Stack = createNativeStackNavigator();
+
 const Navigation = () => {
-  const Stack = createNativeStackNavigator();
   return (
     <Stack.Navigator
       screenOptions={{
@@ -172,7 +175,9 @@ const Navigation = () => {
       <Stack.Screen name="BorrowerApplications" component={BorrowerApplications} />
       <Stack.Screen name="BorrowerLoansPortfolio" component={BorrowerLoansPortfolio} />
       <Stack.Screen name="BorrowerProfileScreen" component={BorrowerProfileScreen} />
+      <Stack.Screen name="BorrowerEditProfileScreen" component={BorrowerEditProfileScreen} />
       <Stack.Screen name="BorrowerSecurityScreen" component={BorrowerSecurityScreen} />
+      <Stack.Screen name="BorrowerContractTermsScreen" component={BorrowerContractTermsScreen} />
 
       {/* Other Borrower screens */}
       <Stack.Screen name="BorrowerLoanHistoryScreen" component={BorrowerLoanHistoryScreen} />
