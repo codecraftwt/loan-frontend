@@ -591,7 +591,7 @@ const styles = StyleSheet.create({
   tabSwitcher: {
     flexDirection: 'row',
     backgroundColor: colors.white,
-    borderRadius: m(24),
+    borderRadius: m(8),
     padding: m(4),
     marginBottom: m(14),
     borderWidth: 1,
@@ -600,7 +600,7 @@ const styles = StyleSheet.create({
   switcherBtn: {
     flex: 1,
     paddingVertical: m(8),
-    borderRadius: m(20),
+    borderRadius: m(6),
     alignItems: 'center',
     justifyContent: 'center',
   },

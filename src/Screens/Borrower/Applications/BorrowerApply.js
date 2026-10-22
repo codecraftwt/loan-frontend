@@ -13,7 +13,7 @@ import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/nativ
 import Feather from 'react-native-vector-icons/Feather';
 import { colors, FontFamily } from '../../../constants';
 import { m } from '../../../Utils/responsive';
-import { ScreenWrapper } from '../../../Components/common';
+import { ScreenWrapper, SuccessModal } from '../../../Components/common';
 import borrowerFlowService from '../../../Services/borrowerFlowService';
 
 const PURPOSE_OPTIONS = [
@@ -54,6 +54,20 @@ export default function BorrowerApply() {
     missingFields: [],
   });
 
+  // Success Confirmation Modal State
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [submittedAppInfo, setSubmittedAppInfo] = useState(null);
+
+  // Active Pending Alert Collapsible State
+  const [isPendingExpanded, setIsPendingExpanded] = useState(false);
+
+  // Sync selected lender when navigating back from Explore Lenders
+  useEffect(() => {
+    if (route.params?.preselectedLender) {
+      setSelectedLender(route.params.preselectedLender);
+    }
+  }, [route.params?.preselectedLender]);
+
   const fetchPrerequisites = useCallback(async () => {
     try {
       setLoadingPrereqs(true);
@@ -68,13 +82,10 @@ export default function BorrowerApply() {
         const list = lendersRes.value.lenders || [];
         setAvailableLenders(list);
         setSelectedLender((prev) => {
-          if (prev) {
-            const found = list.find((l) => l._id === prev._id);
-            return found || prev;
-          }
-          if (preselectedLender) {
-            const found = list.find((l) => l._id === preselectedLender._id);
-            return found || preselectedLender;
+          const target = route.params?.preselectedLender || prev;
+          if (target) {
+            const found = list.find((l) => l._id === target._id);
+            return found || target;
           }
           return list.length > 0 ? list[0] : null;
         });
@@ -205,18 +216,14 @@ export default function BorrowerApply() {
 
       const res = await borrowerFlowService.submitApplications(payload);
       if (res?.success) {
-        Alert.alert(
-          'Application Submitted!',
-          `Your loan application of ${formatINR(numAmount)} has been submitted to ${
-            selectedLender.companyName || selectedLender.userName
-          }. The institution has a 48-hour review window.`,
-          [
-            {
-              text: 'View Applications',
-              onPress: () => navigation.navigate('BorrowerApplications'),
-            },
-          ]
-        );
+        setSubmittedAppInfo({
+          amount: numAmount,
+          lenderName: selectedLender.companyName || selectedLender.userName,
+          purpose,
+          tenure: tenureMonths,
+          rate: requestedRate,
+        });
+        setShowSuccessModal(true);
       }
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to submit loan application.';
@@ -232,7 +239,7 @@ export default function BorrowerApply() {
       topInsetBg={colors.primary}
       statusBarColor={colors.primary}
       statusBarStyle="dark-content"
-      includeTabBarClearance={true}
+      includeTabBarClearance={false}
       scrollable={false}
     >
       {/* Top Green Banner */}
@@ -275,34 +282,74 @@ export default function BorrowerApply() {
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
-            {/* Active Pending Application Warning */}
+            {/* Active Pending Application Banner */}
             {activePendingApp ? (
-              <View style={styles.pendingAlertCard}>
-                <View style={styles.alertHeader}>
-                  <View style={styles.alertIconBadge}>
-                    <Feather name="clock" size={m(15)} color="#d97706" />
-                  </View>
-                  <Text style={styles.alertTitle}>Active Application in Review</Text>
-                </View>
-                <Text style={styles.alertDesc}>
-                  You currently have an application under review with{' '}
-                  <Text style={{ fontFamily: FontFamily.primaryBold }}>
-                    {activePendingApp.lenderSnapshot?.companyName ||
-                      activePendingApp.lenderSnapshot?.userName ||
-                      activePendingApp.lenderId?.companyName ||
-                      'an institutional lender'}
-                  </Text>
-                  . Single-lender review protocol is active.
-                </Text>
-                <TouchableOpacity
-                  style={styles.alertBtn}
-                  activeOpacity={0.8}
-                  onPress={() => navigation.navigate('BorrowerApplications')}
+              <TouchableOpacity
+                style={[
+                  styles.pendingAlertCard,
+                  !isPendingExpanded && styles.pendingAlertCardCollapsed,
+                ]}
+                activeOpacity={0.88}
+                onPress={() => setIsPendingExpanded((prev) => !prev)}
+              >
+                <View
+                  style={[
+                    styles.alertHeader,
+                    !isPendingExpanded && { marginBottom: 0 },
+                  ]}
                 >
-                  <Text style={styles.alertBtnText}>Go to My Applications</Text>
-                  <Feather name="chevron-right" size={m(14)} color="#b45309" />
-                </TouchableOpacity>
-              </View>
+                  <View style={styles.alertIconBadge}>
+                    <Feather name="clock" size={m(14)} color="#d97706" />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={styles.alertTitle} numberOfLines={1}>Active Application in Review</Text>
+                    <Text style={styles.alertSubtitle} numberOfLines={1}>Single-lender review protocol active</Text>
+                  </View>
+                  <View style={styles.alertHeaderRight}>
+                    <View style={styles.alertStatusPill}>
+                      <Text style={styles.alertStatusPillText}>IN REVIEW</Text>
+                    </View>
+                    <Feather
+                      name={isPendingExpanded ? 'chevron-up' : 'chevron-down'}
+                      size={m(13)}
+                      color="#b45309"
+                      style={{ marginLeft: m(3) }}
+                    />
+                  </View>
+                </View>
+
+                {isPendingExpanded && (
+                  <View style={{ marginTop: m(10) }}>
+                    <View style={styles.lenderLockStrip}>
+                      <View style={styles.lenderLockLeft}>
+                        <Feather name="briefcase" size={m(13)} color={colors.lettersAndIcons} />
+                        <Text style={styles.lenderLockName} numberOfLines={1}>
+                          {activePendingApp.lenderSnapshot?.companyName ||
+                            activePendingApp.lenderSnapshot?.userName ||
+                            activePendingApp.lenderId?.companyName ||
+                            'Institutional Partner'}
+                        </Text>
+                      </View>
+                      <Text style={styles.lenderLockWindow}>48h Window</Text>
+                    </View>
+
+                    <Text style={styles.alertDesc}>
+                      You currently have a facility request under assessment. New application submissions are temporarily paused until a decision is issued.
+                    </Text>
+
+                    <TouchableOpacity
+                      style={styles.alertBtn}
+                      activeOpacity={0.85}
+                      onPress={(e) => {
+                        e?.stopPropagation?.();
+                        navigation.navigate('BorrowerApplications');
+                      }}
+                    >
+                      <Text style={styles.alertBtnText}>Go to My Applications</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </TouchableOpacity>
             ) : null}
 
             {/* Profile Completion Warning */}
@@ -376,63 +423,75 @@ export default function BorrowerApply() {
             {/* Section 1: Target Institutional Lender */}
             <View style={styles.sectionCard}>
               <View style={styles.sectionHeaderRow}>
-                <Text style={styles.sectionTitle}>1. Target Institutional Lender</Text>
-                <Text style={styles.sectionSubtitle}>
-                  {selectedLender ? 'Selected' : 'Choose 1 partner'}
-                </Text>
+                <Text style={styles.sectionTitleInRow}>1. Target Institutional Lender</Text>
+                <TouchableOpacity
+                  style={styles.changeLenderBtn}
+                  onPress={() =>
+                    navigation.navigate('BorrowerExploreLenders', {
+                      selectMode: true,
+                      currentLenderId: selectedLender?._id,
+                    })
+                  }
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={styles.changeLenderText}>Change</Text>
+                  <Feather name="arrow-right" size={m(12)} color={colors.primary} />
+                </TouchableOpacity>
               </View>
 
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.lendersRow}
-                contentContainerStyle={{ paddingRight: m(10) }}
-              >
-                {availableLenders.map((item) => {
-                  const isSelected = selectedLender?._id === item._id;
-                  return (
-                    <TouchableOpacity
-                      key={item._id}
-                      style={[
-                        styles.lenderSelectCard,
-                        isSelected && styles.selectedLenderCard,
-                      ]}
-                      activeOpacity={0.8}
-                      onPress={() => setSelectedLender(item)}
-                    >
-                      <View style={styles.lenderCardTop}>
-                        <View
-                          style={[
-                            styles.lenderIcon,
-                            isSelected && styles.selectedLenderIcon,
-                          ]}
-                        >
-                          <Feather
-                            name="briefcase"
-                            size={m(14)}
-                            color={isSelected ? colors.white : colors.blueButton}
-                          />
-                        </View>
-                        {isSelected ? (
-                          <Feather name="check-circle" size={m(16)} color="#059669" />
-                        ) : null}
+              {selectedLender ? (
+                <TouchableOpacity
+                  style={styles.selectedLenderSingleCard}
+                  activeOpacity={0.85}
+                  onPress={() =>
+                    navigation.navigate('BorrowerExploreLenders', {
+                      selectMode: true,
+                      currentLenderId: selectedLender?._id,
+                    })
+                  }
+                >
+                  <View style={styles.selectedLenderIconWrap}>
+                    <Feather name="briefcase" size={m(16)} color={colors.white} />
+                  </View>
+                  <View style={styles.selectedLenderInfoCol}>
+                    <View style={styles.lenderNameRow}>
+                      <Text style={styles.selectedLenderNameText} numberOfLines={1}>
+                        {selectedLender.companyName || selectedLender.userName}
+                      </Text>
+                      <View style={styles.verifiedSmallBadge}>
+                        <Feather name="check-circle" size={m(10)} color="#059669" />
+                        <Text style={styles.verifiedSmallText}>Verified</Text>
                       </View>
-                      <Text
-                        style={[
-                          styles.lenderSelectName,
-                          isSelected && styles.selectedLenderName,
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {item.companyName || item.userName}
-                      </Text>
-                      <Text style={styles.lenderSelectRate}>
-                        From {item.lenderProfile?.minInterestRate || 10.5}% p.a.
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
+                    </View>
+                    <Text style={styles.selectedLenderRateText}>
+                      From {selectedLender.lenderProfile?.minInterestRate || 10.5}% p.a. • Max {formatINR(selectedLender.lenderProfile?.maxLoanAmount || 5000000)}
+                    </Text>
+                  </View>
+                  <View style={styles.selectedCheckBadge}>
+                    <Feather name="check" size={m(13)} color="#059669" />
+                  </View>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.selectedLenderSingleCard, { backgroundColor: '#f8fafc', borderColor: '#e2e8f0' }]}
+                  activeOpacity={0.8}
+                  onPress={() =>
+                    navigation.navigate('BorrowerExploreLenders', {
+                      selectMode: true,
+                    })
+                  }
+                >
+                  <View style={[styles.selectedLenderIconWrap, { backgroundColor: colors.blueButton }]}>
+                    <Feather name="plus" size={m(16)} color={colors.white} />
+                  </View>
+                  <View style={styles.selectedLenderInfoCol}>
+                    <Text style={styles.selectedLenderNameText}>Select an Institutional Partner</Text>
+                    <Text style={styles.selectedLenderRateText}>Tap to browse and choose a lender</Text>
+                  </View>
+                  <Feather name="chevron-right" size={m(16)} color={colors.textSecondary} />
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* Section 2: Loan Facility Details */}
@@ -629,7 +688,7 @@ export default function BorrowerApply() {
                 <ActivityIndicator color={colors.white} />
               ) : (
                 <>
-                  <Feather name="send" size={m(16)} color={colors.white} />
+                  {/* <Feather name="send" size={m(16)} color={colors.white} /> */}
                   <Text style={styles.submitBtnText}>Submit Loan Application</Text>
                 </>
               )}
@@ -637,6 +696,26 @@ export default function BorrowerApply() {
           </ScrollView>
         )}
       </View>
+
+      {/* Reusable Custom Success Modal */}
+      <SuccessModal
+        visible={showSuccessModal}
+        title="Application Submitted!"
+        subtitle="Your Facility Request Has Been Sent"
+        message={`Your loan application of ${formatINR(submittedAppInfo?.amount || amount)} has been submitted to ${
+          submittedAppInfo?.lenderName || selectedLender?.companyName || selectedLender?.userName || 'the institutional partner'
+        }. The institution has a 48-hour review window.`}
+        primaryButtonText="View Applications"
+        onPrimaryPress={() => {
+          setShowSuccessModal(false);
+          navigation.navigate('BorrowerApplications');
+        }}
+        showSecondaryButton={false}
+        onClose={() => {
+          setShowSuccessModal(false);
+          navigation.navigate('BorrowerApplications');
+        }}
+      />
     </ScreenWrapper>
   );
 }
@@ -711,7 +790,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: m(18),
-    paddingBottom: m(40),
+    paddingBottom: m(50),
   },
   centerContainer: {
     flex: 1,
@@ -728,12 +807,21 @@ const styles = StyleSheet.create({
 
   // Alerts
   pendingAlertCard: {
-    backgroundColor: '#fffbeb',
-    borderRadius: m(16),
-    padding: m(14),
-    marginBottom: m(12),
-    borderWidth: 1,
-    borderColor: '#fde68a',
+    backgroundColor: colors.white,
+    borderRadius: m(18),
+    padding: m(16),
+    marginBottom: m(14),
+    borderWidth: 1.5,
+    borderColor: '#fef3c7',
+    elevation: 3,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+  },
+  pendingAlertCardCollapsed: {
+    paddingVertical: m(10),
+    paddingHorizontal: m(12),
   },
   profileAlertCard: {
     backgroundColor: '#fef2f2',
@@ -747,43 +835,106 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: m(8),
-    marginBottom: m(6),
+    marginBottom: m(10),
+  },
+  alertHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   alertIconBadge: {
-    width: m(26),
-    height: m(26),
-    borderRadius: m(13),
-    backgroundColor: '#fef3c7',
+    width: m(32),
+    height: m(32),
+    borderRadius: m(8),
+    backgroundColor: '#fffbeb',
+    borderWidth: 1,
+    borderColor: '#fde68a',
     alignItems: 'center',
     justifyContent: 'center',
   },
   alertTitle: {
-    fontSize: m(13),
+    fontSize: m(12),
     fontFamily: FontFamily.primaryBold,
-    color: '#92400e',
+    color: colors.lettersAndIcons,
+  },
+  alertSubtitle: {
+    fontSize: m(10),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+    marginTop: m(1),
+  },
+  alertStatusPill: {
+    backgroundColor: '#fef3c7',
+    paddingHorizontal: m(6),
+    paddingVertical: m(2.5),
+    borderRadius: m(5),
+    borderWidth: 1,
+    borderColor: '#fde68a',
+  },
+  alertStatusPillText: {
+    fontSize: m(8.5),
+    fontFamily: FontFamily.primaryBold,
+    color: '#b45309',
+    letterSpacing: 0.4,
+  },
+  lenderLockStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#f8fafc',
+    borderRadius: m(10),
+    paddingHorizontal: m(12),
+    paddingVertical: m(9),
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginBottom: m(10),
+  },
+  lenderLockLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(7),
+    flex: 1,
+    marginRight: m(8),
+  },
+  lenderLockName: {
+    fontSize: m(12.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    flexShrink: 1,
+  },
+  lenderLockWindow: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primarySemiBold,
+    color: '#b45309',
+    backgroundColor: '#fffbeb',
+    paddingHorizontal: m(7),
+    paddingVertical: m(2),
+    borderRadius: m(5),
   },
   alertDesc: {
     fontSize: m(11.5),
-    lineHeight: m(16),
+    lineHeight: m(17),
     fontFamily: FontFamily.primaryRegular,
-    color: '#78350f',
+    color: colors.textSecondary,
+    marginBottom: m(12),
   },
   alertBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.white,
-    paddingHorizontal: m(12),
-    paddingVertical: m(8),
-    borderRadius: m(10),
-    borderWidth: 1,
-    borderColor: '#fde68a',
-    marginTop: m(10),
+    justifyContent: 'center',
+    gap: m(6),
+    backgroundColor: colors.lettersAndIcons,
+    paddingVertical: m(11),
+    borderRadius: m(12),
+    elevation: 2,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
   },
   alertBtnText: {
-    fontSize: m(11.5),
+    fontSize: m(12.5),
     fontFamily: FontFamily.primaryBold,
-    color: '#b45309',
+    color: colors.white,
   },
 
   // Dynamic EMI Simulator Card
@@ -899,10 +1050,91 @@ const styles = StyleSheet.create({
     color: colors.lettersAndIcons,
     marginBottom: m(8),
   },
+  sectionTitleInRow: {
+    fontSize: m(13.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    lineHeight: m(18),
+  },
   sectionSubtitle: {
     fontSize: m(11),
     fontFamily: FontFamily.primaryRegular,
     color: colors.textSecondary,
+  },
+  changeLenderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(3),
+    paddingVertical: m(2),
+  },
+  changeLenderText: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primarySemiBold,
+    color: colors.primary,
+  },
+
+  // Single Selected Lender Card
+  selectedLenderSingleCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ecfdf5',
+    borderRadius: m(14),
+    padding: m(12),
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    marginTop: m(2),
+  },
+  selectedLenderIconWrap: {
+    width: m(36),
+    height: m(36),
+    borderRadius: m(18),
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: m(10),
+  },
+  selectedLenderInfoCol: {
+    flex: 1,
+    marginRight: m(6),
+  },
+  lenderNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(5),
+  },
+  selectedLenderNameText: {
+    fontSize: m(13.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    flexShrink: 1,
+  },
+  verifiedSmallBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(2),
+    backgroundColor: '#d1fae5',
+    paddingHorizontal: m(5),
+    paddingVertical: m(1),
+    borderRadius: m(4),
+  },
+  verifiedSmallText: {
+    fontSize: m(9),
+    fontFamily: FontFamily.primaryBold,
+    color: '#059669',
+  },
+  selectedLenderRateText: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+    marginTop: m(2),
+  },
+  selectedCheckBadge: {
+    width: m(24),
+    height: m(24),
+    borderRadius: m(12),
+    backgroundColor: '#d1fae5',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   // Lenders Horizontal List

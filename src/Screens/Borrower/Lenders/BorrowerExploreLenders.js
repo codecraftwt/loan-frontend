@@ -9,7 +9,7 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
 import { colors, FontFamily } from '../../../constants';
 import { m } from '../../../Utils/responsive';
@@ -18,6 +18,8 @@ import borrowerFlowService from '../../../Services/borrowerFlowService';
 
 export default function BorrowerExploreLenders() {
   const navigation = useNavigation();
+  const route = useRoute();
+  const { selectMode, currentLenderId } = route.params || {};
   const [lenders, setLenders] = useState([]);
   const [favoriteCount, setFavoriteCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -89,13 +91,26 @@ export default function BorrowerExploreLenders() {
     const maxRate = lp.maxInterestRate || 16.0;
     const maxTenure = lp.maxTenureMonths || 36;
     const isFav = !!item.isFavorite;
+    const isCurrentlySelected = selectMode && currentLenderId === item._id;
+
+    const handleCardPress = () => {
+      if (selectMode) {
+        navigation.navigate('BorrowerApply', { preselectedLender: item });
+      } else {
+        navigation.navigate('BorrowerLenderDetails', { id: item._id });
+      }
+    };
 
     return (
-      <View style={styles.card}>
+      <TouchableOpacity
+        style={[styles.card, isCurrentlySelected && styles.cardSelected]}
+        activeOpacity={0.85}
+        onPress={handleCardPress}
+      >
         {/* Header Row */}
         <View style={styles.cardHeaderRow}>
           <View style={styles.lenderIconCircle}>
-            <Feather name="briefcase" size={m(17)} color={colors.white} />
+            <Feather name="briefcase" size={m(15)} color={colors.white} />
           </View>
 
           <View style={styles.lenderInfoCol}>
@@ -104,7 +119,7 @@ export default function BorrowerExploreLenders() {
                 {item.companyName || item.userName || 'Institutional Lender'}
               </Text>
               <View style={styles.verifiedBadge}>
-                <Feather name="check-circle" size={m(11)} color="#059669" />
+                <Feather name="check-circle" size={m(10)} color="#059669" />
                 <Text style={styles.verifiedBadgeText}>Verified</Text>
               </View>
             </View>
@@ -114,21 +129,38 @@ export default function BorrowerExploreLenders() {
             </Text>
           </View>
 
-          {/* Bookmark Button */}
-          <TouchableOpacity
-            style={[styles.favBtn, isFav && styles.favBtnActive]}
-            activeOpacity={0.8}
-            onPress={() => handleToggleFavorite(item._id)}
-          >
-            <Feather
-              name="bookmark"
-              size={m(15)}
-              color={isFav ? colors.lettersAndIcons : colors.textSecondary}
-            />
-          </TouchableOpacity>
+          {/* Right Action: In Select Mode show Select/Selected badge, otherwise Bookmark */}
+          {selectMode ? (
+            isCurrentlySelected ? (
+              <View style={styles.selectedPillBadge}>
+                <Feather name="check" size={m(11)} color="#059669" />
+                <Text style={styles.selectedPillText}>Selected</Text>
+              </View>
+            ) : (
+              <View style={styles.selectPillBadge}>
+                <Text style={styles.selectPillText}>Select</Text>
+                <Feather name="arrow-right" size={m(11)} color={colors.white} />
+              </View>
+            )
+          ) : (
+            <TouchableOpacity
+              style={[styles.favBtn, isFav && styles.favBtnActive]}
+              activeOpacity={0.8}
+              onPress={(e) => {
+                e?.stopPropagation?.();
+                handleToggleFavorite(item._id);
+              }}
+            >
+              <Feather
+                name="bookmark"
+                size={m(14)}
+                color={isFav ? colors.lettersAndIcons : colors.textSecondary}
+              />
+            </TouchableOpacity>
+          )}
         </View>
 
-        {/* Compact Metrics Strip - Neutral Slate-50 (#F8FAFC) */}
+        {/* Compact Metrics Strip */}
         <View style={styles.metricsBox}>
           <View style={styles.metricItem}>
             <Text style={styles.metricLabel}>Max Facility</Text>
@@ -151,26 +183,7 @@ export default function BorrowerExploreLenders() {
             <Text style={styles.metricValue}>{maxTenure} Mo</Text>
           </View>
         </View>
-
-        {/* Card Actions */}
-        <View style={styles.cardActionsRow}>
-          <TouchableOpacity
-            style={styles.detailsBtn}
-            activeOpacity={0.8}
-            onPress={() => navigation.navigate('BorrowerLenderDetails', { id: item._id })}
-          >
-            <Text style={styles.detailsBtnText}>View Terms</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.applyBtn}
-            activeOpacity={0.85}
-            onPress={() => navigation.navigate('BorrowerApply', { preselectedLender: item })}
-          >
-            <Text style={styles.applyBtnText}>Apply Facility</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -180,17 +193,33 @@ export default function BorrowerExploreLenders() {
       topInsetBg={colors.primary}
       statusBarColor={colors.primary}
       statusBarStyle="dark-content"
-      includeTabBarClearance={true}
+      includeTabBarClearance={!selectMode}
       scrollable={false}
     >
       {/* Top Green Banner */}
       <View style={styles.topBanner}>
         <View style={styles.headerRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.headerTag}>CAPITAL NETWORK</Text>
-            <Text style={styles.headerTitle}>Explore Lenders</Text>
+          {selectMode && (
+            <TouchableOpacity
+              style={styles.backBtn}
+              onPress={() => navigation.goBack()}
+              activeOpacity={0.8}
+            >
+              <Feather name="arrow-left" size={m(18)} color={colors.lettersAndIcons} />
+            </TouchableOpacity>
+          )}
+
+          <View style={{ flex: 1, marginLeft: selectMode ? m(10) : 0 }}>
+            <Text style={styles.headerTag}>
+              {selectMode ? 'SELECT INSTITUTION' : 'CAPITAL NETWORK'}
+            </Text>
+            <Text style={styles.headerTitle}>
+              {selectMode ? 'Select Lender' : 'Explore Lenders'}
+            </Text>
             <Text style={styles.headerSubtitle}>
-              Browse institutions, compare credit terms & apply directly
+              {selectMode
+                ? 'Tap an institution to apply directly with them'
+                : 'Browse institutions, compare credit terms & apply directly'}
             </Text>
           </View>
 
@@ -358,6 +387,53 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
+  backBtn: {
+    width: m(38),
+    height: m(38),
+    borderRadius: m(19),
+    backgroundColor: colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: m(10),
+    elevation: 2,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  cardSelected: {
+    borderColor: '#059669',
+    borderWidth: 1.5,
+    backgroundColor: '#f0fdf4',
+  },
+  selectPillBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(3),
+    backgroundColor: colors.lettersAndIcons,
+    paddingHorizontal: m(8),
+    paddingVertical: m(4),
+    borderRadius: m(6),
+  },
+  selectPillText: {
+    fontSize: m(10.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
+  },
+  selectedPillBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(3),
+    backgroundColor: '#d1fae5',
+    paddingHorizontal: m(8),
+    paddingVertical: m(4),
+    borderRadius: m(6),
+  },
+  selectedPillText: {
+    fontSize: m(10.5),
+    fontFamily: FontFamily.primaryBold,
+    color: '#059669',
+  },
 
   // Main Curved Sheet
   sheetSection: {
@@ -389,11 +465,11 @@ const styles = StyleSheet.create({
     color: colors.lettersAndIcons,
   },
 
-  // Capsule Filter Tabs
+  // Filter Tabs (Square)
   periodCapsuleRow: {
     flexDirection: 'row',
     backgroundColor: colors.white,
-    borderRadius: m(24),
+    borderRadius: m(8),
     padding: m(4),
     marginHorizontal: m(18),
     marginBottom: m(14),
@@ -403,7 +479,7 @@ const styles = StyleSheet.create({
   periodTab: {
     flex: 1,
     paddingVertical: m(7),
-    borderRadius: m(20),
+    borderRadius: m(6),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -437,33 +513,34 @@ const styles = StyleSheet.create({
     marginTop: m(8),
   },
 
-  // Lender Card
+  // Lender Card (Compact)
   card: {
     backgroundColor: colors.white,
-    borderRadius: m(16),
-    padding: m(14),
-    marginBottom: m(12),
+    borderRadius: m(14),
+    paddingHorizontal: m(12),
+    paddingVertical: m(10),
+    marginBottom: m(10),
     borderWidth: 1,
     borderColor: 'rgba(9, 48, 48, 0.06)',
     elevation: 2,
     shadowColor: colors.lettersAndIcons,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
-    shadowRadius: 4,
+    shadowRadius: 3,
   },
   cardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: m(10),
+    marginBottom: m(8),
   },
   lenderIconCircle: {
-    width: m(38),
-    height: m(38),
-    borderRadius: m(19),
+    width: m(34),
+    height: m(34),
+    borderRadius: m(17),
     backgroundColor: colors.blueButton,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: m(10),
+    marginRight: m(9),
   },
   lenderInfoCol: {
     flex: 1,
@@ -472,11 +549,11 @@ const styles = StyleSheet.create({
   companyNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(6),
+    gap: m(5),
   },
   companyNameText: {
-    fontSize: m(14),
-    lineHeight: m(18),
+    fontSize: m(13.5),
+    lineHeight: m(17),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
     flexShrink: 1,
@@ -484,27 +561,27 @@ const styles = StyleSheet.create({
   verifiedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(3),
+    gap: m(2),
     backgroundColor: '#ecfdf5',
-    paddingHorizontal: m(6),
-    paddingVertical: m(2),
-    borderRadius: m(6),
+    paddingHorizontal: m(5),
+    paddingVertical: m(1.5),
+    borderRadius: m(5),
   },
   verifiedBadgeText: {
-    fontSize: m(9.5),
+    fontSize: m(9),
     fontFamily: FontFamily.primaryBold,
     color: '#059669',
   },
   locationText: {
-    fontSize: m(11),
+    fontSize: m(10.5),
     fontFamily: FontFamily.primaryRegular,
     color: colors.textSecondary,
-    marginTop: m(2),
+    marginTop: m(1),
   },
   favBtn: {
-    width: m(32),
-    height: m(32),
-    borderRadius: m(16),
+    width: m(28),
+    height: m(28),
+    borderRadius: m(14),
     backgroundColor: '#f8fafc',
     borderWidth: 1,
     borderColor: '#e2e8f0',
@@ -516,79 +593,41 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
 
-  // Compact Metrics Box - Clean Neutral Slate-50 (#F8FAFC)
+  // Compact Metrics Box
   metricsBox: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f8fafc',
-    borderRadius: m(10),
-    paddingVertical: m(8),
-    paddingHorizontal: m(10),
+    borderRadius: m(8),
+    paddingVertical: m(6),
+    paddingHorizontal: m(8),
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    marginBottom: m(12),
   },
   metricItem: {
     flex: 1,
     alignItems: 'center',
   },
   metricLabel: {
-    fontSize: m(9.5),
+    fontSize: m(9),
     fontFamily: FontFamily.primaryMedium,
     color: colors.textSecondary,
     marginBottom: m(1),
   },
   metricValueBold: {
-    fontSize: m(12.5),
+    fontSize: m(11.5),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
   },
   metricValue: {
-    fontSize: m(11),
+    fontSize: m(10.5),
     fontFamily: FontFamily.primarySemiBold,
     color: colors.lettersAndIcons,
   },
   metricDivider: {
     width: 1,
-    height: m(20),
+    height: m(18),
     backgroundColor: '#e2e8f0',
-  },
-
-  // Card Actions Row
-  cardActionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(8),
-  },
-  detailsBtn: {
-    flex: 1,
-    backgroundColor: colors.white,
-    paddingVertical: m(9),
-    borderRadius: m(12),
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(9, 48, 48, 0.12)',
-  },
-  detailsBtnText: {
-    fontSize: m(12),
-    fontFamily: FontFamily.primarySemiBold,
-    color: colors.lettersAndIcons,
-  },
-  applyBtn: {
-    flex: 1.2,
-    backgroundColor: colors.lettersAndIcons,
-    paddingVertical: m(9),
-    borderRadius: m(12),
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: m(6),
-  },
-  applyBtnText: {
-    fontSize: m(12),
-    fontFamily: FontFamily.primaryBold,
-    color: colors.white,
   },
 
   // Empty State

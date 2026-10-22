@@ -11,3 +11,4 @@ export {
   closeCustomAlert,
   alertService,
 } from './CustomAlertModal';
+export { default as SuccessModal } from './SuccessModal';
