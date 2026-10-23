@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,10 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
+  PanResponder,
+  Modal,
 } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
 import { colors, FontFamily } from '../../../constants';
@@ -24,6 +27,48 @@ export default function BorrowerContractTermsScreen() {
   const [signerName, setSignerName] = useState('');
   const [signingStep, setSigningStep] = useState('review'); // 'review' | 'sign'
   const [signing, setSigning] = useState(false);
+  const [signMode, setSignMode] = useState('draw'); // 'draw' | 'type'
+  const [paths, setPaths] = useState([]);
+  const [currentPath, setCurrentPath] = useState(null);
+  const [consentChecked, setConsentChecked] = useState(true);
+  const [successModalVisible, setSuccessModalVisible] = useState(false);
+
+  const currentPathRef = useRef([]);
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: () => true,
+        onPanResponderGrant: (evt) => {
+          const { locationX, locationY } = evt.nativeEvent;
+          currentPathRef.current = [`M ${locationX.toFixed(1)} ${locationY.toFixed(1)}`];
+          setCurrentPath(currentPathRef.current[0]);
+        },
+        onPanResponderMove: (evt) => {
+          const { locationX, locationY } = evt.nativeEvent;
+          if (currentPathRef.current.length > 0) {
+            currentPathRef.current.push(`L ${locationX.toFixed(1)} ${locationY.toFixed(1)}`);
+            setCurrentPath(currentPathRef.current.join(' '));
+          }
+        },
+        onPanResponderRelease: () => {
+          if (currentPathRef.current.length > 0) {
+            const completedPath = currentPathRef.current.join(' ');
+            setPaths((prev) => [...prev, completedPath]);
+            currentPathRef.current = [];
+            setCurrentPath(null);
+          }
+        },
+      }),
+    []
+  );
+
+  const clearCanvas = () => {
+    setPaths([]);
+    setCurrentPath(null);
+    currentPathRef.current = [];
+  };
 
   if (!application) {
     return (
@@ -85,33 +130,45 @@ export default function BorrowerContractTermsScreen() {
   };
 
   const handleExecuteSignature = async () => {
+    if (!consentChecked) {
+      Alert.alert(
+        'Consent Required',
+        'Please confirm your legal authorization by checking the declaration.'
+      );
+      return;
+    }
+
+    if (signMode === 'draw' && paths.length === 0) {
+      Alert.alert('Signature Required', 'Please draw your signature on the pad above.');
+      return;
+    }
+
     const finalSigner = signerName.trim() || borrowerName;
-    if (!finalSigner) {
+    if (signMode === 'type' && !finalSigner) {
       Alert.alert('Required', 'Please enter the name of the authorized signatory.');
       return;
     }
 
     try {
       setSigning(true);
+      // Generate standard SVG Data URI so it renders as a native image across web, mobile & PDF
+      const generateSvgDataUri = (pathsList) => {
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 350 160" width="350" height="160"><rect width="100%" height="100%" fill="none"/>${pathsList.map(d => `<path d="${d}" fill="none" stroke="#093030" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>`).join('')}</svg>`;
+        return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+      };
+
       const signaturePayload = {
         signedBy: finalSigner,
-        signatureData: `DIGITAL_SIG_${Date.now()}_${finalSigner}`,
+        signatureData:
+          signMode === 'draw'
+            ? generateSvgDataUri(paths)
+            : `DIGITAL_SIG_${Date.now()}_${finalSigner}`,
+        signMode,
       };
 
       const res = await borrowerFlowService.signAgreement(application._id, signaturePayload);
       if (res?.success) {
-        Alert.alert(
-          'Agreement Countersigned!',
-          'Loan contract mutually executed! Your 6-digit disbursal OTP is now active. Share this OTP with the lender to execute funds transfer.',
-          [
-            {
-              text: 'Go to Applications',
-              onPress: () => {
-                navigation.goBack();
-              },
-            },
-          ]
-        );
+        setSuccessModalVisible(true);
       }
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to countersign agreement.';
@@ -301,7 +358,7 @@ export default function BorrowerContractTermsScreen() {
                   setSigningStep('sign');
                 }}
               >
-                <Feather name="edit-3" size={m(16)} color={colors.white} />
+                {/* <Feather name="edit-3" size={m(16)} color={colors.white} /> */}
                 <Text style={styles.proceedSignBtnText}>Proceed to E-Sign Agreement</Text>
               </TouchableOpacity>
             ) : null}
@@ -312,12 +369,56 @@ export default function BorrowerContractTermsScreen() {
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
+            scrollEnabled={signMode !== 'draw'}
           >
             <View style={styles.card}>
               <Text style={styles.cardHeaderTitle}>Apply Electronic Countersignature</Text>
               <Text style={styles.signSubtitle}>
                 By countersigning, you legally execute this facility agreement. A unique 6-digit disbursal OTP will be unlocked immediately.
               </Text>
+
+              {/* Mode Toggle Row: Draw vs Type */}
+              <View style={styles.modeToggleRow}>
+                <TouchableOpacity
+                  style={[styles.modeToggleBtn, signMode === 'draw' && styles.modeToggleBtnActive]}
+                  onPress={() => setSignMode('draw')}
+                  activeOpacity={0.8}
+                >
+                  <Feather
+                    name="edit-2"
+                    size={m(13)}
+                    color={signMode === 'draw' ? colors.white : colors.lettersAndIcons}
+                  />
+                  <Text
+                    style={[
+                      styles.modeToggleText,
+                      signMode === 'draw' && styles.modeToggleTextActive,
+                    ]}
+                  >
+                    Draw Signature
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.modeToggleBtn, signMode === 'type' && styles.modeToggleBtnActive]}
+                  onPress={() => setSignMode('type')}
+                  activeOpacity={0.8}
+                >
+                  <Feather
+                    name="type"
+                    size={m(13)}
+                    color={signMode === 'type' ? colors.white : colors.lettersAndIcons}
+                  />
+                  <Text
+                    style={[
+                      styles.modeToggleText,
+                      signMode === 'type' && styles.modeToggleTextActive,
+                    ]}
+                  >
+                    Type Name
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Full Name of Authorized Signatory</Text>
@@ -330,29 +431,96 @@ export default function BorrowerContractTermsScreen() {
                 />
               </View>
 
-              {/* Digital Signature Simulated Pad */}
-              <View style={styles.sigPadBox}>
-                <View style={styles.sigPadHeader}>
-                  <Text style={styles.sigPadTitle}>ELECTRONIC SIGNATURE PREVIEW</Text>
-                  <Feather name="check" size={m(14)} color="#059669" />
-                </View>
-                <View style={styles.sigPadContent}>
-                  <Text style={styles.scriptSignature}>
-                    {signerName.trim() || borrowerName}
-                  </Text>
-                  <Text style={styles.sigMetaLine}>
-                    Digitally validated via Aadhaar / KYC Vault · {new Date().toLocaleDateString('en-IN')}
-                  </Text>
-                </View>
-              </View>
+              {/* SIGNATURE AREA: DRAW OR TYPE */}
+              {signMode === 'draw' ? (
+                <View style={styles.drawingPadWrapper}>
+                  <View style={styles.drawingPadHeader}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: m(4) }}>
+                      <Feather name="pen-tool" size={m(12)} color={colors.primary} />
+                      <Text style={styles.drawingPadTitle}>DIGITAL SIGNATURE PAD</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.clearBtn}
+                      activeOpacity={0.75}
+                      onPress={clearCanvas}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Feather name="rotate-ccw" size={m(11)} color="#dc2626" />
+                      <Text style={styles.clearBtnText}>Clear</Text>
+                    </TouchableOpacity>
+                  </View>
 
-              {/* Legal Confirmation Check */}
-              <View style={styles.legalCertBox}>
-                <Feather name="check-square" size={m(16)} color={colors.lettersAndIcons} />
+                  <View style={styles.canvasSurface} {...panResponder.panHandlers}>
+                    <Svg style={StyleSheet.absoluteFillObject}>
+                      {paths.map((p, i) => (
+                        <Path
+                          key={i}
+                          d={p}
+                          stroke={colors.lettersAndIcons}
+                          strokeWidth={3}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          fill="none"
+                        />
+                      ))}
+                      {currentPath ? (
+                        <Path
+                          d={currentPath}
+                          stroke={colors.lettersAndIcons}
+                          strokeWidth={3}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          fill="none"
+                        />
+                      ) : null}
+                    </Svg>
+
+                    {paths.length === 0 && !currentPath ? (
+                      <View style={styles.watermarkContainer} pointerEvents="none">
+                        <Feather name="edit-3" size={m(22)} color="rgba(9, 48, 48, 0.2)" />
+                        <Text style={styles.watermarkText}>
+                          Draw your signature here with finger or stylus
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+                  <Text style={styles.drawingFooterHint}>
+                    Draw within the dashed boundary. Tap Clear to reset.
+                  </Text>
+                </View>
+              ) : (
+                /* Type Mode Simulated Pad */
+                <View style={styles.sigPadBox}>
+                  <View style={styles.sigPadHeader}>
+                    <Text style={styles.sigPadTitle}>ELECTRONIC SIGNATURE PREVIEW</Text>
+                    <Feather name="check" size={m(14)} color="#059669" />
+                  </View>
+                  <View style={styles.sigPadContent}>
+                    <Text style={styles.scriptSignature}>
+                      {signerName.trim() || borrowerName}
+                    </Text>
+                    <Text style={styles.sigMetaLine}>
+                      Digitally validated via Aadhaar / KYC Vault · {new Date().toLocaleDateString('en-IN')}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Legal Confirmation Checkbox */}
+              <TouchableOpacity
+                style={styles.legalCertBox}
+                activeOpacity={0.8}
+                onPress={() => setConsentChecked(!consentChecked)}
+              >
+                <Feather
+                  name={consentChecked ? 'check-square' : 'square'}
+                  size={m(18)}
+                  color={consentChecked ? colors.primary : colors.textMuted}
+                />
                 <Text style={styles.legalCertText}>
                   I confirm that I am authorized to bind the borrower entity to this credit agreement under the provisions of the Information Technology Act, 2000.
                 </Text>
-              </View>
+              </TouchableOpacity>
 
               {/* Action Buttons */}
               <View style={styles.signActionRow}>
@@ -384,6 +552,61 @@ export default function BorrowerContractTermsScreen() {
           </ScrollView>
         )}
       </View>
+
+      {/* App-Themed Success Countersignature Modal */}
+      <Modal
+        visible={successModalVisible}
+        transparent={true}
+        statusBarTranslucent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          setSuccessModalVisible(false);
+          navigation.goBack();
+        }}
+      >
+        <View style={styles.successModalOverlay}>
+          <View style={styles.successModalCard}>
+            {/* Top Brand Circle Icon */}
+            <View style={styles.successIconCircle}>
+              <Feather name="check" size={m(28)} color={colors.lettersAndIcons} />
+            </View>
+
+            {/* Title */}
+            <Text style={styles.successModalTitle}>Agreement Countersigned!</Text>
+
+            {/* Subtitle / Description */}
+            <Text style={styles.successModalMessage}>
+              Loan contract mutually executed! Your 6-digit disbursal OTP is now active. Share this OTP with the lender to execute funds transfer.
+            </Text>
+
+            {/* OTP Status Info Pill */}
+            <View style={styles.successOtpInfoBox}>
+              <View style={styles.successKeyIcon}>
+                <Feather name="key" size={m(14)} color={colors.lettersAndIcons} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.successOtpInfoTitle}>Disbursal OTP Unlocked</Text>
+                <Text style={styles.successOtpInfoSub}>
+                  Ready in your Applications dashboard
+                </Text>
+              </View>
+            </View>
+
+            {/* Primary Action Button */}
+            <TouchableOpacity
+              style={styles.successModalBtn}
+              activeOpacity={0.85}
+              onPress={() => {
+                setSuccessModalVisible(false);
+                navigation.goBack();
+              }}
+            >
+              <Text style={styles.successModalBtnText}>Go to Applications</Text>
+              <Feather name="arrow-right" size={m(16)} color={colors.white} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScreenWrapper>
   );
 }
@@ -782,6 +1005,204 @@ const styles = StyleSheet.create({
   },
   executeSignText: {
     fontSize: m(12.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
+  },
+  // Mode Toggle
+  modeToggleRow: {
+    flexDirection: 'row',
+    backgroundColor: '#e2e8f0',
+    borderRadius: m(12),
+    padding: m(4),
+    marginBottom: m(14),
+    gap: m(4),
+  },
+  modeToggleBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: m(8),
+    borderRadius: m(9),
+    gap: m(6),
+  },
+  modeToggleBtnActive: {
+    backgroundColor: colors.lettersAndIcons,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  modeToggleText: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primarySemiBold,
+    color: colors.lettersAndIcons,
+  },
+  modeToggleTextActive: {
+    color: colors.white,
+    fontFamily: FontFamily.primaryBold,
+  },
+
+  // Drawing Pad
+  drawingPadWrapper: {
+    marginBottom: m(14),
+  },
+  drawingPadHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: m(6),
+  },
+  drawingPadTitle: {
+    fontSize: m(10),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    letterSpacing: 0.5,
+  },
+  clearBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fee2e2',
+    paddingHorizontal: m(8),
+    paddingVertical: m(4),
+    borderRadius: m(6),
+    gap: m(4),
+  },
+  clearBtnText: {
+    fontSize: m(10),
+    fontFamily: FontFamily.primaryBold,
+    color: '#dc2626',
+  },
+  canvasSurface: {
+    width: '100%',
+    height: m(160),
+    backgroundColor: '#f8fafc',
+    borderRadius: m(14),
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: colors.primary,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  watermarkContainer: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: m(6),
+  },
+  watermarkText: {
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryMedium,
+    color: 'rgba(9, 48, 48, 0.35)',
+  },
+  drawingFooterHint: {
+    fontSize: m(10),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+    marginTop: m(4),
+  },
+  // App-Themed Success Countersignature Modal
+  successModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(9, 48, 48, 0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: m(24),
+  },
+  successModalCard: {
+    backgroundColor: colors.white,
+    borderRadius: m(24),
+    paddingHorizontal: m(22),
+    paddingTop: m(28),
+    paddingBottom: m(24),
+    width: '100%',
+    alignItems: 'center',
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 20,
+  },
+  successIconCircle: {
+    width: m(64),
+    height: m(64),
+    borderRadius: m(32),
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: m(16),
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  successModalTitle: {
+    fontSize: m(18),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    textAlign: 'center',
+    marginBottom: m(8),
+  },
+  successModalMessage: {
+    fontSize: m(12.5),
+    lineHeight: m(18),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: m(18),
+    paddingHorizontal: m(4),
+  },
+  successOtpInfoBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderRadius: m(14),
+    paddingVertical: m(10),
+    paddingHorizontal: m(12),
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.08)',
+    width: '100%',
+    gap: m(10),
+    marginBottom: m(20),
+  },
+  successKeyIcon: {
+    width: m(34),
+    height: m(34),
+    borderRadius: m(17),
+    backgroundColor: 'rgba(0, 208, 158, 0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  successOtpInfoTitle: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  successOtpInfoSub: {
+    fontSize: m(10.5),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+    marginTop: m(1),
+  },
+  successModalBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.lettersAndIcons,
+    borderRadius: m(14),
+    paddingVertical: m(13),
+    width: '100%',
+    gap: m(8),
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  successModalBtnText: {
+    fontSize: m(13.5),
     fontFamily: FontFamily.primaryBold,
     color: colors.white,
   },

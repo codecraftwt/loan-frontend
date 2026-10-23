@@ -141,7 +141,11 @@ export default function BorrowerLoansPortfolio() {
     const isClosed = item.status === 'closed' || item.remainingAmount <= 0;
 
     return (
-      <View style={styles.card}>
+      <TouchableOpacity
+        style={styles.card}
+        activeOpacity={0.75}
+        onPress={() => navigation.navigate('BorrowerLoanDetails', { id: item._id, loan: item })}
+      >
         {/* Top Header Row */}
         <View style={styles.cardHeaderRow}>
           <View style={styles.activityIconCircle}>
@@ -206,35 +210,7 @@ export default function BorrowerLoansPortfolio() {
             <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
           </View>
         </View>
-
-        {/* Card Actions Row */}
-        <View style={styles.cardActionsRow}>
-          <TouchableOpacity
-            style={styles.scheduleBtn}
-            activeOpacity={0.8}
-            onPress={() => navigation.navigate('BorrowerLoanDetails', { id: item._id, loan: item })}
-          >
-            <Feather name="calendar" size={m(13)} color={colors.lettersAndIcons} />
-            <Text style={styles.scheduleBtnText}>Amortization Schedule</Text>
-          </TouchableOpacity>
-
-          {!isClosed ? (
-            <TouchableOpacity
-              style={styles.payBtn}
-              activeOpacity={0.85}
-              onPress={() => navigation.navigate('MakePayment', { loan: item })}
-            >
-              <Feather name="credit-card" size={m(13)} color={colors.white} />
-              <Text style={styles.payBtnText}>Pay EMI</Text>
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.settledPill}>
-              <Feather name="check" size={m(12)} color="#64748b" />
-              <Text style={styles.settledPillText}>Settled</Text>
-            </View>
-          )}
-        </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -657,7 +633,7 @@ const styles = StyleSheet.create({
 
   // Progress Bar
   progressWrap: {
-    marginBottom: m(12),
+    marginBottom: m(2),
   },
   progressLabelRow: {
     flexDirection: 'row',

@@ -454,7 +454,7 @@ export default function BorrowerLoanDetails() {
         </ScrollView>
 
         {/* Bottom Sticky Action Bar: Make Repayment */}
-        {!isClosed ? (
+        {/* {!isClosed ? (
           <View style={styles.bottomBar}>
             <TouchableOpacity
               style={styles.payNowBtn}
@@ -465,7 +465,7 @@ export default function BorrowerLoanDetails() {
               <Text style={styles.payNowBtnText}>Make EMI Repayment</Text>
             </TouchableOpacity>
           </View>
-        ) : null}
+        ) : null} */}
       </View>
     </ScreenWrapper>
   );

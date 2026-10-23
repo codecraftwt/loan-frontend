@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  Modal,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
@@ -24,6 +25,7 @@ export default function BorrowerApplications() {
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'pending' | 'accepted' | 'closed'
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedAppForMenu, setSelectedAppForMenu] = useState(null);
 
   const fetchApplications = useCallback(async () => {
     try {
@@ -131,6 +133,23 @@ export default function BorrowerApplications() {
       .catch(() => Linking.openURL(`tel:${cleanNumber}`));
   };
 
+  
+  const callLender = (mobileNo) => {
+    if (!mobileNo) {
+      Alert.alert('Contact', 'Lender phone number is not listed.');
+      return;
+    }
+    const cleanNumber = mobileNo.replace(/\D/g, '');
+    Linking.openURL(`tel:${cleanNumber}`).catch(() => {
+      Alert.alert('Error', 'Unable to open phone dialer.');
+    });
+  };
+
+  
+  const handleOpenMenu = (item) => {
+    setSelectedAppForMenu(item);
+  };
+
   const renderApplicationCard = ({ item }) => {
     const isAccepted = item.status === 'accepted';
     const isPending = item.status === 'pending';
@@ -144,7 +163,12 @@ export default function BorrowerApplications() {
       'Institutional Lender';
 
     const agreement = item.agreement || {};
-    const isLenderSigned = isAccepted && agreement.status === 'lender_signed';
+    const isBorrowerSigned = Boolean(
+      agreement.borrowerSignature?.signedAt ||
+      agreement.status === 'both_signed' ||
+      (item.disbursalVerification?.otp || item.activeLoan?.disbursalVerification?.otp)
+    );
+    const isLenderSigned = isAccepted && agreement.status === 'lender_signed' && !isBorrowerSigned;
     const otp =
       item.disbursalVerification?.otp || item.activeLoan?.disbursalVerification?.otp;
     const isDisbursed =
@@ -152,7 +176,11 @@ export default function BorrowerApplications() {
       item.activeLoan?.disbursalVerification?.isVerified;
 
     return (
-      <View style={styles.card}>
+      <TouchableOpacity
+        style={styles.card}
+        activeOpacity={0.8}
+        onPress={() => navigation.navigate('BorrowerContractTermsScreen', { application: item })}
+      >
         {/* Card Header Row */}
         <View style={styles.cardHeaderRow}>
           <View style={styles.activityIconCircle}>
@@ -178,7 +206,7 @@ export default function BorrowerApplications() {
             </View>
           ) : isLenderSigned ? (
             <View style={styles.pillSign}>
-              <Feather name="edit-3" size={m(10)} color={colors.blueButton} />
+              <Feather name="edit-3" size={m(10)} color={colors.lettersAndIcons} />
               <Text style={styles.pillTextSign}>SIGN CONTRACT</Text>
             </View>
           ) : isAccepted ? (
@@ -193,6 +221,16 @@ export default function BorrowerApplications() {
               </Text>
             </View>
           )}
+
+          {/* 3-Dots Action Button */}
+          <TouchableOpacity
+            style={styles.moreDotsBtn}
+            activeOpacity={0.7}
+            hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+            onPress={() => handleOpenMenu(item)}
+          >
+            <Feather name="more-vertical" size={m(18)} color={colors.lettersAndIcons} />
+          </TouchableOpacity>
         </View>
 
         {/* Compact Metrics Strip - Neutral Slate-50 (#F8FAFC) */}
@@ -226,7 +264,7 @@ export default function BorrowerApplications() {
           <View style={styles.signActionBox}>
             <View style={styles.signActionLeft}>
               <View style={styles.signIconCircle}>
-                <Feather name="file-text" size={m(15)} color={colors.blueButton} />
+                <Feather name="file-text" size={m(14)} color={colors.lettersAndIcons} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.signActionTitle}>Facility Contract Ready to Sign</Text>
@@ -253,7 +291,7 @@ export default function BorrowerApplications() {
           <View style={styles.otpCard}>
             <View style={styles.otpHeader}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: m(4) }}>
-                <Feather name="key" size={m(13)} color="#d97706" />
+                <Feather name="key" size={m(13)} color={colors.lettersAndIcons} />
                 <Text style={styles.otpTitle}>DISBURSAL VERIFICATION OTP</Text>
               </View>
               <Text style={styles.otpShareNotice}>Share with Lender</Text>
@@ -266,7 +304,7 @@ export default function BorrowerApplications() {
                 activeOpacity={0.8}
                 onPress={() => copyOtpToClipboard(otp)}
               >
-                <Feather name="copy" size={m(12)} color="#b45309" />
+                <Feather name="copy" size={m(12)} color={colors.lettersAndIcons} />
                 <Text style={styles.copyOtpBtnText}>View / Copy</Text>
               </TouchableOpacity>
             </View>
@@ -308,29 +346,7 @@ export default function BorrowerApplications() {
           </View>
         ) : null}
 
-        {/* Card Actions Row */}
-        <View style={styles.cardActionsRow}>
-          <TouchableOpacity
-            style={styles.agreementBtn}
-            activeOpacity={0.8}
-            onPress={() => {
-              navigation.navigate('BorrowerContractTermsScreen', { application: item });
-            }}
-          >
-            <Feather name="file-text" size={m(13)} color={colors.lettersAndIcons} />
-            <Text style={styles.agreementBtnText}>Contract Terms</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.chatBtn}
-            activeOpacity={0.85}
-            onPress={() => openLenderChat(item.lenderSnapshot?.mobileNo || item.lenderId?.mobileNo)}
-          >
-            <Feather name="message-square" size={m(13)} color={colors.white} />
-            <Text style={styles.chatBtnText}>Chat Lender</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -456,7 +472,156 @@ export default function BorrowerApplications() {
             }
           />
         )}
+            </View>
+
+      {/* 3-Dots Action Sheet Modal */}
+    <Modal
+      visible={Boolean(selectedAppForMenu)}
+      transparent={true}
+      statusBarTranslucent={true}
+      animationType="slide"
+      onRequestClose={() => setSelectedAppForMenu(null)}
+    >
+      <View style={styles.modalOverlay}>
+        <TouchableOpacity
+          style={StyleSheet.absoluteFillObject}
+          activeOpacity={1}
+          onPress={() => setSelectedAppForMenu(null)}
+        />
+        <View style={styles.actionSheetContainer}>
+          {/* Top Pill Handle */}
+          <View style={styles.sheetHandle} />
+
+          {/* Header Row */}
+          <View style={styles.actionSheetHeader}>
+            <View style={styles.sheetIconCircle}>
+              <Feather name="briefcase" size={m(16)} color={colors.white} />
+            </View>
+            <View style={{ flex: 1, marginRight: m(10) }}>
+              <Text style={styles.actionSheetTitle} numberOfLines={1}>
+                {selectedAppForMenu?.lenderSnapshot?.companyName ||
+                  selectedAppForMenu?.lenderSnapshot?.userName ||
+                  selectedAppForMenu?.lenderId?.companyName ||
+                  selectedAppForMenu?.lenderId?.userName ||
+                  'Lender Actions'}
+              </Text>
+              <Text style={styles.actionSheetSub} numberOfLines={1}>
+                {selectedAppForMenu?.purpose || 'Working Capital Line'}
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => setSelectedAppForMenu(null)}
+              style={styles.actionSheetCloseBtn}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <Feather name="x" size={m(16)} color={colors.lettersAndIcons} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.actionSheetDivider} />
+
+          {/* Options Container */}
+          <View style={styles.optionsList}>
+            {/* 1. Chat Lender */}
+            <TouchableOpacity
+              style={styles.actionCard}
+              activeOpacity={0.75}
+              onPress={() => {
+                const phone =
+                  selectedAppForMenu?.lenderSnapshot?.mobileNo ||
+                  selectedAppForMenu?.lenderId?.mobileNo;
+                setSelectedAppForMenu(null);
+                openLenderChat(phone);
+              }}
+            >
+              <View style={styles.actionIconBox}>
+                <Feather name="message-square" size={m(16)} color={colors.lettersAndIcons} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.actionItemTitle}>Chat Lender (WhatsApp)</Text>
+                <Text style={styles.actionItemDesc}>Direct message regarding this inquiry</Text>
+              </View>
+              <Feather name="chevron-right" size={m(16)} color="#94a3b8" />
+            </TouchableOpacity>
+
+            {/* 2. Call / Contact Lender */}
+            <TouchableOpacity
+              style={styles.actionCard}
+              activeOpacity={0.75}
+              onPress={() => {
+                const phone =
+                  selectedAppForMenu?.lenderSnapshot?.mobileNo ||
+                  selectedAppForMenu?.lenderId?.mobileNo;
+                setSelectedAppForMenu(null);
+                callLender(phone);
+              }}
+            >
+              <View style={styles.actionIconBox}>
+                <Feather name="phone" size={m(16)} color={colors.lettersAndIcons} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.actionItemTitle}>Call Lender</Text>
+                <Text style={styles.actionItemDesc}>Contact directly via phone call</Text>
+              </View>
+              <Feather name="chevron-right" size={m(16)} color="#94a3b8" />
+            </TouchableOpacity>
+
+            {/* 3. Contract Terms - ONLY IF ACCEPTED / SANCTIONED */}
+            {selectedAppForMenu?.status === 'accepted' ? (
+              <TouchableOpacity
+                style={styles.actionCard}
+                activeOpacity={0.75}
+                onPress={() => {
+                  const app = selectedAppForMenu;
+                  setSelectedAppForMenu(null);
+                  navigation.navigate('BorrowerContractTermsScreen', { application: app });
+                }}
+              >
+                <View style={styles.actionIconBox}>
+                <Feather name="file-text" size={m(16)} color={colors.lettersAndIcons} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.actionItemTitle}>Contract Terms</Text>
+                  <Text style={styles.actionItemDesc}>View accepted facility agreement</Text>
+                </View>
+                <Feather name="chevron-right" size={m(16)} color="#94a3b8" />
+              </TouchableOpacity>
+            ) : null}
+
+            {/* 4. Repayment Schedule (If active loan exists) */}
+            {selectedAppForMenu?.activeLoan ? (
+              <TouchableOpacity
+                style={styles.actionCard}
+                activeOpacity={0.75}
+                onPress={() => {
+                  const loanId = selectedAppForMenu.activeLoan._id;
+                  setSelectedAppForMenu(null);
+                  navigation.navigate('BorrowerLoanDetails', { id: loanId });
+                }}
+              >
+                <View style={styles.actionIconBox}>
+                <Feather name="calendar" size={m(16)} color={colors.lettersAndIcons} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.actionItemTitle}>Repayment Schedule</Text>
+                  <Text style={styles.actionItemDesc}>Track EMIs and amortization</Text>
+                </View>
+                <Feather name="chevron-right" size={m(16)} color="#94a3b8" />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+
+          {/* Cancel Button */}
+          <TouchableOpacity
+            style={styles.sheetCancelBtn}
+            activeOpacity={0.8}
+            onPress={() => setSelectedAppForMenu(null)}
+          >
+            <Text style={styles.sheetCancelBtnText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
       </View>
+    </Modal>
     </ScreenWrapper>
   );
 }
@@ -652,7 +817,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: m(4),
-    backgroundColor: '#eff6ff',
+    backgroundColor: 'rgba(9, 48, 48, 0.08)',
     paddingHorizontal: m(8),
     paddingVertical: m(4),
     borderRadius: m(6),
@@ -660,7 +825,7 @@ const styles = StyleSheet.create({
   pillTextSign: {
     fontSize: m(9.5),
     fontFamily: FontFamily.primaryBold,
-    color: colors.blueButton,
+    color: colors.lettersAndIcons,
   },
   pillAccepted: {
     flexDirection: 'row',
@@ -728,37 +893,37 @@ const styles = StyleSheet.create({
 
   // Sign Action Box
   signActionBox: {
-    backgroundColor: '#eff6ff',
-    borderRadius: m(12),
+    backgroundColor: '#f8fafc',
+    borderRadius: m(14),
     padding: m(12),
     borderWidth: 1,
-    borderColor: '#bfdbfe',
+    borderColor: 'rgba(9, 48, 48, 0.08)',
     marginBottom: m(10),
     gap: m(8),
   },
   signActionLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(8),
+    gap: m(10),
   },
   signIconCircle: {
-    width: m(30),
-    height: m(30),
-    borderRadius: m(15),
-    backgroundColor: '#dbeafe',
+    width: m(32),
+    height: m(32),
+    borderRadius: m(16),
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   signActionTitle: {
-    fontSize: m(12),
+    fontSize: m(12.5),
     fontFamily: FontFamily.primaryBold,
-    color: '#1e40af',
+    color: colors.lettersAndIcons,
   },
   signActionSub: {
     fontSize: m(10.5),
     lineHeight: m(14),
     fontFamily: FontFamily.primaryRegular,
-    color: '#3b82f6',
+    color: colors.textSecondary,
     marginTop: m(1),
   },
   reviewSignBtn: {
@@ -766,9 +931,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: m(6),
-    backgroundColor: colors.blueButton,
+    backgroundColor: colors.lettersAndIcons,
     paddingVertical: m(8),
-    paddingHorizontal: m(12),
+    paddingHorizontal: m(14),
     borderRadius: m(10),
     alignSelf: 'flex-start',
   },
@@ -780,29 +945,29 @@ const styles = StyleSheet.create({
 
   // Disbursal OTP Card
   otpCard: {
-    backgroundColor: '#fffbeb',
-    borderRadius: m(12),
+    backgroundColor: '#f8fafc',
+    borderRadius: m(14),
     padding: m(12),
     borderWidth: 1,
-    borderColor: '#fde68a',
+    borderColor: 'rgba(9, 48, 48, 0.08)',
     marginBottom: m(10),
   },
   otpHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: m(6),
+    marginBottom: m(8),
   },
   otpTitle: {
     fontSize: m(10),
     fontFamily: FontFamily.primaryBold,
-    color: '#92400e',
+    color: colors.lettersAndIcons,
     letterSpacing: 0.5,
   },
   otpShareNotice: {
-    fontSize: m(9.5),
-    fontFamily: FontFamily.primaryBold,
-    color: '#b45309',
+    fontSize: m(10),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.textSecondary,
   },
   otpCodeRow: {
     flexDirection: 'row',
@@ -811,22 +976,22 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: m(10),
     paddingVertical: m(8),
-    paddingHorizontal: m(12),
+    paddingHorizontal: m(14),
     borderWidth: 1,
-    borderColor: '#fef08a',
+    borderColor: 'rgba(9, 48, 48, 0.08)',
     marginBottom: m(6),
   },
   otpCodeText: {
     fontSize: m(20),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
-    letterSpacing: 4,
+    letterSpacing: 5,
   },
   copyOtpBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: m(4),
-    backgroundColor: '#fef3c7',
+    backgroundColor: 'rgba(9, 48, 48, 0.06)',
     paddingHorizontal: m(10),
     paddingVertical: m(6),
     borderRadius: m(8),
@@ -834,7 +999,7 @@ const styles = StyleSheet.create({
   copyOtpBtnText: {
     fontSize: m(11),
     fontFamily: FontFamily.primaryBold,
-    color: '#92400e',
+    color: colors.lettersAndIcons,
   },
   otpFooterText: {
     fontSize: m(10.5),
@@ -848,11 +1013,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#f0fdf4',
-    padding: m(10),
-    borderRadius: m(10),
+    backgroundColor: '#f8fafc',
+    borderRadius: m(12),
+    paddingVertical: m(10),
+    paddingHorizontal: m(12),
     borderWidth: 1,
-    borderColor: '#bbf7d0',
+    borderColor: 'rgba(9, 48, 48, 0.08)',
     marginBottom: m(10),
   },
   activeLoanText: {
@@ -956,6 +1122,130 @@ const styles = StyleSheet.create({
   },
   emptyActionText: {
     fontSize: m(12),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  moreDotsBtn: {
+    width: m(34),
+    height: m(34),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: m(6),
+    zIndex: 10,
+  },
+
+  // 3-Dots Action Sheet Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(9, 48, 48, 0.45)',
+    justifyContent: 'flex-end',
+    width: '100%',
+    height: '100%',
+  },
+  actionSheetContainer: {
+    backgroundColor: colors.white,
+    borderTopLeftRadius: m(28),
+    borderTopRightRadius: m(28),
+    width: '100%',
+    paddingHorizontal: m(20),
+    paddingTop: m(12),
+    paddingBottom: m(28),
+    elevation: 25,
+    zIndex: 9999,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+  },
+  sheetHandle: {
+    width: m(42),
+    height: m(4),
+    backgroundColor: 'rgba(9, 48, 48, 0.15)',
+    borderRadius: m(2),
+    alignSelf: 'center',
+    marginBottom: m(14),
+  },
+  actionSheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sheetIconCircle: {
+    width: m(38),
+    height: m(38),
+    borderRadius: m(19),
+    backgroundColor: colors.lettersAndIcons,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: m(12),
+  },
+  actionSheetTitle: {
+    fontSize: m(15.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  actionSheetSub: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+    marginTop: m(2),
+  },
+  actionSheetCloseBtn: {
+    width: m(32),
+    height: m(32),
+    borderRadius: m(16),
+    backgroundColor: 'rgba(9, 48, 48, 0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionSheetDivider: {
+    height: 1,
+    backgroundColor: 'rgba(9, 48, 48, 0.06)',
+    marginTop: m(12),
+    marginBottom: m(12),
+  },
+  optionsList: {
+    gap: m(8),
+  },
+  actionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderRadius: m(14),
+    paddingVertical: m(10),
+    paddingHorizontal: m(12),
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.06)',
+    gap: m(12),
+  },
+  actionIconBox: {
+    width: m(38),
+    height: m(38),
+    borderRadius: m(19),
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionItemTitle: {
+    fontSize: m(13),
+    fontFamily: FontFamily.primarySemiBold,
+    color: colors.lettersAndIcons,
+  },
+  actionItemDesc: {
+    fontSize: m(10.5),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+    marginTop: m(1),
+  },
+  sheetCancelBtn: {
+    marginTop: m(14),
+    backgroundColor: 'rgba(9, 48, 48, 0.06)',
+    paddingVertical: m(11),
+    borderRadius: m(12),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheetCancelBtnText: {
+    fontSize: m(13),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
   },
