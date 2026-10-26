@@ -9,7 +9,6 @@ import {
   RefreshControl,
   TextInput,
   Linking,
-  Alert,
   Modal,
   ScrollView,
 } from 'react-native';
@@ -18,7 +17,7 @@ import { useSelector } from 'react-redux';
 import Feather from 'react-native-vector-icons/Feather';
 import { colors, FontFamily } from '../../../constants';
 import { m } from '../../../Utils/responsive';
-import { ScreenWrapper } from '../../../Components/common';
+import { ScreenWrapper, showAlert } from '../../../Components/common';
 import lenderFlowService from '../../../Services/lenderFlowService';
 
 export default function LenderLoansPortfolio() {
@@ -117,7 +116,7 @@ export default function LenderLoansPortfolio() {
   // WhatsApp outreach shortcut
   const handleOpenWhatsApp = (mobileNo, borrowerName, amount) => {
     if (!mobileNo) {
-      Alert.alert('No Contact', 'No mobile number recorded for this borrower.');
+      showAlert('No Contact', 'No mobile number recorded for this borrower.');
       return;
     }
     const cleanNumber = mobileNo.replace(/\D/g, '');
@@ -138,7 +137,7 @@ export default function LenderLoansPortfolio() {
       })
       .catch(() => {
         Linking.openURL(webWaUrl).catch(() => {
-          Alert.alert('Error', 'Unable to launch WhatsApp.');
+          showAlert('Error', 'Unable to launch WhatsApp.');
         });
       });
   };
@@ -157,7 +156,7 @@ export default function LenderLoansPortfolio() {
   // Submit Repayment
   const handleSubmitPayment = async () => {
     if (!paymentAmount || Number(paymentAmount) <= 0) {
-      Alert.alert('Invalid Amount', 'Please enter a valid repayment amount.');
+      showAlert('Invalid Amount', 'Please enter a valid repayment amount.');
       return;
     }
     if (!selectedLoanForPayment?._id) return;
@@ -174,19 +173,19 @@ export default function LenderLoansPortfolio() {
 
       const res = await lenderFlowService.recordLoanPayment(selectedLoanForPayment._id, payload);
       if (res?.success) {
-        Alert.alert(
+        showAlert(
           'Repayment Recorded! 🎉',
           res.message || 'Payment has been applied to the facility amortization schedule.'
         );
         setRepaymentModalVisible(false);
         fetchPortfolio();
       } else {
-        Alert.alert('Error', res?.message || 'Could not post payment.');
+        showAlert('Error', res?.message || 'Could not post payment.');
       }
     } catch (err) {
       console.error('Error posting repayment:', err);
       const msg = err.response?.data?.message || 'Failed to post payment.';
-      Alert.alert('Payment Error', msg);
+      showAlert('Payment Error', msg);
     } finally {
       setRecordingPayment(false);
     }

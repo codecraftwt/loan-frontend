@@ -1,5 +1,5 @@
 import RazorpayCheckout from 'react-native-razorpay';
-import { Alert } from 'react-native';
+import { showAlert } from '../Components/common';
 
 // Your Razorpay key (use test key for development)
 //old test key
@@ -212,7 +212,7 @@ export const handlePaymentVerification = async (paymentResult, subscriptionId, d
  */
 export const canProceedToPayment = (hasActiveSubscription) => {
   if (hasActiveSubscription) {
-    Alert.alert(
+    showAlert(
       'Active Subscription',
       'You already have an active subscription. You can purchase a new plan after your current subscription ends.',
       [{ text: 'OK' }]

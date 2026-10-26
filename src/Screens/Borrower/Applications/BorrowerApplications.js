@@ -8,7 +8,6 @@ import {
   TextInput,
   RefreshControl,
   ActivityIndicator,
-  Alert,
   Linking,
   Modal,
 } from 'react-native';
@@ -16,7 +15,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
 import { colors, FontFamily } from '../../../constants';
 import { m } from '../../../Utils/responsive';
-import { ScreenWrapper } from '../../../Components/common';
+import { ScreenWrapper, showAlert } from '../../../Components/common';
 import borrowerFlowService from '../../../Services/borrowerFlowService';
 export default function BorrowerApplications() {
   const navigation = useNavigation();
@@ -108,7 +107,7 @@ export default function BorrowerApplications() {
   }, [applications, activeTab, searchQuery]);
 
   const copyOtpToClipboard = (otp) => {
-    Alert.alert(
+    showAlert(
       'Disbursal OTP',
       `Your 6-digit Disbursal Verification Code is:\n\n${otp}\n\nShare this code with your lender representative to authorize instant RTGS funds release.`,
       [{ text: 'Got it' }]
@@ -117,7 +116,7 @@ export default function BorrowerApplications() {
 
   const openLenderChat = (mobileNo) => {
     if (!mobileNo) {
-      Alert.alert('Contact', 'Lender phone number is not listed.');
+      showAlert('Contact', 'Lender phone number is not listed.');
       return;
     }
     const cleanNumber = mobileNo.replace(/\D/g, '');
@@ -136,12 +135,12 @@ export default function BorrowerApplications() {
   
   const callLender = (mobileNo) => {
     if (!mobileNo) {
-      Alert.alert('Contact', 'Lender phone number is not listed.');
+      showAlert('Contact', 'Lender phone number is not listed.');
       return;
     }
     const cleanNumber = mobileNo.replace(/\D/g, '');
     Linking.openURL(`tel:${cleanNumber}`).catch(() => {
-      Alert.alert('Error', 'Unable to open phone dialer.');
+      showAlert('Error', 'Unable to open phone dialer.');
     });
   };
 

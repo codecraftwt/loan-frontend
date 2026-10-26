@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  Alert,
   Modal,
   Clipboard,
 } from 'react-native';
@@ -16,7 +15,7 @@ import { useSelector } from 'react-redux';
 import Feather from 'react-native-vector-icons/Feather';
 import { FontFamily, colors } from '../../../constants';
 import { m } from '../../../Utils/responsive';
-import { ScreenWrapper } from '../../../Components/common';
+import { ScreenWrapper, showAlert } from '../../../Components/common';
 import lenderFlowService from '../../../Services/lenderFlowService';
 import { openRazorpayCheckout } from '../../../Services/razorpayService';
 
@@ -225,7 +224,7 @@ export default function LenderSubscriptionScreen() {
         paymentResult = await openRazorpayCheckout(orderData, authUser);
       } catch (sdkErr) {
         if (sdkErr?.type === 'PAYMENT_CANCELLED') {
-          Alert.alert('Checkout Cancelled', 'Payment process was cancelled.');
+          showAlert('Checkout Cancelled', 'Payment process was cancelled.');
           return;
         }
         // Fallback for emulator / mock preview mode
@@ -251,7 +250,7 @@ export default function LenderSubscriptionScreen() {
       }
 
       setCheckoutModalVisible(false);
-      Alert.alert(
+      showAlert(
         'Subscription Activated! 👑',
         `Your institutional subscription to ${selectedPlanForPurchase.name} has been renewed. Quota allocation updated.`
       );
@@ -259,7 +258,7 @@ export default function LenderSubscriptionScreen() {
     } catch (err) {
       console.error('Error in purchase flow:', err);
       const msg = err.response?.data?.message || 'Could not complete subscription upgrade.';
-      Alert.alert('Purchase Notice', msg);
+      showAlert('Purchase Notice', msg);
     } finally {
       setPurchasing(false);
     }
@@ -270,7 +269,7 @@ export default function LenderSubscriptionScreen() {
     Clipboard.setString(id);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
-    Alert.alert('Copied', 'Transaction ID copied to clipboard.');
+    showAlert('Copied', 'Transaction ID copied to clipboard.');
   };
 
   return (

@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
@@ -18,6 +17,7 @@ import { colors, FontFamily, FontSizes } from '../../../constants';
 import { getLenderRecentActivities } from '../../../Redux/Slices/lenderActivitiesSlice';
 import { getLenderStatistics } from '../../../Redux/Slices/loanSlice';
 import { getActivePlan } from '../../../Redux/Slices/planPurchaseSlice';
+import { showAlert } from '../../../Components/common';
 
 const getActivityProperties = activity => {
   const activityType = activity.type || '';
@@ -101,7 +101,7 @@ export default function LenderRecentActivity() {
 
   const handleActivityPress = activity => {
     if (!isSubscriptionActive) {
-      Alert.alert(
+      showAlert(
         'Subscription Required',
         'Purchase a plan to view recent activities.',
         [

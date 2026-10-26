@@ -8,11 +8,11 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { colors, FontFamily } from '../../../constants';
 import { m } from '../../../Utils/responsive';
+import { showAlert } from '../../../Components/common';
 import borrowerFlowService from '../../../Services/borrowerFlowService';
 
 export default function DigitalAgreementModal({
@@ -64,7 +64,7 @@ export default function DigitalAgreementModal({
   const handleExecuteSignature = async () => {
     const finalSigner = signerName.trim() || borrowerName;
     if (!finalSigner) {
-      Alert.alert('Required', 'Please enter the name of the authorized signatory.');
+      showAlert('Required', 'Please enter the name of the authorized signatory.');
       return;
     }
 
@@ -77,7 +77,7 @@ export default function DigitalAgreementModal({
 
       const res = await borrowerFlowService.signAgreement(application._id, signaturePayload);
       if (res?.success) {
-        Alert.alert(
+        showAlert(
           'Agreement Countersigned!',
           'Loan contract mutually executed! Your 6-digit disbursal OTP is now active. Share this OTP with the lender to execute funds transfer.',
           [
@@ -93,7 +93,7 @@ export default function DigitalAgreementModal({
       }
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to countersign agreement.';
-      Alert.alert('Signing Error', msg);
+      showAlert('Signing Error', msg);
     } finally {
       setSigning(false);
     }

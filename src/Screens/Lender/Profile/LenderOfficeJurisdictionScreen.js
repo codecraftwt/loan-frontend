@@ -7,13 +7,12 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
 import { FontFamily, colors } from '../../../constants';
 import { m } from '../../../Utils/responsive';
-import { ScreenWrapper } from '../../../Components/common';
+import { ScreenWrapper, showAlert } from '../../../Components/common';
 import lenderFlowService from '../../../Services/lenderFlowService';
 
 export default function LenderOfficeJurisdictionScreen() {
@@ -74,14 +73,15 @@ export default function LenderOfficeJurisdictionScreen() {
 
       const res = await lenderFlowService.updateProfile(payload);
       if (res?.success) {
-        Alert.alert('Address Saved ✨', 'Registered head office and jurisdiction details updated.');
-        navigation.goBack();
+        showAlert('Address Saved ✨', 'Registered head office and jurisdiction details updated.', [
+          { text: 'OK', onPress: () => navigation.goBack() }
+        ]);
       } else {
-        Alert.alert('Update Failed', res?.message || 'Unable to update address.');
+        showAlert('Update Failed', res?.message || 'Unable to update address.');
       }
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to save address.';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     } finally {
       setSaving(false);
     }

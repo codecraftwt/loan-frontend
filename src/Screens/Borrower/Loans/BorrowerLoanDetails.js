@@ -6,14 +6,13 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   Linking,
 } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
 import { colors, FontFamily } from '../../../constants';
 import { m } from '../../../Utils/responsive';
-import { ScreenWrapper } from '../../../Components/common';
+import { ScreenWrapper, showAlert } from '../../../Components/common';
 import borrowerFlowService from '../../../Services/borrowerFlowService';
 
 export default function BorrowerLoanDetails() {
@@ -70,7 +69,7 @@ export default function BorrowerLoanDetails() {
 
   const copyOtpToClipboard = (otp) => {
     setCopiedOtp(true);
-    Alert.alert(
+    showAlert(
       'Disbursal Verification OTP',
       `Your 6-digit Disbursal Code is:\n\n${otp}\n\nShare this code with your lender to execute funds transfer.`,
       [{ text: 'OK', onPress: () => setCopiedOtp(false) }]
@@ -79,7 +78,7 @@ export default function BorrowerLoanDetails() {
 
   const openLenderChat = (mobileNo) => {
     if (!mobileNo) {
-      Alert.alert('Contact', 'Lender phone number is not listed.');
+      showAlert('Contact', 'Lender phone number is not listed.');
       return;
     }
     const cleanNumber = mobileNo.replace(/\D/g, '');

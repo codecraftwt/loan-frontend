@@ -1,9 +1,10 @@
 import messaging from '@react-native-firebase/messaging';
 import firebase from '@react-native-firebase/app';
-import { Platform, PermissionsAndroid, Alert } from 'react-native';
+import { Platform, PermissionsAndroid } from 'react-native';
 import notifee from '@notifee/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import instance from '../Utils/AxiosInstance';
+import { showAlert } from '../Components/common';
 
 class NotificationService {
   constructor() {
@@ -90,7 +91,7 @@ class NotificationService {
           authStatus === messaging.AuthorizationStatus.PROVISIONAL;
 
         if (!enabled) {
-          Alert.alert(
+          showAlert(
             'Permission Required',
             'Please enable notifications in Settings to receive loan updates'
           );
@@ -739,9 +740,9 @@ class NotificationService {
       });
     } catch (error) {
       console.error('Error displaying notification with Notifee:', error);
-      // Fallback to Alert if Notifee fails
+      // Fallback to showAlert if Notifee fails
       if (notification) {
-        Alert.alert(
+        showAlert(
           notification.title || 'Notification',
           notification.body || '',
           [

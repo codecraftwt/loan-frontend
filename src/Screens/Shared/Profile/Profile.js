@@ -6,7 +6,6 @@ import {
   ScrollView,
   ActivityIndicator,
   Image,
-  Alert,
   StatusBar,
   Platform,
   PermissionsAndroid,
@@ -20,6 +19,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import Toast from 'react-native-toast-message';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import PromptBox from '../../PromptBox/Prompt';
+import { showAlert } from '../../../Components/common';
 import {
   deleteProfileImage,
   logout,
@@ -105,7 +105,7 @@ export default function Profile() {
     if (source === 'camera') {
       const hasPermission = await requestCameraPermission();
       if (!hasPermission) {
-        Alert.alert(
+        showAlert(
           'Permission Denied',
           'Camera permission is required to take a profile photo.',
         );
@@ -181,7 +181,7 @@ export default function Profile() {
       return;
     }
 
-    Alert.alert(
+    showAlert(
       'Remove Photo',
       'Are you sure you want to remove your profile photo?',
       [
@@ -240,7 +240,7 @@ export default function Profile() {
       }, 200);
     } catch (error) {
       // console.error('Error during logout process:', error);
-      Alert.alert('Not able to logout');
+      showAlert('Error', 'Not able to logout. Please try again.');
     }
   };
 

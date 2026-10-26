@@ -6,7 +6,6 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   Switch,
 } from 'react-native';
@@ -15,7 +14,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import Feather from 'react-native-vector-icons/Feather';
 import { colors, FontFamily } from '../../../constants';
 import { m } from '../../../Utils/responsive';
-import { ScreenWrapper } from '../../../Components/common';
+import { ScreenWrapper, showAlert } from '../../../Components/common';
 import {
   createPlan,
   updatePlan,
@@ -129,12 +128,12 @@ export default function CreateEditPlan() {
   // Form Validation
   const validate = () => {
     if (!planName.trim()) {
-      Alert.alert('Validation Error', 'Plan Name is required.');
+      showAlert('Validation Error', 'Plan Name is required.');
       return false;
     }
     const numPrice = Number(price);
     if (!price || isNaN(numPrice) || numPrice <= 0) {
-      Alert.alert('Validation Error', 'Please enter a valid price amount.');
+      showAlert('Validation Error', 'Please enter a valid price amount.');
       return false;
     }
     return true;
@@ -162,20 +161,20 @@ export default function CreateEditPlan() {
         updatePlan({ planId: plan._id, planData: payload })
       );
       if (updatePlan.fulfilled.match(result)) {
-        Alert.alert('Success', 'Plan updated successfully!', [
+        showAlert('Success', 'Plan updated successfully!', [
           { text: 'OK', onPress: () => navigation.goBack() },
         ]);
       } else {
-        Alert.alert('Error', updateError || 'Failed to update plan.');
+        showAlert('Error', updateError || 'Failed to update plan.');
       }
     } else {
       const result = await dispatch(createPlan(payload));
       if (createPlan.fulfilled.match(result)) {
-        Alert.alert('Success', 'Plan created successfully!', [
+        showAlert('Success', 'Plan created successfully!', [
           { text: 'OK', onPress: () => navigation.goBack() },
         ]);
       } else {
-        Alert.alert('Error', createError || 'Failed to create plan.');
+        showAlert('Error', createError || 'Failed to create plan.');
       }
     }
   };

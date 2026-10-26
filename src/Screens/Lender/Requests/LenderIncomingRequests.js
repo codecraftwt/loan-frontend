@@ -9,13 +9,12 @@ import {
   RefreshControl,
   TextInput,
   Modal,
-  Alert,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
 import { colors, FontFamily } from '../../../constants';
 import { m } from '../../../Utils/responsive';
-import { ScreenWrapper } from '../../../Components/common';
+import { ScreenWrapper, showAlert } from '../../../Components/common';
 import lenderFlowService from '../../../Services/lenderFlowService';
 
 export default function LenderIncomingRequests() {
@@ -102,17 +101,17 @@ export default function LenderIncomingRequests() {
         rejectReason.trim() || 'Credit requirements not satisfied'
       );
       if (res?.success) {
-        Alert.alert('Request Declined', 'Borrower has been notified of the decision.');
+        showAlert('Request Declined', 'Borrower has been notified of the decision.');
         setRejectModalVisible(false);
         setRejectReason('');
         setSelectedRequest(null);
         fetchRequests();
       } else {
-        Alert.alert('Action Failed', res?.message || 'Unable to decline request.');
+        showAlert('Action Failed', res?.message || 'Unable to decline request.');
       }
     } catch (error) {
       const msg = error.response?.data?.message || 'Failed to decline application.';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     } finally {
       setActionLoading(false);
     }

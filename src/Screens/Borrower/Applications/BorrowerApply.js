@@ -7,13 +7,12 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
 import { colors, FontFamily } from '../../../constants';
 import { m } from '../../../Utils/responsive';
-import { ScreenWrapper, SuccessModal } from '../../../Components/common';
+import { ScreenWrapper, SuccessModal, showAlert } from '../../../Components/common';
 import borrowerFlowService from '../../../Services/borrowerFlowService';
 
 const PURPOSE_OPTIONS = [
@@ -167,7 +166,7 @@ export default function BorrowerApply() {
         activePendingApp.lenderSnapshot?.userName ||
         activePendingApp.lenderId?.companyName ||
         'your selected lender';
-      Alert.alert(
+      showAlert(
         'Active Application in Review',
         `You currently have an active loan application with ${lenderName}. In accordance with commercial lending rules, borrowers can have 1 active application under review at a time. Please wait for a decision or view status in My Applications.`,
         [
@@ -179,7 +178,7 @@ export default function BorrowerApply() {
     }
 
     if (!profileCompletion.isComplete) {
-      Alert.alert(
+      showAlert(
         'Profile Incomplete',
         `Your profile is ${profileCompletion.percentage}% complete. Please complete 100% of your borrower profile before applying.`,
         [
@@ -191,13 +190,13 @@ export default function BorrowerApply() {
     }
 
     if (!selectedLender) {
-      Alert.alert('Selection Required', 'Please select an institutional lender.');
+      showAlert('Selection Required', 'Please select an institutional lender.');
       return;
     }
 
     const numAmount = Number(amount);
     if (!numAmount || numAmount < 1000) {
-      Alert.alert('Validation Error', 'Minimum loan amount is ₹1,000');
+      showAlert('Validation Error', 'Minimum loan amount is ₹1,000');
       return;
     }
 
@@ -227,7 +226,7 @@ export default function BorrowerApply() {
       }
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to submit loan application.';
-      Alert.alert('Application Notice', msg);
+      showAlert('Application Notice', msg);
     } finally {
       setSubmitting(false);
     }

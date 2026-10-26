@@ -7,13 +7,12 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
 import { colors, FontFamily } from '../../../constants';
 import { m } from '../../../Utils/responsive';
-import { ScreenWrapper } from '../../../Components/common';
+import { ScreenWrapper, showAlert } from '../../../Components/common';
 import borrowerFlowService from '../../../Services/borrowerFlowService';
 
 const BUSINESS_TYPES = [
@@ -135,7 +134,7 @@ export default function BorrowerEditProfileScreen() {
 
       const res = await borrowerFlowService.updateProfile(payload);
       if (res?.success) {
-        Alert.alert(
+        showAlert(
           'Profile Saved',
           'Your corporate details have been successfully synchronized.',
           [{ text: 'OK', onPress: () => navigation.goBack() }]
@@ -143,7 +142,7 @@ export default function BorrowerEditProfileScreen() {
       }
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to update details.';
-      Alert.alert('Save Error', msg);
+      showAlert('Save Error', msg);
     } finally {
       setSaving(false);
     }

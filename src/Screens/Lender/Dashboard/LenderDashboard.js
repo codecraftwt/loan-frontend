@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   Modal,
   TextInput,
-  Alert,
   ScrollView,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -17,7 +16,7 @@ import Feather from 'react-native-vector-icons/Feather';
 import { useSelector } from 'react-redux';
 import { colors, FontFamily } from '../../../constants';
 import { m } from '../../../Utils/responsive';
-import { ScreenWrapper } from '../../../Components/common';
+import { ScreenWrapper, showAlert } from '../../../Components/common';
 import lenderFlowService from '../../../Services/lenderFlowService';
 
 /**
@@ -147,11 +146,11 @@ export default function LenderDashboard() {
 
   const handleVerifyOtpSubmit = async () => {
     if (!selectedEntityId.trim()) {
-      Alert.alert('Required', 'Please enter or select a valid Request/Loan ID to verify.');
+      showAlert('Required', 'Please enter or select a valid Request/Loan ID to verify.');
       return;
     }
     if (!otpInput.trim() || otpInput.trim().length !== 6) {
-      Alert.alert('Invalid OTP', 'Please enter the 6-digit disbursal OTP provided by the borrower.');
+      showAlert('Invalid OTP', 'Please enter the 6-digit disbursal OTP provided by the borrower.');
       return;
     }
 
@@ -163,7 +162,7 @@ export default function LenderDashboard() {
         false
       );
       if (res?.success) {
-        Alert.alert(
+        showAlert(
           'Success',
           'Borrower disbursal OTP verified successfully! Capital allocation is confirmed.'
         );
@@ -172,12 +171,12 @@ export default function LenderDashboard() {
         setSelectedEntityId('');
         fetchAllDashboardData();
       } else {
-        Alert.alert('Verification Failed', res?.message || 'Unable to verify OTP.');
+        showAlert('Verification Failed', res?.message || 'Unable to verify OTP.');
       }
     } catch (error) {
       const errMsg =
         error.response?.data?.message || 'OTP verification failed. Please try again.';
-      Alert.alert('Error', errMsg);
+      showAlert('Error', errMsg);
     } finally {
       setVerifyingOtp(false);
     }
@@ -657,14 +656,14 @@ export default function LenderDashboard() {
               <TouchableOpacity
                 onPress={async () => {
                   if (!selectedEntityId.trim()) {
-                    Alert.alert('Required', 'Please select or enter a Deal ID to resend OTP.');
+                    showAlert('Required', 'Please select or enter a Deal ID to resend OTP.');
                     return;
                   }
                   try {
                     await lenderFlowService.resendDisbursalOtp(selectedEntityId.trim(), false);
-                    Alert.alert('Dispatched', 'Fresh 6-digit OTP sent to borrower.');
+                    showAlert('Dispatched', 'Fresh 6-digit OTP sent to borrower.');
                   } catch (e) {
-                    Alert.alert('Error', 'Unable to resend OTP.');
+                    showAlert('Error', 'Unable to resend OTP.');
                   }
                 }}
               >

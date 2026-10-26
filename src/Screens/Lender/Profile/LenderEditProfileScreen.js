@@ -7,14 +7,13 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
 import { useSelector } from 'react-redux';
 import { FontFamily, colors } from '../../../constants';
 import { m } from '../../../Utils/responsive';
-import { ScreenWrapper } from '../../../Components/common';
+import { ScreenWrapper, showAlert } from '../../../Components/common';
 import lenderFlowService from '../../../Services/lenderFlowService';
 
 const AVAILABLE_SERVICES_PRESETS = [
@@ -132,7 +131,7 @@ export default function LenderEditProfileScreen() {
 
   const handleSave = async () => {
     if (!profile.companyName.trim()) {
-      Alert.alert('Required', 'Please enter your institution legal name.');
+      showAlert('Required', 'Please enter your institution legal name.');
       return;
     }
 
@@ -156,14 +155,15 @@ export default function LenderEditProfileScreen() {
 
       const res = await lenderFlowService.updateProfile(payload);
       if (res?.success) {
-        Alert.alert('Profile Saved ✨', 'Institutional profile and lending criteria have been updated.');
-        navigation.goBack();
+        showAlert('Profile Saved ✨', 'Institutional profile and lending criteria have been updated.', [
+          { text: 'OK', onPress: () => navigation.goBack() }
+        ]);
       } else {
-        Alert.alert('Update Failed', res?.message || 'Unable to update profile.');
+        showAlert('Update Failed', res?.message || 'Unable to update profile.');
       }
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to save changes.';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     } finally {
       setSaving(false);
     }

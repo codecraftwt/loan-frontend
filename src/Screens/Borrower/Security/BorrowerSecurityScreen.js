@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   ScrollView,
-  Alert,
   Switch,
   Platform,
 } from 'react-native';
@@ -16,7 +15,7 @@ import Feather from 'react-native-vector-icons/Feather';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, FontFamily } from '../../../constants';
 import { m } from '../../../Utils/responsive';
-import { ScreenWrapper } from '../../../Components/common';
+import { ScreenWrapper, showAlert } from '../../../Components/common';
 import borrowerFlowService from '../../../Services/borrowerFlowService';
 
 export default function BorrowerSecurityScreen() {
@@ -60,7 +59,7 @@ export default function BorrowerSecurityScreen() {
     setBiometricsEnabled(value);
     try {
       await AsyncStorage.setItem('@borrower_biometrics_enabled', value ? 'true' : 'false');
-      Alert.alert(
+      showAlert(
         value ? 'Biometrics Enabled' : 'Biometrics Disabled',
         value
           ? 'Biometric touch/face verification is now activated for swift authorization.'
@@ -74,23 +73,23 @@ export default function BorrowerSecurityScreen() {
   // 4-digit PIN setup/update
   const handleSavePin = async () => {
     if (pin.length !== 4 || isNaN(Number(pin))) {
-      Alert.alert('Invalid PIN', 'Please enter a valid 4-digit numeric transaction PIN.');
+      showAlert('Invalid PIN', 'Please enter a valid 4-digit numeric transaction PIN.');
       return;
     }
     if (pin !== confirmPin) {
-      Alert.alert('PIN Mismatch', 'The confirmation PIN does not match.');
+      showAlert('PIN Mismatch', 'The confirmation PIN does not match.');
       return;
     }
 
     const isSequential = '1234,2345,3456,4567,5678,6789,9876,8765,7654,6543,5432,4321'.includes(pin);
     if (isSequential) {
-      Alert.alert('Weak PIN', 'Avoid sequential combinations such as 1234 or 9876.');
+      showAlert('Weak PIN', 'Avoid sequential combinations such as 1234 or 9876.');
       return;
     }
 
     const isRepeated = /^(\d)\1{3}$/.test(pin);
     if (isRepeated) {
-      Alert.alert('Weak PIN', 'Avoid repeated digits such as 1111 or 0000.');
+      showAlert('Weak PIN', 'Avoid repeated digits such as 1111 or 0000.');
       return;
     }
 
@@ -101,12 +100,12 @@ export default function BorrowerSecurityScreen() {
       setShowPinForm(false);
       setPin('');
       setConfirmPin('');
-      Alert.alert(
+      showAlert(
         'Transaction MPIN Saved',
         'Your 4-digit transaction PIN has been successfully secured for loan acceptances and tranche drawdowns.'
       );
     } catch (e) {
-      Alert.alert('Error', 'Failed to store transaction PIN.');
+      showAlert('Error', 'Failed to store transaction PIN.');
     } finally {
       setPinLoading(false);
     }
@@ -160,23 +159,23 @@ export default function BorrowerSecurityScreen() {
 
   const handleChangePassword = async () => {
     if (!currentPassword.trim()) {
-      Alert.alert('Required Field', 'Please provide your current account password.');
+      showAlert('Required Field', 'Please provide your current account password.');
       return;
     }
     if (!newPassword.trim()) {
-      Alert.alert('Required Field', 'Please enter your new password.');
+      showAlert('Required Field', 'Please enter your new password.');
       return;
     }
     if (newPassword.length < 6) {
-      Alert.alert('Password Length', 'New password must be at least 6 characters long.');
+      showAlert('Password Length', 'New password must be at least 6 characters long.');
       return;
     }
     if (currentPassword === newPassword) {
-      Alert.alert('Password Notice', 'Your new password must be different from your current password.');
+      showAlert('Password Notice', 'Your new password must be different from your current password.');
       return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert('Mismatch', 'The new passwords do not match.');
+      showAlert('Mismatch', 'The new passwords do not match.');
       return;
     }
 
@@ -189,7 +188,7 @@ export default function BorrowerSecurityScreen() {
       });
 
       if (res?.success) {
-        Alert.alert(
+        showAlert(
           'Password Updated',
           'Your account credentials have been securely updated.',
           [
@@ -209,14 +208,14 @@ export default function BorrowerSecurityScreen() {
       const msg =
         err.response?.data?.message ||
         'Failed to change password. Please verify your current password.';
-      Alert.alert('Security Error', msg);
+      showAlert('Security Error', msg);
     } finally {
       setPwdLoading(false);
     }
   };
 
   const handleRevokeSessions = () => {
-    Alert.alert(
+    showAlert(
       'Session Governance',
       'All other active mobile and web login sessions will be immediately invalidated.',
       [
@@ -225,7 +224,7 @@ export default function BorrowerSecurityScreen() {
           text: 'Revoke Sessions',
           style: 'destructive',
           onPress: () => {
-            Alert.alert('Sessions Terminated', 'Other device tokens have been revoked.');
+            showAlert('Sessions Terminated', 'Other device tokens have been revoked.');
           },
         },
       ]

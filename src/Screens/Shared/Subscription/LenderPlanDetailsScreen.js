@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
@@ -14,6 +13,7 @@ import Header from '../../../Components/Header';
 import moment from 'moment';
 import { useSubscription } from '../../../hooks/useSubscription';
 import { useSelector } from 'react-redux';
+import { showAlert } from '../../../Components/common';
 
 const DetailItem = ({ icon, label, value, isHighlight }) => {
   return (
@@ -180,16 +180,17 @@ export default function LenderPlanDetailsScreen({ route, navigation }) {
 
   const handleBuyPlan = async () => {
     if (!displayPlan?._id) {
-      Alert.alert('Error', 'Plan ID is missing');
+      showAlert('Error', 'Plan ID is missing');
       return;
     }
 
     if (hasActivePlan && remainingDays > 0) {
-      Alert.alert(
+      showAlert(
         'Active Plan',
         `You already have an active plan. It expires in ${remainingDays} days. Would you like to purchase a new plan?`,
         [
           { text: 'Cancel', style: 'cancel' },
+          { text: 'Continue', onPress: () => proceedWithPurchase() },
         ]
       );
     } else {
@@ -206,7 +207,7 @@ export default function LenderPlanDetailsScreen({ route, navigation }) {
       if (result.success) {
         await getActivePlan();
 
-        Alert.alert(
+        showAlert(
           'Success!',
           result.message || 'Plan purchased and activated successfully!',
           [
@@ -219,7 +220,7 @@ export default function LenderPlanDetailsScreen({ route, navigation }) {
           ]
         );
       } else if (result.type === 'CANCELLED') {
-        Alert.alert(
+        showAlert(
           'Payment Cancelled',
           'You have cancelled the payment. You can try again whenever you\'re ready.',
           [{ text: 'OK' }]
@@ -242,10 +243,10 @@ export default function LenderPlanDetailsScreen({ route, navigation }) {
             '\n\nPlease contact support if this issue persists.';
         }
 
-        Alert.alert('Payment Failed', errorMessage, [{ text: 'OK' }]);
+        showAlert('Payment Failed', errorMessage, [{ text: 'OK' }]);
       }
     } catch (error) {
-      Alert.alert(
+      showAlert(
         'Error',
         error.message || 'An error occurred. Please try again.',
         [{ text: 'OK' }]

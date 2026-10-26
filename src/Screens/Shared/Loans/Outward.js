@@ -11,7 +11,6 @@ import {
   KeyboardAvoidingView,
   RefreshControl,
   Image,
-  Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useDispatch, useSelector } from 'react-redux';
@@ -23,6 +22,7 @@ import { getRiskAssessment } from '../../../Redux/Slices/loanSlice';
 import { getPendingPayments } from '../../../Redux/Slices/lenderPaymentSlice';
 import { useFocusEffect } from '@react-navigation/native';
 import BorrowerReputationCard from '../../../Components/BorrowerReputationCard';
+import { showAlert } from '../../../Components/common';
 import LoaderSkeleton from '../../../Components/LoaderSkeleton';
 import SubscriptionRestriction from '../../../Components/SubscriptionRestriction';
 import { useSubscription } from '../../../hooks/useSubscription';
@@ -380,7 +380,7 @@ const Outward = ({ navigation, route }) => {
         riskLevel === 'critical'
       ) {
         // Show alert with risk warning
-        Alert.alert(
+        showAlert(
           '⚠️ Fraud Risk Detected',
           riskData.warning ||
             riskData.recommendation ||

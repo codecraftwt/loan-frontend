@@ -11,7 +11,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
 import { colors, FontFamily } from '../../../constants';
 import { m } from '../../../Utils/responsive';
-import { ScreenWrapper } from '../../../Components/common';
+import { ScreenWrapper, showAlert } from '../../../Components/common';
 import borrowerFlowService from '../../../Services/borrowerFlowService';
 
 export default function BorrowerLenderDetails() {
@@ -76,7 +76,7 @@ export default function BorrowerLenderDetails() {
         activePendingApp.remainingHours != null
           ? `${activePendingApp.remainingHours} hours`
           : 'up to 48 hours';
-      Alert.alert(
+      showAlert(
         'Active Application Under Review',
         `You currently have an active credit request with ${pendingLenderName} (decision expires in ${remaining}). In accordance with commercial lending rules, you can apply with another lender once this request is accepted, rejected, or expired.`,
         [

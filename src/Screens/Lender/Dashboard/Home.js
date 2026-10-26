@@ -11,7 +11,6 @@ import {
   Platform,
   FlatList,
   BackHandler,
-  Alert,
   SafeAreaView,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -23,6 +22,7 @@ import { getPendingPayments } from '../../../Redux/Slices/lenderPaymentSlice';
 import { getLenderRecentActivities } from '../../../Redux/Slices/lenderActivitiesSlice';
 import { getActivePlan } from '../../../Redux/Slices/planPurchaseSlice';
 import { useDispatch, useSelector } from 'react-redux';
+import { showAlert } from '../../../Components/common';
 import useFetchUserFromStorage from '../../../Redux/hooks/useFetchUserFromStorage';
 import { m } from 'walstar-rn-responsive';
 import { FontFamily, FontSizes, colors } from '../../../constants';
@@ -217,7 +217,7 @@ export default function Home() {
 
   const handleActivityPress = activity => {
     if (!isSubscriptionActive) {
-      Alert.alert(
+      showAlert(
         'Subscription Required',
         'Purchase a plan to view recent activities.',
         [

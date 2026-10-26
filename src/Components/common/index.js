@@ -7,6 +7,8 @@ export { default as StatusBadge } from './StatusBadge';
 export { default as CustomButton } from './CustomButton';
 export {
   default as CustomAlertModal,
+  showAlert,
+  closeAlert,
   showCustomAlert,
   closeCustomAlert,
   alertService,

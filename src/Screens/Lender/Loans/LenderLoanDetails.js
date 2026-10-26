@@ -8,14 +8,13 @@ import {
   ActivityIndicator,
   Modal,
   TextInput,
-  Alert,
   Linking,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
 import { FontFamily, colors } from '../../../constants';
 import { m } from '../../../Utils/responsive';
-import { ScreenWrapper } from '../../../Components/common';
+import { ScreenWrapper, showAlert } from '../../../Components/common';
 import lenderFlowService from '../../../Services/lenderFlowService';
 import DisbursalOtpModal from '../Components/DisbursalOtpModal';
 
@@ -54,7 +53,7 @@ export default function LenderLoanDetails() {
       }
     } catch (err) {
       console.error('Error fetching loan details:', err);
-      Alert.alert('Error', 'Unable to retrieve loan facility details.');
+      showAlert('Error', 'Unable to retrieve loan facility details.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -90,7 +89,7 @@ export default function LenderLoanDetails() {
   // WhatsApp outreach shortcut
   const handleOpenWhatsApp = (mobileNo, borrowerName, amount) => {
     if (!mobileNo) {
-      Alert.alert('No Contact', 'No mobile number recorded for this borrower.');
+      showAlert('No Contact', 'No mobile number recorded for this borrower.');
       return;
     }
     const cleanNumber = mobileNo.replace(/\D/g, '');
@@ -111,7 +110,7 @@ export default function LenderLoanDetails() {
       })
       .catch(() => {
         Linking.openURL(webWaUrl).catch(() => {
-          Alert.alert('Error', 'Unable to launch WhatsApp.');
+          showAlert('Error', 'Unable to launch WhatsApp.');
         });
       });
   };
@@ -119,7 +118,7 @@ export default function LenderLoanDetails() {
   // Submit Payment
   const handleRecordPaymentSubmit = async () => {
     if (!paymentAmount || Number(paymentAmount) <= 0) {
-      Alert.alert('Required', 'Please enter a valid payment amount.');
+      showAlert('Required', 'Please enter a valid payment amount.');
       return;
     }
 
@@ -135,7 +134,7 @@ export default function LenderLoanDetails() {
 
       const res = await lenderFlowService.recordLoanPayment(loan._id, payload);
       if (res?.success) {
-        Alert.alert(
+        showAlert(
           'Payment Recorded! 🎉',
           res.message || 'Payment has been successfully applied to the amortization schedule.'
         );
@@ -144,12 +143,12 @@ export default function LenderLoanDetails() {
         setPaymentNotes('');
         fetchLoanDetails();
       } else {
-        Alert.alert('Payment Error', res?.message || 'Could not record repayment.');
+        showAlert('Payment Error', res?.message || 'Could not record repayment.');
       }
     } catch (err) {
       console.error('Error recording payment:', err);
       const msg = err.response?.data?.message || 'Failed to record repayment.';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     } finally {
       setRecordingPayment(false);
     }
@@ -161,13 +160,13 @@ export default function LenderLoanDetails() {
       setRecalculating(true);
       const res = await lenderFlowService.recalculateLoanSchedule(loan._id);
       if (res?.success) {
-        Alert.alert('Amortization Synchronized', 'Schedule has been synchronized with live debt balances.');
+        showAlert('Amortization Synchronized', 'Schedule has been synchronized with live debt balances.');
         fetchLoanDetails();
       } else {
-        Alert.alert('Notice', res?.message || 'Recalculation complete.');
+        showAlert('Notice', res?.message || 'Recalculation complete.');
       }
     } catch (err) {
-      Alert.alert('Error', 'Unable to recalculate schedule.');
+      showAlert('Error', 'Unable to recalculate schedule.');
     } finally {
       setRecalculating(false);
     }

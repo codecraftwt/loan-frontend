@@ -6,7 +6,6 @@ import {
   StyleSheet,
   // SafeAreaView,
   ScrollView,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
@@ -14,6 +13,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import Header from '../../../Components/Header';
 import { useSubscription } from '../../../hooks/useSubscription';
 import { useSelector } from 'react-redux';
+import { showAlert } from '../../../Components/common';
 
 const SubscriptionScreen = ({ navigation }) => {
   const {
@@ -40,7 +40,7 @@ const SubscriptionScreen = ({ navigation }) => {
 
   useEffect(() => {
     if (hasActivePlan && remainingDays <= 0) {
-      Alert.alert(
+      showAlert(
         'Plan Expired',
         'Your plan has expired. Please renew to continue creating loans.',
         [{ text: 'OK', style: 'cancel' }]
@@ -79,16 +79,17 @@ const SubscriptionScreen = ({ navigation }) => {
     }
     
     if (!plan?._id) {
-      Alert.alert('Error', 'Plan ID is missing');
+      showAlert('Error', 'Plan ID is missing');
       return;
     }
 
     if (hasActivePlan && remainingDays > 0) {
-      Alert.alert(
+      showAlert(
         'Active Plan',
         `You already have an active plan. It expires in ${remainingDays} days. Would you like to purchase a new plan?`,
         [
           { text: 'Cancel', style: 'cancel' },
+          { text: 'Continue', onPress: () => proceedWithPaymentFromCard(plan) },
         ]
       );
     } else {
@@ -105,7 +106,7 @@ const SubscriptionScreen = ({ navigation }) => {
       if (result.success) {
         await getActivePlan();
 
-        Alert.alert(
+        showAlert(
           'Success!',
           result.message || 'Plan purchased and activated successfully!',
           [
@@ -116,7 +117,7 @@ const SubscriptionScreen = ({ navigation }) => {
           ]
         );
       } else if (result.type === 'CANCELLED') {
-        Alert.alert(
+        showAlert(
           'Payment Cancelled',
           'You have cancelled the payment. You can try again whenever you\'re ready.',
           [{ text: 'OK' }]
@@ -139,10 +140,10 @@ const SubscriptionScreen = ({ navigation }) => {
             '\n\nPlease contact support if this issue persists.';
         }
 
-        Alert.alert('Payment Failed', errorMessage, [{ text: 'OK' }]);
+        showAlert('Payment Failed', errorMessage, [{ text: 'OK' }]);
       }
     } catch (error) {
-      Alert.alert(
+      showAlert(
         'Error',
         error.message || 'An error occurred. Please try again.',
         [{ text: 'OK' }]

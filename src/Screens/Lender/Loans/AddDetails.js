@@ -11,7 +11,6 @@ import {
   Keyboard,
   ActivityIndicator,
   Animated,
-  Alert,
   Image,
   PermissionsAndroid,
   StatusBar,
@@ -20,6 +19,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { useDispatch, useSelector } from 'react-redux';
+import { showAlert } from '../../../Components/common';
 import {
   createLoan,
   getLoanByAadhar,
@@ -405,7 +405,7 @@ export default function AddDetails({ route, navigation }) {
           };
         } else {
           // No cached plan found offline
-          Alert.alert(
+          showAlert(
             'Plan Required',
             'You are offline and no active plan was found on this device. Please connect to the internet to verify your plan.',
             [{ text: 'OK', style: 'cancel' }],
@@ -417,7 +417,7 @@ export default function AddDetails({ route, navigation }) {
       }
 
       if (!result.hasActivePlan) {
-        Alert.alert(
+        showAlert(
           'Plan Required',
           'You need to purchase a plan to create loans. Would you like to view plans?',
           [
@@ -432,7 +432,7 @@ export default function AddDetails({ route, navigation }) {
       }
 
       if (result.remainingDays <= 0) {
-        Alert.alert(
+        showAlert(
           'Plan Expired',
           'Your plan has expired. Please renew to continue creating loans.',
           [
@@ -450,7 +450,7 @@ export default function AddDetails({ route, navigation }) {
     } catch (error) {
       console.error('Error checking plan:', error);
       // If plan check fails, show alert but allow user to proceed
-      Alert.alert(
+      showAlert(
         'Plan Check Failed',
         'Unable to verify your plan status. You may proceed, but ensure you have an active plan.',
         [
@@ -634,7 +634,7 @@ export default function AddDetails({ route, navigation }) {
           responsePayload.warning.fraudDetected &&
           !loanDetails
         ) {
-          Alert.alert(
+          showAlert(
             'Fraud Alert',
             responsePayload.warning.recommendation ||
               'Fraud risk detected for this borrower.',
@@ -683,7 +683,7 @@ export default function AddDetails({ route, navigation }) {
           response.payload?.type === 'SUBSCRIPTION_REQUIRED' ||
           response.payload?.errorCode === 'PLAN_REQUIRED'
         ) {
-          Alert.alert(
+          showAlert(
             'Plan Required',
             response.payload?.message ||
               'You need to purchase a plan to create loans.',
@@ -755,7 +755,7 @@ export default function AddDetails({ route, navigation }) {
       setIsProcessingPayment(false);
 
       if (error.type === 'USER_CANCELLED') {
-        Alert.alert(
+        showAlert(
           'Payment Cancelled',
           'You cancelled the payment. The loan has been created but payment is pending. You can complete the payment later or switch to cash mode.',
           [
@@ -767,7 +767,7 @@ export default function AddDetails({ route, navigation }) {
           ],
         );
       } else {
-        Alert.alert(
+        showAlert(
           'Payment Failed',
           error.message || 'Payment could not be completed. Please try again.',
           [
@@ -821,7 +821,7 @@ export default function AddDetails({ route, navigation }) {
     } catch (error) {
       setIsProcessingPayment(false);
 
-      Alert.alert(
+      showAlert(
         'Payment Verification Failed',
         error.message ||
           'Could not verify the payment. Please contact support.',
@@ -883,7 +883,7 @@ export default function AddDetails({ route, navigation }) {
       });
     } else {
       // Show error if Aadhaar number is not valid
-      Alert.alert(
+      showAlert(
         'Invalid Aadhaar Number',
         'Please enter a valid 12-digit Aadhaar number to view history.',
         [{ text: 'OK' }],

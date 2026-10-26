@@ -6,7 +6,6 @@ import {
   TextInput,
   TouchableOpacity,
   StatusBar,
-  Alert,
   Platform,
   KeyboardAvoidingView,
   ScrollView,
@@ -18,6 +17,7 @@ import {verifyOtp, resendOtp} from '../../Redux/Slices/authslice';
 import Toast from 'react-native-toast-message';
 import {m} from 'walstar-rn-responsive';
 import {FontFamily, FontSizes} from '../../constants';
+import {showAlert} from '../../Components/common';
 
 export default function OTP({navigation, route}) {
   const {email} = route.params; 
@@ -95,7 +95,7 @@ export default function OTP({navigation, route}) {
   const handleVerify = async () => {
     const otpCode = otp.join('');
     if (otpCode.length < 6) {
-      Alert.alert('Error', 'Please enter a complete 6-digit OTP.');
+      showAlert('Error', 'Please enter a complete 6-digit OTP.');
       return;
     }
 
@@ -107,7 +107,7 @@ export default function OTP({navigation, route}) {
       const result = await dispatch(verifyOtp({email, otp: otpCode})).unwrap();
       
       if (result.message === 'Invalid verification code') {
-        Alert.alert('Error', 'The OTP you entered is invalid or expired.');
+        showAlert('Error', 'The OTP you entered is invalid or expired.');
       } else {
         // OTP is valid, navigate to CreatePass to set the new password
         navigation.navigate('CreatePass', {email, otp: otpCode});

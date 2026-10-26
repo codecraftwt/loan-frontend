@@ -9,7 +9,6 @@ import {
   SafeAreaView,
   StatusBar,
   ScrollView,
-  Alert,
   Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -17,6 +16,7 @@ import Feather from 'react-native-vector-icons/Feather';
 import { m } from 'walstar-rn-responsive';
 import { colors, FontFamily } from '../../../constants';
 import lenderFlowService from '../../../Services/lenderFlowService';
+import { showAlert } from '../../../Components/common';
 
 export default function LenderSettingsScreen() {
   const navigation = useNavigation();
@@ -78,26 +78,26 @@ export default function LenderSettingsScreen() {
 
   const handleChangePassword = async () => {
     if (!currentPassword.trim()) {
-      Alert.alert('Required Field', 'Please provide your current administrative password.');
+      showAlert('Required Field', 'Please provide your current administrative password.');
       return;
     }
     if (!newPassword.trim()) {
-      Alert.alert('Required Field', 'Please enter your new password.');
+      showAlert('Required Field', 'Please enter your new password.');
       return;
     }
     if (newPassword.length < 6) {
-      Alert.alert('Password Length', 'New password must be at least 6 characters long.');
+      showAlert('Password Length', 'New password must be at least 6 characters long.');
       return;
     }
     if (currentPassword === newPassword) {
-      Alert.alert(
+      showAlert(
         'Password Notice',
         'Your new password must be different from your current password.'
       );
       return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert('Mismatch', 'The new password and confirm password do not match.');
+      showAlert('Mismatch', 'The new password and confirm password do not match.');
       return;
     }
 
@@ -110,7 +110,7 @@ export default function LenderSettingsScreen() {
       });
 
       if (res?.success || res?.message?.toLowerCase().includes('success')) {
-        Alert.alert(
+        showAlert(
           'Password Updated 🔒',
           'Your institutional credentials have been securely updated.',
           [
@@ -126,13 +126,13 @@ export default function LenderSettingsScreen() {
           ]
         );
       } else {
-        Alert.alert('Update Failed', res?.message || 'Could not change password.');
+        showAlert('Update Failed', res?.message || 'Could not change password.');
       }
     } catch (err) {
       const errMsg =
         err.response?.data?.message ||
         'Failed to update password. Please verify your current password.';
-      Alert.alert('Security Error', errMsg);
+      showAlert('Security Error', errMsg);
     } finally {
       setLoading(false);
     }

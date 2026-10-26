@@ -8,7 +8,6 @@ import {
   RefreshControl,
   ActivityIndicator,
   Linking,
-  Alert,
   Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
@@ -19,6 +18,7 @@ import { useSubscription } from '../../../hooks/useSubscription';
 import { lenderLoanAPI } from '../../../Services/lenderLoanService';
 import { m } from 'walstar-rn-responsive';
 import { colors, FontFamily, FontSizes } from '../../../constants';
+import { showAlert } from '../../../Components/common';
 
 const ContactsScreen = ({ navigation }) => {
   const dispatch = useDispatch();
@@ -74,7 +74,7 @@ const ContactsScreen = ({ navigation }) => {
 
   const handleCall = (phoneNumber) => {
     if (!phoneNumber) {
-      Alert.alert('Error', 'Phone number is not available');
+      showAlert('Error', 'Phone number is not available');
       return;
     }
 
@@ -92,18 +92,18 @@ const ContactsScreen = ({ navigation }) => {
           // User can then press call button to initiate the call
           return Linking.openURL(phoneUrl);
         } else {
-          Alert.alert('Error', 'Phone calls are not supported on this device');
+          showAlert('Error', 'Phone calls are not supported on this device');
         }
       })
       .catch((err) => {
         console.error('Error opening phone dialer:', err);
-        Alert.alert('Error', 'Unable to open phone dialer. Please check your device settings.');
+        showAlert('Error', 'Unable to open phone dialer. Please check your device settings.');
       });
   };
 
   const handleMessage = (phoneNumber) => {
     if (!phoneNumber) {
-      Alert.alert('Error', 'Phone number is not available');
+      showAlert('Error', 'Phone number is not available');
       return;
     }
 
@@ -116,12 +116,12 @@ const ContactsScreen = ({ navigation }) => {
         if (supported) {
           return Linking.openURL(smsUrl);
         } else {
-          Alert.alert('Error', 'SMS is not supported on this device');
+          showAlert('Error', 'SMS is not supported on this device');
         }
       })
       .catch((err) => {
         console.error('Error opening SMS:', err);
-        Alert.alert('Error', 'Unable to send SMS. Please check your device settings.');
+        showAlert('Error', 'Unable to send SMS. Please check your device settings.');
       });
   };
 

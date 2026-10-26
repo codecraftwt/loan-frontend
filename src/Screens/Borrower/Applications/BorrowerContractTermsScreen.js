@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
-  Alert,
   PanResponder,
   Modal,
 } from 'react-native';
@@ -16,7 +15,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
 import { colors, FontFamily } from '../../../constants';
 import { m } from '../../../Utils/responsive';
-import { ScreenWrapper } from '../../../Components/common';
+import { ScreenWrapper, showAlert } from '../../../Components/common';
 import borrowerFlowService from '../../../Services/borrowerFlowService';
 
 export default function BorrowerContractTermsScreen() {
@@ -131,7 +130,7 @@ export default function BorrowerContractTermsScreen() {
 
   const handleExecuteSignature = async () => {
     if (!consentChecked) {
-      Alert.alert(
+      showAlert(
         'Consent Required',
         'Please confirm your legal authorization by checking the declaration.'
       );
@@ -139,13 +138,13 @@ export default function BorrowerContractTermsScreen() {
     }
 
     if (signMode === 'draw' && paths.length === 0) {
-      Alert.alert('Signature Required', 'Please draw your signature on the pad above.');
+      showAlert('Signature Required', 'Please draw your signature on the pad above.');
       return;
     }
 
     const finalSigner = signerName.trim() || borrowerName;
     if (signMode === 'type' && !finalSigner) {
-      Alert.alert('Required', 'Please enter the name of the authorized signatory.');
+      showAlert('Required', 'Please enter the name of the authorized signatory.');
       return;
     }
 
@@ -172,7 +171,7 @@ export default function BorrowerContractTermsScreen() {
       }
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to countersign agreement.';
-      Alert.alert('Signing Error', msg);
+      showAlert('Signing Error', msg);
     } finally {
       setSigning(false);
     }

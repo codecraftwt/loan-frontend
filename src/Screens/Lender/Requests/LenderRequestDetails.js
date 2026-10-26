@@ -10,14 +10,13 @@ import {
   ActivityIndicator,
   Modal,
   TextInput,
-  Alert,
   Platform,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
 import { m } from '../../../Utils/responsive';
 import { FontFamily, colors } from '../../../constants';
-import { ScreenWrapper } from '../../../Components/common';
+import { ScreenWrapper, showAlert } from '../../../Components/common';
 import lenderFlowService from '../../../Services/lenderFlowService';
 import DisbursalOtpModal from '../Components/DisbursalOtpModal';
 
@@ -69,7 +68,7 @@ export default function LenderRequestDetails() {
       }
     } catch (err) {
       console.error('Error fetching request details:', err);
-      Alert.alert('Error', 'Unable to load full request details.');
+      showAlert('Error', 'Unable to load full request details.');
     } finally {
       setLoading(false);
     }
@@ -174,7 +173,7 @@ export default function LenderRequestDetails() {
 
       const res = await lenderFlowService.acceptLoanRequest(request._id, payload);
       if (res?.success) {
-        Alert.alert(
+        showAlert(
           'Loan Facility Sanctioned!',
           `Term sheet generated! ${res.autoRejectedApplicationsCount || 0} other pending applications for this borrower were atomically auto-closed.`,
           [{ text: 'OK', onPress: () => fetchRequestDetails() }]
@@ -182,11 +181,11 @@ export default function LenderRequestDetails() {
         setShowAcceptModal(false);
         setSanctionStep(1);
       } else {
-        Alert.alert('Sanction Failed', res?.message || 'Could not sanction loan.');
+        showAlert('Sanction Failed', res?.message || 'Could not sanction loan.');
       }
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to sanction application.';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     } finally {
       setActionLoading(false);
     }
@@ -201,16 +200,16 @@ export default function LenderRequestDetails() {
         rejectReason.trim() || 'Underwriting criteria not satisfied'
       );
       if (res?.success) {
-        Alert.alert('Request Declined', 'Borrower has been notified.');
+        showAlert('Request Declined', 'Borrower has been notified.');
         setShowRejectModal(false);
         setRejectReason('');
         fetchRequestDetails();
       } else {
-        Alert.alert('Failed', res?.message || 'Could not decline application.');
+        showAlert('Failed', res?.message || 'Could not decline application.');
       }
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to decline application.';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     } finally {
       setActionLoading(false);
     }
@@ -219,7 +218,7 @@ export default function LenderRequestDetails() {
   // Verify Disbursal OTP
   const handleVerifyOtp = async () => {
     if (!otpInput.trim() || otpInput.trim().length !== 6) {
-      Alert.alert('Invalid OTP', 'Please enter the 6-digit Disbursal OTP from borrower.');
+      showAlert('Invalid OTP', 'Please enter the 6-digit Disbursal OTP from borrower.');
       return;
     }
 
@@ -227,16 +226,16 @@ export default function LenderRequestDetails() {
       setOtpLoading(true);
       const res = await lenderFlowService.verifyDisbursalOtp(request._id, otpInput.trim(), false);
       if (res?.success) {
-        Alert.alert('Success', 'Borrower Disbursal OTP verified! Funds released atomically.');
+        showAlert('Success', 'Borrower Disbursal OTP verified! Funds released atomically.');
         setShowOtpModal(false);
         setOtpInput('');
         fetchRequestDetails();
       } else {
-        Alert.alert('Verification Failed', res?.message || 'Invalid OTP.');
+        showAlert('Verification Failed', res?.message || 'Invalid OTP.');
       }
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to verify disbursal OTP.';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     } finally {
       setOtpLoading(false);
     }
@@ -248,10 +247,10 @@ export default function LenderRequestDetails() {
       setOtpLoading(true);
       const res = await lenderFlowService.resendDisbursalOtp(request._id, false);
       if (res?.success) {
-        Alert.alert('OTP Dispatched', 'A fresh 6-digit disbursal OTP has been sent to the borrower.');
+        showAlert('OTP Dispatched', 'A fresh 6-digit disbursal OTP has been sent to the borrower.');
       }
     } catch (err) {
-      Alert.alert('Error', 'Unable to resend OTP.');
+      showAlert('Error', 'Unable to resend OTP.');
     } finally {
       setOtpLoading(false);
     }

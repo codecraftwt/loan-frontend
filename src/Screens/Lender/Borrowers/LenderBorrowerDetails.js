@@ -7,13 +7,12 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Linking,
-  Alert,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
 import { FontFamily, colors } from '../../../constants';
 import { m } from '../../../Utils/responsive';
-import { ScreenWrapper } from '../../../Components/common';
+import { ScreenWrapper, showAlert } from '../../../Components/common';
 import lenderFlowService from '../../../Services/lenderFlowService';
 
 export default function LenderBorrowerDetails() {
@@ -35,7 +34,7 @@ export default function LenderBorrowerDetails() {
       }
     } catch (err) {
       console.error('Error fetching borrower profile details:', err);
-      Alert.alert('Error', 'Unable to retrieve borrower credit profile.');
+      showAlert('Error', 'Unable to retrieve borrower credit profile.');
     } finally {
       setLoading(false);
     }
@@ -65,17 +64,17 @@ export default function LenderBorrowerDetails() {
   // Contact actions
   const handleCall = (phone) => {
     if (!phone) {
-      Alert.alert('No Contact', 'No phone number on record.');
+      showAlert('No Contact', 'No phone number on record.');
       return;
     }
     Linking.openURL(`tel:${phone.replace(/\D/g, '')}`).catch(() => {
-      Alert.alert('Error', 'Unable to initiate phone call.');
+      showAlert('Error', 'Unable to initiate phone call.');
     });
   };
 
   const handleWhatsApp = (phone, name) => {
     if (!phone) {
-      Alert.alert('No Contact', 'No phone number on record.');
+      showAlert('No Contact', 'No phone number on record.');
       return;
     }
     const cleanNumber = phone.replace(/\D/g, '');
@@ -96,7 +95,7 @@ export default function LenderBorrowerDetails() {
       })
       .catch(() => {
         Linking.openURL(webWaUrl).catch(() => {
-          Alert.alert('Error', 'Unable to launch WhatsApp.');
+          showAlert('Error', 'Unable to launch WhatsApp.');
         });
       });
   };
