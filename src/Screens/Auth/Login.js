@@ -169,6 +169,14 @@ export default function LoginScreen({navigation}) {
               {passwordError ? (
                 <Text style={styles.errorText}>{passwordError}</Text>
               ) : null}
+
+              {/* Forgot Password Link */}
+              <TouchableOpacity
+                style={styles.forgotPasswordButton}
+                onPress={() => navigation.navigate('ForgotPassword')}
+                activeOpacity={0.7}>
+                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              </TouchableOpacity>
             </View>
 
             {/* Action Buttons */}
@@ -187,22 +195,6 @@ export default function LoginScreen({navigation}) {
                 ) : (
                   <Text style={styles.loginButtonText}>Log In</Text>
                 )}
-              </TouchableOpacity>
-
-              {/* Forgot Password Link */}
-              <TouchableOpacity
-                style={styles.forgotPasswordButton}
-                onPress={() => navigation.navigate('ForgotPassword')}
-                activeOpacity={0.7}>
-                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-              </TouchableOpacity>
-
-              {/* Sign Up Button */}
-              <TouchableOpacity
-                style={styles.signUpButton}
-                onPress={() => navigation.navigate('Register')}
-                activeOpacity={0.85}>
-                <Text style={styles.signUpButtonText}>Sign Up</Text>
               </TouchableOpacity>
 
               {/* Don't have an account? Sign Up */}
@@ -344,12 +336,12 @@ const styles = StyleSheet.create({
     color: colors.lettersAndIcons,
   },
   forgotPasswordButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: m(16),
+    alignSelf: 'flex-end',
+    paddingVertical: m(6),
+    marginTop: m(6),
   },
   forgotPasswordText: {
-    fontSize: m(13.5),
+    fontSize: m(13),
     lineHeight: m(18),
     fontFamily: FontFamily.primarySemiBold,
     color: colors.lettersAndIcons,
@@ -360,6 +352,7 @@ const styles = StyleSheet.create({
     borderRadius: m(26),
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: m(14),
   },
   signUpButtonText: {
     fontSize: m(16.5),

@@ -27,18 +27,30 @@ export default function BorrowerExploreLenders() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilterTab, setActiveFilterTab] = useState('all'); // 'all' | 'favorites'
 
+  const [activePendingApp, setActivePendingApp] = useState(null);
+
   const fetchLenders = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await borrowerFlowService.getLenders({
-        search: searchQuery,
-        onlyFavorites: activeFilterTab === 'favorites',
-      });
-      if (res?.success) {
-        setLenders(res.lenders || []);
-        if (res.favoriteCount !== undefined) {
-          setFavoriteCount(res.favoriteCount);
+      const [lendersRes, appsRes] = await Promise.allSettled([
+        borrowerFlowService.getLenders({
+          search: searchQuery,
+          onlyFavorites: activeFilterTab === 'favorites',
+        }),
+        borrowerFlowService.getMyApplications(),
+      ]);
+
+      if (lendersRes.status === 'fulfilled' && lendersRes.value?.success) {
+        setLenders(lendersRes.value.lenders || []);
+        if (lendersRes.value.favoriteCount !== undefined) {
+          setFavoriteCount(lendersRes.value.favoriteCount);
         }
+      }
+
+      if (appsRes.status === 'fulfilled' && appsRes.value?.success) {
+        const apps = appsRes.value.applications || [];
+        const pending = apps.find(a => a.status === 'pending');
+        setActivePendingApp(pending || null);
       }
     } catch (err) {
       console.error('Error fetching lenders:', err);
@@ -236,6 +248,32 @@ export default function BorrowerExploreLenders() {
 
       {/* Main Curved Body Section */}
       <View style={styles.sheetSection}>
+        {/* Active Application Notice Banner (matching webapp) */}
+        {activePendingApp ? (
+          <TouchableOpacity
+            style={styles.pendingAppNotice}
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('BorrowerApplications')}
+          >
+            <View style={styles.pendingAppIconBox}>
+              <Feather name="clock" size={m(15)} color="#d97706" />
+            </View>
+            <View style={{ flex: 1, marginLeft: m(8) }}>
+              <Text style={styles.pendingAppTitle} numberOfLines={1}>
+                Application Under Review (
+                {activePendingApp.lenderSnapshot?.companyName ||
+                  activePendingApp.lenderSnapshot?.userName ||
+                  'Selected Lender'}
+                )
+              </Text>
+              <Text style={styles.pendingAppSub} numberOfLines={2}>
+                48h decision window active ({activePendingApp.remainingHours != null ? `${activePendingApp.remainingHours}h remaining` : 'under review'}). Tap to view status.
+              </Text>
+            </View>
+            <Feather name="chevron-right" size={m(15)} color="#d97706" />
+          </TouchableOpacity>
+        ) : null}
+
         {/* Search Input Bar */}
         <View style={styles.searchContainer}>
           <Feather name="search" size={m(16)} color={colors.textSecondary} />
@@ -650,5 +688,37 @@ const styles = StyleSheet.create({
     marginTop: m(4),
     paddingHorizontal: m(20),
     lineHeight: m(16),
+  },
+
+  // Active Pending App Notice
+  pendingAppNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fffbeb',
+    borderWidth: 1,
+    borderColor: '#fde68a',
+    borderRadius: m(14),
+    padding: m(12),
+    marginBottom: m(12),
+  },
+  pendingAppIconBox: {
+    width: m(32),
+    height: m(32),
+    borderRadius: m(16),
+    backgroundColor: '#fef3c7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pendingAppTitle: {
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryBold,
+    color: '#92400e',
+  },
+  pendingAppSub: {
+    fontSize: m(10.5),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#b45309',
+    marginTop: m(1),
+    lineHeight: m(14),
   },
 });

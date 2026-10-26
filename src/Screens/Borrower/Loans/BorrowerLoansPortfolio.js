@@ -295,8 +295,9 @@ export default function BorrowerLoansPortfolio() {
         {/* Capsule Filter Tabs */}
         <View style={styles.periodCapsuleRow}>
           {[
-            { key: 'all', label: `All Facilities (${metrics.totalLoans || loans.length})` },
+            { key: 'all', label: `All (${metrics.totalLoans || loans.length})` },
             { key: 'active', label: `Active (${metrics.activeLoansCount || 0})` },
+            { key: 'overdue', label: 'Overdue' },
             { key: 'closed', label: `Settled (${metrics.closedLoansCount || 0})` },
           ].map((tab) => {
             const isSelected = activeTab === tab.key;

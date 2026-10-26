@@ -356,6 +356,11 @@ export default function LenderBorrowerDetails() {
                       <Text style={styles.facilityPurposeText} numberOfLines={1}>
                         {l.purpose || l.dealName || 'Commercial Facility'}
                       </Text>
+                      {l.pledgedSecurity ? (
+                        <Text style={styles.facilityPledgedText} numberOfLines={1}>
+                          🛡️ Pledged: {l.pledgedSecurity}
+                        </Text>
+                      ) : null}
                       <Text style={styles.facilitySubText}>
                         Sanctioned: {formatDate(l.loanGivenDate)}
                       </Text>
@@ -752,6 +757,12 @@ const styles = StyleSheet.create({
     fontSize: m(12.5),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
+  },
+  facilityPledgedText: {
+    fontSize: m(10.5),
+    fontFamily: FontFamily.primaryMedium,
+    color: '#b45309',
+    marginTop: m(1),
   },
   facilitySubText: {
     fontSize: m(10.5),

@@ -146,6 +146,22 @@ export default function BorrowerDashboard() {
     );
   };
 
+  const handleViewAcceptedApplication = async () => {
+    if (!stats.latestAccepted?._id) {
+      navigation.navigate('BorrowerApplications');
+      return;
+    }
+    const appId = stats.latestAccepted._id;
+    // Optimistically remove from state so banner disappears immediately
+    setStats((prev) => ({ ...prev, latestAccepted: null }));
+    try {
+      await borrowerFlowService.markApplicationRead(appId);
+    } catch (e) {
+      console.error('Failed to mark accepted app as read:', e);
+    }
+    navigation.navigate('BorrowerApplications');
+  };
+
   const displayName =
     user?.companyName || user?.businessName || user?.userName || user?.name || 'Commercial Borrower';
 
@@ -269,6 +285,58 @@ export default function BorrowerDashboard() {
         {/* 2. MAIN CURVED SHEET SECTION (#F1FFF3)                   */}
         {/* ======================================================== */}
         <View style={styles.sheetSection}>
+          {/* Accepted Deal Banner (When active accepted deal exists) */}
+          {stats.latestAccepted ? (
+            <View style={styles.acceptedBannerCard}>
+              <View style={styles.acceptedBannerHeader}>
+                <View style={styles.acceptedIconCircle}>
+                  <Feather name="check-circle" size={m(18)} color="#059669" />
+                </View>
+                <View style={{ flex: 1, marginLeft: m(10) }}>
+                  <Text style={styles.acceptedBadgeText}>FACILITY SANCTIONED</Text>
+                  <Text style={styles.acceptedTitleText}>
+                    {formatCurrency(stats.latestAccepted.amount)} accepted by{' '}
+                    <Text style={{ fontFamily: FontFamily.primaryBold, color: '#047857' }}>
+                      {stats.latestAccepted.lenderId?.companyName ||
+                        stats.latestAccepted.lenderId?.userName ||
+                        'Institutional Lender'}
+                    </Text>
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={styles.acceptedSubText}>
+                Purpose: {stats.latestAccepted.purpose} • Tenure: {stats.latestAccepted.tenureMonths} Months. Other pending applications were automatically closed.
+              </Text>
+
+              <View style={styles.acceptedBottomRow}>
+                <TouchableOpacity
+                  style={styles.acceptedContactBox}
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    const lenderId = stats.latestAccepted.lenderId?._id || stats.latestAccepted.lenderId;
+                    if (lenderId) {
+                      navigation.navigate('BorrowerLenderDetails', { lenderId });
+                    }
+                  }}
+                >
+                  {/* <Text style={styles.acceptedContactLabel}>LENDER CONTACT</Text> */}
+                  <Text style={styles.acceptedContactName} numberOfLines={1}>
+                    {stats.latestAccepted.lenderId?.userName || 'Loan Officer'}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.viewAppBtn}
+                  activeOpacity={0.85}
+                  onPress={handleViewAcceptedApplication}
+                >
+                  <Text style={styles.viewAppBtnText}>View Application</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : null}
+
           {/* Feature Highlight Card (Goal / Solvency Overview) */}
           <View style={styles.featureCard}>
             {/* Left Solvency Ring */}
@@ -1141,5 +1209,97 @@ const styles = StyleSheet.create({
     fontSize: m(12),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
+  },
+
+  // Accepted Deal Banner
+  acceptedBannerCard: {
+    backgroundColor: '#ecfdf5',
+    borderWidth: 1.5,
+    borderColor: '#a7f3d0',
+    borderRadius: m(20),
+    padding: m(16),
+    marginBottom: m(18),
+    elevation: 2,
+    shadowColor: '#059669',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+  },
+  acceptedBannerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: m(8),
+  },
+  acceptedIconCircle: {
+    width: m(38),
+    height: m(38),
+    borderRadius: m(19),
+    backgroundColor: '#d1fae5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  acceptedBadgeText: {
+    fontSize: m(9.5),
+    fontFamily: FontFamily.primaryBold,
+    color: '#059669',
+    letterSpacing: 0.6,
+  },
+  acceptedTitleText: {
+    fontSize: m(13.5),
+    fontFamily: FontFamily.primarySemiBold,
+    color: colors.lettersAndIcons,
+    marginTop: m(1),
+  },
+  acceptedSubText: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#334155',
+    lineHeight: m(16),
+    marginBottom: m(12),
+  },
+  acceptedBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(10),
+  },
+  acceptedContactBox: {
+    flex: 1,
+    flexBasis: 0,
+    height: m(44),
+    backgroundColor: colors.white,
+    paddingHorizontal: m(12),
+    borderRadius: m(12),
+    borderWidth: 1.2,
+    borderColor: '#a7f3d0',
+    justifyContent: 'center',
+  },
+  acceptedContactLabel: {
+    fontSize: m(8.5),
+    fontFamily: FontFamily.primaryBold,
+    color: '#64748b',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  acceptedContactName: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    marginTop: m(1),
+    textAlign: 'center',
+  },
+  viewAppBtn: {
+    flex: 1,
+    flexBasis: 0,
+    height: m(44),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#059669',
+    paddingHorizontal: m(10),
+    borderRadius: m(12),
+  },
+  viewAppBtnText: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
   },
 });

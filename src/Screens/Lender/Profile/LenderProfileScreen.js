@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -23,6 +23,7 @@ export default function LenderProfileScreen() {
   const navigation = useNavigation();
   const dispatch = useDispatch();
   const authUser = useSelector((state) => state.auth.user);
+  const isLoggingOut = useRef(false);
 
   const [loading, setLoading] = useState(true);
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
@@ -36,6 +37,7 @@ export default function LenderProfileScreen() {
   });
 
   const fetchProfile = useCallback(async () => {
+    if (!authUser || isLoggingOut.current) return;
     try {
       setLoading(true);
       const res = await lenderFlowService.getProfile();
@@ -52,9 +54,14 @@ export default function LenderProfileScreen() {
         });
       }
     } catch (err) {
+      if (err?.response?.status === 401 || isLoggingOut.current) {
+        return;
+      }
       console.error('Error fetching lender profile:', err);
     } finally {
-      setLoading(false);
+      if (!isLoggingOut.current) {
+        setLoading(false);
+      }
     }
   }, [authUser]);
 
@@ -66,6 +73,7 @@ export default function LenderProfileScreen() {
 
   const handleConfirmLogout = async () => {
     try {
+      isLoggingOut.current = true;
       setLogoutModalVisible(false);
       await dispatch(logout());
       await AsyncStorage.clear();
@@ -231,11 +239,8 @@ export default function LenderProfileScreen() {
               onPress={() => setLogoutModalVisible(false)}
             />
             <View style={styles.modalCard}>
-              <View style={styles.modalIconCircle}>
-                <Feather name="log-out" size={m(24)} color={colors.lettersAndIcons} />
-              </View>
-              <Text style={styles.modalSignOutTitle}>Sign Out</Text>
-              <Text style={styles.modalSignOutSubtitle}>
+              <Text style={styles.modalTitle}>Sign Out</Text>
+              <Text style={styles.modalSubtitle}>
                 Are you sure you want to sign out of the Institutional Terminal?
               </Text>
               <View style={styles.modalActionButtons}>
@@ -412,68 +417,79 @@ const styles = StyleSheet.create({
   },
 
   // Logout Modal
+  // Modal Dialog Styles (Exact Match with Admin Console Sign Out Modal)
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(9, 48, 48, 0.45)',
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(9, 48, 48, 0.65)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: m(24),
+    paddingHorizontal: m(24),
   },
   modalCard: {
     width: '100%',
+    maxWidth: m(320),
     backgroundColor: colors.white,
-    borderRadius: m(24),
-    padding: m(22),
+    borderRadius: m(28),
+    paddingHorizontal: m(24),
+    paddingTop: m(36),
+    paddingBottom: m(28),
     alignItems: 'center',
-    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 25,
   },
-  modalIconCircle: {
-    width: m(54),
-    height: m(54),
-    borderRadius: m(27),
-    backgroundColor: colors.lightGreen,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: m(14),
-  },
-  modalSignOutTitle: {
-    fontSize: m(18),
+  modalTitle: {
+    fontSize: m(20),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
-    marginBottom: m(6),
-  },
-  modalSignOutSubtitle: {
-    fontSize: m(12.5),
-    fontFamily: FontFamily.primaryRegular,
-    color: colors.textSecondary,
     textAlign: 'center',
-    marginBottom: m(20),
+  },
+  modalSubtitle: {
+    fontSize: m(13.5),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#4B6358',
+    textAlign: 'center',
+    marginTop: m(10),
+    marginBottom: m(26),
+    lineHeight: m(20),
   },
   modalActionButtons: {
     width: '100%',
-    gap: m(8),
+    gap: m(12),
   },
   modalConfirmBtn: {
-    backgroundColor: colors.oceanBlueButton,
-    paddingVertical: m(12),
-    borderRadius: m(12),
+    width: '100%',
+    height: m(48),
+    borderRadius: m(24),
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   modalConfirmBtnText: {
-    fontSize: m(13),
+    fontSize: m(14.5),
     fontFamily: FontFamily.primaryBold,
-    color: colors.white,
+    color: colors.lettersAndIcons,
   },
   modalCancelBtn: {
-    paddingVertical: m(12),
-    borderRadius: m(12),
+    width: '100%',
+    height: m(48),
+    borderRadius: m(24),
+    backgroundColor: colors.lightGreen,
+    justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
   },
   modalCancelBtnText: {
-    fontSize: m(13),
-    fontFamily: FontFamily.primarySemiBold,
-    color: colors.textSecondary,
+    fontSize: m(14.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  modalCancelBtnText: {
+    fontSize: m(14.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
 });

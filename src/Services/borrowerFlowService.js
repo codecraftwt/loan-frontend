@@ -122,6 +122,16 @@ export const borrowerFlowService = {
     }
   },
 
+  markApplicationRead: async (applicationId) => {
+    try {
+      const response = await axiosInstance.patch(`borrower/applications/${applicationId}/mark-read`);
+      return response.data;
+    } catch (error) {
+      console.error('Error marking application as read:', error);
+      throw error;
+    }
+  },
+
   // ─── Active Loans Portfolio & EMI Schedules ───
   getLoansPortfolio: async (params = {}) => {
     try {

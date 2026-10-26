@@ -585,18 +585,28 @@ export default function BorrowerEditProfileScreen() {
                     />
                   </View>
                   <View style={[styles.fieldWrap, { flex: 1 }]}>
-                    <Text style={styles.inputLabel}>DISTRICT</Text>
+                    <Text style={styles.inputLabel}>TALUKA / TEHSIL</Text>
                     <TextInput
                       style={styles.textInput}
-                      value={profile.district}
-                      onChangeText={t => setProfile({ ...profile, district: t })}
-                      placeholder="Mumbai City"
+                      value={profile.taluka}
+                      onChangeText={t => setProfile({ ...profile, taluka: t })}
+                      placeholder="Andheri"
                       placeholderTextColor="#94A3B8"
                     />
                   </View>
                 </View>
 
                 <View style={styles.twoColumnRow}>
+                  <View style={[styles.fieldWrap, { flex: 1 }]}>
+                    <Text style={styles.inputLabel}>DISTRICT</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      value={profile.district}
+                      onChangeText={t => setProfile({ ...profile, district: t })}
+                      placeholder="Mumbai Suburban"
+                      placeholderTextColor="#94A3B8"
+                    />
+                  </View>
                   <View style={[styles.fieldWrap, { flex: 1 }]}>
                     <Text style={styles.inputLabel}>STATE</Text>
                     <TextInput
@@ -607,17 +617,18 @@ export default function BorrowerEditProfileScreen() {
                       placeholderTextColor="#94A3B8"
                     />
                   </View>
-                  <View style={[styles.fieldWrap, { flex: 1 }]}>
-                    <Text style={styles.inputLabel}>PINCODE</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      keyboardType="numeric"
-                      value={profile.pincode}
-                      onChangeText={t => setProfile({ ...profile, pincode: t })}
-                      placeholder="400001"
-                      placeholderTextColor="#94A3B8"
-                    />
-                  </View>
+                </View>
+
+                <View style={styles.fieldWrap}>
+                  <Text style={styles.inputLabel}>PINCODE</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    keyboardType="numeric"
+                    value={profile.pincode}
+                    onChangeText={t => setProfile({ ...profile, pincode: t })}
+                    placeholder="400001"
+                    placeholderTextColor="#94A3B8"
+                  />
                 </View>
               </View>
             )}

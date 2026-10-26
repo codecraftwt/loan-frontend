@@ -258,6 +258,19 @@ export default function BorrowerLoanDetails() {
               </View>
             </View>
 
+            {/* Pledged Security / Collateral Strip */}
+            {(loan.pledgedSecurity || loan.applicationId?.pledgedSecurity) ? (
+              <View style={styles.collateralStrip}>
+                <Feather name="shield" size={m(13)} color="#b45309" />
+                <View style={{ flex: 1, marginLeft: m(6) }}>
+                  <Text style={styles.collateralLabel}>PLEDGED COLLATERAL / SECURITY</Text>
+                  <Text style={styles.collateralVal} numberOfLines={2}>
+                    {loan.pledgedSecurity || loan.applicationId?.pledgedSecurity}
+                  </Text>
+                </View>
+              </View>
+            ) : null}
+
             {/* Repayment Progress Bar */}
             <View style={styles.progressSection}>
               <View style={styles.progressTextRow}>
@@ -370,11 +383,21 @@ export default function BorrowerLoanDetails() {
                         </View>
                         <View style={{ flex: 1, marginLeft: m(10) }}>
                           <Text style={styles.instAmountText}>
-                            {formatINR(inst.totalAmount || inst.amount || loan.monthlyEmi)}
+                            {formatINR(inst.emiAmount || inst.totalAmount || inst.amount || loan.monthlyEmi)}
                           </Text>
                           <Text style={styles.instDateText}>
                             Due {formatDate(inst.dueDate)}
+                            {inst.principalComponent !== undefined && inst.interestComponent !== undefined ? (
+                              <Text style={styles.instBreakdownText}>
+                                {' '}• P: {formatINR(inst.principalComponent)} | I: {formatINR(inst.interestComponent)}
+                              </Text>
+                            ) : null}
                           </Text>
+                          {isPaid && inst.paymentRef ? (
+                            <Text style={styles.instPaidRefText}>
+                              UTR: {inst.paymentRef}
+                            </Text>
+                          ) : null}
                         </View>
                       </View>
 
@@ -997,5 +1020,41 @@ const styles = StyleSheet.create({
     fontSize: m(13.5),
     fontFamily: FontFamily.primaryBold,
     color: colors.white,
+  },
+
+  // Collateral Strip
+  collateralStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef3c7',
+    borderWidth: 1,
+    borderColor: '#fde68a',
+    borderRadius: m(12),
+    paddingHorizontal: m(12),
+    paddingVertical: m(8),
+    marginTop: m(10),
+  },
+  collateralLabel: {
+    fontSize: m(9.5),
+    fontFamily: FontFamily.primaryBold,
+    color: '#92400e',
+    letterSpacing: 0.5,
+  },
+  collateralVal: {
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primarySemiBold,
+    color: '#78350f',
+    marginTop: m(1),
+  },
+  instBreakdownText: {
+    fontSize: m(10.5),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#64748b',
+  },
+  instPaidRefText: {
+    fontSize: m(10),
+    fontFamily: FontFamily.primaryMedium,
+    color: '#059669',
+    marginTop: m(2),
   },
 });

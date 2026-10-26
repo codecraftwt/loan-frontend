@@ -203,6 +203,10 @@ export default function LenderLoanDetails() {
   const isClosed = loan?.status === 'closed' || loan?.paymentStatus === 'paid' || remaining <= 0;
   const installments = loan?.installments || [];
   const hasOverdue = installments.some((inst) => inst.status === 'overdue');
+  const pledgedSecurity =
+    loan?.pledgedSecurity ||
+    loan?.applicationId?.pledgedSecurity ||
+    loan?.applicationId?.agreement?.sanctionTerms?.pledgedSecurity;
 
   return (
     <ScreenWrapper
@@ -339,6 +343,16 @@ export default function LenderLoanDetails() {
                 <Text style={styles.paramVal}>{formatDate(loan?.loanEndDate)}</Text>
               </View>
             </View>
+
+            {pledgedSecurity ? (
+              <View style={styles.pledgedSecurityBox}>
+                <Feather name="shield" size={m(14)} color="#b45309" />
+                <View style={{ flex: 1, marginLeft: m(8) }}>
+                  <Text style={styles.pledgedSecurityLabel}>Pledged Security / Collateral</Text>
+                  <Text style={styles.pledgedSecurityVal}>{pledgedSecurity}</Text>
+                </View>
+              </View>
+            ) : null}
           </View>
 
           {/* ── 2.2 Pending Disbursal OTP Alert (if applicable) ── */}
@@ -477,6 +491,16 @@ export default function LenderLoanDetails() {
               <Text style={styles.dossierLabel}>PAN / KYC</Text>
               <Text style={styles.dossierVal}>{borrower.panCardNumber || 'Verified'}</Text>
             </View>
+
+            {pledgedSecurity ? (
+              <View style={styles.dossierRow}>
+                <Text style={styles.dossierLabel}>Pledged Collateral</Text>
+                <View style={styles.securityTag}>
+                  <Feather name="shield" size={m(11)} color="#b45309" />
+                  <Text style={styles.securityTagText}>{pledgedSecurity}</Text>
+                </View>
+              </View>
+            ) : null}
 
             {/* Direct WhatsApp Outreach */}
             <TouchableOpacity
@@ -872,6 +896,43 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
     marginTop: m(2),
+  },
+  pledgedSecurityBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fffbeb',
+    borderWidth: 1,
+    borderColor: '#fde68a',
+    borderRadius: m(10),
+    padding: m(10),
+    marginTop: m(6),
+  },
+  pledgedSecurityLabel: {
+    fontSize: m(10),
+    fontFamily: FontFamily.primaryMedium,
+    color: '#b45309',
+  },
+  pledgedSecurityVal: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryBold,
+    color: '#78350f',
+    marginTop: m(1),
+  },
+  securityTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef3c7',
+    paddingHorizontal: m(8),
+    paddingVertical: m(3),
+    borderRadius: m(6),
+    borderWidth: 0.5,
+    borderColor: '#fde68a',
+  },
+  securityTagText: {
+    fontFamily: FontFamily.primaryMedium,
+    fontSize: m(11),
+    color: '#92400e',
+    marginLeft: m(4),
   },
 
   // Disbursal OTP Card

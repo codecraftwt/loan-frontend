@@ -196,9 +196,6 @@ export default function AdminProfileScreen() {
               onPress={() => setLogoutModalVisible(false)}
             />
             <View style={styles.modalCard}>
-              <View style={styles.modalIconCircle}>
-                <Feather name="log-out" size={m(26)} color={colors.lettersAndIcons} />
-              </View>
               <Text style={styles.modalTitle}>Sign Out</Text>
               <Text style={styles.modalSubtitle}>
                 Are you sure you want to sign out of the Admin Console?
@@ -407,23 +404,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: m(28),
     paddingHorizontal: m(24),
-    paddingTop: m(28),
-    paddingBottom: m(22),
+    paddingTop: m(36),
+    paddingBottom: m(28),
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.25,
     shadowRadius: 16,
     elevation: 25,
-  },
-  modalIconCircle: {
-    width: m(54),
-    height: m(54),
-    borderRadius: m(27),
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: m(14),
   },
   modalTitle: {
     fontSize: m(20),
@@ -436,18 +424,18 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.primaryRegular,
     color: '#4B6358',
     textAlign: 'center',
-    marginTop: m(8),
-    marginBottom: m(22),
+    marginTop: m(10),
+    marginBottom: m(26),
     lineHeight: m(20),
   },
   modalActionButtons: {
     width: '100%',
-    gap: m(10),
+    gap: m(12),
   },
   modalConfirmBtn: {
     width: '100%',
-    height: m(46),
-    borderRadius: m(23),
+    height: m(48),
+    borderRadius: m(24),
     backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
@@ -459,8 +447,8 @@ const styles = StyleSheet.create({
   },
   modalCancelBtn: {
     width: '100%',
-    height: m(46),
-    borderRadius: m(23),
+    height: m(48),
+    borderRadius: m(24),
     backgroundColor: colors.lightGreen,
     justifyContent: 'center',
     alignItems: 'center',

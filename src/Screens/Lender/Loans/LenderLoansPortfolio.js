@@ -247,6 +247,14 @@ export default function LenderLoansPortfolio() {
             <Text style={styles.facilitySubtitle} numberOfLines={1}>
               Facility #{item._id.slice(-6).toUpperCase()} • {item.interestRate || 12}% p.a.
             </Text>
+            {item.pledgedSecurity || item.applicationId?.pledgedSecurity ? (
+              <View style={styles.pledgedSecurityBadge}>
+                <Feather name="shield" size={m(10)} color="#b45309" />
+                <Text style={styles.pledgedSecurityBadgeText} numberOfLines={1}>
+                  {item.pledgedSecurity || item.applicationId?.pledgedSecurity}
+                </Text>
+              </View>
+            ) : null}
           </View>
 
           {/* Status Badge */}
@@ -827,6 +835,25 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.primaryRegular,
     color: colors.blueButton,
     marginTop: m(1),
+  },
+  pledgedSecurityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: '#fef3c7',
+    paddingHorizontal: m(5),
+    paddingVertical: m(1.5),
+    borderRadius: m(5),
+    marginTop: m(3),
+    borderWidth: 0.5,
+    borderColor: '#fde68a',
+    maxWidth: '100%',
+  },
+  pledgedSecurityBadgeText: {
+    fontFamily: FontFamily.primaryMedium,
+    fontSize: m(10),
+    color: '#92400e',
+    marginLeft: m(3),
   },
 
   // Status Badges

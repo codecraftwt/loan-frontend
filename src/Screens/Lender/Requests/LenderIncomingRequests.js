@@ -162,6 +162,14 @@ export default function LenderIncomingRequests() {
             <Text style={styles.purposeText} numberOfLines={1}>
               {item.purpose || 'Working Capital'} • {item.tenureMonths || 12} Mo
             </Text>
+            {item.pledgedSecurity ? (
+              <View style={styles.pledgedSecurityBadge}>
+                <Feather name="shield" size={m(10)} color="#b45309" />
+                <Text style={styles.pledgedSecurityBadgeText} numberOfLines={1}>
+                  {item.pledgedSecurity}
+                </Text>
+              </View>
+            ) : null}
           </View>
 
           {/* Status Badge */}
@@ -618,6 +626,25 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.primaryRegular,
     color: colors.blueButton,
     marginTop: m(1),
+  },
+  pledgedSecurityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: '#fef3c7',
+    paddingHorizontal: m(5),
+    paddingVertical: m(1.5),
+    borderRadius: m(5),
+    marginTop: m(3),
+    borderWidth: 0.5,
+    borderColor: '#fde68a',
+    maxWidth: '100%',
+  },
+  pledgedSecurityBadgeText: {
+    fontFamily: FontFamily.primaryMedium,
+    fontSize: m(10),
+    color: '#92400e',
+    marginLeft: m(3),
   },
   statusPill: {
     paddingHorizontal: m(8),

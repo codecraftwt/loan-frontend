@@ -22,15 +22,26 @@ export default function BorrowerLenderDetails() {
   const [lender, setLender] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('financial'); // 'financial' | 'profile'
+  const [activePendingApp, setActivePendingApp] = useState(null);
 
   useEffect(() => {
     const fetchLender = async () => {
       try {
         setLoading(true);
         if (id) {
-          const res = await borrowerFlowService.getLenderById(id);
-          if (res?.success && res.lender) {
-            setLender(res.lender);
+          const [lenderRes, appsRes] = await Promise.allSettled([
+            borrowerFlowService.getLenderById(id),
+            borrowerFlowService.getMyApplications(),
+          ]);
+
+          if (lenderRes.status === 'fulfilled' && lenderRes.value?.success && lenderRes.value.lender) {
+            setLender(lenderRes.value.lender);
+          }
+
+          if (appsRes.status === 'fulfilled' && appsRes.value?.success) {
+            const apps = appsRes.value.applications || [];
+            const pending = apps.find(a => a.status === 'pending');
+            setActivePendingApp(pending || null);
           }
         }
       } catch (err) {
@@ -52,6 +63,30 @@ export default function BorrowerLenderDetails() {
       console.error('Error toggling favorite:', err);
       setLender({ ...lender, isFavorite: !nextState });
     }
+  };
+
+  const handleApply = () => {
+    if (activePendingApp) {
+      const pendingLenderName =
+        activePendingApp.lenderSnapshot?.companyName ||
+        activePendingApp.lenderSnapshot?.userName ||
+        activePendingApp.lenderId?.companyName ||
+        'another institution';
+      const remaining =
+        activePendingApp.remainingHours != null
+          ? `${activePendingApp.remainingHours} hours`
+          : 'up to 48 hours';
+      Alert.alert(
+        'Active Application Under Review',
+        `You currently have an active credit request with ${pendingLenderName} (decision expires in ${remaining}). In accordance with commercial lending rules, you can apply with another lender once this request is accepted, rejected, or expired.`,
+        [
+          { text: 'View Status', onPress: () => navigation.navigate('BorrowerApplications') },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
+      return;
+    }
+    navigation.navigate('BorrowerApply', { preselectedLender: lender });
   };
 
   const formatINR = (val) => {
@@ -368,11 +403,8 @@ export default function BorrowerLenderDetails() {
           <TouchableOpacity
             style={styles.applyNowBtn}
             activeOpacity={0.85}
-            onPress={() =>
-              navigation.navigate('BorrowerApply', { preselectedLender: lender })
-            }
+            onPress={handleApply}
           >
-            {/* <Feather name="send" size={m(15)} color={colors.white} /> */}
             <Text style={styles.applyNowBtnText}>Apply with this Institution</Text>
           </TouchableOpacity>
         </View>

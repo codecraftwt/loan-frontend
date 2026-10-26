@@ -383,6 +383,48 @@ export default function BorrowerApplications() {
 
       {/* Main Curved Body Section */}
       <View style={styles.sheetSection}>
+        {/* Unsigned Agreement Action Banner (matching webapp) */}
+        {(() => {
+          const unsignedApp = applications.find(
+            a =>
+              a.status === 'accepted' &&
+              (a.agreement?.status === 'lender_signed' ||
+                (!a.agreement?.borrowerSignature?.signedAt &&
+                  a.agreement?.lenderSignature?.signedAt))
+          );
+          if (!unsignedApp) return null;
+          return (
+            <View style={styles.signingAlertBanner}>
+              <View style={styles.signingAlertLeft}>
+                <View style={styles.signingAlertIconCircle}>
+                  <Feather name="file-text" size={m(15)} color={colors.white} />
+                </View>
+                <View style={{ flex: 1, marginLeft: m(10) }}>
+                  <Text style={styles.signingAlertTitle} numberOfLines={1}>
+                    Contract Ready for Signature
+                  </Text>
+                  <Text style={styles.signingAlertSubtitle} numberOfLines={2}>
+                    {unsignedApp.lenderSnapshot?.companyName ||
+                      unsignedApp.lenderSnapshot?.userName ||
+                      'Institutional Lender'}{' '}
+                    has approved facility terms. Review & countersign to unlock disbursal.
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={styles.signingAlertBtn}
+                activeOpacity={0.85}
+                onPress={() =>
+                  navigation.navigate('BorrowerContractTermsScreen', { application: unsignedApp })
+                }
+              >
+                <Text style={styles.signingAlertBtnText}>Review & Sign</Text>
+                <Feather name="arrow-right" size={m(11)} color={colors.white} />
+              </TouchableOpacity>
+            </View>
+          );
+        })()}
+
         {/* Search Bar */}
         <View style={styles.searchContainer}>
           <Feather name="search" size={m(16)} color={colors.textSecondary} />
@@ -1248,5 +1290,54 @@ const styles = StyleSheet.create({
     fontSize: m(13),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
+  },
+
+  // Signing Alert Banner
+  signingAlertBanner: {
+    backgroundColor: '#eff6ff',
+    borderWidth: 1.5,
+    borderColor: '#bfdbfe',
+    borderRadius: m(16),
+    padding: m(13),
+    marginBottom: m(14),
+  },
+  signingAlertLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: m(10),
+  },
+  signingAlertIconCircle: {
+    width: m(34),
+    height: m(34),
+    borderRadius: m(17),
+    backgroundColor: colors.oceanBlueButton,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  signingAlertTitle: {
+    fontSize: m(12.5),
+    fontFamily: FontFamily.primaryBold,
+    color: '#1e3a8a',
+  },
+  signingAlertSubtitle: {
+    fontSize: m(10.5),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#3b82f6',
+    lineHeight: m(15),
+    marginTop: m(1),
+  },
+  signingAlertBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: m(5),
+    backgroundColor: colors.oceanBlueButton,
+    paddingVertical: m(8),
+    borderRadius: m(10),
+  },
+  signingAlertBtnText: {
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
   },
 });
