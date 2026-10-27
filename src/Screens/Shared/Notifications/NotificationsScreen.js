@@ -49,6 +49,14 @@ const formatRelativeTime = (dateStr) => {
   }
 };
 
+const stripEmojis = (str) => {
+  if (typeof str !== 'string') return '';
+  return str
+    .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{2300}-\u{23FF}\u{2B50}\u{1F000}-\u{1FFFF}]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
 /**
  * Maps notification type to visual properties (icon, background, badge, theme color)
  * Replicates the web app notification logic & aesthetics.
@@ -56,6 +64,48 @@ const formatRelativeTime = (dateStr) => {
 const getNotificationVisuals = (notification) => {
   const type = notification?.type || '';
   const title = (notification?.title || '').toLowerCase();
+
+  if (
+    type === 'emi_due_tomorrow' ||
+    title.includes('due tomorrow')
+  ) {
+    return {
+      icon: 'clock',
+      iconColor: '#D97706',
+      bgColor: '#FEF3C7',
+      badgeLabel: 'DUE TOMORROW',
+      badgeBg: '#FEF3C7',
+      badgeText: '#B45309',
+    };
+  }
+
+  if (
+    type === 'emi_due_today' ||
+    title.includes('due today')
+  ) {
+    return {
+      icon: 'alert-circle',
+      iconColor: '#EA580C',
+      bgColor: '#FFEDD5',
+      badgeLabel: 'DUE TODAY',
+      badgeBg: '#FFEDD5',
+      badgeText: '#C2410C',
+    };
+  }
+
+  if (
+    type === 'overdue_loan' ||
+    title.includes('overdue')
+  ) {
+    return {
+      icon: 'alert-triangle',
+      iconColor: '#DC2626',
+      bgColor: '#FEE2E2',
+      badgeLabel: 'OVERDUE',
+      badgeBg: '#FEE2E2',
+      badgeText: '#991B1B',
+    };
+  }
 
   if (
     type === 'agreement_signed' ||
@@ -305,9 +355,8 @@ export default function NotificationsScreen() {
 
   const renderNotificationCard = ({ item }) => {
     const visuals = getNotificationVisuals(item);
-    const cleanTitle = (item.title || '')
-      .replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '')
-      .trim();
+    const cleanTitle = stripEmojis(item.title) || 'Notification';
+    const cleanMessage = stripEmojis(item.message);
 
     return (
       <TouchableOpacity
@@ -346,11 +395,11 @@ export default function NotificationsScreen() {
               ]}
               numberOfLines={2}
             >
-              {cleanTitle || 'Notification'}
+              {cleanTitle}
             </Text>
 
             <Text style={styles.notificationMessage} numberOfLines={3}>
-              {item.message}
+              {cleanMessage}
             </Text>
 
             {/* Optional Metadata Strip */}

@@ -483,6 +483,8 @@ class NotificationService {
       case 'loan_payment_confirmed':
       case 'agreement_signed':
       case 'agreement_ready':
+      case 'emi_due_tomorrow':
+      case 'emi_due_today':
       case 'notification':
       case 'in_app_notification':
         try {
@@ -763,11 +765,22 @@ class NotificationService {
     }
   }
  
+  // Helper to strip emojis and unicode icon symbols from notification text
+  stripEmojis(str) {
+    if (typeof str !== 'string') return str || '';
+    return str
+      .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{2300}-\u{23FF}\u{2B50}\u{1F000}-\u{1FFFF}]/gu, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
   //  Display notification (for foreground)
   async displayNotification(remoteMessage) {
     const { notification, data } = remoteMessage;
-    const title = notification?.title || data?.title || 'Loan Notification';
-    const message = notification?.body || data?.message || data?.body || '';
+    const rawTitle = notification?.title || data?.title || 'Loan Notification';
+    const rawMessage = notification?.body || data?.message || data?.body || '';
+    const title = this.stripEmojis(rawTitle);
+    const message = this.stripEmojis(rawMessage);
 
 
     // 2. Display notification using Notifee for OS status bar / system tray
