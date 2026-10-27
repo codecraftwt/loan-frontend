@@ -52,7 +52,7 @@ export default function SplashScreen({navigation}) {
         if (token) {
           const storedUser = await AsyncStorage.getItem('user');
           if (storedUser) {
-            dispatch(setUser(JSON.parse(storedUser)));
+            dispatch(setUser({ ...JSON.parse(storedUser), token }));
           }
           navigation.replace('BottomNavigation');
         } else {

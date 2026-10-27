@@ -128,6 +128,12 @@ export default function LenderProfileScreen() {
       onPress: () => navigation.navigate('LenderOfficeJurisdictionScreen'),
     },
     {
+      id: 'notifications',
+      title: 'Alerts & Notifications',
+      icon: 'bell',
+      onPress: () => navigation.navigate('NotificationsScreen'),
+    },
+    {
       id: 'help',
       title: 'Help',
       icon: 'headphones',

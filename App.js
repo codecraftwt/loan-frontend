@@ -21,6 +21,8 @@ function AppContent() {
 
   // Monitor network state for automatic syncing
   useEffect(() => {
+    // Immediately register notification channel so Android accepts incoming notifications
+    NotificationService.createDefaultChannel?.();
     const unsubscribe = syncService.startNetworkMonitoring(dispatch);
     return () => {
       if (unsubscribe) unsubscribe();
@@ -57,10 +59,11 @@ function AppContent() {
   // Initialize notifications when user logs in
   useEffect(() => {
     const initNotificationsForUser = async () => {
-      if (user?._id && authToken && navigationRef.current) {
+      if (user?._id) {
         try {
-          // Ensure navigation is set
-          NotificationService.setNavigation(navigationRef.current);
+          if (navigationRef.current) {
+            NotificationService.setNavigation(navigationRef.current);
+          }
           
           // Always request permission and initialize notifications when user logs in
           const hasPermission = await NotificationService.requestPermission();

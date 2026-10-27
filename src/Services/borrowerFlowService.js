@@ -207,6 +207,16 @@ export const borrowerFlowService = {
     }
   },
 
+  markAllNotificationsRead: async () => {
+    try {
+      const response = await axiosInstance.patch('borrower/notifications/all/read');
+      return response.data;
+    } catch (error) {
+      console.error('Error marking all borrower notifications read:', error);
+      throw error;
+    }
+  },
+
   // ─── Security / Password ───
   changePassword: async (passwordData) => {
     try {

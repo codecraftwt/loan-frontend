@@ -37,6 +37,7 @@ import BorrowerAnalyticsScreen from '../Screens/Borrower/Analytics/BorrowerAnaly
 import ContactsScreen from '../Screens/Shared/Contacts/ContactsScreen';
 import BorrowerRecentActivity from '../Screens/Borrower/Dashboard/BorrowerRecentActivity';
 import LenderRecentActivity from '../Screens/Lender/Dashboard/LenderRecentActivity';
+import NotificationsScreen from '../Screens/Shared/Notifications/NotificationsScreen';
 // Admin screens
 import PlansList from '../Screens/Admin/Plans/PlansList';
 import CreateEditPlan from '../Screens/Admin/Plans/CreateEditPlan';
@@ -196,6 +197,10 @@ const Navigation = () => {
       <Stack.Screen name="LenderEditProfileScreen" component={LenderEditProfileScreen} />
       <Stack.Screen name="LenderOfficeJurisdictionScreen" component={LenderOfficeJurisdictionScreen} />
       <Stack.Screen name="LenderSettingsScreen" component={LenderSettingsScreen} />
+
+      {/* Notifications Screens */}
+      <Stack.Screen name="NotificationsScreen" component={NotificationsScreen} />
+      <Stack.Screen name="NotificationScreen" component={NotificationsScreen} />
 
     </Stack.Navigator>
   );

@@ -18,6 +18,7 @@ import { colors, FontFamily } from '../../../constants';
 import { m } from '../../../Utils/responsive';
 import { ScreenWrapper, showAlert } from '../../../Components/common';
 import lenderFlowService from '../../../Services/lenderFlowService';
+import NotificationService from '../../../Services/NotificationService';
 
 /**
  * Format currency to Indian Rupee format
@@ -80,6 +81,7 @@ export default function LenderDashboard() {
   });
 
   const [activePlan, setActivePlan] = useState(null);
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState('All'); // 'All' | 'In Review' | 'Disbursed'
@@ -93,14 +95,15 @@ export default function LenderDashboard() {
   // Animation
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  const fetchAllDashboardData = useCallback(async () => {
+  const fetchAllDashboardData = useCallback(async (isSilent = false) => {
     if (!user?._id || user?.roleId !== 1) return;
     try {
-      setLoading(true);
-      const [statsRes, loansRes, planRes] = await Promise.allSettled([
+      if (!isSilent) setLoading(true);
+      const [statsRes, loansRes, planRes, notifsRes] = await Promise.allSettled([
         lenderFlowService.getDashboardStats(),
         lenderFlowService.getLoansPortfolio({ limit: 5 }),
         lenderFlowService.getActivePlan(),
+        lenderFlowService.getNotifications(),
       ]);
 
       if (statsRes.status === 'fulfilled' && statsRes.value?.success) {
@@ -115,6 +118,10 @@ export default function LenderDashboard() {
 
       if (planRes.status === 'fulfilled' && planRes.value?.success) {
         setActivePlan(planRes.value.data || planRes.value.plan || null);
+      }
+
+      if (notifsRes.status === 'fulfilled' && notifsRes.value?.success) {
+        setUnreadNotificationsCount(notifsRes.value.unreadCount || 0);
       }
     } catch (err) {
       if (err?.response?.status !== 401) {
@@ -136,8 +143,30 @@ export default function LenderDashboard() {
         duration: 350,
         useNativeDriver: true,
       }).start();
+
+      // Poll every 15s to automatically receive in-app notifications
+      const interval = setInterval(() => {
+        fetchAllDashboardData(true);
+      }, 15000);
+
+      return () => clearInterval(interval);
     }, [user?._id, user?.roleId, fetchAllDashboardData, fadeAnim])
   );
+
+  // Real-time foreground notification listener to update bell badge immediately
+  useEffect(() => {
+    const unsubscribe = NotificationService.addListener(() => {
+      lenderFlowService
+        .getNotifications()
+        .then((res) => {
+          if (res?.success) {
+            setUnreadNotificationsCount(res.unreadCount || 0);
+          }
+        })
+        .catch(() => {});
+    });
+    return unsubscribe;
+  }, []);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -233,10 +262,18 @@ export default function LenderDashboard() {
             <TouchableOpacity
               style={styles.notificationBtn}
               activeOpacity={0.8}
-              onPress={() => navigation.navigate('LenderProfileScreen')}
+              onPress={() => navigation.navigate('NotificationsScreen')}
             >
               <Feather name="bell" size={m(20)} color={colors.lettersAndIcons} />
-              {pendingCount > 0 && <View style={styles.notificationDot} />}
+              {unreadNotificationsCount > 0 ? (
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.notificationBadgeText}>
+                    {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+                  </Text>
+                </View>
+              ) : pendingCount > 0 ? (
+                <View style={styles.notificationDot} />
+              ) : null}
             </TouchableOpacity>
           </View>
 
@@ -757,6 +794,25 @@ const styles = StyleSheet.create({
     height: m(8),
     borderRadius: m(4),
     backgroundColor: colors.blueButton,
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: m(2),
+    right: m(2),
+    backgroundColor: '#EF4444',
+    minWidth: m(18),
+    height: m(18),
+    borderRadius: m(9),
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: m(3),
+    borderWidth: 1.5,
+    borderColor: colors.white,
+  },
+  notificationBadgeText: {
+    fontSize: m(9),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
   },
 
   // 2-Column Summary Stats on Green

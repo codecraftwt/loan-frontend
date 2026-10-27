@@ -254,6 +254,16 @@ export const lenderFlowService = {
     }
   },
 
+  markAllNotificationsRead: async () => {
+    try {
+      const response = await axiosInstance.patch('lender/notifications/all/read');
+      return response.data;
+    } catch (error) {
+      console.error('Error marking all lender notifications read:', error);
+      throw error;
+    }
+  },
+
   // ─── 8. Subscription Plans & Tier Management ───
   getAvailablePlans: async () => {
     try {

@@ -3,6 +3,7 @@ import firebase from '@react-native-firebase/app';
 import { Platform, PermissionsAndroid } from 'react-native';
 import notifee from '@notifee/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Toast from 'react-native-toast-message';
 import instance from '../Utils/AxiosInstance';
 import { showAlert } from '../Components/common';
 
@@ -14,6 +15,31 @@ class NotificationService {
     this.navigation = null;
     this.notifeeHandlersSetup = false;
     this.isFirebaseInitialized = false;
+    this.listeners = new Set();
+  }
+
+  /**
+   * Register listener for foreground notification arrivals
+   */
+  addListener(callback) {
+    if (typeof callback === 'function') {
+      this.listeners.add(callback);
+      return () => this.listeners.delete(callback);
+    }
+    return () => {};
+  }
+
+  /**
+   * Broadcast foreground notification to registered listeners
+   */
+  notifyListeners(remoteMessage) {
+    this.listeners.forEach(cb => {
+      try {
+        cb(remoteMessage);
+      } catch (err) {
+        console.error('Error in notification listener callback:', err);
+      }
+    });
   }
 
   /**
@@ -233,6 +259,27 @@ class NotificationService {
     this.navigation = navigation;
   }
 
+  /**
+   * Register default Android notification channel with the system
+   */
+  async createDefaultChannel() {
+    if (Platform.OS === 'android') {
+      try {
+        await notifee.createChannel({
+          id: 'loan_notifications',
+          name: 'Loan Notifications',
+          importance: 4, // AndroidImportance.HIGH
+          visibility: 1, // AndroidVisibility.PUBLIC
+          sound: 'default',
+          vibration: true,
+          lights: true,
+        });
+      } catch (err) {
+        console.warn('Error creating default notification channel:', err?.message);
+      }
+    }
+  }
+
   // Setup notification handlers
   setupNotificationHandlers() {
     // Prevent duplicate handlers
@@ -247,8 +294,14 @@ class NotificationService {
     }
 
     try {
+      // Register Android notification channel immediately so OS accepts background notifications
+      this.createDefaultChannel();
+
       // Handle foreground messages
       this.foregroundUnsubscribe = messaging().onMessage(async remoteMessage => {
+        // Broadcast to all active in-app screens (e.g. Dashboard bell & NotificationsScreen)
+        this.notifyListeners(remoteMessage);
+        // Display in-app banner toast & Notifee
         this.displayNotification(remoteMessage);
       });
 
@@ -419,6 +472,24 @@ class NotificationService {
 
       case 'fraud_alert':
         this.handleFraudAlertNotification(data);
+        break;
+
+      case 'loan_accepted':
+      case 'loan_rejected':
+      case 'loan_auto_rejected':
+      case 'loan_received':
+      case 'disbursal_otp':
+      case 'loan_disbursed':
+      case 'loan_payment_confirmed':
+      case 'agreement_signed':
+      case 'agreement_ready':
+      case 'notification':
+      case 'in_app_notification':
+        try {
+          this.navigation.navigate('NotificationsScreen');
+        } catch (e) {
+          this.navigation.navigate('BottomNavigation');
+        }
         break;
 
       default:
@@ -606,9 +677,13 @@ class NotificationService {
 
   // Handle notification by screen (fallback for unknown types)
   handleNotificationByScreen(data) {
-    if (!data.screen) {
-      // No screen specified, navigate to home
-      this.navigation.navigate('BottomNavigation');
+    if (!data?.screen) {
+      // No screen specified, navigate to NotificationsScreen so user can view it
+      try {
+        this.navigation.navigate('NotificationsScreen');
+      } catch (error) {
+        this.navigation.navigate('BottomNavigation');
+      }
       return;
     }
 
@@ -666,6 +741,17 @@ class NotificationService {
         }
         break;
 
+      case 'Notifications':
+      case 'Notification':
+      case 'NotificationsScreen':
+      case 'NotificationScreen':
+        try {
+          this.navigation.navigate('NotificationsScreen', navigationParams);
+        } catch (error) {
+          this.navigation.navigate('BottomNavigation');
+        }
+        break;
+
       default:
         // Try to navigate to screen name directly
         try {
@@ -680,21 +766,14 @@ class NotificationService {
   //  Display notification (for foreground)
   async displayNotification(remoteMessage) {
     const { notification, data } = remoteMessage;
+    const title = notification?.title || data?.title || 'Loan Notification';
+    const message = notification?.body || data?.message || data?.body || '';
 
-    // Create notification channel for Android (required for Notifee)
-    if (Platform.OS === 'android') {
-      await notifee.createChannel({
-        id: 'loan_notifications',
-        name: 'Loan Notifications',
-        importance: 4, // HIGH
-        sound: 'default',
-        vibration: true,
-      });
-    }
 
-    // Display notification using Notifee for better appearance
+    // 2. Display notification using Notifee for OS status bar / system tray
     try {
-      // Add notification ID to data for tracking
+      await this.createDefaultChannel();
+
       const notificationData = {
         ...(data || {}),
         notificationId: data?.notificationId || `notif_${Date.now()}`,
@@ -702,8 +781,8 @@ class NotificationService {
       };
 
       await notifee.displayNotification({
-        title: notification?.title || 'Notification',
-        body: notification?.body || '',
+        title,
+        body: message,
         data: notificationData,
         android: {
           channelId: 'loan_notifications',
@@ -712,17 +791,15 @@ class NotificationService {
           pressAction: {
             id: 'default',
           },
-          // Add action buttons
           actions: [
             {
-              title: 'Mark as Read',
+              title: 'View',
               pressAction: {
-                id: 'mark_as_read',
+                id: 'default',
               },
             },
           ],
-          // Add color for better visibility
-          color: '#b80266',
+          color: '#0EA5E9',
           smallIcon: 'ic_launcher',
           showTimestamp: true,
         },
@@ -733,30 +810,11 @@ class NotificationService {
             badge: true,
             sound: true,
           },
-          // Add action buttons for iOS
           categoryId: 'LOAN_NOTIFICATIONS',
-          // iOS actions will be handled via categories
         },
       });
     } catch (error) {
-      console.error('Error displaying notification with Notifee:', error);
-      // Fallback to showAlert if Notifee fails
-      if (notification) {
-        showAlert(
-          notification.title || 'Notification',
-          notification.body || '',
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                if (data) {
-                  this.handleNotificationPress(remoteMessage);
-                }
-              }
-            }
-          ]
-        );
-      }
+      console.warn('Notifee display warning (in-app banner displayed):', error?.message);
     }
   }
 

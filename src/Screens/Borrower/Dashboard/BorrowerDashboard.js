@@ -17,6 +17,7 @@ import { colors, FontFamily } from '../../../constants';
 import { m } from '../../../Utils/responsive';
 import { ScreenWrapper, showAlert } from '../../../Components/common';
 import borrowerFlowService from '../../../Services/borrowerFlowService';
+import NotificationService from '../../../Services/NotificationService';
 import { logout } from '../../../Redux/Slices/authslice';
 
 /**
@@ -67,19 +68,21 @@ export default function BorrowerDashboard() {
 
   const [recentApplications, setRecentApplications] = useState([]);
   const [activeLoans, setActiveLoans] = useState([]);
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   // Fade-in animation
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  const fetchAllDashboardData = useCallback(async () => {
+  const fetchAllDashboardData = useCallback(async (isSilent = false) => {
     try {
-      setLoading(true);
-      const [statsRes, loansRes, appsRes] = await Promise.allSettled([
+      if (!isSilent) setLoading(true);
+      const [statsRes, loansRes, appsRes, notifsRes] = await Promise.allSettled([
         borrowerFlowService.getDashboardStats(),
         borrowerFlowService.getLoansPortfolio({ limit: 5 }),
         borrowerFlowService.getMyApplications({ limit: 5 }),
+        borrowerFlowService.getNotifications(),
       ]);
 
       if (statsRes.status === 'fulfilled' && statsRes.value?.success) {
@@ -98,6 +101,10 @@ export default function BorrowerDashboard() {
       if (appsRes.status === 'fulfilled' && appsRes.value?.success) {
         setRecentApplications(appsRes.value.applications || []);
       }
+
+      if (notifsRes.status === 'fulfilled' && notifsRes.value?.success) {
+        setUnreadNotificationsCount(notifsRes.value.unreadCount || 0);
+      }
     } catch (err) {
       console.error('Error fetching borrower dashboard data:', err);
     } finally {
@@ -115,8 +122,39 @@ export default function BorrowerDashboard() {
         duration: 350,
         useNativeDriver: true,
       }).start();
+
+      // Poll every 15s to automatically receive in-app notifications
+      const interval = setInterval(() => {
+        fetchAllDashboardData(true);
+      }, 15000);
+
+      return () => clearInterval(interval);
     }, [fetchAllDashboardData, fadeAnim])
   );
+
+  // Real-time foreground notification listener & token registration
+  useEffect(() => {
+    // Ensure FCM device token is registered for the logged-in borrower
+    if (user?._id) {
+      NotificationService.getFCMToken().then(token => {
+        if (token) {
+          NotificationService.registerToken(user._id, token);
+        }
+      }).catch(() => {});
+    }
+
+    const unsubscribe = NotificationService.addListener(() => {
+      borrowerFlowService
+        .getNotifications()
+        .then((res) => {
+          if (res?.success) {
+            setUnreadNotificationsCount(res.unreadCount || 0);
+          }
+        })
+        .catch(() => {});
+    });
+    return unsubscribe;
+  }, [user?._id]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -211,10 +249,18 @@ export default function BorrowerDashboard() {
               <TouchableOpacity
                 style={styles.notificationBtn}
                 activeOpacity={0.8}
-                onPress={() => navigation.navigate('BorrowerRecentActivity')}
+                onPress={() => navigation.navigate('NotificationsScreen')}
               >
                 <Feather name="bell" size={m(19)} color={colors.lettersAndIcons} />
-                {stats.latestAccepted && <View style={styles.notificationDot} />}
+                {unreadNotificationsCount > 0 ? (
+                  <View style={styles.notificationBadge}>
+                    <Text style={styles.notificationBadgeText}>
+                      {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+                    </Text>
+                  </View>
+                ) : stats.latestAccepted ? (
+                  <View style={styles.notificationDot} />
+                ) : null}
               </TouchableOpacity>
             </View>
           </View>
@@ -605,6 +651,25 @@ const styles = StyleSheet.create({
     height: m(8),
     borderRadius: m(4),
     backgroundColor: '#d97706',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: m(2),
+    right: m(2),
+    backgroundColor: '#EF4444',
+    minWidth: m(18),
+    height: m(18),
+    borderRadius: m(9),
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: m(3),
+    borderWidth: 1.5,
+    borderColor: colors.white,
+  },
+  notificationBadgeText: {
+    fontSize: m(9),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
   },
 
   // 2-Column Summary Stats on Green

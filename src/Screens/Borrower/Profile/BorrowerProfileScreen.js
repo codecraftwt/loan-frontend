@@ -146,6 +146,12 @@ export default function BorrowerProfileScreen() {
       onPress: () => navigation.navigate('BorrowerEditProfileScreen', { section: 'address' }),
     },
     {
+      id: 'notifications',
+      title: 'Alerts & Notifications',
+      icon: 'bell',
+      onPress: () => navigation.navigate('NotificationsScreen'),
+    },
+    {
       id: 'help',
       title: 'Help & Support',
       icon: 'headphones',

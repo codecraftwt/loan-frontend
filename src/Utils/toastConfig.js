@@ -1,11 +1,16 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 
 // Define the toastConfig with proper ReactNode return type
 export const toastConfig = {
-  success: ({ text1, text2 }) => (
-    <View style={styles.successContainer}>
+
+  success: ({ text1, text2, onPress }) => (
+    <TouchableOpacity
+      activeOpacity={0.9}
+      onPress={onPress}
+      style={styles.successContainer}
+    >
       <View style={styles.iconContainer}>
         <Icon name="check-circle" size={24} color="#FFFFFF" />
       </View>
@@ -13,10 +18,15 @@ export const toastConfig = {
         <Text style={styles.title}>{text1}</Text>
         {text2 ? <Text style={styles.message}>{text2}</Text> : null}
       </View>
-    </View>
+    </TouchableOpacity>
   ),
-  error: ({ text1, text2 }) => (
-    <View style={styles.errorContainer}>
+
+  error: ({ text1, text2, onPress }) => (
+    <TouchableOpacity
+      activeOpacity={0.9}
+      onPress={onPress}
+      style={styles.errorContainer}
+    >
       <View style={styles.errorIconContainer}>
         <Icon name="alert-circle" size={24} color="#DC2626" />
       </View>
@@ -24,10 +34,15 @@ export const toastConfig = {
         <Text style={styles.errorTitle}>{text1}</Text>
         {text2 ? <Text style={styles.errorMessage}>{text2}</Text> : null}
       </View>
-    </View>
+    </TouchableOpacity>
   ),
-  info: ({ text1, text2 }) => (
-    <View style={styles.infoContainer}>
+
+  info: ({ text1, text2, onPress }) => (
+    <TouchableOpacity
+      activeOpacity={0.9}
+      onPress={onPress}
+      style={styles.infoContainer}
+    >
       <View style={styles.iconContainer}>
         <Icon name="info" size={24} color="#FFFFFF" />
       </View>
@@ -35,10 +50,15 @@ export const toastConfig = {
         <Text style={styles.title}>{text1}</Text>
         {text2 ? <Text style={styles.message}>{text2}</Text> : null}
       </View>
-    </View>
+    </TouchableOpacity>
   ),
-  warning: ({ text1, text2 }) => (
-    <View style={styles.warningContainer}>
+
+  warning: ({ text1, text2, onPress }) => (
+    <TouchableOpacity
+      activeOpacity={0.9}
+      onPress={onPress}
+      style={styles.warningContainer}
+    >
       <View style={styles.iconContainer}>
         <Icon name="alert-triangle" size={24} color="#FFFFFF" />
       </View>
@@ -46,11 +66,12 @@ export const toastConfig = {
         <Text style={styles.warningTitle}>{text1}</Text>
         {text2 ? <Text style={styles.warningMessage}>{text2}</Text> : null}
       </View>
-    </View>
+    </TouchableOpacity>
   ),
 };
 
 const styles = StyleSheet.create({
+
   // Success Toast - Green
   successContainer: {
     flexDirection: 'row',
@@ -125,7 +146,7 @@ const styles = StyleSheet.create({
     borderLeftWidth: 5,
     borderLeftColor: '#93C5FD',
   },
-  // Warning Toast - Amber/Orange (distinct from pending payment card)
+  // Warning Toast - Amber/Orange
   warningContainer: {
     flexDirection: 'row',
     alignItems: 'center',
