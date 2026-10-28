@@ -406,7 +406,7 @@ export default function ForgotPin({ navigation }) {
           style={styles.backButton}
           onPress={() => (step > 1 ? setStep(step - 1) : navigation.goBack())}
         >
-          <Ionicons name="arrow-back" size={22} color={colors.navy} />
+          <Ionicons name="chevron-back" size={24} color={colors.navy} />
         </TouchableOpacity>
       </View>
 

@@ -120,7 +120,7 @@ export default function LenderLoansPortfolio() {
       return;
     }
     const cleanNumber = mobileNo.replace(/\D/g, '');
-    const phoneWithCountry = cleanNumber.startsWith('91') ? cleanNumber : `91${cleanNumber}`;
+    const phoneWithCountry = `91${cleanNumber.slice(-10)}`;
     const textMsg = encodeURIComponent(
       `Hello ${borrowerName}, this is regarding your active loan facility of ${formatINR(amount)} with our lending institution.`
     );

@@ -81,17 +81,25 @@ export default function BorrowerLoanDetails() {
       showAlert('Contact', 'Lender phone number is not listed.');
       return;
     }
-    const cleanNumber = mobileNo.replace(/\D/g, '');
-    const url = `whatsapp://send?phone=91${cleanNumber}`;
-    Linking.canOpenURL(url)
+    const cleanDigits = String(mobileNo).replace(/\D/g, '');
+    const phoneWithCountry = `91${cleanDigits.slice(-10)}`;
+
+    const waUrl = `whatsapp://send?phone=${phoneWithCountry}`;
+    const webWaUrl = `https://wa.me/${phoneWithCountry}`;
+
+    Linking.canOpenURL(waUrl)
       .then((supported) => {
         if (supported) {
-          Linking.openURL(url);
+          return Linking.openURL(waUrl);
         } else {
-          Linking.openURL(`tel:${cleanNumber}`);
+          return Linking.openURL(webWaUrl);
         }
       })
-      .catch(() => Linking.openURL(`tel:${cleanNumber}`));
+      .catch(() => {
+        Linking.openURL(webWaUrl).catch(() => {
+          showAlert('WhatsApp', 'Unable to launch WhatsApp on this device.');
+        });
+      });
   };
 
   if (loading && !loan) {
@@ -129,7 +137,13 @@ export default function BorrowerLoanDetails() {
     );
   }
 
-  const lender = loan.lenderId || {};
+  const lender = (typeof loan.lenderId === 'object' && loan.lenderId !== null)
+    ? loan.lenderId
+    : (loan.lenderSnapshot || {});
+  const lenderName = lender.companyName || lender.userName || 'Institutional Lender';
+  const lenderEmail = lender.email || loan.lenderSnapshot?.email || '';
+  const lenderPhone = lender.mobileNo || lender.phone || loan.lenderSnapshot?.mobileNo || '';
+
   const totalRepayable = Number(loan.totalRepaymentExpected || loan.amount || 0);
   const totalPaid = Number(loan.totalPaid || 0);
   const paidPercent =
@@ -156,27 +170,14 @@ export default function BorrowerLoanDetails() {
             onPress={() => navigation.goBack()}
             activeOpacity={0.8}
           >
-            <Feather name="arrow-left" size={m(18)} color={colors.lettersAndIcons} />
+            <Feather name="chevron-left" size={m(22)} color={colors.lettersAndIcons} />
           </TouchableOpacity>
 
           <View style={styles.headerTitleWrap}>
-            <Text style={styles.headerTag}>CREDIT FACILITY AMORTIZATION</Text>
             <Text style={styles.headerTitle} numberOfLines={1}>
               {loan.purpose || loan.dealName || 'Commercial Facility'}
             </Text>
           </View>
-
-          {lender.mobileNo ? (
-            <TouchableOpacity
-              style={styles.chatCircularBtn}
-              activeOpacity={0.8}
-              onPress={() => openLenderChat(lender.mobileNo)}
-            >
-              <Feather name="message-square" size={m(17)} color={colors.lettersAndIcons} />
-            </TouchableOpacity>
-          ) : (
-            <View style={{ width: m(38) }} />
-          )}
         </View>
       </View>
 
@@ -193,13 +194,46 @@ export default function BorrowerLoanDetails() {
               <View style={styles.lenderIcon}>
                 <Feather name="briefcase" size={m(16)} color={colors.white} />
               </View>
-              <View style={{ flex: 1 }}>
+              <View style={{ flex: 1, marginRight: m(8) }}>
                 <Text style={styles.facilityTitle}>
                   {loan.purpose || loan.dealName || 'Commercial Facility'}
                 </Text>
                 <Text style={styles.lenderSub}>
-                  Sanctioned by: <Text style={{ fontFamily: FontFamily.primaryBold }}>{lender.companyName || lender.userName || 'Institutional Lender'}</Text>
+                  Sanctioned by: <Text style={{ fontFamily: FontFamily.primaryBold }}>{lenderName}</Text>
                 </Text>
+
+                {/* Lender Email & Phone beside each other */}
+                {(lenderPhone || lenderEmail) ? (
+                  <View style={styles.lenderContactBox}>
+                    {lenderPhone ? (
+                      <TouchableOpacity
+                        style={styles.contactItem}
+                        activeOpacity={0.7}
+                        onPress={() => Linking.openURL(`tel:${lenderPhone}`)}
+                      >
+                        <Feather name="phone" size={m(10.5)} color={colors.primary} />
+                        <Text style={styles.contactText}>{lenderPhone}</Text>
+                      </TouchableOpacity>
+                    ) : null}
+
+                    {(lenderPhone && lenderEmail) ? (
+                      <Text style={styles.contactDividerDot}>•</Text>
+                    ) : null}
+
+                    {lenderEmail ? (
+                      <TouchableOpacity
+                        style={styles.contactItem}
+                        activeOpacity={0.7}
+                        onPress={() => Linking.openURL(`mailto:${lenderEmail}`)}
+                      >
+                        <Feather name="mail" size={m(10.5)} color={colors.primary} />
+                        <Text style={styles.contactText} numberOfLines={1}>
+                          {lenderEmail}
+                        </Text>
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
+                ) : null}
               </View>
               <View
                 style={[
@@ -613,7 +647,7 @@ const styles = StyleSheet.create({
   },
   heroTopRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: m(12),
   },
   lenderIcon: {
@@ -624,6 +658,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: m(10),
+    marginTop: m(2),
   },
   facilityTitle: {
     fontSize: m(15),
@@ -636,6 +671,27 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.primaryRegular,
     color: colors.textSecondary,
     marginTop: m(1),
+  },
+  lenderContactBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    marginTop: m(4),
+    gap: m(6),
+  },
+  contactItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(4),
+  },
+  contactText: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.textSecondary,
+  },
+  contactDividerDot: {
+    fontSize: m(10),
+    color: colors.textMuted,
   },
   statusBadge: {
     paddingHorizontal: m(8),

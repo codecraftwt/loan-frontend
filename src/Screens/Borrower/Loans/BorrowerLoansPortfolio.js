@@ -8,6 +8,7 @@ import {
   RefreshControl,
   ActivityIndicator,
   TextInput,
+  Modal,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
@@ -32,6 +33,7 @@ export default function BorrowerLoansPortfolio() {
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'active' | 'closed'
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
 
   const fetchPortfolio = useCallback(async () => {
     try {
@@ -59,6 +61,32 @@ export default function BorrowerLoansPortfolio() {
       fetchPortfolio();
     }, [fetchPortfolio])
   );
+
+  useEffect(() => {
+    fetchPortfolio();
+  }, [fetchPortfolio]);
+
+  const filterTabs = useMemo(() => [
+    {
+      key: 'all',
+      label: 'All Loans',
+      count: metrics.totalLoans || loans.length,
+    },
+    {
+      key: 'active',
+      label: 'Active',
+      count: metrics.activeLoansCount || 0,
+    },
+    {
+      key: 'closed',
+      label: 'Repaid',
+      count: metrics.closedLoansCount || 0,
+    },
+  ], [metrics, loans]);
+
+  const activeFilterInfo = useMemo(() => {
+    return filterTabs.find((t) => t.key === activeTab) || filterTabs[0];
+  }, [filterTabs, activeTab]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -227,100 +255,119 @@ export default function BorrowerLoansPortfolio() {
       <View style={styles.topBanner}>
         <View style={styles.headerRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.headerTag}>CREDIT FACILITIES</Text>
-            <Text style={styles.headerTitle}>Active Book & EMIs</Text>
-            <Text style={styles.headerSubtitle}>
-              Outstanding balances, amortization schedule & repayments
-            </Text>
-          </View>
-
-          <TouchableOpacity
-            style={styles.refreshBtn}
-            onPress={onRefresh}
-            disabled={loading}
-            activeOpacity={0.8}
-          >
-            <Feather name="refresh-cw" size={m(17)} color={colors.lettersAndIcons} />
-          </TouchableOpacity>
-        </View>
-
-        {/* 3-Column Summary Stats on Green */}
-        <View style={styles.topMetricsCard}>
-          <View style={styles.metricColumn}>
-            <Text style={styles.topMetricLabel}>Sanctioned</Text>
-            <Text style={styles.topMetricVal} numberOfLines={1}>
-              {formatINR(metrics.totalBorrowed)}
-            </Text>
-          </View>
-
-          <View style={styles.topMetricDivider} />
-
-          <View style={styles.metricColumn}>
-            <Text style={styles.topMetricLabel}>Outstanding</Text>
-            <Text style={styles.topMetricVal} numberOfLines={1}>
-              {formatINR(metrics.totalOutstanding)}
-            </Text>
-          </View>
-
-          <View style={styles.topMetricDivider} />
-
-          <View style={styles.metricColumn}>
-            <Text style={styles.topMetricLabel}>Next Due</Text>
-            <Text style={styles.topMetricValDark} numberOfLines={1}>
-              {nextEmiAmount > 0 ? formatINR(nextEmiAmount) : '₹0 Due'}
-            </Text>
+            <Text style={styles.headerTitle}>My Loans & EMI Schedule</Text>
           </View>
         </View>
       </View>
 
       {/* Main Curved Body Section */}
       <View style={styles.sheetSection}>
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Feather name="search" size={m(16)} color={colors.textSecondary} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search facilities or lenders..."
-            placeholderTextColor={colors.textMuted}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery ? (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Feather name="x" size={m(16)} color={colors.textSecondary} />
-            </TouchableOpacity>
-          ) : null}
+        {/* Header Subtitle moved down below header */}
+        <View style={styles.sheetSubtitleWrap}>
+          <Text style={styles.sheetSubtitleText}>
+            Outstanding balances, amortization schedule & repayments
+          </Text>
         </View>
 
-        {/* Capsule Filter Tabs */}
-        <View style={styles.periodCapsuleRow}>
-          {[
-            { key: 'all', label: `All (${metrics.totalLoans || loans.length})` },
-            { key: 'active', label: `Active (${metrics.activeLoansCount || 0})` },
-            { key: 'overdue', label: 'Overdue' },
-            { key: 'closed', label: `Settled (${metrics.closedLoansCount || 0})` },
-          ].map((tab) => {
-            const isSelected = activeTab === tab.key;
-            return (
-              <TouchableOpacity
-                key={tab.key}
-                style={[styles.periodTab, isSelected && styles.periodTabActive]}
-                onPress={() => setActiveTab(tab.key)}
-                activeOpacity={0.8}
-              >
-                <Text
-                  style={[
-                    styles.periodTabText,
-                    isSelected && styles.periodTabTextActive,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {tab.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
+        {/* Restyled 3-Column Summary Stats Box */}
+        <View style={styles.summaryMetricsCard}>
+          {/* 1. Total Sanctioned */}
+          <View style={styles.metricColumn}>
+            <View style={styles.metricLabelRow}>
+              <View style={[styles.metricDot, { backgroundColor: colors.primary }]} />
+              <Text style={styles.summaryMetricLabel} numberOfLines={1}>
+                Total Sanctioned
+              </Text>
+            </View>
+            <Text style={styles.summaryMetricVal} numberOfLines={1}>
+              {formatINR(metrics.totalBorrowed)}
+            </Text>
+          </View>
+
+          <View style={styles.summaryMetricDivider} />
+
+          {/* 2. Total Repaid */}
+          <View style={styles.metricColumn}>
+            <View style={styles.metricLabelRow}>
+              <View style={[styles.metricDot, { backgroundColor: '#059669' }]} />
+              <Text style={styles.summaryMetricLabel} numberOfLines={1}>
+                Total Repaid
+              </Text>
+            </View>
+            <Text style={[styles.summaryMetricVal, { color: '#059669' }]} numberOfLines={1}>
+              {formatINR(metrics.totalRepaid)}
+            </Text>
+          </View>
+
+          <View style={styles.summaryMetricDivider} />
+
+          {/* 3. Remaining Balance */}
+          <View style={styles.metricColumn}>
+            <View style={styles.metricLabelRow}>
+              <View style={[styles.metricDot, { backgroundColor: '#0284c7' }]} />
+              <Text style={styles.summaryMetricLabel} numberOfLines={1}>
+                Remaining Balance
+              </Text>
+            </View>
+            <Text style={[styles.summaryMetricVal, { color: '#0369a1' }]} numberOfLines={1}>
+              {formatINR(metrics.totalOutstanding)}
+            </Text>
+          </View>
         </View>
+        {/* Search Row: Search Input + Filter Icon Button */}
+        <View style={styles.searchRow}>
+          <View style={styles.searchContainer}>
+            <Feather name="search" size={m(16)} color={colors.textSecondary} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search facilities or lenders..."
+              placeholderTextColor={colors.textMuted}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery ? (
+              <TouchableOpacity
+                onPress={() => setSearchQuery('')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Feather name="x" size={m(16)} color={colors.textSecondary} />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+
+          <TouchableOpacity
+            style={[
+              styles.filterBtn,
+              activeTab !== 'all' && styles.filterBtnActive,
+            ]}
+            activeOpacity={0.8}
+            onPress={() => setFilterModalVisible(true)}
+          >
+            <Feather
+              name="sliders"
+              size={m(17)}
+              color={activeTab !== 'all' ? colors.lettersAndIcons : colors.lettersAndIcons}
+            />
+            {activeTab !== 'all' && <View style={styles.filterActiveBadge} />}
+          </TouchableOpacity>
+        </View>
+
+        {/* Active Filter Pill (shown when filter is applied, with quick reset) */}
+        {activeTab !== 'all' && (
+          <View style={styles.activeFilterRow}>
+            <View style={styles.activeFilterPill}>
+              <Text style={styles.activeFilterText}>
+                Filter: <Text style={styles.activeFilterBold}>{activeFilterInfo.label} ({activeFilterInfo.count})</Text>
+              </Text>
+              <TouchableOpacity
+                onPress={() => setActiveTab('all')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Feather name="x" size={m(13)} color={colors.lettersAndIcons} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         {/* Facilities List */}
         {loading && !refreshing ? (
@@ -365,6 +412,85 @@ export default function BorrowerLoansPortfolio() {
           />
         )}
       </View>
+
+      {/* Simple Compact Center Filter Modal */}
+      <Modal
+        visible={filterModalVisible}
+        transparent={true}
+        statusBarTranslucent={true}
+        animationType="fade"
+        onRequestClose={() => setFilterModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setFilterModalVisible(false)}
+        >
+          <TouchableOpacity
+            style={styles.simpleFilterContainer}
+            activeOpacity={1}
+            onPress={(e) => e?.stopPropagation?.()}
+          >
+            <View style={styles.simpleFilterHeader}>
+              <Text style={styles.simpleFilterTitle}>Filter Loans</Text>
+              <TouchableOpacity
+                onPress={() => setFilterModalVisible(false)}
+                style={styles.simpleFilterCloseBtn}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <Feather name="x" size={m(16)} color={colors.lettersAndIcons} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.simpleFilterDivider} />
+
+            {/* 3 Simple Options (No background color, clean checkmark selection) */}
+            <View style={styles.simpleOptionsList}>
+              {filterTabs.map((tab, index) => {
+                const isSelected = activeTab === tab.key;
+                const isLast = index === filterTabs.length - 1;
+                return (
+                  <TouchableOpacity
+                    key={tab.key}
+                    style={[
+                      styles.simpleOptionItem,
+                      !isLast && styles.simpleOptionItemBorder,
+                    ]}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      setActiveTab(tab.key);
+                      setFilterModalVisible(false);
+                    }}
+                  >
+                    <View style={styles.simpleOptionLeft}>
+                      <Text
+                        style={[
+                          styles.simpleOptionText,
+                          isSelected && styles.simpleOptionTextSelected,
+                        ]}
+                      >
+                        {tab.label}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.simpleOptionCount,
+                          isSelected && styles.simpleOptionCountSelected,
+                        ]}
+                      >
+                        ({tab.count})
+                      </Text>
+                    </View>
+
+                    {isSelected ? (
+                      <Feather name="check" size={m(18)} color="#2563eb" />
+                    ) : null}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </ScreenWrapper>
   );
 }
@@ -375,13 +501,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     paddingHorizontal: m(20),
     paddingTop: m(12),
-    paddingBottom: m(18),
+    paddingBottom: m(14),
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: m(14),
   },
   headerTag: {
     fontSize: m(10),
@@ -397,14 +522,6 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
   },
-  headerSubtitle: {
-    fontSize: m(12),
-    lineHeight: m(16),
-    fontFamily: FontFamily.primaryRegular,
-    color: colors.lettersAndIcons,
-    opacity: 0.9,
-    marginTop: m(2),
-  },
   refreshBtn: {
     width: m(42),
     height: m(42),
@@ -419,42 +536,67 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
 
-  // 3-Column Top Telemetry Strip
-  topMetricsCard: {
+  // Sheet Subtitle (Moved down from header)
+  sheetSubtitleWrap: {
+    paddingHorizontal: m(20),
+    marginBottom: m(10),
+  },
+  sheetSubtitleText: {
+    fontSize: m(12),
+    lineHeight: m(17),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.textSecondary,
+  },
+
+  // Restyled 3-Column Summary Stats Box
+  summaryMetricsCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-    borderRadius: m(16),
-    paddingVertical: m(10),
-    paddingHorizontal: m(12),
+    backgroundColor: colors.white,
+    borderRadius: m(18),
+    marginHorizontal: m(18),
+    marginBottom: m(14),
+    paddingVertical: m(12),
+    paddingHorizontal: m(8),
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.4)',
+    borderColor: 'rgba(9, 48, 48, 0.08)',
+    elevation: 2,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 5,
   },
   metricColumn: {
     flex: 1,
     alignItems: 'center',
+    paddingHorizontal: m(2),
   },
-  topMetricLabel: {
-    fontSize: m(10),
+  metricLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(3),
+    marginBottom: m(3),
+  },
+  metricDot: {
+    width: m(5.5),
+    height: m(5.5),
+    borderRadius: m(3),
+  },
+  summaryMetricLabel: {
+    fontSize: m(10.5),
     fontFamily: FontFamily.primaryMedium,
-    color: colors.lettersAndIcons,
-    opacity: 0.85,
-    marginBottom: m(2),
+    color: colors.textSecondary,
   },
-  topMetricVal: {
-    fontSize: m(14),
-    fontFamily: FontFamily.primaryBold,
-    color: colors.white,
-  },
-  topMetricValDark: {
-    fontSize: m(14),
+  summaryMetricVal: {
+    fontSize: m(13.5),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
+    letterSpacing: -0.2,
   },
-  topMetricDivider: {
+  summaryMetricDivider: {
     width: 1,
-    height: m(26),
-    backgroundColor: 'rgba(9, 48, 48, 0.15)',
+    height: m(28),
+    backgroundColor: 'rgba(9, 48, 48, 0.08)',
   },
 
   // Main Curved Sheet
@@ -466,14 +608,20 @@ const styles = StyleSheet.create({
     paddingTop: m(16),
   },
 
-  // Search Input Container
+  // Search Input Container & Filter Row
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: m(18),
+    marginBottom: m(12),
+    gap: m(10),
+  },
   searchContainer: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.white,
     borderRadius: m(16),
-    marginHorizontal: m(18),
-    marginBottom: m(12),
     paddingHorizontal: m(14),
     height: m(44),
     borderWidth: 1,
@@ -486,36 +634,151 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.primaryRegular,
     color: colors.lettersAndIcons,
   },
-
-  // Capsule Filter Tabs
-  periodCapsuleRow: {
-    flexDirection: 'row',
+  filterBtn: {
+    width: m(44),
+    height: m(44),
+    borderRadius: m(16),
     backgroundColor: colors.white,
-    borderRadius: m(24),
-    padding: m(3),
-    marginHorizontal: m(18),
-    marginBottom: m(14),
+    justifyContent: 'center',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(9, 48, 48, 0.08)',
+    elevation: 1,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
   },
-  periodTab: {
-    flex: 1,
-    paddingVertical: m(7),
-    borderRadius: m(20),
-    alignItems: 'center',
-    justifyContent: 'center',
+  filterBtnActive: {
+    backgroundColor: colors.lightGreen,
+    borderColor: colors.primary,
   },
-  periodTabActive: {
+  filterActiveBadge: {
+    position: 'absolute',
+    top: m(8),
+    right: m(8),
+    width: m(8),
+    height: m(8),
+    borderRadius: m(4),
     backgroundColor: colors.primary,
+    borderWidth: 1.5,
+    borderColor: colors.white,
   },
-  periodTabText: {
-    fontSize: m(11.5),
+
+  // Active Filter Pill
+  activeFilterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: m(18),
+    marginBottom: m(12),
+  },
+  activeFilterPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: m(20),
+    paddingVertical: m(5),
+    paddingHorizontal: m(12),
+    gap: m(6),
+  },
+  activeFilterDot: {
+    width: m(6),
+    height: m(6),
+    borderRadius: m(3),
+  },
+  activeFilterText: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+  },
+  activeFilterBold: {
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+
+  // Simple Compact Center Filter Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(9, 48, 48, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: m(24),
+  },
+  simpleFilterContainer: {
+    backgroundColor: colors.white,
+    borderRadius: m(20),
+    width: '100%',
+    maxWidth: m(320),
+    paddingHorizontal: m(18),
+    paddingTop: m(16),
+    paddingBottom: m(10),
+    elevation: 25,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+  },
+  simpleFilterHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: m(12),
+  },
+  simpleFilterTitle: {
+    fontSize: m(16),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  simpleFilterCloseBtn: {
+    width: m(30),
+    height: m(30),
+    borderRadius: m(15),
+    backgroundColor: '#f1f5f9',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  simpleFilterDivider: {
+    height: 1,
+    backgroundColor: 'rgba(9, 48, 48, 0.08)',
+  },
+  simpleOptionsList: {
+    paddingVertical: m(2),
+  },
+  simpleOptionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: m(13),
+    paddingHorizontal: m(4),
+  },
+  simpleOptionItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(9, 48, 48, 0.06)',
+  },
+  simpleOptionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(6),
+  },
+  simpleOptionText: {
+    fontSize: m(14),
     fontFamily: FontFamily.primaryMedium,
     color: colors.lettersAndIcons,
   },
-  periodTabTextActive: {
+  simpleOptionTextSelected: {
     fontFamily: FontFamily.primaryBold,
-    color: colors.lettersAndIcons,
+    color: '#2563eb',
+  },
+  simpleOptionCount: {
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.textSecondary,
+  },
+  simpleOptionCountSelected: {
+    fontFamily: FontFamily.primaryBold,
+    color: '#2563eb',
   },
 
   listContent: {

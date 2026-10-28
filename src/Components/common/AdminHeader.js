@@ -60,7 +60,7 @@ export default function AdminHeader({
               activeOpacity={0.7}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Feather name="arrow-left" size={m(22)} color={backIconColor} />
+              <Feather name="chevron-left" size={m(22)} color={backIconColor} />
             </TouchableOpacity>
           )}
 

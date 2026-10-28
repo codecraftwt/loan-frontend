@@ -473,7 +473,6 @@ export default function NotificationsScreen() {
           </TouchableOpacity>
 
           <View style={styles.headerTitleContainer}>
-            <Text style={styles.headerTag}>ALERTS & INBOX</Text>
             <Text style={styles.headerTitle}>Notifications</Text>
           </View>
 
@@ -496,15 +495,6 @@ export default function NotificationsScreen() {
           ) : (
             <View style={{ width: m(42) }} />
           )}
-        </View>
-
-        {/* Status Subtitle Banner */}
-        <View style={styles.headerSubtitleRow}>
-          <Text style={styles.headerSubtitle}>
-            {unreadCount > 0
-              ? `You have ${unreadCount} new update${unreadCount > 1 ? 's' : ''}`
-              : 'All notifications are caught up'}
-          </Text>
         </View>
       </View>
 
@@ -671,16 +661,6 @@ const styles = StyleSheet.create({
     fontSize: m(11.5),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
-  },
-  headerSubtitleRow: {
-    alignItems: 'center',
-    marginTop: m(8),
-  },
-  headerSubtitle: {
-    fontSize: m(12.5),
-    fontFamily: FontFamily.primaryMedium,
-    color: colors.lettersAndIcons,
-    opacity: 0.85,
   },
 
   // ==========================================

@@ -110,7 +110,7 @@ export default function SettingsScreen({ navigation }) {
             onPress={() => navigation.goBack()}
             activeOpacity={0.7}
           >
-            <Feather name="arrow-left" size={m(22)} color={colors.white} />
+            <Feather name="chevron-left" size={m(22)} color={colors.white} />
           </TouchableOpacity>
 
           <Text style={styles.headerTitle}>Settings</Text>

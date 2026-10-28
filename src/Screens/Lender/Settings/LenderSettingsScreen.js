@@ -149,7 +149,7 @@ export default function LenderSettingsScreen() {
           style={styles.backBtn}
           activeOpacity={0.7}
         >
-          <Feather name="arrow-left" size={m(20)} color="#0f172a" />
+          <Feather name="chevron-left" size={m(22)} color="#0f172a" />
         </TouchableOpacity>
         <View style={styles.headerTitleWrap}>
           <Text style={styles.headerTitle}>Account Security</Text>

@@ -217,32 +217,16 @@ export default function BorrowerExploreLenders() {
               onPress={() => navigation.goBack()}
               activeOpacity={0.8}
             >
-              <Feather name="arrow-left" size={m(18)} color={colors.lettersAndIcons} />
+              <Feather name="chevron-left" size={m(22)} color={colors.lettersAndIcons} />
             </TouchableOpacity>
           )}
 
           <View style={{ flex: 1, marginLeft: selectMode ? m(10) : 0 }}>
-            <Text style={styles.headerTag}>
-              {selectMode ? 'SELECT INSTITUTION' : 'CAPITAL NETWORK'}
-            </Text>
+
             <Text style={styles.headerTitle}>
-              {selectMode ? 'Select Lender' : 'Explore Lenders'}
-            </Text>
-            <Text style={styles.headerSubtitle}>
-              {selectMode
-                ? 'Tap an institution to apply directly with them'
-                : 'Browse institutions, compare credit terms & apply directly'}
+              {selectMode ? 'Select Lender' : 'Explore Verified Lenders'}
             </Text>
           </View>
-
-          <TouchableOpacity
-            style={styles.refreshBtn}
-            onPress={onRefresh}
-            disabled={loading}
-            activeOpacity={0.8}
-          >
-            <Feather name="refresh-cw" size={m(17)} color={colors.lettersAndIcons} />
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -309,7 +293,7 @@ export default function BorrowerExploreLenders() {
                 activeFilterTab === 'all' && styles.periodTabTextActive,
               ]}
             >
-              All Institutions
+              All Lenders
             </Text>
           </TouchableOpacity>
 
@@ -333,7 +317,7 @@ export default function BorrowerExploreLenders() {
                   activeFilterTab === 'favorites' && styles.periodTabTextActive,
                 ]}
               >
-                Bookmarks ({favoriteCount})
+                Favorite Lenders ({favoriteCount})
               </Text>
             </View>
           </TouchableOpacity>

@@ -119,49 +119,34 @@ export default function BorrowerProfileScreen() {
       .toUpperCase()
       .slice(0, 2) || 'BP';
 
-  // 6 Primary Menu options matching Lender Profile layout
+  // Primary Menu options with rich styling
   const menuItems = [
     {
       id: 'edit_profile',
       title: 'Edit Profile & Statutory KYC',
-      icon: 'user',
+      subtitle: 'PAN, Aadhaar, DigiLocker & E-NACH',
+      icon: 'file-text',
+      iconColor: '#059669',
+      iconBg: '#E6F4EA',
       onPress: () => navigation.navigate('BorrowerEditProfileScreen', { section: 'kyc' }),
     },
     {
       id: 'entity_info',
       title: 'Corporate Entity & Constitution',
+      subtitle: 'Business structure, GSTIN & financials',
       icon: 'briefcase',
+      iconColor: '#2563EB',
+      iconBg: '#EFF6FF',
       onPress: () => navigation.navigate('BorrowerEditProfileScreen', { section: 'entity' }),
-    },
-    {
-      id: 'security',
-      title: 'Security & PIN Governance',
-      icon: 'shield',
-      onPress: () => navigation.navigate('BorrowerSecurityScreen'),
     },
     {
       id: 'office_address',
       title: 'Registered Office Address',
+      subtitle: 'Premises location, city & pincode',
       icon: 'map-pin',
+      iconColor: '#0D9488',
+      iconBg: '#F0FDFA',
       onPress: () => navigation.navigate('BorrowerEditProfileScreen', { section: 'address' }),
-    },
-    {
-      id: 'notifications',
-      title: 'Alerts & Notifications',
-      icon: 'bell',
-      onPress: () => navigation.navigate('NotificationsScreen'),
-    },
-    {
-      id: 'help',
-      title: 'Help & Support',
-      icon: 'headphones',
-      onPress: () => navigation.navigate('HelpAndSupportScreen'),
-    },
-    {
-      id: 'logout',
-      title: 'Logout',
-      icon: 'log-out',
-      onPress: () => setLogoutModalVisible(true),
     },
   ];
 
@@ -193,7 +178,9 @@ export default function BorrowerProfileScreen() {
       <View style={styles.pageWrapper}>
         {/* ── 1. Top Green Header Bar ── */}
         <View style={styles.headerBar}>
-          <Text style={styles.headerTitle}>Profile</Text>
+          <View>
+            <Text style={styles.headerTitle}>Profile</Text>
+          </View>
         </View>
 
         {/* Green Backdrop Segment (hosts top half of the 92px floating avatar) */}
@@ -207,7 +194,9 @@ export default function BorrowerProfileScreen() {
           >
             {/* User / Enterprise Name & ID */}
             <Text style={styles.userName}>{displayName}</Text>
-            <Text style={styles.userIdText}>ID: {displayId}</Text>
+            <View style={styles.idContainer}>
+              <Text style={styles.userIdText}>ID: {displayId}</Text>
+            </View>
 
             {/* Verified Badge */}
             <View style={styles.badgeWrapper}>
@@ -305,31 +294,51 @@ export default function BorrowerProfileScreen() {
                 )}
             </View>
 
-            {/* Figma-Style Blue Circle Menu Items (Matching Lender Profile) */}
-            <View style={styles.menuList}>
-              {menuItems.map(item => (
-                <TouchableOpacity
-                  key={item.id}
-                  style={styles.menuRow}
-                  activeOpacity={0.75}
-                  onPress={item.onPress}
-                >
-                  <View style={styles.menuIconCircle}>
-                    <Feather name={item.icon} size={m(20)} color={colors.white} />
-                  </View>
-                  <Text style={styles.menuTitle}>{item.title}</Text>
-                  <Feather
-                    name="chevron-right"
-                    size={m(18)}
-                    color="#94A3B8"
-                    style={{ marginLeft: 'auto' }}
-                  />
-                </TouchableOpacity>
+            {/* Grouped Enterprise Menu Card */}
+            <View style={styles.menuCard}>
+              {menuItems.map((item, index) => (
+                <React.Fragment key={item.id}>
+                  <TouchableOpacity
+                    style={styles.menuRow}
+                    activeOpacity={0.72}
+                    onPress={item.onPress}
+                  >
+                    <View style={[styles.menuIconBox, { backgroundColor: item.iconBg }]}>
+                      <Feather name={item.icon} size={m(18)} color={item.iconColor} />
+                    </View>
+                    <View style={styles.menuTextWrap}>
+                      <Text style={styles.menuTitle}>{item.title}</Text>
+                      <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
+                    </View>
+                    <Feather
+                      name="chevron-right"
+                      size={m(18)}
+                      color="#94A3B8"
+                    />
+                  </TouchableOpacity>
+                  {index < menuItems.length - 1 && <View style={styles.menuDivider} />}
+                </React.Fragment>
               ))}
             </View>
 
-            {/* Platform Version Subtitle */}
-            <Text style={styles.versionText}>LoanHub Borrower Terminal v2.4.0</Text>
+            {/* Centered Dedicated Logout Button */}
+            <View style={styles.logoutBtnContainer}>
+              <TouchableOpacity
+                style={styles.logoutBtn}
+                activeOpacity={0.8}
+                onPress={() => setLogoutModalVisible(true)}
+              >
+                <Feather name="log-out" size={m(15)} color="#dc2626" />
+                <Text style={styles.logoutBtnText}>Log Out</Text>
+              </TouchableOpacity>
+
+              <View style={styles.securityRow}>
+                <Feather name="shield" size={m(11)} color={colors.textMuted} />
+                <Text style={styles.securityText}>256-Bit Bank Grade Encryption</Text>
+              </View>
+
+              <Text style={styles.versionText}>LoanHub Borrower Terminal v2.4.0</Text>
+            </View>
           </ScrollView>
         </View>
 
@@ -347,6 +356,9 @@ export default function BorrowerProfileScreen() {
                 <Text style={styles.avatarInitials}>{initials}</Text>
               </View>
             )}
+            <View style={styles.avatarEditBadge}>
+              <Feather name="edit-2" size={m(10)} color={colors.white} />
+            </View>
           </TouchableOpacity>
         </View>
 
@@ -401,16 +413,36 @@ const styles = StyleSheet.create({
 
   // Fixed Top Header
   headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: m(20),
-    paddingTop: m(14),
-    paddingBottom: m(10),
+    paddingTop: m(12),
+    paddingBottom: m(8),
     backgroundColor: colors.primary,
+  },
+  headerTag: {
+    fontSize: m(10),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    opacity: 0.85,
+    marginBottom: m(2),
   },
   headerTitle: {
     fontSize: m(22),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
     textAlign: 'left',
+  },
+  headerRefreshBtn: {
+    width: m(36),
+    height: m(36),
+    borderRadius: m(18),
+    backgroundColor: 'rgba(9, 48, 48, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   // Green Backdrop Segment
@@ -428,7 +460,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingTop: m(52), // Space for bottom half of the floating avatar
-    paddingBottom: m(100),
+    paddingBottom: m(90),
   },
 
   // Floating Avatar (over the seam between header & curved sheet)
@@ -448,7 +480,6 @@ const styles = StyleSheet.create({
     borderWidth: m(3.5),
     borderColor: colors.white,
     backgroundColor: colors.white,
-    overflow: 'hidden',
     shadowColor: colors.lettersAndIcons,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.16,
@@ -464,7 +495,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: m(46),
-    backgroundColor: colors.oceanBlueButton,
+    backgroundColor: colors.lettersAndIcons,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -472,6 +503,20 @@ const styles = StyleSheet.create({
     fontSize: m(28),
     fontFamily: FontFamily.primaryBold,
     color: colors.white,
+  },
+  avatarEditBadge: {
+    position: 'absolute',
+    bottom: m(2),
+    right: m(2),
+    width: m(24),
+    height: m(24),
+    borderRadius: m(12),
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.white,
+    elevation: 4,
   },
 
   // User Header Text
@@ -482,13 +527,20 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: m(20),
   },
+  idContainer: {
+    backgroundColor: 'rgba(9, 48, 48, 0.06)',
+    paddingHorizontal: m(10),
+    paddingVertical: m(3),
+    borderRadius: m(12),
+    alignSelf: 'center',
+    marginTop: m(4),
+    marginBottom: m(8),
+  },
   userIdText: {
-    fontSize: m(12),
+    fontSize: m(11.5),
     fontFamily: FontFamily.primaryBold,
     color: '#4B6358',
-    textAlign: 'center',
-    marginTop: m(2),
-    marginBottom: m(8),
+    letterSpacing: 0.3,
   },
 
   badgeWrapper: {
@@ -500,55 +552,116 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: m(5),
     backgroundColor: '#DCFCE7',
-    paddingHorizontal: m(10),
-    paddingVertical: m(4),
+    paddingHorizontal: m(12),
+    paddingVertical: m(4.5),
     borderRadius: m(20),
     borderWidth: 1,
-    borderColor: '#BBF7D0',
+    borderColor: '#86EFAC',
   },
   verifiedPillText: {
-    fontSize: m(10),
+    fontSize: m(10.5),
     fontFamily: FontFamily.primaryBold,
     color: '#166534',
   },
 
-  // Figma-Style Blue Circle Menu Items
-  menuList: {
-    paddingHorizontal: m(18),
-    marginBottom: m(20),
+  // Grouped Enterprise Menu Card
+  menuCard: {
+    backgroundColor: colors.white,
+    marginHorizontal: m(18),
+    borderRadius: m(20),
+    paddingVertical: m(6),
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.07)',
+    elevation: 2,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    marginBottom: m(14),
   },
   menuRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: m(10),
-    paddingHorizontal: m(8),
+    paddingVertical: m(12),
+    paddingHorizontal: m(16),
   },
-  menuIconCircle: {
-    width: m(44),
-    height: m(44),
-    borderRadius: m(22),
-    backgroundColor: colors.blueButton,
+  menuIconBox: {
+    width: m(40),
+    height: m(40),
+    borderRadius: m(12),
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: m(16),
-    elevation: 2,
-    shadowColor: colors.blueButton,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
+    marginRight: m(14),
+  },
+  menuTextWrap: {
+    flex: 1,
+    marginRight: m(8),
   },
   menuTitle: {
-    fontSize: m(15),
+    fontSize: m(13.5),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
+    marginBottom: m(2),
+  },
+  menuSubtitle: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: 'rgba(9, 48, 48, 0.06)',
+    marginLeft: m(70),
+    marginRight: m(16),
   },
 
+  // Centered Logout Button & Footer
+  logoutBtnContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: m(8),
+    marginBottom: m(16),
+  },
+  logoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: m(8),
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    paddingVertical: m(11),
+    paddingHorizontal: m(32),
+    borderRadius: m(20),
+    elevation: 1,
+    shadowColor: '#DC2626',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+  },
+  logoutBtnText: {
+    fontSize: m(13.5),
+    fontFamily: FontFamily.primaryBold,
+    color: '#DC2626',
+    letterSpacing: 0.3,
+  },
+  securityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(5),
+    marginTop: m(12),
+  },
+  securityText: {
+    fontSize: m(10.5),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.textMuted,
+  },
   versionText: {
-    fontSize: m(11),
+    fontSize: m(10.5),
     fontFamily: FontFamily.primaryRegular,
     color: colors.textMuted,
     textAlign: 'center',
-    marginTop: m(10),
+    marginTop: m(4),
   },
 
   loaderCenter: {
@@ -632,18 +745,23 @@ const styles = StyleSheet.create({
   // Completion Progress Card
   completionCard: {
     marginHorizontal: m(18),
-    marginBottom: m(16),
-    borderRadius: m(16),
+    marginBottom: m(14),
+    borderRadius: m(18),
     padding: m(14),
     borderWidth: 1,
+    elevation: 2,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
   },
   completionCardSuccess: {
-    backgroundColor: '#f0fdf4',
-    borderColor: '#bbf7d0',
+    backgroundColor: colors.white,
+    borderColor: 'rgba(5, 150, 105, 0.22)',
   },
   completionCardPending: {
-    backgroundColor: '#f8fafc',
-    borderColor: '#e2e8f0',
+    backgroundColor: colors.white,
+    borderColor: 'rgba(9, 48, 48, 0.08)',
   },
   completionHeaderRow: {
     flexDirection: 'row',

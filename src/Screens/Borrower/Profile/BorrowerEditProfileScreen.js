@@ -107,6 +107,12 @@ export default function BorrowerEditProfileScreen() {
     fetchProfile();
   }, [fetchProfile]);
 
+  useEffect(() => {
+    if (route.params?.section && route.params.section !== 'all') {
+      setActiveTab(route.params.section);
+    }
+  }, [route.params?.section]);
+
   const handleSave = async () => {
     try {
       setSaving(true);
@@ -164,11 +170,10 @@ export default function BorrowerEditProfileScreen() {
             onPress={() => navigation.goBack()}
             activeOpacity={0.8}
           >
-            <Feather name="arrow-left" size={m(20)} color={colors.white} />
+            <Feather name="chevron-left" size={m(22)} color={colors.white} />
           </TouchableOpacity>
 
           <View style={styles.headerTitleWrap}>
-            <Text style={styles.headerTag}>CREDENTIAL DOSSIER</Text>
             <Text style={styles.headerTitle} numberOfLines={1}>
               {activeTab === 'kyc'
                 ? 'Statutory KYC'
@@ -179,39 +184,6 @@ export default function BorrowerEditProfileScreen() {
           </View>
 
           <View style={{ width: m(38) }} />
-        </View>
-
-        {/* Section Tabs */}
-        <View style={styles.capsuleTabsRow}>
-          <TouchableOpacity
-            style={[styles.tabCapsule, activeTab === 'kyc' && styles.tabCapsuleActive]}
-            onPress={() => setActiveTab('kyc')}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.tabCapsuleText, activeTab === 'kyc' && styles.tabCapsuleTextActive]}>
-              Statutory KYC
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.tabCapsule, activeTab === 'entity' && styles.tabCapsuleActive]}
-            onPress={() => setActiveTab('entity')}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.tabCapsuleText, activeTab === 'entity' && styles.tabCapsuleTextActive]}>
-              Entity Info
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.tabCapsule, activeTab === 'address' && styles.tabCapsuleActive]}
-            onPress={() => setActiveTab('address')}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.tabCapsuleText, activeTab === 'address' && styles.tabCapsuleTextActive]}>
-              Address
-            </Text>
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -668,7 +640,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: m(12),
+    marginBottom: 0,
   },
   backCircularBtn: {
     width: m(38),

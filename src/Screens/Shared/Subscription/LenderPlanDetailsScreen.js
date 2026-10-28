@@ -112,7 +112,7 @@ export default function LenderPlanDetailsScreen({ route, navigation }) {
               style={styles.backButtonGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}>
-              <Icon name="arrow-left" size={20} color="#FFFFFF" />
+              <Icon name="chevron-left" size={22} color="#FFFFFF" />
               <Text style={styles.backButtonText}>Go Back</Text>
             </LinearGradient>
           </TouchableOpacity>

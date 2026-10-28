@@ -289,7 +289,7 @@ export default function LenderSubscriptionScreen() {
             style={styles.backBtn}
             activeOpacity={0.8}
           >
-            <Feather name="arrow-left" size={m(18)} color={colors.lettersAndIcons} />
+            <Feather name="chevron-left" size={m(22)} color={colors.lettersAndIcons} />
           </TouchableOpacity>
 
           <View style={styles.headerTitleWrap}>

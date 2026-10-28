@@ -247,7 +247,7 @@ export default function BorrowerSecurityScreen() {
             onPress={() => navigation.goBack()}
             activeOpacity={0.8}
           >
-            <Feather name="arrow-left" size={m(20)} color={colors.white} />
+            <Feather name="chevron-left" size={m(22)} color={colors.white} />
           </TouchableOpacity>
 
           <View style={styles.headerTitleWrap}>

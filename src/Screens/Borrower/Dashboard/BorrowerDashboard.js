@@ -264,72 +264,79 @@ export default function BorrowerDashboard() {
               </TouchableOpacity>
             </View>
           </View>
-
-          {/* 2-Column Summary Stats on Green */}
-          <View style={styles.topMetricsCard}>
-            {/* Left Column: Total Borrowed / Credit */}
-            <TouchableOpacity
-              style={styles.metricColumn}
-              activeOpacity={0.8}
-              onPress={() => navigation.navigate('BorrowerLoansPortfolio')}
-            >
-              <View style={styles.metricLabelRow}>
-                <Feather name="arrow-down-left" size={m(13)} color={colors.lettersAndIcons} />
-                <Text style={styles.metricLabelText}>Sanctioned Debt</Text>
-              </View>
-              <Text style={styles.metricValueWhite} numberOfLines={1}>
-                {formatCurrency(totalBorrowedVal)}
-              </Text>
-            </TouchableOpacity>
-
-            {/* Vertical Divider */}
-            <View style={styles.metricDivider} />
-
-            {/* Right Column: Next Due EMI */}
-            <TouchableOpacity
-              style={styles.metricColumn}
-              activeOpacity={0.8}
-              onPress={() => navigation.navigate('BorrowerLoansPortfolio')}
-            >
-              <View style={styles.metricLabelRow}>
-                <Feather name="clock" size={m(13)} color={colors.lettersAndIcons} />
-                <Text style={styles.metricLabelText}>Next Installment</Text>
-              </View>
-              <Text style={styles.metricValueBlue} numberOfLines={1}>
-                {nextEmiVal > 0 ? formatCurrency(nextEmiVal) : '₹0 Due'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Target Progress Pill */}
-          <View style={styles.progressContainer}>
-            <View style={styles.progressBarPill}>
-              <View style={styles.progressDarkTag}>
-                <Text style={styles.progressDarkText}>
-                  {activeCount > 0 ? `${activeCount} ACTIVE` : 'HEALTHY'}
-                </Text>
-              </View>
-              <View style={styles.progressWhiteBar}>
-                <Text style={styles.progressWhiteText} numberOfLines={1}>
-                  Credit Grade A • Commercial Facility in Good Standing
-                </Text>
-              </View>
-            </View>
-
-            {/* Target Caption */}
-            <View style={styles.progressCaptionRow}>
-              <Feather name="shield" size={m(13)} color={colors.lettersAndIcons} />
-              <Text style={styles.progressCaptionText}>
-                Borrower verified via DigiLocker & NSDL. Credit ready.
-              </Text>
-            </View>
-          </View>
         </View>
 
         {/* ======================================================== */}
         {/* 2. MAIN CURVED SHEET SECTION (#F1FFF3)                   */}
         {/* ======================================================== */}
         <View style={styles.sheetSection}>
+          {/* Feature Highlight Card (Below the header part, Second SS UI with First SS Data) */}
+          <View style={styles.featureCard}>
+            {/* Left Column: Total Borrowed (First SS Data) */}
+            <TouchableOpacity
+              style={styles.featureLeftCol}
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate('BorrowerLoansPortfolio')}
+            >
+              <View style={styles.featureRingWrapper}>
+                <Feather name="arrow-down-left" size={m(18)} color="#059669" />
+              </View>
+              <Text style={styles.featureCountText} numberOfLines={1}>
+                {formatCurrency(totalBorrowedVal)}
+              </Text>
+              <Text style={styles.featureRingLabel}>Total Borrowed</Text>
+              <Text style={styles.featureRingSub}>{activeCount} Active Loans ›</Text>
+            </TouchableOpacity>
+
+            {/* Vertical Divider */}
+            <View style={styles.featureDivider} />
+
+            {/* Right Column: Upcoming EMI & Network */}
+            <View style={styles.featureRightCol}>
+              {/* Row 1: Upcoming EMI (First SS Data) */}
+              <TouchableOpacity
+                style={styles.featureStatItem}
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate('BorrowerLoansPortfolio')}
+              >
+                <View style={[styles.featureStatIconBox, { backgroundColor: '#eff6ff' }]}>
+                  <Feather name="clock" size={m(15)} color="#2563eb" />
+                </View>
+                <View style={styles.featureStatTexts}>
+                  <Text style={styles.featureStatLabel}>Upcoming EMI</Text>
+                  <Text
+                    style={[
+                      styles.featureStatValue,
+                      { color: nextEmiVal > 0 ? '#dc2626' : colors.lettersAndIcons },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {nextEmiVal > 0 ? formatCurrency(nextEmiVal) : '₹0 Due'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              {/* Horizontal Divider */}
+              <View style={styles.featureHorizontalDivider} />
+
+              {/* Row 2: Available Lenders */}
+              <TouchableOpacity
+                style={styles.featureStatItem}
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate('BorrowerExploreLenders')}
+              >
+                <View style={[styles.featureStatIconBox, { backgroundColor: '#ecfdf5' }]}>
+                  <Feather name="users" size={m(15)} color="#059669" />
+                </View>
+                <View style={styles.featureStatTexts}>
+                  <Text style={styles.featureStatLabel}>Available Lenders</Text>
+                  <Text style={styles.featureStatValue} numberOfLines={1}>
+                    {stats.totalLendersAvailable || 2} Lenders Ready
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          </View>
           {/* Accepted Deal Banner (When active accepted deal exists) */}
           {stats.latestAccepted ? (
             <View style={styles.acceptedBannerCard}>
@@ -338,20 +345,20 @@ export default function BorrowerDashboard() {
                   <Feather name="check-circle" size={m(18)} color="#059669" />
                 </View>
                 <View style={{ flex: 1, marginLeft: m(10) }}>
-                  <Text style={styles.acceptedBadgeText}>FACILITY SANCTIONED</Text>
+                  <Text style={styles.acceptedBadgeText}>LOAN OFFER ACCEPTED</Text>
                   <Text style={styles.acceptedTitleText}>
                     {formatCurrency(stats.latestAccepted.amount)} accepted by{' '}
                     <Text style={{ fontFamily: FontFamily.primaryBold, color: '#047857' }}>
                       {stats.latestAccepted.lenderId?.companyName ||
                         stats.latestAccepted.lenderId?.userName ||
-                        'Institutional Lender'}
+                        'Verified Lender'}
                     </Text>
                   </Text>
                 </View>
               </View>
 
               <Text style={styles.acceptedSubText}>
-                Purpose: {stats.latestAccepted.purpose} • Tenure: {stats.latestAccepted.tenureMonths} Months. Other pending applications were automatically closed.
+                Purpose: {stats.latestAccepted.purpose} • Tenure: {stats.latestAccepted.tenureMonths} Months.
               </Text>
 
               <View style={styles.acceptedBottomRow}>
@@ -365,7 +372,6 @@ export default function BorrowerDashboard() {
                     }
                   }}
                 >
-                  {/* <Text style={styles.acceptedContactLabel}>LENDER CONTACT</Text> */}
                   <Text style={styles.acceptedContactName} numberOfLines={1}>
                     {stats.latestAccepted.lenderId?.userName || 'Loan Officer'}
                   </Text>
@@ -382,167 +388,117 @@ export default function BorrowerDashboard() {
             </View>
           ) : null}
 
-          {/* Feature Highlight Card (Goal / Solvency Overview) */}
-          <View style={styles.featureCard}>
-            {/* Left Solvency Ring */}
-            <TouchableOpacity
-              style={styles.featureLeftCol}
-              activeOpacity={0.8}
-              onPress={() => navigation.navigate('BorrowerLoansPortfolio')}
-            >
-              <View style={styles.featureRingWrapper}>
-                <Feather name="credit-card" size={m(22)} color={colors.lettersAndIcons} />
-              </View>
-              <Text style={styles.featureRingLabel}>Active Book</Text>
-              <Text style={styles.featureRingSub}>{activeCount} Facilities</Text>
-            </TouchableOpacity>
-
-            {/* Vertical White Divider */}
-            <View style={styles.featureDivider} />
-
-            {/* Right Metrics Stack */}
-            <View style={styles.featureRightCol}>
-              {/* Row 1: Available Institutional Lenders */}
-              <TouchableOpacity
-                style={styles.featureStatItem}
-                activeOpacity={0.8}
-                onPress={() => navigation.navigate('BorrowerExploreLenders')}
-              >
-                <View style={styles.featureStatIconBox}>
-                  <Feather name="briefcase" size={m(16)} color={colors.lettersAndIcons} />
-                </View>
-                <View style={styles.featureStatTexts}>
-                  <Text style={styles.featureStatLabel}>Available Lenders</Text>
-                  <Text style={styles.featureStatValue}>
-                    {stats.totalLendersAvailable || 12} Institutional
-                  </Text>
-                </View>
-              </TouchableOpacity>
-
-              {/* Horizontal White Divider */}
-              <View style={styles.featureHorizontalDivider} />
-
-              {/* Row 2: Applications In Flight */}
-              <TouchableOpacity
-                style={styles.featureStatItem}
-                activeOpacity={0.8}
-                onPress={() => navigation.navigate('BorrowerApplications')}
-              >
-                <View style={styles.featureStatIconBox}>
-                  <Feather name="inbox" size={m(16)} color={colors.lettersAndIcons} />
-                </View>
-                <View style={styles.featureStatTexts}>
-                  <Text style={styles.featureStatLabel}>Facility Inquiries</Text>
-                  <Text style={styles.featureStatValue}>
-                    {pendingCount} Under Review
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
-
           {/* ======================================================== */}
-          {/* COMMERCIAL PIPELINE PROGRESSION STRIP                    */}
+          {/* LOAN ACTIVITY OVERVIEW (2x2 Grid)                        */}
           {/* ======================================================== */}
-          <View style={[styles.sectionHeaderRow, { marginTop: m(6), marginBottom: m(12) }]}>
+          <View style={[styles.sectionHeaderRow, { marginTop: m(4), marginBottom: m(12) }]}>
             <View>
-              <Text style={styles.sectionTitle}>Financing Progression</Text>
+              <Text style={styles.sectionTitle}>Loan Overview</Text>
               <Text style={styles.sectionSubtitle}>
-                Active facility inflow & requests
+                Your active loans and applications
               </Text>
             </View>
             <TouchableOpacity
-              onPress={() => navigation.navigate('BorrowerApplications')}
+              onPress={() => navigation.navigate('BorrowerLoansPortfolio')}
               activeOpacity={0.7}
               style={styles.allRequestsBtn}
             >
-              <Text style={styles.allRequestsText}>All Pipeline</Text>
+              <Text style={styles.allRequestsText}>All Loans</Text>
+              <Feather name="chevron-right" size={m(13)} color={colors.white} style={{ marginLeft: m(2) }} />
             </TouchableOpacity>
           </View>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.dealFlowScrollView}
-            contentContainerStyle={styles.dealFlowScroll}
-          >
-            {/* 1. In Review */}
-            <TouchableOpacity
-              style={styles.dealFlowCard}
-              activeOpacity={0.8}
-              onPress={() => navigation.navigate('BorrowerApplications')}
-            >
-              <View style={styles.dealFlowTop}>
-                <Text style={[styles.dealFlowTag, { color: colors.blueButton }]}>
-                  UNDER REVIEW
-                </Text>
-                <View style={[styles.dealFlowIconBox, { backgroundColor: '#eff6ff' }]}>
-                  <Feather name="clock" size={m(15)} color={colors.blueButton} />
+          {/* 2x2 Clean Activity Grid */}
+          <View style={styles.overviewGrid}>
+            {/* Row 1 */}
+            <View style={styles.overviewGridRow}>
+              {/* 1. Active Loans */}
+              <TouchableOpacity
+                style={styles.overviewCard}
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate('BorrowerLoansPortfolio')}
+              >
+                <View style={styles.overviewCardTop}>
+                  <View style={[styles.overviewIconBox, { backgroundColor: '#ecfdf5' }]}>
+                    <Feather name="layers" size={m(16)} color="#059669" />
+                  </View>
+                  <View style={[styles.overviewTag, { backgroundColor: '#ecfdf5' }]}>
+                    <Text style={[styles.overviewTagText, { color: '#059669' }]}>ACTIVE</Text>
+                  </View>
                 </View>
-              </View>
-              <Text style={styles.dealFlowValue}>{stats.pendingApplications || 0}</Text>
-            </TouchableOpacity>
+                <Text style={styles.overviewValue}>{portfolioMetrics.activeLoansCount || 0}</Text>
+                <Text style={styles.overviewTitle}>Active Loans</Text>
+                <Text style={styles.overviewSub}>In repayment</Text>
+              </TouchableOpacity>
 
-            {/* 2. Accepted Offers */}
-            <TouchableOpacity
-              style={styles.dealFlowCard}
-              activeOpacity={0.8}
-              onPress={() => navigation.navigate('BorrowerApplications')}
-            >
-              <View style={styles.dealFlowTop}>
-                <Text style={[styles.dealFlowTag, { color: '#059669' }]}>
-                  ACCEPTED
-                </Text>
-                <View style={[styles.dealFlowIconBox, { backgroundColor: '#ecfdf5' }]}>
-                  <Feather name="check-circle" size={m(15)} color="#059669" />
+              {/* 2. In Review */}
+              <TouchableOpacity
+                style={styles.overviewCard}
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate('BorrowerApplications')}
+              >
+                <View style={styles.overviewCardTop}>
+                  <View style={[styles.overviewIconBox, { backgroundColor: '#fffbeb' }]}>
+                    <Feather name="clock" size={m(16)} color="#d97706" />
+                  </View>
+                  <View style={[styles.overviewTag, { backgroundColor: '#fffbeb' }]}>
+                    <Text style={[styles.overviewTagText, { color: '#d97706' }]}>PENDING</Text>
+                  </View>
                 </View>
-              </View>
-              <Text style={styles.dealFlowValue}>{stats.acceptedApplications || 0}</Text>
-            </TouchableOpacity>
+                <Text style={styles.overviewValue}>{stats.pendingApplications || 0}</Text>
+                <Text style={styles.overviewTitle}>In Review</Text>
+                <Text style={styles.overviewSub}>Applications</Text>
+              </TouchableOpacity>
+            </View>
 
-            {/* 3. Active Facilities */}
-            <TouchableOpacity
-              style={styles.dealFlowCard}
-              activeOpacity={0.8}
-              onPress={() => navigation.navigate('BorrowerLoansPortfolio')}
-            >
-              <View style={styles.dealFlowTop}>
-                <Text style={[styles.dealFlowTag, { color: colors.lettersAndIcons }]}>
-                  ACTIVE LOANS
-                </Text>
-                <View style={[styles.dealFlowIconBox, { backgroundColor: '#f1f5f9' }]}>
-                  <Feather name="layers" size={m(15)} color={colors.lettersAndIcons} />
+            {/* Row 2 */}
+            <View style={styles.overviewGridRow}>
+              {/* 3. Accepted Offers */}
+              <TouchableOpacity
+                style={styles.overviewCard}
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate('BorrowerApplications')}
+              >
+                <View style={styles.overviewCardTop}>
+                  <View style={[styles.overviewIconBox, { backgroundColor: '#eff6ff' }]}>
+                    <Feather name="check-circle" size={m(16)} color="#2563eb" />
+                  </View>
+                  <View style={[styles.overviewTag, { backgroundColor: '#eff6ff' }]}>
+                    <Text style={[styles.overviewTagText, { color: '#2563eb' }]}>ACCEPTED</Text>
+                  </View>
                 </View>
-              </View>
-              <Text style={styles.dealFlowValue}>{portfolioMetrics.activeLoansCount || 0}</Text>
-            </TouchableOpacity>
+                <Text style={styles.overviewValue}>{stats.acceptedApplications || 0}</Text>
+                <Text style={styles.overviewTitle}>Offers Accepted</Text>
+                <Text style={styles.overviewSub}>Ready to disburse</Text>
+              </TouchableOpacity>
 
-            {/* 4. Capital Network */}
-            <TouchableOpacity
-              style={styles.dealFlowCard}
-              activeOpacity={0.8}
-              onPress={() => navigation.navigate('BorrowerExploreLenders')}
-            >
-              <View style={styles.dealFlowTop}>
-                <Text style={[styles.dealFlowTag, { color: colors.blueButton }]}>
-                  LENDER NETWORK
-                </Text>
-                <View style={[styles.dealFlowIconBox, { backgroundColor: '#eff6ff' }]}>
-                  <Feather name="globe" size={m(15)} color={colors.blueButton} />
+              {/* 4. Lender Network */}
+              <TouchableOpacity
+                style={styles.overviewCard}
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate('BorrowerExploreLenders')}
+              >
+                <View style={styles.overviewCardTop}>
+                  <View style={[styles.overviewIconBox, { backgroundColor: '#f5f3ff' }]}>
+                    <Feather name="shield" size={m(16)} color="#7c3aed" />
+                  </View>
+                  <View style={[styles.overviewTag, { backgroundColor: '#f5f3ff' }]}>
+                    <Text style={[styles.overviewTagText, { color: '#7c3aed' }]}>NETWORK</Text>
+                  </View>
                 </View>
-              </View>
-              <Text style={styles.dealFlowValue}>
-                {stats.totalLendersAvailable || 12}
-              </Text>
-            </TouchableOpacity>
-          </ScrollView>
+                <Text style={styles.overviewValue}>{stats.totalLendersAvailable || 2}</Text>
+                <Text style={styles.overviewTitle}>Lender Network</Text>
+                <Text style={styles.overviewSub}>Verified partners</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
           {/* Quick Action Navigation Header */}
-          <View style={[styles.sectionHeaderRow, { marginBottom: m(10) }]}>
+          <View style={[styles.sectionHeaderRow, { marginTop: m(4), marginBottom: m(10) }]}>
             <View>
               <Text style={styles.sectionTitle}>Quick Actions</Text>
               <Text style={styles.sectionSubtitle}>
-                Request capital or explore partner terms
+                Apply for funding or browse verified lenders
               </Text>
             </View>
           </View>
@@ -558,8 +514,8 @@ export default function BorrowerDashboard() {
                 <Feather name="send" size={m(16)} color={colors.white} />
               </View>
               <View style={styles.actionTextWrap}>
-                <Text style={styles.actionTitlePrimary}>Apply for Capital</Text>
-                <Text style={styles.actionSubPrimary}>Request facility</Text>
+                <Text style={styles.actionTitlePrimary}>Apply for Loan</Text>
+                <Text style={styles.actionSubPrimary}>Quick application</Text>
               </View>
               <Feather name="chevron-right" size={m(16)} color={colors.white} />
             </TouchableOpacity>
@@ -570,11 +526,11 @@ export default function BorrowerDashboard() {
               onPress={() => navigation.navigate('BorrowerExploreLenders')}
             >
               <View style={[styles.actionIconCircle, { backgroundColor: '#eff6ff' }]}>
-                <Feather name="search" size={m(16)} color={colors.blueButton} />
+                <Feather name="search" size={m(16)} color="#2563eb" />
               </View>
               <View style={styles.actionTextWrap}>
                 <Text style={styles.actionTitleSecondary}>Explore Lenders</Text>
-                <Text style={styles.actionSubSecondary}>Compare terms</Text>
+                <Text style={styles.actionSubSecondary}>Compare offers</Text>
               </View>
               <Feather name="chevron-right" size={m(16)} color={colors.textSecondary} />
             </TouchableOpacity>
@@ -598,13 +554,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     paddingHorizontal: m(20),
     paddingTop: m(14),
-    paddingBottom: m(22),
+    paddingBottom: m(20),
   },
   greetingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: m(18),
+    marginBottom: 0,
   },
   greetingTextContainer: {
     flex: 1,
@@ -677,7 +633,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: m(18),
+    marginBottom: m(4),
   },
   metricColumn: {
     flex: 1,
@@ -716,53 +672,6 @@ const styles = StyleSheet.create({
     marginHorizontal: m(16),
   },
 
-  // Target Progress Pill
-  progressContainer: {
-    marginTop: m(2),
-  },
-  progressBarPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.white,
-    borderRadius: m(20),
-    overflow: 'hidden',
-    height: m(36),
-  },
-  progressDarkTag: {
-    backgroundColor: colors.lettersAndIcons,
-    paddingHorizontal: m(14),
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  progressDarkText: {
-    fontSize: m(11.5),
-    fontFamily: FontFamily.primaryBold,
-    color: colors.white,
-  },
-  progressWhiteBar: {
-    flex: 1,
-    paddingHorizontal: m(12),
-    justifyContent: 'center',
-  },
-  progressWhiteText: {
-    fontSize: m(11.5),
-    fontFamily: FontFamily.primarySemiBold,
-    color: colors.lettersAndIcons,
-  },
-  progressCaptionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: m(8),
-    gap: m(6),
-  },
-  progressCaptionText: {
-    fontSize: m(11.5),
-    fontFamily: FontFamily.primaryMedium,
-    color: colors.lettersAndIcons,
-    opacity: 0.9,
-  },
-
   // ==========================================
   // MAIN CURVED SHEET SECTION
   // ==========================================
@@ -776,35 +685,46 @@ const styles = StyleSheet.create({
     paddingBottom: m(110),
   },
 
-  // Feature Green Highlight Card
+  // Feature Highlight Card (Hero Overview)
   featureCard: {
-    backgroundColor: colors.primary,
-    borderRadius: m(24),
-    padding: m(18),
+    backgroundColor: colors.white,
+    borderRadius: m(20),
+    paddingVertical: m(14),
+    paddingHorizontal: m(16),
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: m(24),
+    marginBottom: m(20),
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.08)',
     elevation: 3,
     shadowColor: colors.lettersAndIcons,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
     shadowRadius: 6,
   },
   featureLeftCol: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: m(2),
+    paddingHorizontal: m(4),
+    minWidth: m(110),
   },
   featureRingWrapper: {
-    width: m(54),
-    height: m(54),
-    borderRadius: m(27),
-    backgroundColor: 'rgba(255, 255, 255, 0.22)',
-    borderWidth: 2.5,
-    borderColor: colors.blueButton,
+    width: m(42),
+    height: m(42),
+    borderRadius: m(21),
+    backgroundColor: '#ecfdf5',
+    borderWidth: 1.5,
+    borderColor: '#a7f3d0',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: m(6),
+    marginBottom: m(4),
+  },
+  featureCountText: {
+    fontSize: m(17),
+    lineHeight: m(22),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    textAlign: 'center',
   },
   featureRingLabel: {
     fontSize: m(11.5),
@@ -814,23 +734,23 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   featureRingSub: {
-    fontSize: m(10),
+    fontSize: m(9.5),
     lineHeight: m(13),
-    fontFamily: FontFamily.primaryRegular,
-    color: colors.lettersAndIcons,
+    fontFamily: FontFamily.primaryMedium,
+    color: '#059669',
     textAlign: 'center',
-    opacity: 0.85,
+    marginTop: m(1),
   },
   featureDivider: {
-    width: 1.5,
-    height: '85%',
-    backgroundColor: colors.white,
+    width: 1,
+    height: '75%',
+    backgroundColor: '#e2e8f0',
     marginHorizontal: m(12),
   },
   featureHorizontalDivider: {
-    height: 1.5,
-    backgroundColor: colors.white,
-    marginVertical: m(8),
+    height: 1,
+    backgroundColor: '#f1f5f9',
+    marginVertical: m(6),
     width: '100%',
   },
   featureRightCol: {
@@ -840,12 +760,12 @@ const styles = StyleSheet.create({
   featureStatItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: m(4),
   },
   featureStatIconBox: {
     width: m(34),
     height: m(34),
     borderRadius: m(10),
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: m(10),
@@ -857,14 +777,14 @@ const styles = StyleSheet.create({
     fontSize: m(11),
     lineHeight: m(15),
     fontFamily: FontFamily.primaryMedium,
-    color: colors.lettersAndIcons,
-    opacity: 0.85,
+    color: colors.textSecondary,
   },
   featureStatValue: {
-    fontSize: m(15),
-    lineHeight: m(20),
+    fontSize: m(13.5),
+    lineHeight: m(18),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
+    marginTop: m(1),
   },
 
   // Quick Action Navigation Buttons
@@ -988,55 +908,70 @@ const styles = StyleSheet.create({
     lineHeight: m(16),
   },
 
-  // Progression Strip
-  dealFlowScrollView: {
-    marginBottom: m(24),
+  // 2x2 Clean Activity Grid
+  overviewGrid: {
+    marginBottom: m(18),
+    gap: m(10),
   },
-  dealFlowScroll: {
-    paddingBottom: m(8),
-    paddingRight: m(6),
+  overviewGridRow: {
+    flexDirection: 'row',
+    gap: m(10),
   },
-  dealFlowCard: {
-    width: m(145),
+  overviewCard: {
+    flex: 1,
     backgroundColor: colors.white,
-    borderRadius: m(18),
+    borderRadius: m(16),
     paddingVertical: m(12),
-    paddingHorizontal: m(14),
-    marginRight: m(10),
+    paddingHorizontal: m(12),
     borderWidth: 1,
-    borderColor: 'rgba(9, 48, 48, 0.08)',
+    borderColor: 'rgba(9, 48, 48, 0.06)',
     elevation: 2,
     shadowColor: colors.lettersAndIcons,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
-    justifyContent: 'center',
   },
-  dealFlowTop: {
+  overviewCardTop: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: m(6),
   },
-  dealFlowTag: {
-    fontSize: m(9.5),
-    fontFamily: FontFamily.primaryBold,
-    letterSpacing: 0.4,
-    flex: 1,
-    paddingRight: m(4),
-  },
-  dealFlowIconBox: {
-    width: m(28),
-    height: m(28),
-    borderRadius: m(14),
+  overviewIconBox: {
+    width: m(30),
+    height: m(30),
+    borderRadius: m(10),
     justifyContent: 'center',
     alignItems: 'center',
   },
-  dealFlowValue: {
-    fontSize: m(22),
-    lineHeight: m(28),
+  overviewTag: {
+    paddingHorizontal: m(6),
+    paddingVertical: m(2),
+    borderRadius: m(6),
+  },
+  overviewTagText: {
+    fontSize: m(8.5),
+    fontFamily: FontFamily.primaryBold,
+    letterSpacing: 0.4,
+  },
+  overviewValue: {
+    fontSize: m(20),
+    lineHeight: m(26),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
+  },
+  overviewTitle: {
+    fontSize: m(12),
+    lineHeight: m(16),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    marginTop: m(2),
+  },
+  overviewSub: {
+    fontSize: m(10),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+    marginTop: m(1),
   },
 
   // Section Headers

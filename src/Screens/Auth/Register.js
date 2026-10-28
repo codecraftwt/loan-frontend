@@ -1108,8 +1108,8 @@ export default function Register({ navigation }) {
                   disabled={isLoading}
                 >
                   <Ionicons
-                    name="arrow-back"
-                    size={20}
+                    name="chevron-back"
+                    size={22}
                     color={isLoading ? '#999' : GRADIENT_TEAL}
                   />
                   <Text

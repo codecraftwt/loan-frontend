@@ -23,6 +23,7 @@ export default function BorrowerApplications() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'pending' | 'accepted' | 'closed'
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedAppForMenu, setSelectedAppForMenu] = useState(null);
 
@@ -77,17 +78,26 @@ export default function BorrowerApplications() {
     applications.forEach((a) => {
       if (a.status === 'pending') pending++;
       else if (a.status === 'accepted') accepted++;
-      else if (['auto_rejected', 'rejected'].includes(a.status)) closed++;
+      else if (['auto_rejected', 'rejected', 'declined'].includes(a.status)) closed++;
     });
     return { all: applications.length, pending, accepted, closed };
   }, [applications]);
+
+  const filterTabs = [
+    { key: 'all', label: 'All Applications', shortLabel: 'All', count: counts.all },
+    { key: 'pending', label: 'Pending Review', shortLabel: 'Pending', count: counts.pending },
+    { key: 'accepted', label: 'Accepted', shortLabel: 'Accepted', count: counts.accepted },
+    { key: 'closed', label: 'Closed / Declined', shortLabel: 'Closed', count: counts.closed },
+  ];
+
+  const activeFilterInfo = filterTabs.find((t) => t.key === activeTab) || filterTabs[0];
 
   // Filtered applications
   const filteredApps = useMemo(() => {
     return applications.filter((app) => {
       if (activeTab === 'pending' && app.status !== 'pending') return false;
       if (activeTab === 'accepted' && app.status !== 'accepted') return false;
-      if (activeTab === 'closed' && !['auto_rejected', 'rejected'].includes(app.status))
+      if (activeTab === 'closed' && !['auto_rejected', 'rejected', 'declined'].includes(app.status))
         return false;
 
       if (searchQuery.trim()) {
@@ -114,22 +124,38 @@ export default function BorrowerApplications() {
     );
   };
 
-  const openLenderChat = (mobileNo) => {
-    if (!mobileNo) {
+  const openLenderChat = (mobileNo, lenderName, app) => {
+    const rawNumber =
+      mobileNo ||
+      app?.lenderSnapshot?.mobileNo ||
+      app?.lenderId?.mobileNo ||
+      app?.lenderSnapshot?.phone ||
+      app?.lenderId?.phone;
+
+    if (!rawNumber) {
       showAlert('Contact', 'Lender phone number is not listed.');
       return;
     }
-    const cleanNumber = mobileNo.replace(/\D/g, '');
-    const url = `whatsapp://send?phone=91${cleanNumber}`;
-    Linking.canOpenURL(url)
+
+    const cleanDigits = String(rawNumber).replace(/\D/g, '');
+    const phoneWithCountry = `91${cleanDigits.slice(-10)}`;
+
+    const waUrl = `whatsapp://send?phone=${phoneWithCountry}`;
+    const webWaUrl = `https://wa.me/${phoneWithCountry}`;
+
+    Linking.canOpenURL(waUrl)
       .then((supported) => {
         if (supported) {
-          Linking.openURL(url);
+          return Linking.openURL(waUrl);
         } else {
-          Linking.openURL(`tel:${cleanNumber}`);
+          return Linking.openURL(webWaUrl);
         }
       })
-      .catch(() => Linking.openURL(`tel:${cleanNumber}`));
+      .catch(() => {
+        Linking.openURL(webWaUrl).catch(() => {
+          showAlert('WhatsApp', 'Unable to launch WhatsApp on this device.');
+        });
+      });
   };
 
   
@@ -152,7 +178,7 @@ export default function BorrowerApplications() {
   const renderApplicationCard = ({ item }) => {
     const isAccepted = item.status === 'accepted';
     const isPending = item.status === 'pending';
-    const isClosed = ['auto_rejected', 'rejected'].includes(item.status);
+    const isClosed = ['auto_rejected', 'rejected', 'declined'].includes(item.status);
 
     const lenderName =
       item.lenderSnapshot?.companyName ||
@@ -173,13 +199,8 @@ export default function BorrowerApplications() {
     const isDisbursed =
       item.disbursalVerification?.isVerified ||
       item.activeLoan?.disbursalVerification?.isVerified;
-
     return (
-      <TouchableOpacity
-        style={styles.card}
-        activeOpacity={0.8}
-        onPress={() => navigation.navigate('BorrowerContractTermsScreen', { application: item })}
-      >
+      <View style={styles.card}>
         {/* Card Header Row */}
         <View style={styles.cardHeaderRow}>
           <View style={styles.activityIconCircle}>
@@ -220,16 +241,6 @@ export default function BorrowerApplications() {
               </Text>
             </View>
           )}
-
-          {/* 3-Dots Action Button */}
-          <TouchableOpacity
-            style={styles.moreDotsBtn}
-            activeOpacity={0.7}
-            hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
-            onPress={() => handleOpenMenu(item)}
-          >
-            <Feather name="more-vertical" size={m(18)} color={colors.lettersAndIcons} />
-          </TouchableOpacity>
         </View>
 
         {/* Compact Metrics Strip - Neutral Slate-50 (#F8FAFC) */}
@@ -322,15 +333,68 @@ export default function BorrowerApplications() {
                 Active Facility · EMI: {formatINR(item.activeLoan.monthlyEmi || 0)}
               </Text>
             </View>
+          </View>
+        ) : null}
+
+        {/* Actions for Accepted & Active Applications (Matching Web App: Agreement, Schedule, Chat) */}
+        {isAccepted ? (
+          <View style={styles.acceptedFooterStrip}>
+            {/* 1. Agreement / E-Sign */}
             <TouchableOpacity
-              style={styles.viewScheduleBtn}
+              style={styles.footerActionBtn}
               activeOpacity={0.8}
-              onPress={() =>
-                navigation.navigate('BorrowerLoanDetails', { id: item.activeLoan._id })
-              }
+              onPress={() => {
+                navigation.navigate('BorrowerContractTermsScreen', { application: item });
+              }}
             >
-              <Text style={styles.viewScheduleBtnText}>Repayment Schedule</Text>
-              <Feather name="chevron-right" size={m(13)} color={colors.blueButton} />
+              <Feather
+                name={isLenderSigned ? 'edit-3' : 'file-text'}
+                size={m(12)}
+                color={isLenderSigned ? '#2563eb' : colors.lettersAndIcons}
+              />
+              <Text
+                style={[
+                  styles.footerActionBtnText,
+                  isLenderSigned && { color: '#2563eb', fontFamily: FontFamily.primaryBold },
+                ]}
+              >
+                {isLenderSigned ? 'E-Sign' : 'Agreement'}
+              </Text>
+            </TouchableOpacity>
+
+            {/* 2. Schedule (if connected active loan exists) */}
+            {item.activeLoan ? (
+              <TouchableOpacity
+                style={styles.footerActionBtn}
+                activeOpacity={0.8}
+                onPress={() =>
+                  navigation.navigate('BorrowerLoanDetails', {
+                    id: item.activeLoan._id,
+                    loan: item.activeLoan,
+                  })
+                }
+              >
+                <Feather name="calendar" size={m(12)} color="#2563eb" />
+                <Text style={[styles.footerActionBtnText, { color: '#2563eb' }]}>
+                  Schedule
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+
+            {/* 3. Chat (WhatsApp) */}
+            <TouchableOpacity
+              style={styles.footerActionBtn}
+              activeOpacity={0.8}
+              onPress={() => {
+                const phone =
+                  item.lenderSnapshot?.mobileNo || item.lenderId?.mobileNo;
+                openLenderChat(phone, lenderName, item);
+              }}
+            >
+              <Feather name="message-square" size={m(12)} color="#059669" />
+              <Text style={[styles.footerActionBtnText, { color: '#059669' }]}>
+                Chat
+              </Text>
             </TouchableOpacity>
           </View>
         ) : null}
@@ -345,7 +409,22 @@ export default function BorrowerApplications() {
           </View>
         ) : null}
 
-      </TouchableOpacity>
+        {/* Apply with Other Lender Option (When rejected / declined / auto-expired) */}
+        {isClosed ? (
+          <View style={styles.applyOtherRow}>
+            <TouchableOpacity
+              style={styles.applyOtherBtn}
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate('BorrowerExploreLenders')}
+            >
+              <Feather name="refresh-cw" size={m(11)} color="#2563eb" />
+              <Text style={styles.applyOtherBtnText}>Apply with Other</Text>
+              <Feather name="chevron-right" size={m(12)} color="#2563eb" />
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
+      </View>
     );
   };
 
@@ -355,28 +434,25 @@ export default function BorrowerApplications() {
       topInsetBg={colors.primary}
       statusBarColor={colors.primary}
       statusBarStyle="dark-content"
-      includeTabBarClearance={true}
+      includeTabBarClearance={false}
       scrollable={false}
     >
       {/* Top Green Banner */}
       <View style={styles.topBanner}>
         <View style={styles.headerRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.headerTag}>APPLICATION PIPELINE</Text>
-            <Text style={styles.headerTitle}>Track Inquiries</Text>
-            <Text style={styles.headerSubtitle}>
-              Review status, 48-hour countdowns & active term sheets
-            </Text>
-          </View>
-
           <TouchableOpacity
-            style={styles.refreshBtn}
-            onPress={onRefresh}
-            disabled={loading}
+            style={styles.backBtn}
+            onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('BorrowerHome'))}
             activeOpacity={0.8}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Feather name="refresh-cw" size={m(17)} color={colors.lettersAndIcons} />
+            <Feather name="chevron-left" size={m(22)} color={colors.lettersAndIcons} />
           </TouchableOpacity>
+
+          <View style={{ flex: 1, marginHorizontal: m(10) }}>
+            <Text style={styles.headerTitle}>My Loan Applications</Text>
+
+          </View>
         </View>
       </View>
 
@@ -424,52 +500,58 @@ export default function BorrowerApplications() {
           );
         })()}
 
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Feather name="search" size={m(16)} color={colors.textSecondary} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search by institution name or purpose..."
-            placeholderTextColor={colors.textMuted}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery ? (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Feather name="x" size={m(16)} color={colors.textSecondary} />
-            </TouchableOpacity>
-          ) : null}
+        {/* Search Row: Search Input + Beside Filter Button */}
+        <View style={styles.searchRow}>
+          <View style={styles.searchContainer}>
+            <Feather name="search" size={m(16)} color={colors.textSecondary} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search by institution name or purpose..."
+              placeholderTextColor={colors.textMuted}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery ? (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Feather name="x" size={m(16)} color={colors.textSecondary} />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+
+          {/* Filter Icon Button Beside Search */}
+          <TouchableOpacity
+            style={[
+              styles.filterBtn,
+              activeTab !== 'all' && styles.filterBtnActive,
+            ]}
+            activeOpacity={0.8}
+            onPress={() => setFilterModalVisible(true)}
+          >
+            <Feather
+              name="sliders"
+              size={m(17)}
+              color={colors.lettersAndIcons}
+            />
+            {activeTab !== 'all' && <View style={styles.filterActiveBadge} />}
+          </TouchableOpacity>
         </View>
 
-        {/* Capsule Filter Tabs */}
-        <View style={styles.periodCapsuleRow}>
-          {[
-            { key: 'all', label: `All (${counts.all})` },
-            { key: 'pending', label: `Pending (${counts.pending})` },
-            { key: 'accepted', label: `Accepted (${counts.accepted})` },
-            { key: 'closed', label: `Closed (${counts.closed})` },
-          ].map((tab) => {
-            const isSelected = activeTab === tab.key;
-            return (
+        {/* Active Filter Pill (shown when filter is applied, with quick reset) */}
+        {activeTab !== 'all' && (
+          <View style={styles.activeFilterRow}>
+            <View style={styles.activeFilterPill}>
+              <Text style={styles.activeFilterText}>
+                Filter: <Text style={styles.activeFilterBold}>{activeFilterInfo.shortLabel} ({activeFilterInfo.count})</Text>
+              </Text>
               <TouchableOpacity
-                key={tab.key}
-                style={[styles.periodTab, isSelected && styles.periodTabActive]}
-                onPress={() => setActiveTab(tab.key)}
-                activeOpacity={0.8}
+                onPress={() => setActiveTab('all')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Text
-                  style={[
-                    styles.periodTabText,
-                    isSelected && styles.periodTabTextActive,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {tab.label}
-                </Text>
+                <Feather name="x" size={m(13)} color={colors.lettersAndIcons} />
               </TouchableOpacity>
-            );
-          })}
-        </View>
+            </View>
+          </View>
+        )}
 
         {/* Applications List */}
         {loading && !refreshing ? (
@@ -513,10 +595,89 @@ export default function BorrowerApplications() {
             }
           />
         )}
+      </View>
+
+      {/* Simple Center Filter Modal */}
+      <Modal
+        visible={filterModalVisible}
+        transparent={true}
+        statusBarTranslucent={true}
+        animationType="fade"
+        onRequestClose={() => setFilterModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.filterModalOverlay}
+          activeOpacity={1}
+          onPress={() => setFilterModalVisible(false)}
+        >
+          <TouchableOpacity
+            style={styles.simpleFilterContainer}
+            activeOpacity={1}
+            onPress={(e) => e?.stopPropagation?.()}
+          >
+            <View style={styles.simpleFilterHeader}>
+              <Text style={styles.simpleFilterTitle}>Filter Applications</Text>
+              <TouchableOpacity
+                onPress={() => setFilterModalVisible(false)}
+                style={styles.simpleFilterCloseBtn}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <Feather name="x" size={m(16)} color={colors.lettersAndIcons} />
+              </TouchableOpacity>
             </View>
 
+            <View style={styles.simpleFilterDivider} />
+
+            {/* Vertical Options List (No background color, clean checkmark selection) */}
+            <View style={styles.simpleOptionsList}>
+              {filterTabs.map((tab, index) => {
+                const isSelected = activeTab === tab.key;
+                const isLast = index === filterTabs.length - 1;
+                return (
+                  <TouchableOpacity
+                    key={tab.key}
+                    style={[
+                      styles.simpleOptionItem,
+                      !isLast && styles.simpleOptionItemBorder,
+                    ]}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      setActiveTab(tab.key);
+                      setFilterModalVisible(false);
+                    }}
+                  >
+                    <View style={styles.simpleOptionLeft}>
+                      <Text
+                        style={[
+                          styles.simpleOptionText,
+                          isSelected && styles.simpleOptionTextSelected,
+                        ]}
+                      >
+                        {tab.label}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.simpleOptionCount,
+                          isSelected && styles.simpleOptionCountSelected,
+                        ]}
+                      >
+                        ({tab.count})
+                      </Text>
+                    </View>
+
+                    {isSelected ? (
+                      <Feather name="check" size={m(18)} color="#2563eb" />
+                    ) : null}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
       {/* 3-Dots Action Sheet Modal */}
-    <Modal
+      <Modal
       visible={Boolean(selectedAppForMenu)}
       transparent={true}
       statusBarTranslucent={true}
@@ -650,6 +811,31 @@ export default function BorrowerApplications() {
                 <Feather name="chevron-right" size={m(16)} color="#94a3b8" />
               </TouchableOpacity>
             ) : null}
+
+            {/* 5. Apply with Other Lender (If rejected, declined or expired) */}
+            {['auto_rejected', 'rejected', 'declined'].includes(selectedAppForMenu?.status) ? (
+              <TouchableOpacity
+                style={styles.actionCard}
+                activeOpacity={0.75}
+                onPress={() => {
+                  setSelectedAppForMenu(null);
+                  navigation.navigate('BorrowerExploreLenders');
+                }}
+              >
+                <View style={[styles.actionIconBox, { backgroundColor: '#eff6ff' }]}>
+                  <Feather name="refresh-cw" size={m(16)} color="#2563eb" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.actionItemTitle, { color: '#2563eb' }]}>
+                    Apply with Other Lender
+                  </Text>
+                  <Text style={styles.actionItemDesc}>
+                    Explore and apply with another verified lender
+                  </Text>
+                </View>
+                <Feather name="chevron-right" size={m(16)} color="#2563eb" />
+              </TouchableOpacity>
+            ) : null}
           </View>
 
           {/* Cancel Button */}
@@ -702,6 +888,19 @@ const styles = StyleSheet.create({
     opacity: 0.9,
     marginTop: m(2),
   },
+  backBtn: {
+    width: m(42),
+    height: m(42),
+    borderRadius: m(21),
+    backgroundColor: colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
   refreshBtn: {
     width: m(42),
     height: m(42),
@@ -725,14 +924,20 @@ const styles = StyleSheet.create({
     paddingTop: m(16),
   },
 
-  // Search Input Container
+  // Search Row: Search Input Container + Beside Filter Button
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: m(18),
+    marginBottom: m(12),
+    gap: m(10),
+  },
   searchContainer: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.white,
     borderRadius: m(16),
-    marginHorizontal: m(18),
-    marginBottom: m(12),
     paddingHorizontal: m(14),
     height: m(44),
     borderWidth: 1,
@@ -745,36 +950,146 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.primaryRegular,
     color: colors.lettersAndIcons,
   },
-
-  // Capsule Filter Tabs
-  periodCapsuleRow: {
-    flexDirection: 'row',
+  filterBtn: {
+    width: m(44),
+    height: m(44),
+    borderRadius: m(16),
     backgroundColor: colors.white,
-    borderRadius: m(24),
-    padding: m(3),
-    marginHorizontal: m(18),
-    marginBottom: m(14),
+    justifyContent: 'center',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(9, 48, 48, 0.08)',
+    elevation: 1,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
   },
-  periodTab: {
-    flex: 1,
-    paddingVertical: m(7),
-    borderRadius: m(20),
-    alignItems: 'center',
-    justifyContent: 'center',
+  filterBtnActive: {
+    backgroundColor: colors.lightGreen,
+    borderColor: colors.primary,
   },
-  periodTabActive: {
+  filterActiveBadge: {
+    position: 'absolute',
+    top: m(8),
+    right: m(8),
+    width: m(8),
+    height: m(8),
+    borderRadius: m(4),
     backgroundColor: colors.primary,
+    borderWidth: 1.5,
+    borderColor: colors.white,
   },
-  periodTabText: {
-    fontSize: m(11.5),
+
+  // Active Filter Pill
+  activeFilterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: m(18),
+    marginBottom: m(12),
+  },
+  activeFilterPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: m(20),
+    paddingVertical: m(5),
+    paddingHorizontal: m(12),
+    gap: m(6),
+  },
+  activeFilterText: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+  },
+  activeFilterBold: {
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+
+  // Simple Compact Center Filter Modal
+  filterModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(9, 48, 48, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: m(24),
+  },
+  simpleFilterContainer: {
+    backgroundColor: colors.white,
+    borderRadius: m(20),
+    width: '100%',
+    maxWidth: m(320),
+    paddingHorizontal: m(18),
+    paddingTop: m(16),
+    paddingBottom: m(10),
+    elevation: 25,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+  },
+  simpleFilterHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: m(12),
+  },
+  simpleFilterTitle: {
+    fontSize: m(16),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  simpleFilterCloseBtn: {
+    width: m(30),
+    height: m(30),
+    borderRadius: m(15),
+    backgroundColor: '#f1f5f9',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  simpleFilterDivider: {
+    height: 1,
+    backgroundColor: 'rgba(9, 48, 48, 0.08)',
+  },
+  simpleOptionsList: {
+    paddingVertical: m(2),
+  },
+  simpleOptionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: m(13),
+    paddingHorizontal: m(4),
+  },
+  simpleOptionItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(9, 48, 48, 0.06)',
+  },
+  simpleOptionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(6),
+  },
+  simpleOptionText: {
+    fontSize: m(14),
     fontFamily: FontFamily.primaryMedium,
     color: colors.lettersAndIcons,
   },
-  periodTabTextActive: {
+  simpleOptionTextSelected: {
     fontFamily: FontFamily.primaryBold,
-    color: colors.lettersAndIcons,
+    color: '#2563eb',
+  },
+  simpleOptionCount: {
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.textSecondary,
+  },
+  simpleOptionCountSelected: {
+    fontFamily: FontFamily.primaryBold,
+    color: '#2563eb',
   },
 
   listContent: {
@@ -1091,6 +1406,90 @@ const styles = StyleSheet.create({
     fontSize: m(11),
     fontFamily: FontFamily.primaryRegular,
     color: '#991b1b',
+  },
+
+  // Apply with Other Lender Strip
+  applyOtherRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    backgroundColor: '#f8fafc',
+    borderRadius: m(12),
+    paddingVertical: m(8),
+    paddingHorizontal: m(12),
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.08)',
+    marginBottom: m(10),
+  },
+  applyOtherBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(5),
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    paddingHorizontal: m(12),
+    paddingVertical: m(7),
+    borderRadius: m(8),
+  },
+  applyOtherBtnText: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryBold,
+    color: '#2563eb',
+  },
+
+  // Accepted Actions Strip (Matching Web App Action column: Agreement, Schedule, Chat)
+  acceptedFooterStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: m(8),
+    paddingTop: m(8),
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+    marginTop: m(6),
+    flexWrap: 'wrap',
+  },
+  footerActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(4),
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    paddingHorizontal: m(10),
+    paddingVertical: m(6),
+    borderRadius: m(8),
+  },
+  footerActionBtnText: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primarySemiBold,
+    color: '#334155',
+  },
+
+  // Pending Countdown Badge (Matching Web App: 48h left)
+  pendingFooterStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingTop: m(6),
+    marginTop: m(2),
+  },
+  pendingCountdownBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(4),
+    backgroundColor: '#fffbeb',
+    borderWidth: 1,
+    borderColor: '#fde68a',
+    paddingHorizontal: m(8),
+    paddingVertical: m(4),
+    borderRadius: m(6),
+  },
+  pendingCountdownText: {
+    fontSize: m(10.5),
+    fontFamily: FontFamily.primaryBold,
+    color: '#d97706',
   },
 
   // Card Actions Row
