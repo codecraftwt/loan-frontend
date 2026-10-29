@@ -28,7 +28,7 @@ export const POPPINS = {
   medium: 'Poppins-Medium',        // Medium emphasis text
   semiBold: 'Poppins-SemiBold',    // Labels, section titles, buttons
   bold: 'Poppins-Bold',            // Headlines, prices, important text
-  extraBold: 'Poppins-ExtraBold',  // Stat numbers, hero display figures
+  extraBold: 'Poppins-Bold',       // Fallback to Bold (Poppins-ExtraBold.ttf not in assets)
   light: 'Poppins-Regular',        // Light emphasis text (fallback to Regular - add Poppins-Light.ttf for true light weight)
 };
 

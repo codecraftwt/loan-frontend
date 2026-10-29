@@ -161,6 +161,7 @@ export default function BorrowerEditProfileScreen() {
       statusBarColor={colors.primary}
       statusBarStyle="dark-content"
       scrollable={false}
+      includeTabBarClearance={false}
     >
       {/* Top Green Banner */}
       <View style={styles.topBanner}>
@@ -170,7 +171,7 @@ export default function BorrowerEditProfileScreen() {
             onPress={() => navigation.goBack()}
             activeOpacity={0.8}
           >
-            <Feather name="chevron-left" size={m(22)} color={colors.white} />
+            <Feather name="chevron-left" size={m(20)} color={colors.lettersAndIcons} />
           </TouchableOpacity>
 
           <View style={styles.headerTitleWrap}>
@@ -621,7 +622,7 @@ export default function BorrowerEditProfileScreen() {
               )}
             </TouchableOpacity>
 
-            <View style={{ height: m(40) }} />
+            <View style={{ height: m(16) }} />
           </ScrollView>
         )}
       </View>
@@ -646,9 +647,14 @@ const styles = StyleSheet.create({
     width: m(38),
     height: m(38),
     borderRadius: m(19),
-    backgroundColor: 'rgba(9, 48, 48, 0.18)',
+    backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
+    elevation: 2,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   headerTitleWrap: {
     flex: 1,
@@ -662,9 +668,12 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   headerTitle: {
-    fontSize: m(18),
-    fontFamily: FontFamily.primaryExtraBold,
+    fontSize: m(20),
+    lineHeight: m(26),
+    fontFamily: FontFamily.primaryBold,
+    fontWeight: '700',
     color: colors.lettersAndIcons,
+    letterSpacing: -0.2,
   },
   capsuleTabsRow: {
     flexDirection: 'row',
@@ -703,7 +712,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: m(16),
-    paddingBottom: m(60),
+    paddingBottom: m(20),
     gap: m(14),
   },
   centerLoading: {

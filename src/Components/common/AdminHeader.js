@@ -40,8 +40,8 @@ export default function AdminHeader({
     : colors.backgroundGreenWhite;
 
   const textColor = isDark || isGreen ? colors.white : colors.lettersAndIcons;
-  const subtitleColor = isDark || isGreen ? 'rgba(255, 255, 255, 0.85)' : colors.textSecondary;
-  const backIconColor = isDark || isGreen ? colors.white : colors.lettersAndIcons;
+  const backBtnBg = isDark ? 'rgba(255, 255, 255, 0.15)' : colors.white;
+  const backIconColor = isDark ? colors.white : colors.lettersAndIcons;
   const badgeBg = isDark
     ? 'rgba(0, 208, 158, 0.18)'
     : isGreen
@@ -56,11 +56,11 @@ export default function AdminHeader({
           {showBack && (
             <TouchableOpacity
               onPress={handleBack}
-              style={styles.backButton}
+              style={[styles.backButton, { backgroundColor: backBtnBg }]}
               activeOpacity={0.7}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Feather name="chevron-left" size={m(22)} color={backIconColor} />
+              <Feather name="chevron-left" size={m(20)} color={backIconColor} />
             </TouchableOpacity>
           )}
 
@@ -113,13 +113,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   backButton: {
-    width: m(36),
-    height: m(36),
-    borderRadius: m(18),
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    width: m(38),
+    height: m(38),
+    borderRadius: m(19),
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: m(4),
+    elevation: 2,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   badgePill: {
     flexDirection: 'row',
@@ -146,6 +150,7 @@ const styles = StyleSheet.create({
     fontSize: m(24),
     lineHeight: m(30),
     fontFamily: FontFamily.primaryBold,
+    fontWeight: '700',
     letterSpacing: -0.3,
   },
   subtitle: {

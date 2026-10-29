@@ -1,29 +1,33 @@
-import { Platform, StyleSheet, View, Text, Dimensions, TouchableOpacity } from 'react-native';
+import {
+  Platform,
+  StyleSheet,
+  View,
+  Text,
+  Dimensions,
+  TouchableOpacity,
+  Keyboard,
+  UIManager,
+  LayoutAnimation,
+} from 'react-native';
 import React, { useMemo, useState, useEffect } from 'react';
-import Feather from 'react-native-vector-icons/Feather';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import { m } from 'walstar-rn-responsive';
-import { FontFamily, FontSizes, colors } from '../constants';
-// import Fonts from '../constants/fonts';
+import { FontFamily, colors } from '../constants';
 
 // Lender screens
 import LenderDashboard from '../Screens/Lender/Dashboard/LenderDashboard';
 import LenderIncomingRequests from '../Screens/Lender/Requests/LenderIncomingRequests';
 import LenderLoansPortfolio from '../Screens/Lender/Loans/LenderLoansPortfolio';
 import LenderAvailableBorrowers from '../Screens/Lender/Borrowers/LenderAvailableBorrowers';
-import LenderSubscriptionScreen from '../Screens/Lender/Subscription/LenderSubscriptionScreen';
 import LenderProfileScreen from '../Screens/Lender/Profile/LenderProfileScreen';
 import lenderFlowService from '../Services/lenderFlowService';
-import Home from '../Screens/Lender/Dashboard/Home';
-import Outward from '../Screens/Shared/Loans/Outward';
-import Inward from '../Screens/Shared/Loans/Inward';
 
 // Admin screens
 import AdminDashboard from '../Screens/Admin/Dashboard/AdminDashboard';
 import PlansList from '../Screens/Admin/Plans/PlansList';
-import Revenue from '../Screens/Admin/Revenue/Revenue';
 import LenderList from '../Screens/Admin/Lenders/LenderList';
 import AdminBorrowerList from '../Screens/Admin/Borrowers/AdminBorrowerList';
 import AdminProfileScreen from '../Screens/Admin/Profile/AdminProfileScreen';
@@ -31,28 +35,203 @@ import AdminProfileScreen from '../Screens/Admin/Profile/AdminProfileScreen';
 // Borrower screens
 import BorrowerDashboard from '../Screens/Borrower/Dashboard/BorrowerDashboard';
 import BorrowerExploreLenders from '../Screens/Borrower/Lenders/BorrowerExploreLenders';
-import BorrowerApply from '../Screens/Borrower/Applications/BorrowerApply';
 import BorrowerApplications from '../Screens/Borrower/Applications/BorrowerApplications';
 import BorrowerLoansPortfolio from '../Screens/Borrower/Loans/BorrowerLoansPortfolio';
 import BorrowerProfileScreen from '../Screens/Borrower/Profile/BorrowerProfileScreen';
-import MyLoans from '../Screens/Borrower/Loans/MyLoans';
-import BorrowerAnalyticsScreen from '../Screens/Borrower/Analytics/BorrowerAnalyticsScreen';
-
-// Shared screens
-import Profile from '../Screens/Shared/Profile/Profile';
 
 const Tab = createBottomTabNavigator();
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+// Enable layout animation on Android
+if (
+  Platform.OS === 'android' &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+// Smooth horizontal slide animation between tabs
+const tabSlideInterpolator = ({ current }) => {
+  return {
+    sceneStyle: {
+      opacity: current.progress.interpolate({
+        inputRange: [-1, -0.6, 0, 0.6, 1],
+        outputRange: [0, 0.7, 1, 0.7, 0],
+      }),
+      transform: [
+        {
+          translateX: current.progress.interpolate({
+            inputRange: [-1, 0, 1],
+            outputRange: [-SCREEN_WIDTH, 0, SCREEN_WIDTH],
+          }),
+        },
+      ],
+    },
+  };
+};
+
+const tabTransitionSpec = {
+  animation: 'timing',
+  config: {
+    duration: 220,
+  },
+};
+
+/**
+ * Custom Tab Bar Component
+ * Displays professional mobile icons with solid active / outline inactive variants,
+ * expands the active tab horizontally to show the full name,
+ * and maintains consistent alignment and clearance across all device sizes.
+ */
+function CustomTabBar({
+  state,
+  descriptors,
+  navigation,
+  pendingRequestsCount = 0,
+}) {
+  const insets = useSafeAreaInsets();
+  const bottomInset =
+    Platform.OS === 'ios'
+      ? Math.max(insets.bottom, m(12))
+      : Math.max(insets.bottom, m(8));
+  const barHeight = m(66) + bottomInset;
+
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setKeyboardVisible(true),
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardVisible(false),
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  if (isKeyboardVisible) {
+    return null;
+  }
+
+  return (
+    <View
+      style={[
+        styles.tabBar,
+        {
+          height: barHeight,
+          paddingBottom: bottomInset,
+        },
+      ]}
+    >
+      {state.routes.map((route, index) => {
+        const { options } = descriptors[route.key];
+        const isFocused = state.index === index;
+        const label =
+          options.tabBarLabel !== undefined
+            ? options.tabBarLabel
+            : options.title !== undefined
+            ? options.title
+            : route.name;
+
+        const iconBase = options.tabBarIconName || 'ellipse';
+        const activeIcon = options.tabBarActiveIcon || iconBase;
+        const inactiveIcon = options.tabBarInactiveIcon || `${iconBase}-outline`;
+
+        const badgeCount =
+          route.name === 'LenderRequests' ? pendingRequestsCount : 0;
+
+        const onPress = () => {
+          const event = navigation.emit({
+            type: 'tabPress',
+            target: route.key,
+            canPreventDefault: true,
+          });
+
+          if (!isFocused && !event.defaultPrevented) {
+            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            navigation.navigate(route.name);
+          }
+        };
+
+        const onLongPress = () => {
+          navigation.emit({
+            type: 'tabLongPress',
+            target: route.key,
+          });
+        };
+
+        return (
+          <TouchableOpacity
+            key={route.key}
+            accessibilityRole="button"
+            accessibilityState={isFocused ? { selected: true } : {}}
+            accessibilityLabel={options.tabBarAccessibilityLabel}
+            testID={options.tabBarButtonTestID}
+            onPress={onPress}
+            onLongPress={onLongPress}
+            activeOpacity={0.8}
+            style={[
+              styles.tabItem,
+              { flex: isFocused ? 2.1 : 1.0 },
+            ]}
+          >
+            {isFocused ? (
+              <View style={styles.activePill}>
+                <View style={styles.activeIconContainer}>
+                  <Ionicons
+                    name={activeIcon}
+                    size={m(19)}
+                    color={colors.lettersAndIcons}
+                  />
+                  {badgeCount > 0 ? (
+                    <View style={styles.badgeContainer}>
+                      <Text style={styles.badgeText}>
+                        {badgeCount > 99 ? '99+' : badgeCount}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+                <Text
+                  style={styles.activeLabel}
+                  allowFontScaling={false}
+                >
+                  {label}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.inactiveIconWrapper}>
+                <Ionicons
+                  name={inactiveIcon}
+                  size={m(23)}
+                  color={colors.lettersAndIcons}
+                />
+                {badgeCount > 0 ? (
+                  <View style={styles.badgeContainer}>
+                    <Text style={styles.badgeText}>
+                      {badgeCount > 99 ? '99+' : badgeCount}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            )}
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
 
 export default function BottomNavigation() {
   const user = useSelector(state => state.auth.user);
-  // Memoize roleId to prevent unnecessary re-renders
   const roleId = useMemo(() => {
-    // Get roleId from user object, ensuring it's a valid number
     const id = user?.roleId;
     if (id === 0 || id === 1 || id === 2) {
       return id;
     }
-    // If roleId is invalid, try to get from AsyncStorage as fallback
     return undefined;
   }, [user?.roleId]);
 
@@ -81,76 +260,9 @@ export default function BottomNavigation() {
     }
   }, [roleId]);
 
-  // Get safe area values
-  const insets = useSafeAreaInsets();
-  const bottomInset =
-    Platform.OS === 'ios'
-      ? Math.max(insets.bottom, m(12))
-      : Math.max(insets.bottom, m(8));
-  const barHeight = m(66) + bottomInset;
-
-  const renderIcon = (name, color, size, focused, badgeCount = 0) => {
-    return (
-      <View style={[styles.iconWrapper, focused && styles.activeIconWrapper]}>
-        <Feather
-          name={name}
-          size={m(23)}
-          color={colors.lettersAndIcons}
-        />
-        {badgeCount > 0 ? (
-          <View style={styles.badgeContainer}>
-            <Text style={styles.badgeText}>
-              {badgeCount > 99 ? '99+' : badgeCount}
-            </Text>
-          </View>
-        ) : null}
-      </View>
-    );
-  };
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-// Smooth horizontal slide animation between tabs (right-to-left forward, left-to-right backward)
-const tabSlideInterpolator = ({ current }) => {
-  return {
-    sceneStyle: {
-      opacity: current.progress.interpolate({
-        inputRange: [-1, -0.6, 0, 0.6, 1],
-        outputRange: [0, 0.7, 1, 0.7, 0],
-      }),
-      transform: [
-        {
-          translateX: current.progress.interpolate({
-            inputRange: [-1, 0, 1],
-            outputRange: [-SCREEN_WIDTH, 0, SCREEN_WIDTH],
-          }),
-        },
-      ],
-    },
-  };
-};
-
-const tabTransitionSpec = {
-  animation: 'timing',
-  config: {
-    duration: 220,
-  },
-};
-
   const tabScreenOptions = {
     headerShown: false,
     tabBarHideOnKeyboard: true,
-    tabBarShowLabel: false,
-    tabBarActiveTintColor: colors.lettersAndIcons,
-    tabBarInactiveTintColor: colors.lettersAndIcons,
-    tabBarIconStyle: styles.tabBarIcon,
-    tabBarItemStyle: styles.tabBarItem,
-    tabBarButton: props => (
-      <TouchableOpacity
-        {...props}
-        activeOpacity={0.8}
-      />
-    ),
     sceneStyle: { backgroundColor: colors.backgroundGreenWhite },
     lazy: true,
     freezeOnBlur: true,
@@ -158,21 +270,22 @@ const tabTransitionSpec = {
     animation: 'shift',
     sceneStyleInterpolator: tabSlideInterpolator,
     transitionSpec: tabTransitionSpec,
-    tabBarStyle: [
-      styles.tabBar,
-      {
-        height: barHeight,
-        paddingBottom: bottomInset,
-      },
-    ],
   };
 
-  // Admin Dashboard (roleId === 0) - 5 Clean Tabs
+  const renderTabBar = props => (
+    <CustomTabBar
+      {...props}
+      pendingRequestsCount={pendingRequestsCount}
+    />
+  );
+
+  // Admin Dashboard (roleId === 0) - 5 Professional Institutional Tabs
   if (roleId === 0) {
     return (
       <View style={styles.container}>
         <Tab.Navigator
           initialRouteName="AdminHome"
+          tabBar={renderTabBar}
           screenOptions={tabScreenOptions}
         >
           <Tab.Screen
@@ -180,8 +293,7 @@ const tabTransitionSpec = {
             component={AdminDashboard}
             options={{
               tabBarLabel: 'Dashboard',
-              tabBarIcon: ({ color, size, focused }) =>
-                renderIcon('home', color, size, focused),
+              tabBarIconName: 'grid',
             }}
           />
           <Tab.Screen
@@ -189,8 +301,7 @@ const tabTransitionSpec = {
             component={LenderList}
             options={{
               tabBarLabel: 'Lenders',
-              tabBarIcon: ({ color, size, focused }) =>
-                renderIcon('briefcase', color, size, focused),
+              tabBarIconName: 'business',
             }}
           />
           <Tab.Screen
@@ -198,8 +309,7 @@ const tabTransitionSpec = {
             component={AdminBorrowerList}
             options={{
               tabBarLabel: 'Borrowers',
-              tabBarIcon: ({ color, size, focused }) =>
-                renderIcon('user-check', color, size, focused),
+              tabBarIconName: 'people',
             }}
           />
           <Tab.Screen
@@ -207,8 +317,7 @@ const tabTransitionSpec = {
             component={PlansList}
             options={{
               tabBarLabel: 'Plans',
-              tabBarIcon: ({ color, size, focused }) =>
-                renderIcon('layers', color, size, focused),
+              tabBarIconName: 'layers',
             }}
           />
           <Tab.Screen
@@ -216,8 +325,7 @@ const tabTransitionSpec = {
             component={AdminProfileScreen}
             options={{
               tabBarLabel: 'Profile',
-              tabBarIcon: ({ color, size, focused }) =>
-                renderIcon('user', color, size, focused),
+              tabBarIconName: 'person',
             }}
           />
         </Tab.Navigator>
@@ -225,21 +333,21 @@ const tabTransitionSpec = {
     );
   }
 
-  // Borrower Dashboard (roleId === 2) - Streamlined commercial flows matching Lender & Admin 5-tab architecture
+  // Borrower Dashboard (roleId === 2) - 5 Professional Commercial Tabs
   if (roleId === 2) {
     return (
       <View style={styles.container}>
         <Tab.Navigator
           initialRouteName="BorrowerHome"
+          tabBar={renderTabBar}
           screenOptions={tabScreenOptions}
         >
           <Tab.Screen
             name="BorrowerHome"
             component={BorrowerDashboard}
             options={{
-              tabBarLabel: 'Dashboard',
-              tabBarIcon: ({ color, size, focused }) =>
-                renderIcon('home', color, size, focused),
+              tabBarLabel: 'Home',
+              tabBarIconName: 'home',
             }}
           />
           <Tab.Screen
@@ -247,8 +355,7 @@ const tabTransitionSpec = {
             component={BorrowerExploreLenders}
             options={{
               tabBarLabel: 'Explore',
-              tabBarIcon: ({ color, size, focused }) =>
-                renderIcon('search', color, size, focused),
+              tabBarIconName: 'search',
             }}
           />
           <Tab.Screen
@@ -256,17 +363,15 @@ const tabTransitionSpec = {
             component={BorrowerApplications}
             options={{
               tabBarLabel: 'Applications',
-              tabBarIcon: ({ color, size, focused }) =>
-                renderIcon('inbox', color, size, focused),
+              tabBarIconName: 'document-text',
             }}
           />
           <Tab.Screen
             name="BorrowerLoansPortfolio"
             component={BorrowerLoansPortfolio}
             options={{
-              tabBarLabel: 'Loans & EMI',
-              tabBarIcon: ({ color, size, focused }) =>
-                renderIcon('credit-card', color, size, focused),
+              tabBarLabel: 'Loans',
+              tabBarIconName: 'card',
             }}
           />
           <Tab.Screen
@@ -274,8 +379,7 @@ const tabTransitionSpec = {
             component={BorrowerProfileScreen}
             options={{
               tabBarLabel: 'Profile',
-              tabBarIcon: ({ color, size, focused }) =>
-                renderIcon('user', color, size, focused),
+              tabBarIconName: 'person',
             }}
           />
         </Tab.Navigator>
@@ -283,17 +387,20 @@ const tabTransitionSpec = {
     );
   }
 
-  // Lender Dashboard (roleId === 1) - Modern 5-tab institutional workflow matching webapp
+  // Lender Dashboard (roleId === 1) - 5 Professional Institutional Tabs
   return (
     <View style={styles.container}>
-      <Tab.Navigator initialRouteName="LenderHome" screenOptions={tabScreenOptions}>
+      <Tab.Navigator
+        initialRouteName="LenderHome"
+        tabBar={renderTabBar}
+        screenOptions={tabScreenOptions}
+      >
         <Tab.Screen
           name="LenderHome"
           component={LenderDashboard}
           options={{
-            tabBarLabel: 'Dashboard',
-            tabBarIcon: ({ color, size, focused }) =>
-              renderIcon('home', color, size, focused),
+            tabBarLabel: 'Home',
+            tabBarIconName: 'home',
           }}
         />
         <Tab.Screen
@@ -301,8 +408,7 @@ const tabTransitionSpec = {
           component={LenderIncomingRequests}
           options={{
             tabBarLabel: 'Requests',
-            tabBarIcon: ({ color, size, focused }) =>
-              renderIcon('inbox', color, size, focused, pendingRequestsCount),
+            tabBarIconName: 'file-tray-full',
           }}
         />
         <Tab.Screen
@@ -310,8 +416,7 @@ const tabTransitionSpec = {
           component={LenderLoansPortfolio}
           options={{
             tabBarLabel: 'Loans',
-            tabBarIcon: ({ color, size, focused }) =>
-              renderIcon('credit-card', color, size, focused),
+            tabBarIconName: 'card',
           }}
         />
         <Tab.Screen
@@ -319,8 +424,7 @@ const tabTransitionSpec = {
           component={LenderAvailableBorrowers}
           options={{
             tabBarLabel: 'Borrowers',
-            tabBarIcon: ({ color, size, focused }) =>
-              renderIcon('users', color, size, focused),
+            tabBarIconName: 'people',
           }}
         />
         <Tab.Screen
@@ -328,8 +432,7 @@ const tabTransitionSpec = {
           component={LenderProfileScreen}
           options={{
             tabBarLabel: 'Profile',
-            tabBarIcon: ({ color, size, focused }) =>
-              renderIcon('user', color, size, focused),
+            tabBarIconName: 'person',
           }}
         />
       </Tab.Navigator>
@@ -352,7 +455,10 @@ const styles = StyleSheet.create({
     borderTopRightRadius: m(36),
     borderTopWidth: 0,
     borderWidth: 0,
-    paddingHorizontal: m(10),
+    paddingHorizontal: m(8),
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     elevation: 16,
     shadowColor: colors.lettersAndIcons,
     shadowOffset: {
@@ -362,39 +468,45 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: m(10),
   },
-  tabBarItem: {
-    height: m(66),
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 0,
-    paddingBottom: 0,
-    paddingVertical: 0,
-    marginVertical: 0,
-  },
-  tabBarIcon: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    margin: 0,
-    padding: 0,
-    width: '100%',
+  tabItem: {
     height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  iconWrapper: {
-    width: m(48),
-    height: m(48),
-    borderRadius: m(16),
+  activePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    paddingHorizontal: m(10),
+    height: m(42),
+    borderRadius: m(14),
+  },
+  activeIconContainer: {
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
   },
-  activeIconWrapper: {
-    backgroundColor: colors.primary,
-    borderRadius: m(16),
+  activeLabel: {
+    fontSize: m(11.5),
+    lineHeight: m(16),
+    fontFamily: FontFamily.primaryBold,
+    fontWeight: '700',
+    color: colors.lettersAndIcons,
+    marginLeft: m(6),
+    letterSpacing: -0.2,
+  },
+  inactiveIconWrapper: {
+    width: m(42),
+    height: m(42),
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
   },
   badgeContainer: {
     position: 'absolute',
-    top: m(4),
-    right: m(4),
+    top: -m(4),
+    right: -m(6),
     backgroundColor: '#ef4444',
     minWidth: m(16),
     height: m(16),
