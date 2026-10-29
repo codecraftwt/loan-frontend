@@ -394,18 +394,8 @@ export default function BorrowerApply() {
           </TouchableOpacity>
 
           <View style={styles.headerTitleWrap}>
-            <Text style={styles.headerTag}>FINANCING FACILITY</Text>
             <Text style={styles.headerTitle}>Submit Loan Application</Text>
           </View>
-
-          <TouchableOpacity
-            style={styles.backCircularBtn}
-            onPress={fetchPrerequisites}
-            disabled={loadingPrereqs}
-            activeOpacity={0.8}
-          >
-            <Feather name="refresh-cw" size={m(16)} color={colors.lettersAndIcons} />
-          </TouchableOpacity>
         </View>
       </View>
 

@@ -460,18 +460,6 @@ export default function BorrowerContractTermsScreen() {
             <Text style={styles.headerTitle}>Agreement</Text>
           </View>
 
-          <TouchableOpacity
-            style={styles.backCircularBtn}
-            onPress={fetchAgreementData}
-            activeOpacity={0.8}
-            disabled={loadingAgreement}
-          >
-            {loadingAgreement ? (
-              <ActivityIndicator size="small" color={colors.lettersAndIcons} />
-            ) : (
-              <Feather name="refresh-cw" size={m(16)} color={colors.lettersAndIcons} />
-            )}
-          </TouchableOpacity>
         </View>
       </View>
 

@@ -143,13 +143,6 @@ export default function LenderDashboard() {
         duration: 350,
         useNativeDriver: true,
       }).start();
-
-      // Poll every 15s to automatically receive in-app notifications
-      const interval = setInterval(() => {
-        fetchAllDashboardData(true);
-      }, 15000);
-
-      return () => clearInterval(interval);
     }, [user?._id, user?.roleId, fetchAllDashboardData, fadeAnim])
   );
 

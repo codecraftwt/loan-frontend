@@ -122,13 +122,6 @@ export default function BorrowerDashboard() {
         duration: 350,
         useNativeDriver: true,
       }).start();
-
-      // Poll every 15s to automatically receive in-app notifications
-      const interval = setInterval(() => {
-        fetchAllDashboardData(true);
-      }, 15000);
-
-      return () => clearInterval(interval);
     }, [fetchAllDashboardData, fadeAnim])
   );
 

@@ -11,7 +11,7 @@ import {
   Linking,
   Modal,
 } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
 import { colors, FontFamily } from '../../../constants';
 import { m } from '../../../Utils/responsive';
@@ -19,6 +19,12 @@ import { ScreenWrapper, showAlert } from '../../../Components/common';
 import borrowerFlowService from '../../../Services/borrowerFlowService';
 export default function BorrowerApplications() {
   const navigation = useNavigation();
+  const route = useRoute();
+  const parentNav = navigation.getParent();
+  const isInsideBottomTab =
+    parentNav?.getState()?.type === 'tab' || navigation.getState()?.type === 'tab';
+  const showBackButton =
+    route?.params?.showBack === true || (!isInsideBottomTab && navigation.canGoBack());
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -203,8 +209,39 @@ export default function BorrowerApplications() {
       <View style={styles.card}>
         {/* Card Header Row */}
         <View style={styles.cardHeaderRow}>
-          <View style={styles.activityIconCircle}>
-            <Feather name="briefcase" size={m(16)} color={colors.white} />
+          <View
+            style={[
+              styles.activityIconTile,
+              isAccepted
+                ? styles.iconTileAccepted
+                : isPending
+                ? styles.iconTilePending
+                : isLenderSigned
+                ? styles.iconTileSign
+                : styles.iconTileClosed,
+            ]}
+          >
+            <Feather
+              name={
+                isAccepted
+                  ? 'check-circle'
+                  : isPending
+                  ? 'clock'
+                  : isLenderSigned
+                  ? 'file-text'
+                  : 'x-circle'
+              }
+              size={m(17)}
+              color={
+                isAccepted
+                  ? '#059669'
+                  : isPending
+                  ? '#D97706'
+                  : isLenderSigned
+                  ? '#2563EB'
+                  : '#DC2626'
+              }
+            />
           </View>
 
           <View style={styles.headerInfoCol}>
@@ -219,14 +256,14 @@ export default function BorrowerApplications() {
           {/* Status Badge */}
           {isPending ? (
             <View style={styles.pillPending}>
-              <Feather name="clock" size={m(10)} color="#d97706" />
+              <Feather name="clock" size={m(10)} color="#D97706" />
               <Text style={styles.pillTextPending}>
                 {item.remainingHours != null ? `${item.remainingHours}h left` : 'IN REVIEW'}
               </Text>
             </View>
           ) : isLenderSigned ? (
             <View style={styles.pillSign}>
-              <Feather name="edit-3" size={m(10)} color={colors.lettersAndIcons} />
+              <Feather name="edit-3" size={m(10)} color="#2563EB" />
               <Text style={styles.pillTextSign}>SIGN CONTRACT</Text>
             </View>
           ) : isAccepted ? (
@@ -243,7 +280,7 @@ export default function BorrowerApplications() {
           )}
         </View>
 
-        {/* Compact Metrics Strip - Neutral Slate-50 (#F8FAFC) */}
+        {/* Compact Metrics Strip */}
         <View style={styles.metricsBox}>
           <View style={styles.metricItem}>
             <Text style={styles.metricLabel}>Facility Amount</Text>
@@ -274,10 +311,10 @@ export default function BorrowerApplications() {
           <View style={styles.signActionBox}>
             <View style={styles.signActionLeft}>
               <View style={styles.signIconCircle}>
-                <Feather name="file-text" size={m(14)} color={colors.lettersAndIcons} />
+                <Feather name="file-text" size={m(14)} color="#1D4ED8" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.signActionTitle}>Facility Contract Ready to Sign</Text>
+                <Text style={styles.signActionTitle}>Facility Contract Ready</Text>
                 <Text style={styles.signActionSub}>
                   Lender has approved facility terms. Review and countersign to unlock disbursal.
                 </Text>
@@ -336,7 +373,7 @@ export default function BorrowerApplications() {
           </View>
         ) : null}
 
-        {/* Actions for Accepted & Active Applications (Matching Web App: Agreement, Schedule, Chat) */}
+        {/* Actions for Accepted & Active Applications */}
         {isAccepted ? (
           <View style={styles.acceptedFooterStrip}>
             {/* 1. Agreement / E-Sign */}
@@ -350,12 +387,12 @@ export default function BorrowerApplications() {
               <Feather
                 name={isLenderSigned ? 'edit-3' : 'file-text'}
                 size={m(12)}
-                color={isLenderSigned ? '#2563eb' : colors.lettersAndIcons}
+                color={isLenderSigned ? '#2563EB' : colors.lettersAndIcons}
               />
               <Text
                 style={[
                   styles.footerActionBtnText,
-                  isLenderSigned && { color: '#2563eb', fontFamily: FontFamily.primaryBold },
+                  isLenderSigned && { color: '#2563EB', fontFamily: FontFamily.primaryBold },
                 ]}
               >
                 {isLenderSigned ? 'E-Sign' : 'Agreement'}
@@ -374,8 +411,8 @@ export default function BorrowerApplications() {
                   })
                 }
               >
-                <Feather name="calendar" size={m(12)} color="#2563eb" />
-                <Text style={[styles.footerActionBtnText, { color: '#2563eb' }]}>
+                <Feather name="calendar" size={m(12)} color="#2563EB" />
+                <Text style={[styles.footerActionBtnText, { color: '#2563EB' }]}>
                   Schedule
                 </Text>
               </TouchableOpacity>
@@ -383,7 +420,7 @@ export default function BorrowerApplications() {
 
             {/* 3. Chat (WhatsApp) */}
             <TouchableOpacity
-              style={styles.footerActionBtn}
+              style={[styles.footerActionBtn, styles.chatActionBtn]}
               activeOpacity={0.8}
               onPress={() => {
                 const phone =
@@ -391,8 +428,8 @@ export default function BorrowerApplications() {
                 openLenderChat(phone, lenderName, item);
               }}
             >
-              <Feather name="message-square" size={m(12)} color="#059669" />
-              <Text style={[styles.footerActionBtnText, { color: '#059669' }]}>
+              <Feather name="message-circle" size={m(12)} color="#059669" />
+              <Text style={[styles.footerActionBtnText, { color: '#059669', fontFamily: FontFamily.primaryBold }]}>
                 Chat
               </Text>
             </TouchableOpacity>
@@ -402,28 +439,26 @@ export default function BorrowerApplications() {
         {/* Rejection / Expiration Notice */}
         {item.rejectionReason ? (
           <View style={styles.reasonBox}>
-            <Text style={styles.reasonText}>
-              <Text style={{ fontFamily: FontFamily.primaryBold }}>Decision Note: </Text>
-              {item.rejectionReason}
-            </Text>
+            <Feather name="alert-circle" size={m(13)} color="#DC2626" style={{ marginTop: m(1) }} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.reasonTitle}>Decision Note</Text>
+              <Text style={styles.reasonText}>{item.rejectionReason}</Text>
+            </View>
           </View>
         ) : null}
 
-        {/* Apply with Other Lender Option (When rejected / declined / auto-expired) */}
+        {/* Apply with Other Lender Option */}
         {isClosed ? (
-          <View style={styles.applyOtherRow}>
-            <TouchableOpacity
-              style={styles.applyOtherBtn}
-              activeOpacity={0.8}
-              onPress={() => navigation.navigate('BorrowerExploreLenders')}
-            >
-              <Feather name="refresh-cw" size={m(11)} color="#2563eb" />
-              <Text style={styles.applyOtherBtnText}>Apply with Other</Text>
-              <Feather name="chevron-right" size={m(12)} color="#2563eb" />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={styles.applyOtherBtn}
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('BorrowerExploreLenders')}
+          >
+            <Feather name="refresh-cw" size={m(12)} color={colors.primary} />
+            <Text style={styles.applyOtherBtnText}>Apply with Another Lender</Text>
+            <Feather name="chevron-right" size={m(13)} color={colors.primary} />
+          </TouchableOpacity>
         ) : null}
-
       </View>
     );
   };
@@ -434,24 +469,25 @@ export default function BorrowerApplications() {
       topInsetBg={colors.primary}
       statusBarColor={colors.primary}
       statusBarStyle="dark-content"
-      includeTabBarClearance={false}
+      includeTabBarClearance={isInsideBottomTab}
       scrollable={false}
     >
       {/* Top Green Banner */}
       <View style={styles.topBanner}>
         <View style={styles.headerRow}>
-          <TouchableOpacity
-            style={styles.backBtn}
-            onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('BorrowerHome'))}
-            activeOpacity={0.8}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Feather name="chevron-left" size={m(22)} color={colors.lettersAndIcons} />
-          </TouchableOpacity>
+          {showBackButton ? (
+            <TouchableOpacity
+              style={styles.backBtn}
+              onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('BorrowerHome'))}
+              activeOpacity={0.8}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Feather name="chevron-left" size={m(22)} color={colors.lettersAndIcons} />
+            </TouchableOpacity>
+          ) : null}
 
-          <View style={{ flex: 1, marginHorizontal: m(10) }}>
+          <View style={{ flex: 1, marginLeft: showBackButton ? m(10) : 0 }}>
             <Text style={styles.headerTitle}>My Loan Applications</Text>
-
           </View>
         </View>
       </View>
@@ -1112,46 +1148,62 @@ const styles = StyleSheet.create({
   // Card
   card: {
     backgroundColor: colors.white,
-    borderRadius: m(16),
-    padding: m(14),
-    marginBottom: m(12),
+    borderRadius: m(18),
+    padding: m(16),
+    marginBottom: m(14),
     borderWidth: 1,
-    borderColor: 'rgba(9, 48, 48, 0.06)',
+    borderColor: 'rgba(9, 48, 48, 0.07)',
     elevation: 2,
     shadowColor: colors.lettersAndIcons,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
   },
   cardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: m(10),
+    marginBottom: m(12),
   },
-  activityIconCircle: {
+  activityIconTile: {
     width: m(38),
     height: m(38),
-    borderRadius: m(19),
-    backgroundColor: colors.blueButton,
+    borderRadius: m(12),
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: m(10),
+    borderWidth: 1,
+  },
+  iconTileAccepted: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#A7F3D0',
+  },
+  iconTilePending: {
+    backgroundColor: '#FEF3C7',
+    borderColor: '#FDE68A',
+  },
+  iconTileSign: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#BFDBFE',
+  },
+  iconTileClosed: {
+    backgroundColor: '#FEE2E2',
+    borderColor: '#FECACA',
   },
   headerInfoCol: {
     flex: 1,
-    marginRight: m(6),
+    marginRight: m(8),
   },
   lenderNameText: {
-    fontSize: m(14),
-    lineHeight: m(18),
+    fontSize: m(14.5),
+    lineHeight: m(19),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
   },
   purposeSubText: {
     fontSize: m(11),
     fontFamily: FontFamily.primaryRegular,
-    color: colors.blueButton,
-    marginTop: m(1),
+    color: colors.textSecondary,
+    marginTop: m(2),
   },
 
   // Status Badges
@@ -1159,67 +1211,79 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: m(4),
-    backgroundColor: '#fef3c7',
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
     paddingHorizontal: m(8),
     paddingVertical: m(4),
-    borderRadius: m(6),
+    borderRadius: m(20),
   },
   pillTextPending: {
     fontSize: m(9.5),
     fontFamily: FontFamily.primaryBold,
-    color: '#d97706',
+    color: '#D97706',
+    letterSpacing: 0.3,
   },
   pillSign: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: m(4),
-    backgroundColor: 'rgba(9, 48, 48, 0.08)',
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
     paddingHorizontal: m(8),
     paddingVertical: m(4),
-    borderRadius: m(6),
+    borderRadius: m(20),
   },
   pillTextSign: {
     fontSize: m(9.5),
     fontFamily: FontFamily.primaryBold,
-    color: colors.lettersAndIcons,
+    color: '#2563EB',
+    letterSpacing: 0.3,
   },
   pillAccepted: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: m(4),
-    backgroundColor: '#ecfdf5',
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
     paddingHorizontal: m(8),
     paddingVertical: m(4),
-    borderRadius: m(6),
+    borderRadius: m(20),
   },
   pillTextAccepted: {
     fontSize: m(9.5),
     fontFamily: FontFamily.primaryBold,
     color: '#059669',
+    letterSpacing: 0.3,
   },
   pillRejected: {
-    backgroundColor: '#fee2e2',
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
     paddingHorizontal: m(8),
     paddingVertical: m(4),
-    borderRadius: m(6),
+    borderRadius: m(20),
   },
   pillTextRejected: {
     fontSize: m(9.5),
     fontFamily: FontFamily.primaryBold,
-    color: '#dc2626',
+    color: '#DC2626',
+    letterSpacing: 0.3,
   },
 
-  // Compact Metrics Box - Clean Neutral Slate-50 (#F8FAFC)
+  // Compact Metrics Box
   metricsBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
-    borderRadius: m(10),
-    paddingVertical: m(8),
-    paddingHorizontal: m(10),
+    backgroundColor: '#F8FAFC',
+    borderRadius: m(12),
+    paddingVertical: m(10),
+    paddingHorizontal: m(12),
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    marginBottom: m(10),
+    borderColor: '#EEF2F6',
+    marginBottom: m(12),
   },
   metricItem: {
     flex: 1,
@@ -1228,59 +1292,60 @@ const styles = StyleSheet.create({
   metricLabel: {
     fontSize: m(9.5),
     fontFamily: FontFamily.primaryMedium,
-    color: colors.textSecondary,
-    marginBottom: m(1),
+    color: '#64748B',
+    marginBottom: m(2),
+    letterSpacing: 0.2,
   },
   metricValueBold: {
-    fontSize: m(12.5),
+    fontSize: m(13.5),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
   },
   metricValue: {
-    fontSize: m(11),
+    fontSize: m(11.5),
     fontFamily: FontFamily.primarySemiBold,
     color: colors.lettersAndIcons,
   },
   metricDivider: {
     width: 1,
-    height: m(20),
-    backgroundColor: '#e2e8f0',
+    height: m(22),
+    backgroundColor: '#E2E8F0',
   },
 
   // Sign Action Box
   signActionBox: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#EFF6FF',
     borderRadius: m(14),
     padding: m(12),
     borderWidth: 1,
-    borderColor: 'rgba(9, 48, 48, 0.08)',
-    marginBottom: m(10),
-    gap: m(8),
+    borderColor: '#BFDBFE',
+    marginBottom: m(12),
+    gap: m(10),
   },
   signActionLeft: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: m(10),
   },
   signIconCircle: {
     width: m(32),
     height: m(32),
-    borderRadius: m(16),
-    backgroundColor: colors.primary,
+    borderRadius: m(10),
+    backgroundColor: '#DBEAFE',
     alignItems: 'center',
     justifyContent: 'center',
   },
   signActionTitle: {
     fontSize: m(12.5),
     fontFamily: FontFamily.primaryBold,
-    color: colors.lettersAndIcons,
+    color: '#1E3A8A',
   },
   signActionSub: {
     fontSize: m(10.5),
-    lineHeight: m(14),
+    lineHeight: m(15),
     fontFamily: FontFamily.primaryRegular,
-    color: colors.textSecondary,
-    marginTop: m(1),
+    color: '#3B82F6',
+    marginTop: m(2),
   },
   reviewSignBtn: {
     flexDirection: 'row',
@@ -1288,10 +1353,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: m(6),
     backgroundColor: colors.lettersAndIcons,
-    paddingVertical: m(8),
+    paddingVertical: m(9),
     paddingHorizontal: m(14),
     borderRadius: m(10),
-    alignSelf: 'flex-start',
+    alignSelf: 'stretch',
   },
   reviewSignBtnText: {
     fontSize: m(11.5),
@@ -1301,12 +1366,12 @@ const styles = StyleSheet.create({
 
   // Disbursal OTP Card
   otpCard: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#FFFBEB',
     borderRadius: m(14),
     padding: m(12),
     borderWidth: 1,
-    borderColor: 'rgba(9, 48, 48, 0.08)',
-    marginBottom: m(10),
+    borderColor: '#FDE68A',
+    marginBottom: m(12),
   },
   otpHeader: {
     flexDirection: 'row',
@@ -1317,13 +1382,13 @@ const styles = StyleSheet.create({
   otpTitle: {
     fontSize: m(10),
     fontFamily: FontFamily.primaryBold,
-    color: colors.lettersAndIcons,
+    color: '#92400E',
     letterSpacing: 0.5,
   },
   otpShareNotice: {
     fontSize: m(10),
     fontFamily: FontFamily.primaryMedium,
-    color: colors.textSecondary,
+    color: '#B45309',
   },
   otpCodeRow: {
     flexDirection: 'row',
@@ -1334,20 +1399,20 @@ const styles = StyleSheet.create({
     paddingVertical: m(8),
     paddingHorizontal: m(14),
     borderWidth: 1,
-    borderColor: 'rgba(9, 48, 48, 0.08)',
+    borderColor: '#FDE68A',
     marginBottom: m(6),
   },
   otpCodeText: {
     fontSize: m(20),
     fontFamily: FontFamily.primaryBold,
-    color: colors.lettersAndIcons,
+    color: '#92400E',
     letterSpacing: 5,
   },
   copyOtpBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: m(4),
-    backgroundColor: 'rgba(9, 48, 48, 0.06)',
+    backgroundColor: '#FEF3C7',
     paddingHorizontal: m(10),
     paddingVertical: m(6),
     borderRadius: m(8),
@@ -1355,13 +1420,13 @@ const styles = StyleSheet.create({
   copyOtpBtnText: {
     fontSize: m(11),
     fontFamily: FontFamily.primaryBold,
-    color: colors.lettersAndIcons,
+    color: '#92400E',
   },
   otpFooterText: {
     fontSize: m(10.5),
     lineHeight: m(14),
     fontFamily: FontFamily.primaryRegular,
-    color: '#78350f',
+    color: '#78350F',
   },
 
   // Connected Active Loan
@@ -1369,18 +1434,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#ECFDF5',
     borderRadius: m(12),
     paddingVertical: m(10),
     paddingHorizontal: m(12),
     borderWidth: 1,
-    borderColor: 'rgba(9, 48, 48, 0.08)',
-    marginBottom: m(10),
+    borderColor: '#A7F3D0',
+    marginBottom: m(12),
   },
   activeLoanText: {
-    fontSize: m(11),
+    fontSize: m(11.5),
     fontFamily: FontFamily.primaryBold,
-    color: '#166534',
+    color: '#065F46',
   },
   viewScheduleBtn: {
     flexDirection: 'row',
@@ -1390,76 +1455,81 @@ const styles = StyleSheet.create({
   viewScheduleBtnText: {
     fontSize: m(11),
     fontFamily: FontFamily.primarySemiBold,
-    color: colors.blueButton,
+    color: colors.primary,
   },
 
-  // Reason Box
+  // Reason Box (Decision Note)
   reasonBox: {
-    backgroundColor: '#fef2f2',
-    padding: m(8),
-    borderRadius: m(8),
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: m(8),
+    backgroundColor: '#FEF2F2',
+    paddingVertical: m(10),
+    paddingHorizontal: m(12),
+    borderRadius: m(12),
     borderWidth: 1,
-    borderColor: '#fecaca',
-    marginBottom: m(10),
+    borderColor: '#FEE2E2',
+    marginBottom: m(12),
+  },
+  reasonTitle: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryBold,
+    color: '#991B1B',
+    marginBottom: m(1),
   },
   reasonText: {
     fontSize: m(11),
     fontFamily: FontFamily.primaryRegular,
-    color: '#991b1b',
+    color: '#B91C1C',
+    lineHeight: m(15),
   },
 
-  // Apply with Other Lender Strip
-  applyOtherRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    backgroundColor: '#f8fafc',
-    borderRadius: m(12),
-    paddingVertical: m(8),
-    paddingHorizontal: m(12),
-    borderWidth: 1,
-    borderColor: 'rgba(9, 48, 48, 0.08)',
-    marginBottom: m(10),
-  },
+  // Apply with Other Lender (Clean full-width CTA)
   applyOtherBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(5),
-    backgroundColor: '#eff6ff',
+    justifyContent: 'center',
+    gap: m(8),
+    backgroundColor: 'rgba(0, 209, 146, 0.08)',
     borderWidth: 1,
-    borderColor: '#bfdbfe',
-    paddingHorizontal: m(12),
-    paddingVertical: m(7),
-    borderRadius: m(8),
+    borderColor: 'rgba(0, 209, 146, 0.25)',
+    paddingVertical: m(10),
+    paddingHorizontal: m(14),
+    borderRadius: m(12),
+    marginTop: m(2),
   },
   applyOtherBtnText: {
-    fontSize: m(11),
+    fontSize: m(11.5),
     fontFamily: FontFamily.primaryBold,
-    color: '#2563eb',
+    color: colors.lettersAndIcons,
   },
 
-  // Accepted Actions Strip (Matching Web App Action column: Agreement, Schedule, Chat)
+  // Accepted Actions Strip
   acceptedFooterStrip: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
     gap: m(8),
-    paddingTop: m(8),
+    paddingTop: m(10),
     borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
-    marginTop: m(6),
+    borderTopColor: '#F1F5F9',
+    marginTop: m(2),
     flexWrap: 'wrap',
   },
   footerActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(4),
-    backgroundColor: '#f8fafc',
+    gap: m(5),
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    paddingHorizontal: m(10),
+    borderColor: '#E2E8F0',
+    paddingHorizontal: m(11),
     paddingVertical: m(6),
     borderRadius: m(8),
+  },
+  chatActionBtn: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#A7F3D0',
   },
   footerActionBtnText: {
     fontSize: m(11),

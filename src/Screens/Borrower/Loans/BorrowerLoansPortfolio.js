@@ -176,8 +176,8 @@ export default function BorrowerLoansPortfolio() {
       >
         {/* Top Header Row */}
         <View style={styles.cardHeaderRow}>
-          <View style={styles.activityIconCircle}>
-            <Feather name="credit-card" size={m(16)} color={colors.white} />
+          <View style={styles.activityIconTile}>
+            <Feather name="credit-card" size={m(16)} color="#059669" />
           </View>
 
           <View style={styles.headerInfoCol}>
@@ -801,46 +801,48 @@ const styles = StyleSheet.create({
   // Card
   card: {
     backgroundColor: colors.white,
-    borderRadius: m(16),
-    padding: m(14),
-    marginBottom: m(12),
+    borderRadius: m(18),
+    padding: m(16),
+    marginBottom: m(14),
     borderWidth: 1,
-    borderColor: 'rgba(9, 48, 48, 0.06)',
+    borderColor: 'rgba(9, 48, 48, 0.07)',
     elevation: 2,
     shadowColor: colors.lettersAndIcons,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
   },
   cardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: m(10),
+    marginBottom: m(12),
   },
-  activityIconCircle: {
+  activityIconTile: {
     width: m(38),
     height: m(38),
-    borderRadius: m(19),
-    backgroundColor: colors.blueButton,
+    borderRadius: m(12),
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: m(10),
   },
   headerInfoCol: {
     flex: 1,
-    marginRight: m(6),
+    marginRight: m(8),
   },
   lenderNameText: {
-    fontSize: m(14),
-    lineHeight: m(18),
+    fontSize: m(14.5),
+    lineHeight: m(19),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
   },
   purposeSubText: {
     fontSize: m(11),
     fontFamily: FontFamily.primaryRegular,
-    color: colors.blueButton,
-    marginTop: m(1),
+    color: colors.textSecondary,
+    marginTop: m(2),
   },
 
   // Status Badge
@@ -850,11 +852,12 @@ const styles = StyleSheet.create({
     gap: m(4),
     paddingHorizontal: m(8),
     paddingVertical: m(4),
-    borderRadius: m(6),
+    borderRadius: m(20),
   },
   statusBadgeText: {
     fontSize: m(9.5),
     fontFamily: FontFamily.primaryBold,
+    letterSpacing: 0.3,
   },
 
   // Compact Metrics Box - Clean Neutral Slate-50 (#F8FAFC)

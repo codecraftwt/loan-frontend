@@ -400,6 +400,7 @@ const authSlice = createSlice({
       const payloadRoleId = action.payload?.roleId;
       
       state.user = {
+        ...state.user,
         ...action.payload,
         // Preserve roleId if payload doesn't have it but current state does
         roleId: payloadRoleId !== undefined && payloadRoleId !== null 
@@ -408,7 +409,9 @@ const authSlice = createSlice({
             ? currentRoleId 
             : action.payload?.roleId,
       };
-      state.token = action.payload.token;
+      if (action.payload?.token) {
+        state.token = action.payload.token;
+      }
     },
   },
   extraReducers: builder => {

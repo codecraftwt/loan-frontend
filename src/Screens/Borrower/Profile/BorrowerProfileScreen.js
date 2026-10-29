@@ -8,16 +8,42 @@ import {
   ActivityIndicator,
   Modal,
   Image,
+  Platform,
+  PermissionsAndroid,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
 import { useDispatch, useSelector } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
+import Toast from 'react-native-toast-message';
 import { FontFamily, colors } from '../../../constants';
 import { m } from '../../../Utils/responsive';
-import { ScreenWrapper } from '../../../Components/common';
+import { ScreenWrapper, showAlert } from '../../../Components/common';
 import borrowerFlowService from '../../../Services/borrowerFlowService';
-import { logout } from '../../../Redux/Slices/authslice';
+import { logout, updateUserProfile, deleteProfileImage, setUser } from '../../../Redux/Slices/authslice';
+
+const requestCameraPermission = async () => {
+  if (Platform.OS !== 'android') {
+    return true;
+  }
+  try {
+    const granted = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.CAMERA,
+      {
+        title: 'Camera Permission',
+        message: 'LoanHub needs camera access to take a profile photo.',
+        buttonNeutral: 'Ask Me Later',
+        buttonNegative: 'Cancel',
+        buttonPositive: 'OK',
+      },
+    );
+    return granted === PermissionsAndroid.RESULTS.GRANTED;
+  } catch (error) {
+    console.warn('Camera permission error:', error);
+    return false;
+  }
+};
 
 export default function BorrowerProfileScreen() {
   const navigation = useNavigation();
@@ -27,6 +53,8 @@ export default function BorrowerProfileScreen() {
 
   const [loading, setLoading] = useState(true);
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
+  const [photoModalVisible, setPhotoModalVisible] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
   const [profile, setProfile] = useState({
     userName: '',
@@ -34,6 +62,7 @@ export default function BorrowerProfileScreen() {
     panCardNumber: '',
     email: '',
     mobileNo: '',
+    profileImage: authUser?.profileImage || null,
   });
 
   const [profileCompletion, setProfileCompletion] = useState({
@@ -49,13 +78,28 @@ export default function BorrowerProfileScreen() {
       const res = await borrowerFlowService.getProfile();
       if (res?.success && res.borrower) {
         const b = res.borrower;
+        const currentImg = b.profileImage !== undefined ? b.profileImage : (authUser?.profileImage || null);
         setProfile({
           userName: b.userName || authUser?.userName || '',
           companyName: b.companyName || b.borrowerProfile?.businessName || authUser?.companyName || '',
           panCardNumber: b.panCardNumber || '',
           email: b.email || authUser?.email || '',
           mobileNo: b.mobileNo || authUser?.mobileNo || '',
+          profileImage: currentImg,
         });
+        if (b.profileImage !== authUser?.profileImage) {
+          dispatch(setUser({ profileImage: b.profileImage || null }));
+          const currentStored = await AsyncStorage.getItem('user');
+          if (currentStored) {
+            try {
+              const parsed = JSON.parse(currentStored);
+              await AsyncStorage.setItem(
+                'user',
+                JSON.stringify({ ...parsed, profileImage: b.profileImage || null })
+              );
+            } catch (e) {}
+          }
+        }
         if (res.profileCompletion) {
           setProfileCompletion(res.profileCompletion);
         }
@@ -70,7 +114,7 @@ export default function BorrowerProfileScreen() {
         setLoading(false);
       }
     }
-  }, [authUser]);
+  }, [authUser, dispatch]);
 
   useFocusEffect(
     useCallback(() => {
@@ -97,6 +141,119 @@ export default function BorrowerProfileScreen() {
     }
   };
 
+  const handlePhotoOption = async (option) => {
+    setPhotoModalVisible(false);
+    if (option === 'camera') {
+      const hasPermission = await requestCameraPermission();
+      if (!hasPermission) {
+        showAlert('Permission Denied', 'Camera permission is required to take a profile photo.');
+        return;
+      }
+      launchCamera(
+        {
+          mediaType: 'photo',
+          quality: 0.8,
+          cameraType: 'front',
+          saveToPhotos: true,
+        },
+        handleImagePickerResponse
+      );
+      return;
+    }
+
+    if (option === 'gallery') {
+      launchImageLibrary(
+        {
+          mediaType: 'photo',
+          quality: 0.8,
+        },
+        handleImagePickerResponse
+      );
+      return;
+    }
+
+    if (option === 'remove') {
+      handleRemovePhoto();
+    }
+  };
+
+  const handleImagePickerResponse = async (response) => {
+    if (response.didCancel) return;
+    if (response.errorCode) {
+      Toast.show({
+        type: 'error',
+        text1: 'Photo selection failed',
+        text2: response.errorMessage || 'Please try again.',
+      });
+      return;
+    }
+
+    if (response.assets?.[0]) {
+      const asset = response.assets[0];
+      try {
+        setIsUploadingPhoto(true);
+        const formData = new FormData();
+        formData.append('profileImage', {
+          uri: asset.uri,
+          type: asset.type || 'image/jpeg',
+          name: asset.fileName || 'profile.jpg',
+        });
+        const uploadResult = await dispatch(updateUserProfile(formData)).unwrap();
+        const newImg = uploadResult?.user?.profileImage || uploadResult?.profileImage;
+        if (newImg) {
+          setProfile(prev => ({ ...prev, profileImage: newImg }));
+        }
+        Toast.show({
+          type: 'success',
+          text1: 'Profile photo updated',
+        });
+        fetchProfile();
+      } catch (err) {
+        Toast.show({
+          type: 'error',
+          text1: 'Upload failed',
+          text2: (typeof err === 'string' ? err : null) || err?.message || 'Please try again.',
+        });
+      } finally {
+        setIsUploadingPhoto(false);
+      }
+    }
+  };
+
+  const handleRemovePhoto = () => {
+    showAlert(
+      'Remove Photo',
+      'Are you sure you want to remove your profile photo?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsUploadingPhoto(true);
+              await dispatch(deleteProfileImage()).unwrap();
+              setProfile(prev => ({ ...prev, profileImage: null }));
+              Toast.show({
+                type: 'success',
+                text1: 'Profile photo removed',
+              });
+              fetchProfile();
+            } catch (err) {
+              Toast.show({
+                type: 'error',
+                text1: 'Failed to remove photo',
+                text2: (typeof err === 'string' ? err : null) || err?.message || 'Please try again.',
+              });
+            } finally {
+              setIsUploadingPhoto(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const displayName =
     profile.userName ||
     profile.companyName ||
@@ -108,7 +265,7 @@ export default function BorrowerProfileScreen() {
     profile.panCardNumber ||
     (authUser?._id ? authUser._id.slice(-8).toUpperCase() : '25030024');
 
-  const avatarUrl = authUser?.profileImage || authUser?.avatar;
+  const avatarUrl = profile.profileImage || authUser?.profileImage || authUser?.avatar;
 
   const initials =
     displayName
@@ -172,7 +329,7 @@ export default function BorrowerProfileScreen() {
       topInsetBg={colors.primary}
       statusBarColor={colors.primary}
       statusBarStyle="dark-content"
-      includeTabBarClearance={false}
+      includeTabBarClearance={true}
       scrollable={false}
     >
       <View style={styles.pageWrapper}>
@@ -347,9 +504,13 @@ export default function BorrowerProfileScreen() {
           <TouchableOpacity
             style={styles.avatarCircle}
             activeOpacity={0.85}
-            onPress={() => navigation.navigate('BorrowerEditProfileScreen', { section: 'kyc' })}
+            onPress={() => setPhotoModalVisible(true)}
           >
-            {avatarUrl ? (
+            {isUploadingPhoto ? (
+              <View style={styles.avatarLoadingOverlay}>
+                <ActivityIndicator size="small" color={colors.white} />
+              </View>
+            ) : avatarUrl ? (
               <Image source={{ uri: avatarUrl }} style={styles.avatarImage} resizeMode="cover" />
             ) : (
               <View style={styles.avatarFallback}>
@@ -357,10 +518,97 @@ export default function BorrowerProfileScreen() {
               </View>
             )}
             <View style={styles.avatarEditBadge}>
-              <Feather name="edit-2" size={m(10)} color={colors.white} />
+              <Feather name="camera" size={m(11)} color={colors.white} />
             </View>
           </TouchableOpacity>
         </View>
+
+        {/* ── Photo Action Modal (Add photo / Remove photo) ── */}
+        <Modal
+          visible={photoModalVisible}
+          transparent={true}
+          animationType="fade"
+          statusBarTranslucent={true}
+          onRequestClose={() => setPhotoModalVisible(false)}
+        >
+          <View style={styles.modalBackdrop}>
+            <TouchableOpacity
+              style={StyleSheet.absoluteFill}
+              activeOpacity={1}
+              onPress={() => setPhotoModalVisible(false)}
+            />
+            <View style={styles.photoModalCard}>
+              <View style={styles.photoModalHeader}>
+                <Text style={styles.photoModalTitle}>Profile Photo</Text>
+                <Text style={styles.photoModalSubtitle}>
+                  Update or remove your profile picture
+                </Text>
+              </View>
+
+              <View style={styles.photoModalOptions}>
+                <TouchableOpacity
+                  style={styles.photoOptionRow}
+                  activeOpacity={0.7}
+                  onPress={() => handlePhotoOption('camera')}
+                >
+                  <View style={[styles.photoOptionIcon, { backgroundColor: '#E0F2FE' }]}>
+                    <Feather name="camera" size={m(18)} color="#0284C7" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.photoOptionText}>Take Photo</Text>
+                    <Text style={styles.photoOptionSubtext}>Capture using camera</Text>
+                  </View>
+                  <Feather name="chevron-right" size={m(16)} color="#94A3B8" />
+                </TouchableOpacity>
+
+                <View style={styles.photoOptionDivider} />
+
+                <TouchableOpacity
+                  style={styles.photoOptionRow}
+                  activeOpacity={0.7}
+                  onPress={() => handlePhotoOption('gallery')}
+                >
+                  <View style={[styles.photoOptionIcon, { backgroundColor: '#ECFDF5' }]}>
+                    <Feather name="image" size={m(18)} color="#059669" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.photoOptionText}>Choose from Gallery</Text>
+                    <Text style={styles.photoOptionSubtext}>Pick from your photos</Text>
+                  </View>
+                  <Feather name="chevron-right" size={m(16)} color="#94A3B8" />
+                </TouchableOpacity>
+
+                {avatarUrl ? (
+                  <>
+                    <View style={styles.photoOptionDivider} />
+                    <TouchableOpacity
+                      style={styles.photoOptionRow}
+                      activeOpacity={0.7}
+                      onPress={() => handlePhotoOption('remove')}
+                    >
+                      <View style={[styles.photoOptionIcon, { backgroundColor: '#FEE2E2' }]}>
+                        <Feather name="trash-2" size={m(18)} color="#DC2626" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.photoOptionText, { color: '#DC2626' }]}>Remove Photo</Text>
+                        <Text style={styles.photoOptionSubtext}>Delete current photo</Text>
+                      </View>
+                      <Feather name="chevron-right" size={m(16)} color="#94A3B8" />
+                    </TouchableOpacity>
+                  </>
+                ) : null}
+              </View>
+
+              <TouchableOpacity
+                style={styles.photoCancelBtn}
+                activeOpacity={0.8}
+                onPress={() => setPhotoModalVisible(false)}
+              >
+                <Text style={styles.photoCancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
 
         {/* ── 3. Full-Screen Logout Confirmation Modal ── */}
         <Modal
@@ -417,8 +665,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: m(20),
-    paddingTop: m(12),
-    paddingBottom: m(8),
+    paddingTop: m(6),
+    paddingBottom: m(2),
     backgroundColor: colors.primary,
   },
   headerTag: {
@@ -431,7 +679,7 @@ const styles = StyleSheet.create({
     marginBottom: m(2),
   },
   headerTitle: {
-    fontSize: m(22),
+    fontSize: m(20),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
     textAlign: 'left',
@@ -445,9 +693,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  // Green Backdrop Segment
+  // Green Backdrop Segment (tightened to remove excess blank space)
   greenBackdrop: {
-    height: m(46),
+    height: m(20),
     backgroundColor: colors.primary,
   },
 
@@ -459,14 +707,14 @@ const styles = StyleSheet.create({
     borderTopRightRadius: m(36),
   },
   scrollContent: {
-    paddingTop: m(52), // Space for bottom half of the floating avatar
+    paddingTop: m(48), // Space for bottom half of the floating avatar
     paddingBottom: m(90),
   },
 
   // Floating Avatar (over the seam between header & curved sheet)
   avatarFloatingWrapper: {
     position: 'absolute',
-    top: m(60),
+    top: m(18),
     left: 0,
     right: 0,
     alignItems: 'center',
@@ -474,9 +722,9 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   avatarCircle: {
-    width: m(92),
-    height: m(92),
-    borderRadius: m(46),
+    width: m(86),
+    height: m(86),
+    borderRadius: m(43),
     borderWidth: m(3.5),
     borderColor: colors.white,
     backgroundColor: colors.white,
@@ -489,18 +737,18 @@ const styles = StyleSheet.create({
   avatarImage: {
     width: '100%',
     height: '100%',
-    borderRadius: m(46),
+    borderRadius: m(43),
   },
   avatarFallback: {
     width: '100%',
     height: '100%',
-    borderRadius: m(46),
+    borderRadius: m(43),
     backgroundColor: colors.lettersAndIcons,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarInitials: {
-    fontSize: m(28),
+    fontSize: m(26),
     fontFamily: FontFamily.primaryBold,
     color: colors.white,
   },
@@ -517,6 +765,93 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.white,
     elevation: 4,
+  },
+  avatarLoadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    borderRadius: m(43),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // Photo Action Modal
+  photoModalCard: {
+    width: '88%',
+    maxWidth: m(360),
+    backgroundColor: colors.white,
+    borderRadius: m(24),
+    padding: m(20),
+    elevation: 10,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+  },
+  photoModalHeader: {
+    alignItems: 'center',
+    marginBottom: m(16),
+  },
+  photoModalTitle: {
+    fontSize: m(18),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  photoModalSubtitle: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+    marginTop: m(2),
+    textAlign: 'center',
+  },
+  photoModalOptions: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: m(14),
+    borderWidth: 1,
+    borderColor: '#EEF2F6',
+    overflow: 'hidden',
+    marginBottom: m(14),
+  },
+  photoOptionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: m(12),
+    paddingHorizontal: m(14),
+    gap: m(12),
+  },
+  photoOptionIcon: {
+    width: m(38),
+    height: m(38),
+    borderRadius: m(10),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoOptionText: {
+    fontSize: m(13.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  photoOptionSubtext: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+    marginTop: m(1),
+  },
+  photoOptionDivider: {
+    height: 1,
+    backgroundColor: '#EEF2F6',
+    marginHorizontal: m(14),
+  },
+  photoCancelBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: m(12),
+    borderRadius: m(12),
+    backgroundColor: 'rgba(9, 48, 48, 0.05)',
+  },
+  photoCancelBtnText: {
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
   },
 
   // User Header Text
