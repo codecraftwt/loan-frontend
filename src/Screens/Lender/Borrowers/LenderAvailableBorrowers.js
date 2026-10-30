@@ -141,38 +141,10 @@ export default function LenderAvailableBorrowers() {
       <View style={styles.topBanner}>
         <View style={styles.headerRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.headerTag}>COMMERCIAL NETWORK</Text>
-            <Text style={styles.headerTitle}>Borrower Directory</Text>
+            <Text style={styles.headerTitle}>My Connected Borrowers</Text>
             <Text style={styles.headerSubtitle}>
-              Verified institutional & SME credit profiles
+             Borrowers whose loan applications you have accepted and partnered with.
             </Text>
-          </View>
-
-          <TouchableOpacity
-            style={styles.refreshBtn}
-            onPress={onRefresh}
-            disabled={loading}
-            activeOpacity={0.8}
-          >
-            <Feather name="refresh-cw" size={m(17)} color={colors.lettersAndIcons} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Network Metrics Strip on Green */}
-        <View style={styles.networkMetricsCard}>
-          <View style={styles.metricColumn}>
-            <Text style={styles.metricColumnLabel}>Total Network</Text>
-            <Text style={styles.metricColumnValueWhite}>{networkMetrics.total}</Text>
-          </View>
-          <View style={styles.metricDividerLight} />
-          <View style={styles.metricColumn}>
-            <Text style={styles.metricColumnLabel}>Prime (>750)</Text>
-            <Text style={styles.metricColumnValueBlue}>{networkMetrics.primeCount}</Text>
-          </View>
-          <View style={styles.metricDividerLight} />
-          <View style={styles.metricColumn}>
-            <Text style={styles.metricColumnLabel}>Turnover {'>'}₹25L</Text>
-            <Text style={styles.metricColumnValueDark}>{networkMetrics.highTurnoverCount}</Text>
           </View>
         </View>
       </View>
@@ -246,7 +218,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: m(12),
+    marginBottom: m(4),
   },
   headerTag: {
     fontSize: m(10),

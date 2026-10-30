@@ -240,23 +240,12 @@ export default function BottomNavigation() {
 
   useEffect(() => {
     if (roleId === 1) {
-      let isMounted = true;
-      const fetchBadge = () => {
-        lenderFlowService
-          .getDashboardStats()
-          .then(res => {
-            if (isMounted && res?.success && res.stats?.pendingRequests !== undefined) {
-              setPendingRequestsCount(res.stats.pendingRequests);
-            }
-          })
-          .catch(() => {});
-      };
-      fetchBadge();
-      const interval = setInterval(fetchBadge, 25000);
-      return () => {
-        isMounted = false;
-        clearInterval(interval);
-      };
+      const unsubscribe = lenderFlowService.subscribeToStats(res => {
+        if (res?.success && res.stats?.pendingRequests !== undefined) {
+          setPendingRequestsCount(res.stats.pendingRequests);
+        }
+      });
+      return unsubscribe;
     }
   }, [roleId]);
 

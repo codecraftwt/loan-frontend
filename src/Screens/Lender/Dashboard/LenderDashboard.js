@@ -7,8 +7,6 @@ import {
   RefreshControl,
   Animated,
   ActivityIndicator,
-  Modal,
-  TextInput,
   ScrollView,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -41,22 +39,6 @@ const getGreeting = () => {
   return 'Good Evening';
 };
 
-/**
- * Relative time formatter
- */
-const formatRelativeTime = (dateStr) => {
-  if (!dateStr) return 'Recently';
-  try {
-    const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
-    if (diff < 60) return 'Just now';
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    return `${Math.floor(diff / 86400)}d ago`;
-  } catch {
-    return 'Recently';
-  }
-};
-
 export default function LenderDashboard() {
   const navigation = useNavigation();
   const user = useSelector(state => state.auth?.user);
@@ -84,23 +66,27 @@ export default function LenderDashboard() {
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedFilter, setSelectedFilter] = useState('All'); // 'All' | 'In Review' | 'Disbursed'
-
-  // Quick OTP Modal state
-  const [otpModalVisible, setOtpModalVisible] = useState(false);
-  const [otpInput, setOtpInput] = useState('');
-  const [selectedEntityId, setSelectedEntityId] = useState('');
-  const [verifyingOtp, setVerifyingOtp] = useState(false);
 
   // Animation
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  const fetchAllDashboardData = useCallback(async (isSilent = false) => {
+  // Deduplication & cooldown refs
+  const isFetchingRef = useRef(false);
+  const lastFetchTimeRef = useRef(0);
+
+  const fetchAllDashboardData = useCallback(async (isSilent = false, force = false) => {
     if (!user?._id || user?.roleId !== 1) return;
+    if (isFetchingRef.current) return;
+
+    const now = Date.now();
+    if (!force && now - lastFetchTimeRef.current < 45000) return;
+
     try {
+      isFetchingRef.current = true;
+      lastFetchTimeRef.current = now;
       if (!isSilent) setLoading(true);
       const [statsRes, loansRes, planRes, notifsRes] = await Promise.allSettled([
-        lenderFlowService.getDashboardStats(),
+        lenderFlowService.getDashboardStats(force),
         lenderFlowService.getLoansPortfolio({ limit: 5 }),
         lenderFlowService.getActivePlan(),
         lenderFlowService.getNotifications(),
@@ -128,6 +114,7 @@ export default function LenderDashboard() {
         console.error('Error fetching lender dashboard data:', err);
       }
     } finally {
+      isFetchingRef.current = false;
       setLoading(false);
       setRefreshing(false);
     }
@@ -163,64 +150,21 @@ export default function LenderDashboard() {
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchAllDashboardData();
-  };
-
-  const handleVerifyOtpSubmit = async () => {
-    if (!selectedEntityId.trim()) {
-      showAlert('Required', 'Please enter or select a valid Request/Loan ID to verify.');
-      return;
-    }
-    if (!otpInput.trim() || otpInput.trim().length !== 6) {
-      showAlert('Invalid OTP', 'Please enter the 6-digit disbursal OTP provided by the borrower.');
-      return;
-    }
-
-    try {
-      setVerifyingOtp(true);
-      const res = await lenderFlowService.verifyDisbursalOtp(
-        selectedEntityId.trim(),
-        otpInput.trim(),
-        false
-      );
-      if (res?.success) {
-        showAlert(
-          'Success',
-          'Borrower disbursal OTP verified successfully! Capital allocation is confirmed.'
-        );
-        setOtpModalVisible(false);
-        setOtpInput('');
-        setSelectedEntityId('');
-        fetchAllDashboardData();
-      } else {
-        showAlert('Verification Failed', res?.message || 'Unable to verify OTP.');
-      }
-    } catch (error) {
-      const errMsg =
-        error.response?.data?.message || 'OTP verification failed. Please try again.';
-      showAlert('Error', errMsg);
-    } finally {
-      setVerifyingOtp(false);
-    }
+    fetchAllDashboardData(false, true);
   };
 
   const displayName =
     user?.companyName || user?.userName || user?.name || 'Institutional Lender';
 
-  // Filter deal inquiries based on active tab
+  // Recent pending inquiries list
   const filteredInquiries = useMemo(() => {
-    const list = stats.recentPendingRequests || [];
-    if (selectedFilter === 'In Review') {
-      return list.filter(r => r.status === 'pending' || !r.status);
-    }
-    if (selectedFilter === 'Disbursed') {
-      return list.filter(r => r.status === 'disbursed' || r.status === 'accepted');
-    }
-    return list;
-  }, [stats.recentPendingRequests, selectedFilter]);
+    return stats.recentPendingRequests || [];
+  }, [stats.recentPendingRequests]);
 
   const activeLoansCount = portfolioMetrics.activeCount || stats.acceptedRequests || 0;
   const pendingCount = stats.pendingRequests || 0;
+  const totalDisbursedVal = portfolioMetrics.totalDisbursed || 0;
+  const expectedYieldVal = portfolioMetrics.totalInterestExpected || 0;
 
   return (
     <ScreenWrapper
@@ -239,94 +183,39 @@ export default function LenderDashboard() {
     >
       <Animated.View style={[{ opacity: fadeAnim }, styles.pageGreenWrapper]}>
         {/* ======================================================== */}
-        {/* 1. TOP GREEN SECTION (Matching Exact Figma Design)       */}
+        {/* 1. TOP GREEN SECTION (Matching Borrower Dashboard)       */}
         {/* ======================================================== */}
         <View style={styles.topSection}>
-          {/* Greeting & Notification Row */}
           <View style={styles.greetingRow}>
-            <View style={styles.greetingTextContainer}>
+            <TouchableOpacity
+              style={styles.greetingTextContainer}
+              activeOpacity={0.9}
+              onPress={() => navigation.navigate('LenderProfile')}
+            >
               <Text style={styles.greetingTitle}>Hi, Welcome Back</Text>
-              <Text style={styles.greetingSubtitle}>
+              <Text style={styles.greetingSubtitle} numberOfLines={1}>
                 {getGreeting()}, {displayName}
               </Text>
-            </View>
-
-            {/* White Circular Notification Button */}
-            <TouchableOpacity
-              style={styles.notificationBtn}
-              activeOpacity={0.8}
-              onPress={() => navigation.navigate('NotificationsScreen')}
-            >
-              <Feather name="bell" size={m(20)} color={colors.lettersAndIcons} />
-              {unreadNotificationsCount > 0 ? (
-                <View style={styles.notificationBadge}>
-                  <Text style={styles.notificationBadgeText}>
-                    {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
-                  </Text>
-                </View>
-              ) : pendingCount > 0 ? (
-                <View style={styles.notificationDot} />
-              ) : null}
-            </TouchableOpacity>
-          </View>
-
-          {/* 2-Column Summary Stats on Green */}
-          <View style={styles.topMetricsCard}>
-            {/* Left Column: Disbursed Capital */}
-            <TouchableOpacity
-              style={styles.metricColumn}
-              activeOpacity={0.8}
-              onPress={() => navigation.navigate('LenderLoansPortfolio')}
-            >
-              <View style={styles.metricLabelRow}>
-                <Feather name="arrow-up-right" size={m(13)} color={colors.lettersAndIcons} />
-                <Text style={styles.metricLabelText}>Total Disbursed</Text>
-              </View>
-              <Text style={styles.metricValueWhite} numberOfLines={1}>
-                {formatCurrency(portfolioMetrics.totalDisbursed || 0)}
-              </Text>
             </TouchableOpacity>
 
-            {/* Vertical Divider Line */}
-            <View style={styles.metricDivider} />
-
-            {/* Right Column: Projected Yield / Returns */}
-            <TouchableOpacity
-              style={styles.metricColumn}
-              activeOpacity={0.8}
-              onPress={() => navigation.navigate('LenderLoansPortfolio')}
-            >
-              <View style={styles.metricLabelRow}>
-                <Feather name="percent" size={m(13)} color={colors.lettersAndIcons} />
-                <Text style={styles.metricLabelText}>Projected Yield</Text>
-              </View>
-              <Text style={styles.metricValueBlue} numberOfLines={1}>
-                +{formatCurrency(portfolioMetrics.totalInterestExpected || 0)}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Target Progress Pill */}
-          <View style={styles.progressContainer}>
-            <View style={styles.progressBarPill}>
-              <View style={styles.progressDarkTag}>
-                <Text style={styles.progressDarkText}>
-                  {activeLoansCount > 0 ? `${activeLoansCount} Deals` : 'ACTIVE'}
-                </Text>
-              </View>
-              <View style={styles.progressWhiteBar}>
-                <Text style={styles.progressWhiteText} numberOfLines={1}>
-                  {activePlan?.name || 'Institutional Allocation'} • {formatCurrency(portfolioMetrics.totalOutstanding || 0)} Out
-                </Text>
-              </View>
-            </View>
-
-            {/* Target Caption */}
-            <View style={styles.progressCaptionRow}>
-              <Feather name="check-circle" size={m(14)} color={colors.lettersAndIcons} />
-              <Text style={styles.progressCaptionText}>
-                Capital allocation & underwriting active. Looks Good.
-              </Text>
+            <View style={styles.headerBtnGroup}>
+              {/* White Circular Notification Button */}
+              <TouchableOpacity
+                style={styles.notificationBtn}
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate('NotificationsScreen')}
+              >
+                <Feather name="bell" size={m(19)} color={colors.lettersAndIcons} />
+                {unreadNotificationsCount > 0 ? (
+                  <View style={styles.notificationBadge}>
+                    <Text style={styles.notificationBadgeText}>
+                      {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+                    </Text>
+                  </View>
+                ) : pendingCount > 0 ? (
+                  <View style={styles.notificationDot} />
+                ) : null}
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -335,59 +224,68 @@ export default function LenderDashboard() {
         {/* 2. MAIN CURVED SHEET SECTION (#F1FFF3)                   */}
         {/* ======================================================== */}
         <View style={styles.sheetSection}>
-          {/* Feature Green Highlight Card (Matching Figma Vehicle / Goal Card) */}
+          {/* Feature Highlight Hero Card */}
           <View style={styles.featureCard}>
-            {/* Left Donut / Goal Ring Circle */}
+            {/* Left Column: Total Disbursed Capital */}
             <TouchableOpacity
               style={styles.featureLeftCol}
               activeOpacity={0.8}
               onPress={() => navigation.navigate('LenderLoansPortfolio')}
             >
               <View style={styles.featureRingWrapper}>
-                <Feather name="briefcase" size={m(22)} color={colors.lettersAndIcons} />
+                <Feather name="arrow-up-right" size={m(18)} color="#059669" />
               </View>
-              <Text style={styles.featureRingLabel}>Active Book</Text>
-              <Text style={styles.featureRingSub}>{activeLoansCount} Facilities</Text>
+              <Text style={styles.featureCountText} numberOfLines={1}>
+                {formatCurrency(totalDisbursedVal)}
+              </Text>
+              <Text style={styles.featureRingLabel}>Total Disbursed</Text>
+              <Text style={styles.featureRingSub}>{activeLoansCount} Active Deals ›</Text>
             </TouchableOpacity>
 
-            {/* Vertical White Divider */}
+            {/* Vertical Divider */}
             <View style={styles.featureDivider} />
 
-            {/* Right Metrics Stack */}
+            {/* Right Column: Pipeline & Yield */}
             <View style={styles.featureRightCol}>
-              {/* Row 1: Incoming Pipeline */}
+              {/* Row 1: Incoming Inquiries */}
               <TouchableOpacity
                 style={styles.featureStatItem}
                 activeOpacity={0.8}
                 onPress={() => navigation.navigate('LenderIncomingRequests')}
               >
-                <View style={styles.featureStatIconBox}>
-                  <Feather name="inbox" size={m(16)} color={colors.lettersAndIcons} />
+                <View style={[styles.featureStatIconBox, { backgroundColor: '#eff6ff' }]}>
+                  <Feather name="inbox" size={m(15)} color="#2563eb" />
                 </View>
                 <View style={styles.featureStatTexts}>
                   <Text style={styles.featureStatLabel}>Incoming Inquiries</Text>
-                  <Text style={styles.featureStatValue}>
-                    {pendingCount} Awaiting Review
+                  <Text
+                    style={[
+                      styles.featureStatValue,
+                      { color: pendingCount > 0 ? '#2563eb' : colors.lettersAndIcons },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {pendingCount > 0 ? `${pendingCount} Awaiting Review` : 'All Reviewed'}
                   </Text>
                 </View>
               </TouchableOpacity>
 
-              {/* Horizontal White Divider */}
+              {/* Horizontal Divider */}
               <View style={styles.featureHorizontalDivider} />
 
-              {/* Row 2: Settled / Repaid */}
+              {/* Row 2: Projected Returns / Yield */}
               <TouchableOpacity
                 style={styles.featureStatItem}
                 activeOpacity={0.8}
                 onPress={() => navigation.navigate('LenderLoansPortfolio')}
               >
-                <View style={styles.featureStatIconBox}>
-                  <Feather name="check-circle" size={m(16)} color={colors.lettersAndIcons} />
+                <View style={[styles.featureStatIconBox, { backgroundColor: '#ecfdf5' }]}>
+                  <Feather name="percent" size={m(15)} color="#059669" />
                 </View>
                 <View style={styles.featureStatTexts}>
-                  <Text style={styles.featureStatLabel}>Settled Deals</Text>
-                  <Text style={styles.featureStatValue}>
-                    {portfolioMetrics.closedCount || 0} Fully Paid
+                  <Text style={styles.featureStatLabel}>Projected Yield</Text>
+                  <Text style={styles.featureStatValue} numberOfLines={1}>
+                    +{formatCurrency(expectedYieldVal)}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -395,134 +293,120 @@ export default function LenderDashboard() {
           </View>
 
           {/* ======================================================== */}
-          {/* COMMERCIAL DEAL FLOW & INQUIRIES (Matching Webapp Strip) */}
+          {/* PORTFOLIO OVERVIEW (2x2 Grid Matching Borrower Dashboard) */}
           {/* ======================================================== */}
-          <View style={[styles.sectionHeaderRow, { marginBottom: m(10) }]}>
+          <View style={[styles.sectionHeaderRow, { marginTop: m(4), marginBottom: m(12) }]}>
             <View>
-              <Text style={styles.sectionTitle}>Commercial Deal Flow</Text>
+              <Text style={styles.sectionTitle}>Portfolio Overview</Text>
               <Text style={styles.sectionSubtitle}>
-                Inflow progression & inquiries
+                Your lending facilities and deal flow
               </Text>
             </View>
             <TouchableOpacity
-              onPress={() => navigation.navigate('LenderIncomingRequests')}
+              onPress={() => navigation.navigate('LenderLoansPortfolio')}
               activeOpacity={0.7}
               style={styles.allRequestsBtn}
             >
-              <Text style={styles.allRequestsText}>All Requests</Text>
+              <Text style={styles.allRequestsText}>All Loans</Text>
+              <Feather name="chevron-right" size={m(13)} color={colors.white} style={{ marginLeft: m(2) }} />
             </TouchableOpacity>
           </View>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.dealFlowScroll}
-          >
-            {/* 1. Pending Action */}
-            <TouchableOpacity
-              style={styles.dealFlowCard}
-              activeOpacity={0.8}
-              onPress={() => navigation.navigate('LenderIncomingRequests')}
-            >
-              <View style={styles.dealFlowTop}>
-                <Text style={[styles.dealFlowTag, { color: colors.blueButton }]}>
-                  PENDING ACTION
-                </Text>
-                <View style={[styles.dealFlowIconBox, { backgroundColor: '#eff6ff' }]}>
-                  <Feather name="clock" size={m(15)} color={colors.blueButton} />
+          {/* 2x2 Clean Activity Grid */}
+          <View style={styles.overviewGrid}>
+            {/* Row 1 */}
+            <View style={styles.overviewGridRow}>
+              {/* 1. Active Facilities */}
+              <TouchableOpacity
+                style={styles.overviewCard}
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate('LenderLoansPortfolio')}
+              >
+                <View style={styles.overviewCardTop}>
+                  <View style={[styles.overviewIconBox, { backgroundColor: '#ecfdf5' }]}>
+                    <Feather name="layers" size={m(16)} color="#059669" />
+                  </View>
+                  <View style={[styles.overviewTag, { backgroundColor: '#ecfdf5' }]}>
+                    <Text style={[styles.overviewTagText, { color: '#059669' }]}>ACTIVE</Text>
+                  </View>
                 </View>
-              </View>
-              <Text style={styles.dealFlowValue}>{stats.pendingRequests || 0}</Text>
-            </TouchableOpacity>
+                <Text style={styles.overviewValue}>{activeLoansCount}</Text>
+                <Text style={styles.overviewTitle}>Active Facilities</Text>
+                <Text style={styles.overviewSub}>Earning interest</Text>
+              </TouchableOpacity>
 
-            {/* 2. Accepted Deals */}
-            <TouchableOpacity
-              style={styles.dealFlowCard}
-              activeOpacity={0.8}
-              onPress={() => navigation.navigate('LenderLoansPortfolio')}
-            >
-              <View style={styles.dealFlowTop}>
-                <Text style={[styles.dealFlowTag, { color: colors.blueButton }]}>
-                  ACCEPTED DEALS
-                </Text>
-                <View style={[styles.dealFlowIconBox, { backgroundColor: '#eff6ff' }]}>
-                  <Feather name="check-circle" size={m(15)} color={colors.blueButton} />
+              {/* 2. In Review */}
+              <TouchableOpacity
+                style={styles.overviewCard}
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate('LenderIncomingRequests')}
+              >
+                <View style={styles.overviewCardTop}>
+                  <View style={[styles.overviewIconBox, { backgroundColor: '#fffbeb' }]}>
+                    <Feather name="clock" size={m(16)} color="#d97706" />
+                  </View>
+                  <View style={[styles.overviewTag, { backgroundColor: '#fffbeb' }]}>
+                    <Text style={[styles.overviewTagText, { color: '#d97706' }]}>PENDING</Text>
+                  </View>
                 </View>
-              </View>
-              <Text style={styles.dealFlowValue}>{stats.acceptedRequests || 0}</Text>
-            </TouchableOpacity>
+                <Text style={styles.overviewValue}>{pendingCount}</Text>
+                <Text style={styles.overviewTitle}>New Inquiries</Text>
+                <Text style={styles.overviewSub}>Awaiting decision</Text>
+              </TouchableOpacity>
+            </View>
 
-            {/* 3. Total Inquiries */}
-            <TouchableOpacity
-              style={styles.dealFlowCard}
-              activeOpacity={0.8}
-              onPress={() => navigation.navigate('LenderIncomingRequests')}
-            >
-              <View style={styles.dealFlowTop}>
-                <Text style={[styles.dealFlowTag, { color: colors.blueButton }]}>
-                  TOTAL INQUIRIES
-                </Text>
-                <View style={[styles.dealFlowIconBox, { backgroundColor: '#eff6ff' }]}>
-                  <Feather name="inbox" size={m(15)} color={colors.blueButton} />
+            {/* Row 2 */}
+            <View style={styles.overviewGridRow}>
+              {/* 3. Sanctioned Deals */}
+              <TouchableOpacity
+                style={styles.overviewCard}
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate('LenderLoansPortfolio')}
+              >
+                <View style={styles.overviewCardTop}>
+                  <View style={[styles.overviewIconBox, { backgroundColor: '#eff6ff' }]}>
+                    <Feather name="check-circle" size={m(16)} color="#2563eb" />
+                  </View>
+                  <View style={[styles.overviewTag, { backgroundColor: '#eff6ff' }]}>
+                    <Text style={[styles.overviewTagText, { color: '#2563eb' }]}>SANCTIONED</Text>
+                  </View>
                 </View>
-              </View>
-              <Text style={styles.dealFlowValue}>
-                {stats.totalRequests ||
-                  (stats.pendingRequests || 0) + (stats.acceptedRequests || 0) ||
-                  0}
-              </Text>
-            </TouchableOpacity>
+                <Text style={styles.overviewValue}>{stats.acceptedRequests || 0}</Text>
+                <Text style={styles.overviewTitle}>Sanctioned Deals</Text>
+                <Text style={styles.overviewSub}>Ready to disburse</Text>
+              </TouchableOpacity>
 
-            {/* 4. Connected Borrowers */}
-            <TouchableOpacity
-              style={styles.dealFlowCard}
-              activeOpacity={0.8}
-              onPress={() => navigation.navigate('LenderAvailableBorrowers')}
-            >
-              <View style={styles.dealFlowTop}>
-                <Text style={[styles.dealFlowTag, { color: colors.blueButton }]}>
-                  CONNECTED BORROWERS
-                </Text>
-                <View style={[styles.dealFlowIconBox, { backgroundColor: '#eff6ff' }]}>
-                  <Feather name="users" size={m(15)} color={colors.blueButton} />
+              {/* 4. Borrower Network */}
+              <TouchableOpacity
+                style={styles.overviewCard}
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate('LenderAvailableBorrowers')}
+              >
+                <View style={styles.overviewCardTop}>
+                  <View style={[styles.overviewIconBox, { backgroundColor: '#f5f3ff' }]}>
+                    <Feather name="users" size={m(16)} color="#7c3aed" />
+                  </View>
+                  <View style={[styles.overviewTag, { backgroundColor: '#f5f3ff' }]}>
+                    <Text style={[styles.overviewTagText, { color: '#7c3aed' }]}>NETWORK</Text>
+                  </View>
                 </View>
-              </View>
-              <Text style={styles.dealFlowValue}>
-                {stats.availableBorrowersCount || 1}
-              </Text>
-            </TouchableOpacity>
-          </ScrollView>
-
-          {/* Period Filter Capsule Tabs (Daily / Weekly / Monthly style in Figma) */}
-          <View style={styles.periodCapsuleRow}>
-            {['All', 'In Review', 'Disbursed'].map(tab => {
-              const isSelected = selectedFilter === tab;
-              return (
-                <TouchableOpacity
-                  key={tab}
-                  style={[
-                    styles.periodTab,
-                    isSelected && styles.periodTabActive,
-                  ]}
-                  onPress={() => setSelectedFilter(tab)}
-                  activeOpacity={0.8}
-                >
-                  <Text
-                    style={[
-                      styles.periodTabText,
-                      isSelected && styles.periodTabTextActive,
-                    ]}
-                  >
-                    {tab}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+                <Text style={styles.overviewValue}>{stats.availableBorrowersCount || 1}</Text>
+                <Text style={styles.overviewTitle}>Borrower Network</Text>
+                <Text style={styles.overviewSub}>Verified pool</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
-          {/* Deal Desk Inquiries Section Header */}
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Deal Desk Pipeline</Text>
+          {/* ======================================================== */}
+          {/* RECENT PENDING INQUIRIES LIST                            */}
+          {/* ======================================================== */}
+          <View style={[styles.sectionHeaderRow, { marginTop: m(14), marginBottom: m(12) }]}>
+            <View>
+              <Text style={styles.sectionTitle}>Recent Pending Inquiries</Text>
+              <Text style={styles.sectionSubtitle}>
+                Incoming loan requests awaiting underwriting
+              </Text>
+            </View>
             <TouchableOpacity
               onPress={() => navigation.navigate('LenderIncomingRequests')}
               activeOpacity={0.7}
@@ -531,11 +415,11 @@ export default function LenderDashboard() {
             </TouchableOpacity>
           </View>
 
-          {/* Inquiries / Deals List (Matching Blue Icon Circles in Figma Design) */}
+          {/* Recent Pending Inquiries List */}
           {loading && !refreshing ? (
             <View style={styles.loadingBox}>
               <ActivityIndicator size="small" color={colors.lettersAndIcons} />
-              <Text style={styles.loadingText}>Syncing deal desk...</Text>
+              <Text style={styles.loadingText}>Syncing pending inquiries...</Text>
             </View>
           ) : filteredInquiries.length === 0 ? (
             <View style={styles.emptyBox}>
@@ -554,7 +438,7 @@ export default function LenderDashboard() {
               return (
                 <TouchableOpacity
                   key={req._id || index}
-                  style={styles.activityItemCard}
+                  style={styles.activityCard}
                   activeOpacity={0.75}
                   onPress={() =>
                     navigation.navigate('LenderRequestDetails', {
@@ -563,29 +447,30 @@ export default function LenderDashboard() {
                     })
                   }
                 >
-                  {/* Vibrant Blue Circle Icon */}
-                  <View style={styles.activityIconCircle}>
-                    <Feather name="briefcase" size={m(18)} color={colors.white} />
+                  <View style={styles.activityHeaderRow}>
+                    <View style={styles.activityIconCircle}>
+                      <Feather name="briefcase" size={m(16)} color={colors.white} />
+                    </View>
+                    <View style={styles.activityInfoCol}>
+                      <Text style={styles.activityTitleText} numberOfLines={1}>
+                        {borrowerName}
+                      </Text>
+                      <Text style={styles.activityTimeText} numberOfLines={1}>
+                        {req.purpose || 'Working Capital'} • {req.tenureMonths || 12} Months
+                      </Text>
+                    </View>
+                    <View style={styles.categoryTag}>
+                      <Text style={styles.categoryTagText}>Score {creditScore}</Text>
+                    </View>
                   </View>
 
-                  {/* Borrower Name & Purpose/Tenure */}
-                  <View style={styles.activityMainCol}>
-                    <Text style={styles.activityTitleText} numberOfLines={1}>
-                      {borrowerName}
-                    </Text>
-                    <Text style={styles.activityTimeText} numberOfLines={1}>
-                      {req.purpose || 'Working Capital'} • {req.tenureMonths || 12} Mo
-                    </Text>
-                  </View>
-
-                  {/* Credit Score Tag */}
-                  <View style={styles.categoryTag}>
-                    <Text style={styles.categoryTagText}>Score {creditScore}</Text>
-                  </View>
-
-                  {/* Requested Amount */}
-                  <View style={styles.activityStatusCol}>
-                    <Text style={styles.activityStatusText}>
+                  <View style={styles.activityFooterRow}>
+                    <View style={styles.statusPill}>
+                      <Text style={styles.statusPillText}>
+                        {req.status === 'accepted' ? 'SANCTIONED' : req.status === 'disbursed' ? 'DISBURSED' : 'PENDING REVIEW'}
+                      </Text>
+                    </View>
+                    <Text style={styles.activityAmountText}>
                       {formatCurrency(req.amount)}
                     </Text>
                   </View>
@@ -594,143 +479,61 @@ export default function LenderDashboard() {
             })
           )}
 
-        </View>
-      </Animated.View>
-
-      {/* ======================================================== */}
-      {/* 3. DISBURSAL OTP MODAL                                   */}
-      {/* ======================================================== */}
-      <Modal
-        visible={otpModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setOtpModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <View style={styles.modalIconWrap}>
-                <Feather name="key" size={m(18)} color={colors.blueButton} />
-              </View>
-              <Text style={styles.modalTitle}>Verify Disbursal OTP</Text>
-              <TouchableOpacity
-                onPress={() => setOtpModalVisible(false)}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Feather name="x" size={m(20)} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.modalSubtitle}>
-              Enter the borrower's 6-digit Disbursal Code to release sanctioned funds.
-            </Text>
-
-            <Text style={styles.inputLabel}>Select Deal or Enter ID</Text>
-            {stats.recentPendingRequests && stats.recentPendingRequests.length > 0 ? (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.chipScrollView}
-              >
-                {stats.recentPendingRequests.map((req) => {
-                  const bName =
-                    req.borrowerSnapshot?.businessName ||
-                    req.borrowerId?.userName ||
-                    'Borrower';
-                  const isSelected = selectedEntityId === req._id;
-                  return (
-                    <TouchableOpacity
-                      key={req._id}
-                      style={[
-                        styles.dealChip,
-                        isSelected && styles.dealChipSelected,
-                      ]}
-                      onPress={() => setSelectedEntityId(req._id)}
-                    >
-                      <Text
-                        style={[
-                          styles.dealChipText,
-                          isSelected && styles.dealChipTextSelected,
-                        ]}
-                      >
-                        {bName} • {formatCurrency(req.amount)}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            ) : null}
-
-            <TextInput
-              style={styles.inputField}
-              placeholder="Deal / Loan ID (or tap chip above)"
-              placeholderTextColor="#94a3b8"
-              value={selectedEntityId}
-              onChangeText={setSelectedEntityId}
-              autoCapitalize="none"
-            />
-
-            <Text style={styles.inputLabel}>6-Digit OTP</Text>
-            <TextInput
-              style={[styles.inputField, styles.otpInputField]}
-              placeholder="• • • • • •"
-              placeholderTextColor="#94a3b8"
-              keyboardType="number-pad"
-              maxLength={6}
-              value={otpInput}
-              onChangeText={setOtpInput}
-            />
-
-            <View style={styles.otpHelperRow}>
-              <Text style={styles.otpTimerText}>⏱ Valid for 15 mins</Text>
-              <TouchableOpacity
-                onPress={async () => {
-                  if (!selectedEntityId.trim()) {
-                    showAlert('Required', 'Please select or enter a Deal ID to resend OTP.');
-                    return;
-                  }
-                  try {
-                    await lenderFlowService.resendDisbursalOtp(selectedEntityId.trim(), false);
-                    showAlert('Dispatched', 'Fresh 6-digit OTP sent to borrower.');
-                  } catch (e) {
-                    showAlert('Error', 'Unable to resend OTP.');
-                  }
-                }}
-              >
-                <Text style={styles.resendCodeText}>Resend Code</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.modalActionRow}>
-              <TouchableOpacity
-                style={styles.modalCancelBtn}
-                onPress={() => setOtpModalVisible(false)}
-              >
-                <Text style={styles.modalCancelText}>Cancel</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.modalVerifyBtn}
-                onPress={handleVerifyOtpSubmit}
-                disabled={verifyingOtp}
-              >
-                {verifyingOtp ? (
-                  <ActivityIndicator size="small" color={colors.white} />
-                ) : (
-                  <Text style={styles.modalVerifyText}>Confirm & Disburse</Text>
-                )}
-              </TouchableOpacity>
+          {/* ======================================================== */}
+          {/* QUICK ACTIONS GRID                                       */}
+          {/* ======================================================== */}
+          <View style={[styles.sectionHeaderRow, { marginTop: m(18), marginBottom: m(10) }]}>
+            <View>
+              <Text style={styles.sectionTitle}>Quick Actions</Text>
             </View>
           </View>
+
+          <View style={styles.quickActionsGrid}>
+            <TouchableOpacity
+              style={styles.actionButtonPrimary}
+              activeOpacity={0.85}
+              onPress={() => navigation.navigate('LenderSubscriptionScreen')}
+            >
+              <View style={styles.actionIconCircle}>
+                <Feather name="credit-card" size={m(16)} color={colors.white} />
+              </View>
+              <View style={styles.actionTextWrap}>
+                <Text style={styles.actionTitlePrimary}>Subscription Packs</Text>
+                <Text style={styles.actionSubPrimary} numberOfLines={1}>
+                  {activePlan?.hasActivePlan
+                    ? `${activePlan?.plan?.planName || 'Active Plan'} (${activePlan?.remainingDays ?? 0}d left)`
+                    : (activePlan?.plan?.planName || activePlan?.planName || 'Explore & Recharge')}
+                </Text>
+              </View>
+              <Feather name="chevron-right" size={m(16)} color={colors.white} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionButtonSecondary}
+              activeOpacity={0.85}
+              onPress={() => navigation.navigate('LenderAvailableBorrowers')}
+            >
+              <View style={[styles.actionIconCircle, { backgroundColor: '#eff6ff' }]}>
+                <Feather name="search" size={m(16)} color="#2563eb" />
+              </View>
+              <View style={styles.actionTextWrap}>
+                <Text style={styles.actionTitleSecondary}>Explore Borrowers</Text>
+                <Text style={styles.actionSubSecondary}>Deploy capital</Text>
+              </View>
+              <Feather name="chevron-right" size={m(16)} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={{ height: m(20) }} />
         </View>
-      </Modal>
+      </Animated.View>
     </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
   // ==========================================
-  // TOP GREEN SECTION (Matching Exact Figma)
+  // TOP GREEN SECTION (Matching Borrower Dashboard)
   // ==========================================
   pageGreenWrapper: {
     backgroundColor: colors.primary,
@@ -739,13 +542,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     paddingHorizontal: m(20),
     paddingTop: m(14),
-    paddingBottom: m(22),
+    paddingBottom: m(20),
   },
   greetingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: m(18),
+    marginBottom: 0,
   },
   greetingTextContainer: {
     flex: 1,
@@ -765,6 +568,11 @@ const styles = StyleSheet.create({
     color: colors.lettersAndIcons,
     marginTop: m(2),
     opacity: 0.9,
+  },
+  headerBtnGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(8),
   },
   notificationBtn: {
     width: m(44),
@@ -786,7 +594,7 @@ const styles = StyleSheet.create({
     width: m(8),
     height: m(8),
     borderRadius: m(4),
-    backgroundColor: colors.blueButton,
+    backgroundColor: '#d97706',
   },
   notificationBadge: {
     position: 'absolute',
@@ -808,97 +616,6 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
 
-  // 2-Column Summary Stats on Green
-  topMetricsCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: m(18),
-  },
-  metricColumn: {
-    flex: 1,
-  },
-  metricLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(6),
-    marginBottom: m(4),
-  },
-  metricLabelText: {
-    fontSize: m(12),
-    lineHeight: m(16),
-    fontFamily: FontFamily.primaryMedium,
-    color: colors.lettersAndIcons,
-    opacity: 0.9,
-  },
-  metricValueWhite: {
-    fontSize: m(24),
-    lineHeight: m(30),
-    fontFamily: FontFamily.primaryBold,
-    color: colors.white,
-    letterSpacing: -0.3,
-  },
-  metricValueBlue: {
-    fontSize: m(22),
-    lineHeight: m(28),
-    fontFamily: FontFamily.primaryBold,
-    color: colors.oceanBlueButton,
-    letterSpacing: -0.3,
-  },
-  metricDivider: {
-    width: 1.5,
-    height: m(40),
-    backgroundColor: colors.white,
-    marginHorizontal: m(16),
-  },
-
-  // Target Progress Pill
-  progressContainer: {
-    marginTop: m(2),
-  },
-  progressBarPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.white,
-    borderRadius: m(20),
-    overflow: 'hidden',
-    height: m(36),
-  },
-  progressDarkTag: {
-    backgroundColor: colors.lettersAndIcons,
-    paddingHorizontal: m(14),
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  progressDarkText: {
-    fontSize: m(12),
-    fontFamily: FontFamily.primaryBold,
-    color: colors.white,
-  },
-  progressWhiteBar: {
-    flex: 1,
-    paddingHorizontal: m(12),
-    justifyContent: 'center',
-  },
-  progressWhiteText: {
-    fontSize: m(12),
-    fontFamily: FontFamily.primarySemiBold,
-    color: colors.lettersAndIcons,
-  },
-  progressCaptionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: m(8),
-    gap: m(6),
-  },
-  progressCaptionText: {
-    fontSize: m(12),
-    fontFamily: FontFamily.primaryMedium,
-    color: colors.lettersAndIcons,
-    opacity: 0.9,
-  },
-
   // ==========================================
   // MAIN CURVED SHEET SECTION
   // ==========================================
@@ -912,35 +629,46 @@ const styles = StyleSheet.create({
     paddingBottom: m(110),
   },
 
-  // Feature Green Card (Vehicle / Goals Card in Figma)
+  // Feature Highlight Card (Hero Overview)
   featureCard: {
-    backgroundColor: colors.primary,
-    borderRadius: m(24),
-    padding: m(18),
+    backgroundColor: colors.white,
+    borderRadius: m(20),
+    paddingVertical: m(14),
+    paddingHorizontal: m(16),
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: m(20),
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.08)',
     elevation: 3,
     shadowColor: colors.lettersAndIcons,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
     shadowRadius: 6,
   },
   featureLeftCol: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: m(2),
+    paddingHorizontal: m(4),
+    minWidth: m(110),
   },
   featureRingWrapper: {
-    width: m(54),
-    height: m(54),
-    borderRadius: m(27),
-    backgroundColor: 'rgba(255, 255, 255, 0.22)',
-    borderWidth: 2.5,
-    borderColor: colors.blueButton,
+    width: m(42),
+    height: m(42),
+    borderRadius: m(21),
+    backgroundColor: '#ecfdf5',
+    borderWidth: 1.5,
+    borderColor: '#a7f3d0',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: m(6),
+    marginBottom: m(4),
+  },
+  featureCountText: {
+    fontSize: m(17),
+    lineHeight: m(22),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    textAlign: 'center',
   },
   featureRingLabel: {
     fontSize: m(11.5),
@@ -950,23 +678,23 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   featureRingSub: {
-    fontSize: m(10),
+    fontSize: m(9.5),
     lineHeight: m(13),
-    fontFamily: FontFamily.primaryRegular,
-    color: colors.lettersAndIcons,
+    fontFamily: FontFamily.primaryMedium,
+    color: '#059669',
     textAlign: 'center',
-    opacity: 0.85,
+    marginTop: m(1),
   },
   featureDivider: {
-    width: 1.5,
-    height: '85%',
-    backgroundColor: colors.white,
+    width: 1,
+    height: '75%',
+    backgroundColor: '#e2e8f0',
     marginHorizontal: m(12),
   },
   featureHorizontalDivider: {
-    height: 1.5,
-    backgroundColor: colors.white,
-    marginVertical: m(8),
+    height: 1,
+    backgroundColor: '#f1f5f9',
+    marginVertical: m(6),
     width: '100%',
   },
   featureRightCol: {
@@ -976,12 +704,12 @@ const styles = StyleSheet.create({
   featureStatItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: m(4),
   },
   featureStatIconBox: {
     width: m(34),
     height: m(34),
     borderRadius: m(10),
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: m(10),
@@ -993,44 +721,149 @@ const styles = StyleSheet.create({
     fontSize: m(11),
     lineHeight: m(15),
     fontFamily: FontFamily.primaryMedium,
-    color: colors.lettersAndIcons,
-    opacity: 0.85,
+    color: colors.textSecondary,
   },
   featureStatValue: {
-    fontSize: m(15),
-    lineHeight: m(20),
+    fontSize: m(13.5),
+    lineHeight: m(18),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
+    marginTop: m(1),
   },
 
-  // Period Tabs Capsule
-  periodCapsuleRow: {
+  // 2x2 Clean Activity Grid
+  overviewGrid: {
+    marginBottom: m(18),
+    gap: m(10),
+  },
+  overviewGridRow: {
     flexDirection: 'row',
-    backgroundColor: colors.white,
-    borderRadius: m(24),
-    padding: m(4),
-    marginBottom: m(20),
-    borderWidth: 1,
-    borderColor: 'rgba(9, 48, 48, 0.08)',
+    gap: m(10),
   },
-  periodTab: {
+  overviewCard: {
     flex: 1,
-    paddingVertical: m(8),
-    borderRadius: m(20),
+    backgroundColor: colors.white,
+    borderRadius: m(16),
+    paddingVertical: m(12),
+    paddingHorizontal: m(12),
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.06)',
+    elevation: 2,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+  },
+  overviewCardTop: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: m(6),
+  },
+  overviewIconBox: {
+    width: m(30),
+    height: m(30),
+    borderRadius: m(10),
     justifyContent: 'center',
+    alignItems: 'center',
   },
-  periodTabActive: {
-    backgroundColor: colors.primary,
+  overviewTag: {
+    paddingHorizontal: m(6),
+    paddingVertical: m(2),
+    borderRadius: m(6),
   },
-  periodTabText: {
-    fontSize: m(13),
-    fontFamily: FontFamily.primaryMedium,
-    color: colors.lettersAndIcons,
+  overviewTagText: {
+    fontSize: m(8.5),
+    fontFamily: FontFamily.primaryBold,
+    letterSpacing: 0.4,
   },
-  periodTabTextActive: {
+  overviewValue: {
+    fontSize: m(20),
+    lineHeight: m(26),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
+  },
+  overviewTitle: {
+    fontSize: m(12),
+    lineHeight: m(16),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    marginTop: m(2),
+  },
+  overviewSub: {
+    fontSize: m(10),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+    marginTop: m(1),
+  },
+
+  // Quick Action Navigation Buttons
+  quickActionsGrid: {
+    flexDirection: 'row',
+    gap: m(10),
+    marginBottom: m(16),
+  },
+  actionButtonPrimary: {
+    flex: 1,
+    backgroundColor: colors.lettersAndIcons,
+    borderRadius: m(16),
+    paddingVertical: m(12),
+    paddingHorizontal: m(12),
+    flexDirection: 'row',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  actionButtonSecondary: {
+    flex: 1,
+    backgroundColor: colors.white,
+    borderRadius: m(16),
+    paddingVertical: m(12),
+    paddingHorizontal: m(12),
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.08)',
+    elevation: 2,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+  },
+  actionIconCircle: {
+    width: m(32),
+    height: m(32),
+    borderRadius: m(16),
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: m(8),
+  },
+  actionTextWrap: {
+    flex: 1,
+  },
+  actionTitlePrimary: {
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.white,
+  },
+  actionSubPrimary: {
+    fontSize: m(9.5),
+    fontFamily: FontFamily.primaryRegular,
+    color: 'rgba(255, 255, 255, 0.75)',
+  },
+  actionTitleSecondary: {
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  actionSubSecondary: {
+    fontSize: m(9.5),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
   },
 
   // Section Headers
@@ -1065,7 +898,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: m(10),
     paddingVertical: m(5),
     borderRadius: m(16),
-    gap: m(4),
   },
   allRequestsText: {
     fontSize: m(11),
@@ -1073,278 +905,136 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
 
-  // Commercial Deal Flow Strip
-  dealFlowScroll: {
-    paddingBottom: m(18),
-    paddingRight: m(6),
-  },
-  dealFlowCard: {
-    width: m(150),
+  // Period Tabs Capsule
+  periodCapsuleRow: {
+    flexDirection: 'row',
     backgroundColor: colors.white,
-    borderRadius: m(18),
-    paddingVertical: m(12),
-    paddingHorizontal: m(14),
-    marginRight: m(10),
+    borderRadius: m(24),
+    padding: m(4),
+    marginBottom: m(16),
     borderWidth: 1,
     borderColor: 'rgba(9, 48, 48, 0.08)',
-    elevation: 2,
-    shadowColor: colors.lettersAndIcons,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    justifyContent: 'center',
   },
-  dealFlowTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: m(6),
-  },
-  dealFlowTag: {
-    fontSize: m(9.5),
-    fontFamily: FontFamily.primaryBold,
-    letterSpacing: 0.4,
+  periodTab: {
     flex: 1,
-    paddingRight: m(4),
-  },
-  dealFlowIconBox: {
-    width: m(28),
-    height: m(28),
-    borderRadius: m(14),
-    justifyContent: 'center',
+    paddingVertical: m(8),
+    borderRadius: m(20),
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  dealFlowValue: {
-    fontSize: m(22),
-    lineHeight: m(28),
+  periodTabActive: {
+    backgroundColor: colors.primary,
+  },
+  periodTabText: {
+    fontSize: m(12.5),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
+  },
+  periodTabTextActive: {
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
   },
 
-  // Activity Feed Items (Matching Blue Circle Rows in Figma)
-  activityItemCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  // Activity / Deal Cards
+  activityCard: {
     backgroundColor: colors.white,
-    borderRadius: m(18),
-    paddingVertical: m(12),
-    paddingHorizontal: m(14),
+    borderRadius: m(16),
+    padding: m(14),
     marginBottom: m(10),
     borderWidth: 1,
     borderColor: 'rgba(9, 48, 48, 0.06)',
     elevation: 2,
     shadowColor: colors.lettersAndIcons,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+  },
+  activityHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: m(10),
   },
   activityIconCircle: {
-    width: m(40),
-    height: m(40),
-    borderRadius: m(20),
-    backgroundColor: colors.blueButton, // #3299FF matching Figma screenshot
+    width: m(34),
+    height: m(34),
+    borderRadius: m(17),
+    backgroundColor: colors.blueButton,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: m(12),
+    marginRight: m(10),
   },
-  activityMainCol: {
+  activityInfoCol: {
     flex: 1,
-    paddingRight: m(8),
+    marginRight: m(8),
   },
   activityTitleText: {
     fontSize: m(13.5),
     lineHeight: m(18),
-    fontFamily: FontFamily.primarySemiBold,
+    fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
   },
   activityTimeText: {
     fontSize: m(11),
-    lineHeight: m(15),
     fontFamily: FontFamily.primaryRegular,
-    color: colors.blueButton, // Blue subtitle matching Figma screenshot
-    marginTop: m(2),
+    color: colors.textSecondary,
+    marginTop: m(1),
   },
   categoryTag: {
+    backgroundColor: '#ecfdf5',
     paddingHorizontal: m(8),
     paddingVertical: m(3),
-    borderRadius: m(8),
-    backgroundColor: colors.lightGreen,
-    marginRight: m(8),
+    borderRadius: m(6),
   },
   categoryTagText: {
-    fontSize: m(11),
-    fontFamily: FontFamily.primaryMedium,
-    color: colors.lettersAndIcons,
+    fontSize: m(10),
+    fontFamily: FontFamily.primaryBold,
+    color: '#059669',
   },
-  activityStatusCol: {
-    alignItems: 'flex-end',
+  activityFooterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: m(8),
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
   },
-  activityStatusText: {
-    fontSize: m(13.5),
+  statusPill: {
+    backgroundColor: '#eff6ff',
+    paddingHorizontal: m(8),
+    paddingVertical: m(3),
+    borderRadius: m(6),
+  },
+  statusPillText: {
+    fontSize: m(9.5),
+    fontFamily: FontFamily.primaryBold,
+    color: '#2563eb',
+  },
+  activityAmountText: {
+    fontSize: m(15),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
   },
 
-  // Loading & Empty States
   loadingBox: {
-    paddingVertical: m(24),
+    paddingVertical: m(30),
     alignItems: 'center',
     justifyContent: 'center',
+    gap: m(8),
   },
   loadingText: {
     fontSize: m(12),
     fontFamily: FontFamily.primaryRegular,
     color: colors.textSecondary,
-    marginTop: m(6),
   },
   emptyBox: {
-    paddingVertical: m(28),
+    paddingVertical: m(30),
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.white,
-    borderRadius: m(18),
+    gap: m(8),
   },
   emptyText: {
     fontSize: m(13),
-    fontFamily: FontFamily.primaryRegular,
-    color: colors.textSecondary,
-    marginTop: m(8),
-  },
-
-
-  // Disbursal OTP Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(9, 48, 48, 0.65)',
-    justifyContent: 'center',
-    padding: m(20),
-  },
-  modalCard: {
-    backgroundColor: colors.white,
-    borderRadius: m(24),
-    padding: m(20),
-    elevation: 8,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: m(8),
-  },
-  modalIconWrap: {
-    width: m(32),
-    height: m(32),
-    borderRadius: m(16),
-    backgroundColor: '#E6F2FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalTitle: {
-    fontSize: m(16),
-    fontFamily: FontFamily.primaryBold,
-    color: colors.lettersAndIcons,
-    flex: 1,
-    marginLeft: m(10),
-  },
-  modalSubtitle: {
-    fontSize: m(11.5),
-    fontFamily: FontFamily.primaryRegular,
-    color: colors.textSecondary,
-    marginBottom: m(14),
-    lineHeight: m(17),
-  },
-  inputLabel: {
-    fontSize: m(11.5),
-    fontFamily: FontFamily.primarySemiBold,
-    color: colors.lettersAndIcons,
-    marginBottom: m(6),
-  },
-  chipScrollView: {
-    marginBottom: m(10),
-  },
-  dealChip: {
-    paddingHorizontal: m(10),
-    paddingVertical: m(6),
-    borderRadius: m(8),
-    backgroundColor: '#f8fafc',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    marginRight: m(6),
-  },
-  dealChipSelected: {
-    backgroundColor: colors.lightGreen,
-    borderColor: colors.lettersAndIcons,
-  },
-  dealChipText: {
-    fontSize: m(11),
     fontFamily: FontFamily.primaryMedium,
     color: colors.textSecondary,
-  },
-  dealChipTextSelected: {
-    color: colors.lettersAndIcons,
-    fontFamily: FontFamily.primaryBold,
-  },
-  inputField: {
-    backgroundColor: colors.backgroundGreenWhite,
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: m(12),
-    paddingHorizontal: m(12),
-    paddingVertical: m(10),
-    fontSize: m(13),
-    color: colors.lettersAndIcons,
-    fontFamily: FontFamily.primaryMedium,
-    marginBottom: m(12),
-  },
-  otpInputField: {
-    fontSize: m(18),
-    fontFamily: FontFamily.primaryBold,
-    letterSpacing: 4,
-    textAlign: 'center',
-  },
-  otpHelperRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: m(14),
-  },
-  otpTimerText: {
-    fontSize: m(11),
-    fontFamily: FontFamily.primaryRegular,
-    color: colors.textMuted,
-  },
-  resendCodeText: {
-    fontSize: m(11.5),
-    fontFamily: FontFamily.primaryBold,
-    color: colors.lettersAndIcons,
-  },
-  modalActionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  modalCancelBtn: {
-    flex: 1,
-    paddingVertical: m(12),
-    borderRadius: m(12),
-    alignItems: 'center',
-    backgroundColor: '#f1f5f9',
-    marginRight: m(8),
-  },
-  modalCancelText: {
-    fontSize: m(13),
-    fontFamily: FontFamily.primarySemiBold,
-    color: colors.textSecondary,
-  },
-  modalVerifyBtn: {
-    flex: 2,
-    paddingVertical: m(12),
-    borderRadius: m(12),
-    alignItems: 'center',
-    backgroundColor: colors.lettersAndIcons,
-  },
-  modalVerifyText: {
-    fontSize: m(13),
-    fontFamily: FontFamily.primaryBold,
-    color: colors.white,
   },
 });

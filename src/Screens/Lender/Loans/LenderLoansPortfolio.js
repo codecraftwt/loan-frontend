@@ -218,8 +218,8 @@ export default function LenderLoansPortfolio() {
     const nextDueDate = nextInstallment?.dueDate
       ? formatDate(nextInstallment.dueDate)
       : item.loanEndDate
-      ? formatDate(item.loanEndDate)
-      : 'N/A';
+        ? formatDate(item.loanEndDate)
+        : 'N/A';
     const isNextOverdue = nextInstallment?.status === 'overdue' || hasOverdue;
 
     return (
@@ -263,10 +263,10 @@ export default function LenderLoansPortfolio() {
               isClosed
                 ? styles.badgeClosed
                 : isPendingDisbursal
-                ? styles.badgePending
-                : hasOverdue
-                ? styles.badgeOverdue
-                : styles.badgeActive,
+                  ? styles.badgePending
+                  : hasOverdue
+                    ? styles.badgeOverdue
+                    : styles.badgeActive,
             ]}
           >
             <Text
@@ -275,19 +275,19 @@ export default function LenderLoansPortfolio() {
                 isClosed
                   ? styles.textClosed
                   : isPendingDisbursal
-                  ? styles.textPending
-                  : hasOverdue
-                  ? styles.textOverdue
-                  : styles.textActive,
+                    ? styles.textPending
+                    : hasOverdue
+                      ? styles.textOverdue
+                      : styles.textActive,
               ]}
             >
               {isClosed
                 ? 'CLOSED'
                 : isPendingDisbursal
-                ? 'OTP PENDING'
-                : hasOverdue
-                ? 'OVERDUE'
-                : 'ACTIVE'}
+                  ? 'OTP PENDING'
+                  : hasOverdue
+                    ? 'OVERDUE'
+                    : 'ACTIVE'}
             </Text>
           </View>
         </View>
@@ -345,79 +345,81 @@ export default function LenderLoansPortfolio() {
       includeTabBarClearance={true}
       scrollable={false}
     >
-      {/* ── 1. Top Green Banner with Unified 4-Metrics Bar ── */}
+      {/* ── 1. Top Green Banner ── */}
       <View style={styles.topBanner}>
         <View style={styles.headerRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.headerTag}>INSTITUTIONAL DEBT BOOK</Text>
             <Text style={styles.headerTitle}>Loans Portfolio</Text>
-            <Text style={styles.headerSubtitle}>
-              Live portfolio, repayment schedules & collections
-            </Text>
-          </View>
-
-          <TouchableOpacity
-            style={styles.refreshBtn}
-            onPress={onRefresh}
-            disabled={loading}
-            activeOpacity={0.8}
-          >
-            <Feather name="refresh-cw" size={m(17)} color={colors.lettersAndIcons} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Unified 4-Tile Portfolio Metrics Bar */}
-        <View style={styles.unifiedMetricsGrid}>
-          {/* Tile 1: Total Disbursed */}
-          <View style={styles.metricTile}>
-            <View style={styles.tileHeaderRow}>
-              <Feather name="arrow-up-right" size={m(12)} color={colors.lettersAndIcons} />
-              <Text style={styles.tileLabel}>Disbursed</Text>
-            </View>
-            <Text style={styles.tileValueWhite} numberOfLines={1}>
-              {formatINR(metrics.totalDisbursed)}
-            </Text>
-          </View>
-
-          {/* Tile 2: Collected */}
-          <View style={styles.metricTile}>
-            <View style={styles.tileHeaderRow}>
-              <Feather name="check-circle" size={m(12)} color={colors.lettersAndIcons} />
-              <Text style={styles.tileLabel}>Collected</Text>
-            </View>
-            <Text style={styles.tileValueBlue} numberOfLines={1}>
-              {formatINR(metrics.totalCollected)}
-            </Text>
-          </View>
-
-          {/* Tile 3: Outstanding */}
-          <View style={styles.metricTile}>
-            <View style={styles.tileHeaderRow}>
-              <Feather name="clock" size={m(12)} color={colors.lettersAndIcons} />
-              <Text style={styles.tileLabel}>Outstanding</Text>
-            </View>
-            <Text style={styles.tileValueDark} numberOfLines={1}>
-              {formatINR(metrics.totalOutstanding)}
-            </Text>
-          </View>
-
-          {/* Tile 4: Overdue */}
-          <View style={styles.metricTile}>
-            <View style={styles.tileHeaderRow}>
-              <Feather name="alert-circle" size={m(12)} color="#b91c1c" />
-              <Text style={[styles.tileLabel, { color: '#7f1d1d' }]}>Overdue</Text>
-            </View>
-            <Text style={styles.tileValueRed} numberOfLines={1}>
-              {overdueTotalAmount > 0
-                ? formatINR(overdueTotalAmount)
-                : `${metrics.overdueCount || 0} Deals`}
-            </Text>
           </View>
         </View>
       </View>
 
       {/* ── 2. Main Curved Body Section ── */}
       <View style={styles.sheetSection}>
+        {/* Feature Highlight Hero Card (Matching Reference UI) */}
+        <View style={styles.featureCard}>
+          {/* Left Column: Total Disbursed Capital & Projected Yield */}
+          <TouchableOpacity
+            style={styles.featureLeftCol}
+            activeOpacity={0.8}
+            onPress={() => setActiveTab('active')}
+          >
+            <View style={styles.featureRingWrapper}>
+              <Feather name="arrow-up-right" size={m(18)} color="#059669" />
+            </View>
+            <Text style={styles.featureCountText} numberOfLines={1}>
+              {formatINR(metrics.totalDisbursed)}
+            </Text>
+            <Text style={styles.featureRingLabel}>Total Disbursed</Text>
+            <Text style={styles.featureRingSub}>
+              +{formatINR(metrics.totalInterestExpected || 0)} Interest Earnings
+            </Text>
+          </TouchableOpacity>
+
+          {/* Vertical Divider */}
+          <View style={styles.featureDivider} />
+
+          {/* Right Column: Collected & Outstanding */}
+          <View style={styles.featureRightCol}>
+            {/* 1. Collected */}
+            <TouchableOpacity
+              style={styles.featureStatItem}
+              activeOpacity={0.8}
+              onPress={() => setActiveTab('closed')}
+            >
+              <View style={[styles.featureStatIconBox, { backgroundColor: '#eff6ff' }]}>
+                <Feather name="check-circle" size={m(15)} color="#2563eb" />
+              </View>
+              <View style={styles.featureStatTexts}>
+                <Text style={styles.featureStatLabel}>Total Collected</Text>
+                <Text style={styles.featureStatValue} numberOfLines={1}>
+                  {formatINR(metrics.totalCollected)}
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* Horizontal Divider */}
+            <View style={styles.featureHorizontalDivider} />
+
+            {/* 2. Outstanding */}
+            <TouchableOpacity
+              style={styles.featureStatItem}
+              activeOpacity={0.8}
+              onPress={() => setActiveTab('active')}
+            >
+              <View style={[styles.featureStatIconBox, { backgroundColor: '#f0fdfa' }]}>
+                <Feather name="clock" size={m(15)} color="#0d9488" />
+              </View>
+              <View style={styles.featureStatTexts}>
+                <Text style={styles.featureStatLabel}>Outstanding Balance</Text>
+                <Text style={styles.featureStatValue} numberOfLines={1}>
+                  {formatINR(metrics.totalOutstanding)}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* Search Input Bar */}
         <View style={styles.searchContainer}>
           <Feather name="search" size={m(16)} color={colors.textSecondary} />
@@ -621,13 +623,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     paddingHorizontal: m(18),
     paddingTop: m(10),
-    paddingBottom: m(16),
+    paddingBottom: m(14),
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: m(12),
+    marginBottom: 0,
   },
   headerTag: {
     fontSize: m(10),
@@ -665,53 +667,106 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
 
-  // Unified 4-Tile Metrics Grid
-  unifiedMetricsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: m(8),
-    marginTop: m(2),
-  },
-  metricTile: {
-    width: '48.5%',
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
-    borderRadius: m(14),
-    paddingHorizontal: m(12),
-    paddingVertical: m(9),
-    borderWidth: 1,
-    borderColor: 'rgba(9, 48, 48, 0.08)',
-  },
-  tileHeaderRow: {
+  // Feature Highlight Card (Hero Overview matching reference UI)
+  featureCard: {
+    backgroundColor: colors.white,
+    borderRadius: m(20),
+    paddingVertical: m(14),
+    paddingHorizontal: m(16),
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(5),
-    marginBottom: m(3),
+    marginHorizontal: m(18),
+    marginBottom: m(14),
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.08)',
+    elevation: 3,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
   },
-  tileLabel: {
-    fontSize: m(11),
+  featureLeftCol: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: m(4),
+    minWidth: m(110),
+  },
+  featureRingWrapper: {
+    width: m(42),
+    height: m(42),
+    borderRadius: m(21),
+    backgroundColor: '#ecfdf5',
+    borderWidth: 1.5,
+    borderColor: '#a7f3d0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: m(4),
+  },
+  featureCountText: {
+    fontSize: m(17),
+    lineHeight: m(22),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    textAlign: 'center',
+  },
+  featureRingLabel: {
+    fontSize: m(11.5),
+    lineHeight: m(15),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    textAlign: 'center',
+  },
+  featureRingSub: {
+    fontSize: m(9.5),
+    lineHeight: m(13),
     fontFamily: FontFamily.primaryMedium,
-    color: colors.lettersAndIcons,
-    opacity: 0.85,
+    color: '#059669',
+    textAlign: 'center',
+    marginTop: m(1),
   },
-  tileValueWhite: {
-    fontSize: m(16),
+  featureDivider: {
+    width: 1,
+    height: '75%',
+    backgroundColor: '#e2e8f0',
+    marginHorizontal: m(12),
+  },
+  featureHorizontalDivider: {
+    height: 1,
+    backgroundColor: '#f1f5f9',
+    marginVertical: m(6),
+    width: '100%',
+  },
+  featureRightCol: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  featureStatItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: m(4),
+  },
+  featureStatIconBox: {
+    width: m(34),
+    height: m(34),
+    borderRadius: m(10),
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: m(10),
+  },
+  featureStatTexts: {
+    flex: 1,
+  },
+  featureStatLabel: {
+    fontSize: m(11),
+    lineHeight: m(15),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.textSecondary,
+  },
+  featureStatValue: {
+    fontSize: m(13.5),
+    lineHeight: m(18),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
-  },
-  tileValueBlue: {
-    fontSize: m(16),
-    fontFamily: FontFamily.primaryBold,
-    color: colors.oceanBlueButton,
-  },
-  tileValueDark: {
-    fontSize: m(16),
-    fontFamily: FontFamily.primaryBold,
-    color: colors.lettersAndIcons,
-  },
-  tileValueRed: {
-    fontSize: m(16),
-    fontFamily: FontFamily.primaryBold,
-    color: '#b91c1c',
   },
 
   // Main Curved Sheet

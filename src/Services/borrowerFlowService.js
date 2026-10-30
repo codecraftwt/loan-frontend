@@ -4,16 +4,37 @@ import axiosInstance from '../Utils/AxiosInstance';
  * Borrower Flow API Service
  * Aligned 1:1 with backend routes in borrowerFlowRoutes.js
  */
+// In-flight deduplication & short-term cache for borrower dashboard stats
+let pendingBorrowerStatsPromise = null;
+let lastBorrowerStatsData = null;
+let lastBorrowerStatsTimestamp = 0;
+
 export const borrowerFlowService = {
   // ─── Dashboard ───
-  getDashboardStats: async () => {
-    try {
-      const response = await axiosInstance.get('borrower/dashboard-stats');
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching borrower dashboard stats:', error);
-      throw error;
+  getDashboardStats: async (force = false) => {
+    const now = Date.now();
+    if (!force && lastBorrowerStatsData && now - lastBorrowerStatsTimestamp < 3500) {
+      return lastBorrowerStatsData;
     }
+    if (pendingBorrowerStatsPromise) {
+      return pendingBorrowerStatsPromise;
+    }
+
+    pendingBorrowerStatsPromise = (async () => {
+      try {
+        const response = await axiosInstance.get('borrower/dashboard-stats');
+        lastBorrowerStatsData = response.data;
+        lastBorrowerStatsTimestamp = Date.now();
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching borrower dashboard stats:', error);
+        throw error;
+      } finally {
+        pendingBorrowerStatsPromise = null;
+      }
+    })();
+
+    return pendingBorrowerStatsPromise;
   },
 
   // ─── Lenders Marketplace ───

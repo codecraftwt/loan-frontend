@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Linking,
+  Image,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
@@ -26,10 +27,14 @@ export default function LenderBorrowerDetails() {
   const fetchBorrowerProfile = useCallback(async () => {
     try {
       if (borrowerId) {
-        if (!borrowerData) setLoading(true);
         const res = await lenderFlowService.getBorrowerDetails(borrowerId);
-        if (res?.success && res.borrower) {
-          setBorrowerData(res.borrower);
+        if (res?.success) {
+          const borrowerObj = res.borrower || {};
+          const loansList = res.loans || borrowerObj.loans || [];
+          setBorrowerData({
+            ...borrowerObj,
+            loans: loansList,
+          });
         }
       }
     } catch (err) {
@@ -155,26 +160,11 @@ export default function LenderBorrowerDetails() {
           </TouchableOpacity>
 
           <View style={styles.headerTitleWrap}>
-            <Text style={styles.borrowerTag}>CREDIT DOSSIER</Text>
             <Text style={styles.borrowerHeaderName} numberOfLines={1}>
-              {tradeName}
-            </Text>
-            <Text style={styles.borrowerIdSub}>
-              ID: #{b?._id?.slice(-8)?.toUpperCase()}
+              History
             </Text>
           </View>
 
-          {/* Prime / Standard Tier Badge */}
-          <View style={[styles.tierHeaderBadge, isPrime ? styles.tierPrimeBg : styles.tierStandardBg]}>
-            <Feather
-              name={isPrime ? 'shield' : 'award'}
-              size={m(11)}
-              color={isPrime ? '#15803d' : colors.oceanBlueButton}
-            />
-            <Text style={[styles.tierHeaderText, isPrime ? styles.tierTextPrime : styles.tierTextStandard]}>
-              {isPrime ? 'PRIME >750' : 'STANDARD'}
-            </Text>
-          </View>
         </View>
       </View>
 
@@ -188,9 +178,13 @@ export default function LenderBorrowerDetails() {
           {/* ── 2.1 Hero CIBIL Credit Assessment Card ── */}
           <View style={styles.heroCard}>
             <View style={styles.heroTopRow}>
-              <View style={styles.heroIconCircle}>
-                <Feather name="briefcase" size={m(18)} color={colors.white} />
-              </View>
+              {b.profileImage ? (
+                <Image source={{ uri: b.profileImage }} style={styles.heroProfileImg} />
+              ) : (
+                <View style={styles.heroIconCircle}>
+                  <Feather name="briefcase" size={m(18)} color={colors.white} />
+                </View>
+              )}
               <View style={{ flex: 1 }}>
                 <Text style={styles.heroTradeName} numberOfLines={1}>
                   {tradeName}
@@ -227,11 +221,34 @@ export default function LenderBorrowerDetails() {
                 <Feather name="check-circle" size={m(11)} color="#15803d" />
                 <Text style={styles.trustChipText}>DigiLocker KYC Verified</Text>
               </View>
-              <View style={styles.trustChip}>
-                <Feather name="shield" size={m(11)} color={colors.oceanBlueButton} />
-                <Text style={styles.trustChipText}>
-                  {b.panCardNumber ? 'PAN Card on File' : 'KYC Verified'}
-                </Text>
+            </View>
+
+            {/* Direct Contact & Statutory Identity Section (2 Lines Matching Web) */}
+            <View style={styles.heroContactDivider} />
+            <View style={styles.heroContactTwoLinesBox}>
+              {/* Line 1: Phone & Aadhaar with ample spacing */}
+              <View style={styles.heroContactLine1}>
+                <View style={styles.heroInlineItem}>
+                  <Feather name="phone" size={m(13)} color="#2563eb" style={{ marginRight: m(6) }} />
+                  <Text style={styles.heroInlineText}>{phone || b.mobileNo || 'N/A'}</Text>
+                </View>
+
+                <View style={styles.heroInlineItem}>
+                  <Feather name="credit-card" size={m(13)} color="#2563eb" style={{ marginRight: m(6) }} />
+                  <Text style={styles.heroInlineText}>
+                    Aadhaar: {b.aadharCardNo || 'N/A'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Line 2: Email */}
+              <View style={styles.heroContactLine2}>
+                <View style={styles.heroInlineItem}>
+                  <Feather name="mail" size={m(13)} color="#2563eb" style={{ marginRight: m(6) }} />
+                  <Text style={styles.heroInlineText} numberOfLines={1}>
+                    {email || b.email || 'N/A'}
+                  </Text>
+                </View>
               </View>
             </View>
           </View>
@@ -239,24 +256,44 @@ export default function LenderBorrowerDetails() {
           {/* ── 2.2 Financial Portfolio KPI 4-Card Grid ── */}
           <View style={styles.kpiGrid}>
             <View style={styles.kpiCard}>
-              <Text style={styles.kpiLabel}>TOTAL FACILITIES</Text>
+              <View style={styles.kpiHeaderRow}>
+                <Text style={styles.kpiLabel}>TOTAL FACILITIES</Text>
+                <View style={[styles.kpiMiniIcon, { backgroundColor: '#f1f5f9' }]}>
+                  <Feather name="layers" size={m(11)} color={colors.textSecondary} />
+                </View>
+              </View>
               <Text style={styles.kpiVal}>{totalLoansCount} Deals</Text>
             </View>
 
             <View style={styles.kpiCard}>
-              <Text style={styles.kpiLabel}>SANCTIONED BOOK</Text>
+              <View style={styles.kpiHeaderRow}>
+                <Text style={styles.kpiLabel}>SANCTIONED BOOK</Text>
+                <View style={[styles.kpiMiniIcon, { backgroundColor: '#eff6ff' }]}>
+                  <Feather name="trending-up" size={m(11)} color="#2563eb" />
+                </View>
+              </View>
               <Text style={styles.kpiValBold}>{formatINR(totalSanctionedBook)}</Text>
             </View>
 
             <View style={styles.kpiCard}>
-              <Text style={styles.kpiLabel}>RECOVERED CAPITAL</Text>
+              <View style={styles.kpiHeaderRow}>
+                <Text style={styles.kpiLabel}>RECOVERED CAPITAL</Text>
+                <View style={[styles.kpiMiniIcon, { backgroundColor: '#dcfce7' }]}>
+                  <Feather name="check-circle" size={m(11)} color="#15803d" />
+                </View>
+              </View>
               <Text style={[styles.kpiValBold, { color: '#15803d' }]}>
                 {formatINR(totalRecovered)}
               </Text>
             </View>
 
             <View style={styles.kpiCard}>
-              <Text style={styles.kpiLabel}>ACTIVE OUTSTANDING</Text>
+              <View style={styles.kpiHeaderRow}>
+                <Text style={styles.kpiLabel}>ACTIVE OUTSTANDING</Text>
+                <View style={[styles.kpiMiniIcon, { backgroundColor: '#fef3c7' }]}>
+                  <Feather name="clock" size={m(11)} color="#b45309" />
+                </View>
+              </View>
               <Text style={[styles.kpiValBold, { color: colors.oceanBlueButton }]}>
                 {formatINR(totalOutstanding)}
               </Text>
@@ -300,6 +337,21 @@ export default function LenderBorrowerDetails() {
             </View>
 
             <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Aadhaar Card Number</Text>
+              <Text style={styles.detailValMono}>{b.aadharCardNo || 'Disclosed on File'}</Text>
+            </View>
+
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Email Address</Text>
+              <Text style={styles.detailValMono}>{email || b.email || 'Disclosed on File'}</Text>
+            </View>
+
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Mobile Phone</Text>
+              <Text style={styles.detailValMono}>{phone || b.mobileNo || 'Disclosed on File'}</Text>
+            </View>
+
+            <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>GSTIN Registration</Text>
               <Text style={styles.detailValMono}>
                 {bProfile.gstNumber || 'Active GST Registered'}
@@ -328,13 +380,20 @@ export default function LenderBorrowerDetails() {
             </View>
           </View>
 
-          {/* ── 2.4 Active Facilities with this Lender ── */}
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
+          {/* ── 2.4 Loan Facilities & Underwriting History Section ── */}
+          <View style={styles.facilitiesSection}>
+            <View style={styles.facilitiesSectionHeader}>
               <View style={[styles.cardIconCircle, { backgroundColor: colors.oceanBlueButton }]}>
                 <Feather name="layers" size={m(14)} color={colors.white} />
               </View>
-              <Text style={styles.cardTitle}>Platform Facilities ({loans.length})</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.facilitiesSectionTitle}>
+                  Loan Facilities & Underwriting History
+                </Text>
+                <Text style={styles.facilitiesCountSubText}>
+                  {loans.length} Records
+                </Text>
+              </View>
             </View>
 
             {loans.length === 0 ? (
@@ -346,52 +405,122 @@ export default function LenderBorrowerDetails() {
               </View>
             ) : (
               loans.map((l, index) => {
-                const isPaid = l.paymentStatus === 'paid';
-                const isOverdue = l.paymentStatus === 'overdue';
+                const statusStr = String(l.paymentStatus || l.status || '').toLowerCase().trim();
+                const amt = Number(l.amount) || 0;
+                const totalPaidVal = Number(l.totalPaid) || 0;
+                const remainingVal = Number(
+                  l.remainingAmount !== undefined
+                    ? l.remainingAmount
+                    : l.remainigAmount !== undefined
+                    ? l.remainigAmount
+                    : Math.max(0, amt - totalPaidVal)
+                ) || 0;
+
+                const isPaid =
+                  statusStr === 'paid' ||
+                  statusStr === 'closed' ||
+                  (remainingVal <= 0 && totalPaidVal > 0);
+                const isOverdue = statusStr === 'overdue';
+                const isPartPaid = statusStr === 'part paid' || statusStr === 'part_paid';
+
+                const statusLabel = isPaid
+                  ? 'PAID'
+                  : isOverdue
+                  ? 'OVERDUE'
+                  : isPartPaid
+                  ? 'PART PAID'
+                  : (statusStr === 'pending' ? 'PENDING' : (l.paymentStatus ? String(l.paymentStatus).toUpperCase() : 'PENDING'));
+
+                const pillStyle = isPaid
+                  ? styles.facPillPaid
+                  : isOverdue
+                  ? styles.facPillOverdue
+                  : isPartPaid
+                  ? styles.facPillPartPaid
+                  : styles.facPillPending;
+
+                const textStyle = isPaid
+                  ? styles.facTextPaid
+                  : isOverdue
+                  ? styles.facTextOverdue
+                  : isPartPaid
+                  ? styles.facTextPartPaid
+                  : styles.facTextPending;
+
+                const dotColor = isPaid
+                  ? '#16a34a'
+                  : isOverdue
+                  ? '#dc2626'
+                  : isPartPaid
+                  ? '#d97706'
+                  : colors.oceanBlueButton;
+
+                const loanIdStr = String(l.loanId || l._id || '');
+                const shortId = loanIdStr ? `#${loanIdStr.slice(-6).toUpperCase()}` : `#${index + 1}`;
 
                 return (
-                  <View key={l._id || index} style={styles.facilityItem}>
-                    <View style={{ flex: 1, marginRight: m(8) }}>
-                      <Text style={styles.facilityPurposeText} numberOfLines={1}>
-                        {l.purpose || l.dealName || 'Commercial Facility'}
-                      </Text>
-                      {l.pledgedSecurity ? (
-                        <Text style={styles.facilityPledgedText} numberOfLines={1}>
-                          🛡️ Pledged: {l.pledgedSecurity}
-                        </Text>
-                      ) : null}
-                      <Text style={styles.facilitySubText}>
-                        Sanctioned: {formatDate(l.loanGivenDate)}
-                      </Text>
-                    </View>
+                  <View key={l._id || index} style={styles.facilityCard}>
+                    {/* Facility Top Header */}
+                    <View style={styles.facilityCardHeader}>
+                      <View style={styles.facilityIconCircle}>
+                        <Feather name="credit-card" size={m(15)} color={colors.oceanBlueButton} />
+                      </View>
 
-                    <View style={{ alignItems: 'flex-end' }}>
-                      <Text style={styles.facilityAmountText}>
-                        {formatINR(l.amount || 0)}
-                      </Text>
-                      <View
-                        style={[
-                          styles.facilityPill,
-                          isPaid
-                            ? styles.facPillPaid
-                            : isOverdue
-                            ? styles.facPillOverdue
-                            : styles.facPillPending,
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.facilityPillText,
-                            isPaid
-                              ? styles.facTextPaid
-                              : isOverdue
-                              ? styles.facTextOverdue
-                              : styles.facTextPending,
-                          ]}
-                        >
-                          {isPaid ? 'PAID' : isOverdue ? 'OVERDUE' : 'ACTIVE'}
+                      <View style={styles.facilityHeaderInfo}>
+                        <Text style={styles.facilityPurposeText} numberOfLines={1}>
+                          {l.purpose || l.dealName || 'Commercial Facility'}
+                        </Text>
+                        <Text style={styles.facilitySubText} numberOfLines={1}>
+                          Facility {shortId}{l.lenderName ? ` • ${l.lenderName}` : ''}
                         </Text>
                       </View>
+
+                      {/* Status Pill Badge with Dot */}
+                      <View style={[styles.facilityPill, pillStyle]}>
+                        <View style={[styles.statusDot, { backgroundColor: dotColor }]} />
+                        <Text style={[styles.facilityPillText, textStyle]}>
+                          {statusLabel}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Collateral Pledged Banner (if present) */}
+                    {l.pledgedSecurity ? (
+                      <View style={styles.facilityPledgedChip}>
+                        <Feather name="shield" size={m(11)} color="#b45309" style={{ marginRight: m(4) }} />
+                        <Text style={styles.facilityPledgedText} numberOfLines={1}>
+                          Pledged Collateral: {l.pledgedSecurity}
+                        </Text>
+                      </View>
+                    ) : null}
+
+                    {/* Key Financial Metrics Strip */}
+                    <View style={styles.facilityMetricsStrip}>
+                      <View style={styles.facilityMetricCol}>
+                        <Text style={styles.facilityMetricLabel}>Sanctioned</Text>
+                        <Text style={styles.facilityAmountText}>{formatINR(amt)}</Text>
+                      </View>
+
+                      <View style={styles.facilityMetricCol}>
+                        <Text style={styles.facilityMetricLabel}>Total Paid</Text>
+                        <Text style={[styles.facilityMetricVal, { color: '#16a34a' }]}>
+                          {formatINR(totalPaidVal)}
+                        </Text>
+                      </View>
+
+                      <View style={styles.facilityMetricCol}>
+                        <Text style={styles.facilityMetricLabel}>Remaining</Text>
+                        <Text style={[styles.facilityMetricVal, { color: remainingVal > 0 ? '#d97706' : '#64748b' }]}>
+                          {formatINR(remainingVal)}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Facility Due Date Footer */}
+                    <View style={styles.facilityFooterRow}>
+                      <Text style={styles.facilityFooterDate}>
+                        Due: {formatDate(l.loanEndDate || l.loanGivenDate)}
+                      </Text>
                     </View>
                   </View>
                 );
@@ -399,27 +528,6 @@ export default function LenderBorrowerDetails() {
             )}
           </View>
         </ScrollView>
-
-        {/* ── Fixed Bottom Actions Bar: WhatsApp & Phone Call ── */}
-        <View style={styles.bottomBar}>
-          <TouchableOpacity
-            style={styles.callActionBtn}
-            onPress={() => handleCall(phone)}
-            activeOpacity={0.8}
-          >
-            <Feather name="phone" size={m(16)} color={colors.oceanBlueButton} />
-            <Text style={styles.callActionText}>Call Contact</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.whatsAppActionBtn}
-            onPress={() => handleWhatsApp(phone, tradeName)}
-            activeOpacity={0.8}
-          >
-            <Feather name="message-circle" size={m(16)} color={colors.white} />
-            <Text style={styles.whatsAppActionText}>WhatsApp Discussion</Text>
-          </TouchableOpacity>
-        </View>
       </View>
     </ScreenWrapper>
   );
@@ -524,7 +632,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: m(16),
-    paddingBottom: m(90),
+    paddingBottom: m(24),
   },
 
   // Hero Card
@@ -641,6 +749,42 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.primaryMedium,
     color: colors.lettersAndIcons,
   },
+  heroProfileImg: {
+    width: m(44),
+    height: m(44),
+    borderRadius: m(22),
+    marginRight: m(12),
+    backgroundColor: '#e2e8f0',
+  },
+  heroContactDivider: {
+    height: 1,
+    backgroundColor: '#f1f5f9',
+    marginTop: m(12),
+    marginBottom: m(10),
+  },
+  heroContactTwoLinesBox: {
+    marginTop: m(2),
+  },
+  heroContactLine1: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingRight: m(4),
+  },
+  heroContactLine2: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: m(8),
+  },
+  heroInlineItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  heroInlineText: {
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
+  },
 
   // KPI Grid
   kpiGrid: {
@@ -657,12 +801,24 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(9, 48, 48, 0.06)',
   },
+  kpiHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: m(4),
+  },
+  kpiMiniIcon: {
+    width: m(20),
+    height: m(20),
+    borderRadius: m(10),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   kpiLabel: {
     fontSize: m(9.5),
     fontFamily: FontFamily.primaryBold,
     color: colors.textSecondary,
     letterSpacing: 0.5,
-    marginBottom: m(4),
   },
   kpiVal: {
     fontSize: m(14),
@@ -733,10 +889,34 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  // Facilities
+  // Facilities Section & Dedicated Cards
+  facilitiesSection: {
+    marginBottom: m(16),
+  },
+  facilitiesSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: m(12),
+    paddingHorizontal: m(2),
+  },
+  facilitiesSectionTitle: {
+    fontSize: m(13.5),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    letterSpacing: 0.2,
+  },
+  facilitiesCountSubText: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.textSecondary,
+  },
   emptyFacilitiesBox: {
     alignItems: 'center',
     paddingVertical: m(20),
+    backgroundColor: colors.white,
+    borderRadius: m(16),
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.06)',
   },
   emptyFacilitiesText: {
     fontSize: m(12),
@@ -745,40 +925,117 @@ const styles = StyleSheet.create({
     marginTop: m(6),
     textAlign: 'center',
   },
-  facilityItem: {
+  facilityCard: {
+    backgroundColor: colors.white,
+    borderRadius: m(16),
+    padding: m(14),
+    marginBottom: m(12),
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.08)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  facilityCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: m(10),
-    borderBottomWidth: 1,
-    borderBottomColor: '#f8fafc',
+    justifyContent: 'space-between',
+  },
+  facilityIconCircle: {
+    width: m(32),
+    height: m(32),
+    borderRadius: m(16),
+    backgroundColor: '#eff6ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: m(10),
+  },
+  facilityHeaderInfo: {
+    flex: 1,
+    marginRight: m(8),
   },
   facilityPurposeText: {
-    fontSize: m(12.5),
+    fontSize: m(13),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
-  },
-  facilityPledgedText: {
-    fontSize: m(10.5),
-    fontFamily: FontFamily.primaryMedium,
-    color: '#b45309',
-    marginTop: m(1),
   },
   facilitySubText: {
     fontSize: m(10.5),
     fontFamily: FontFamily.primaryRegular,
     color: colors.textSecondary,
-    marginTop: m(1),
+    marginTop: m(2),
+  },
+  facilityPledgedChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fffbeb',
+    borderRadius: m(6),
+    paddingHorizontal: m(8),
+    paddingVertical: m(3.5),
+    marginTop: m(8),
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: '#fef3c7',
+  },
+  facilityPledgedText: {
+    fontSize: m(10),
+    fontFamily: FontFamily.primaryMedium,
+    color: '#b45309',
+  },
+  facilityMetricsStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#f8fafc',
+    borderRadius: m(10),
+    paddingHorizontal: m(12),
+    paddingVertical: m(8),
+    marginTop: m(10),
+  },
+  facilityMetricCol: {
+    alignItems: 'flex-start',
+  },
+  facilityMetricLabel: {
+    fontSize: m(9.5),
+    fontFamily: FontFamily.primaryRegular,
+    color: colors.textSecondary,
+    marginBottom: m(2),
   },
   facilityAmountText: {
     fontSize: m(13),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
   },
+  facilityMetricVal: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  facilityFooterRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginTop: m(8),
+  },
+  facilityFooterDate: {
+    fontSize: m(10),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.textSecondary,
+  },
   facilityPill: {
-    paddingHorizontal: m(6),
-    paddingVertical: m(2),
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: m(7),
+    paddingVertical: m(3),
     borderRadius: m(6),
-    marginTop: m(2),
+  },
+  statusDot: {
+    width: m(5),
+    height: m(5),
+    borderRadius: m(2.5),
+    marginRight: m(4),
   },
   facPillPaid: {
     backgroundColor: '#dcfce7',
@@ -804,52 +1061,12 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.primaryBold,
     color: colors.oceanBlueButton,
   },
-
-  // Bottom Actions Bar
-  bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: colors.white,
-    paddingHorizontal: m(16),
-    paddingVertical: m(12),
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(9, 48, 48, 0.08)',
-    flexDirection: 'row',
-    gap: m(10),
-    elevation: 8,
+  facPillPartPaid: {
+    backgroundColor: '#fef3c7',
   },
-  callActionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#eff6ff',
-    borderWidth: 1,
-    borderColor: '#bfdbfe',
-    borderRadius: m(12),
-    paddingVertical: m(12),
-    gap: m(6),
-  },
-  callActionText: {
-    fontSize: m(12.5),
+  facTextPartPaid: {
+    fontSize: m(9),
     fontFamily: FontFamily.primaryBold,
-    color: colors.oceanBlueButton,
-  },
-  whatsAppActionBtn: {
-    flex: 1.4,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#15803d',
-    borderRadius: m(12),
-    paddingVertical: m(12),
-    gap: m(6),
-  },
-  whatsAppActionText: {
-    fontSize: m(12.5),
-    fontFamily: FontFamily.primaryBold,
-    color: colors.white,
+    color: '#b45309',
   },
 });

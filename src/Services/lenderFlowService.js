@@ -4,16 +4,66 @@ import axiosInstance from '../Utils/AxiosInstance';
  * Lender Flow API Service
  * Aligned 1:1 with backend routes in lenderFlowRoutes.js & planPurchaseRoutes.js
  */
-export const lenderFlowService = {
-  // ─── 1. Executive Dashboard ───
-  getDashboardStats: async () => {
+// In-flight deduplication, 45s cache & listener event bus for lender dashboard stats
+let pendingStatsPromise = null;
+let lastStatsData = null;
+let lastStatsTimestamp = 0;
+const statsListeners = new Set();
+
+const notifyStatsListeners = (data) => {
+  statsListeners.forEach(cb => {
     try {
-      const response = await axiosInstance.get('lender/dashboard-stats');
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching lender dashboard stats:', error);
-      throw error;
+      cb(data);
+    } catch (err) {
+      console.warn('Error in stats listener:', err);
     }
+  });
+};
+
+export const lenderFlowService = {
+  // ─── Stats Subscription for Badges & Real-time Sync ───
+  subscribeToStats: (callback) => {
+    if (typeof callback === 'function') {
+      statsListeners.add(callback);
+      if (lastStatsData) {
+        callback(lastStatsData);
+      }
+      return () => statsListeners.delete(callback);
+    }
+    return () => {};
+  },
+
+  clearStatsCache: () => {
+    lastStatsData = null;
+    lastStatsTimestamp = 0;
+  },
+
+  // ─── 1. Executive Dashboard ───
+  getDashboardStats: async (force = false) => {
+    const now = Date.now();
+    if (!force && lastStatsData && now - lastStatsTimestamp < 45000) {
+      return lastStatsData;
+    }
+    if (pendingStatsPromise) {
+      return pendingStatsPromise;
+    }
+
+    pendingStatsPromise = (async () => {
+      try {
+        const response = await axiosInstance.get('lender/dashboard-stats');
+        lastStatsData = response.data;
+        lastStatsTimestamp = Date.now();
+        notifyStatsListeners(response.data);
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching lender dashboard stats:', error);
+        throw error;
+      } finally {
+        pendingStatsPromise = null;
+      }
+    })();
+
+    return pendingStatsPromise;
   },
 
   // ─── 2. Incoming Borrower Loan Requests & Underwriting ───
@@ -161,9 +211,9 @@ export const lenderFlowService = {
     }
   },
 
-  recalculateLoanSchedule: async (loanId) => {
+  recalculateLoanSchedule: async (loanId, payload = {}) => {
     try {
-      const response = await axiosInstance.post(`lender/loans/${loanId}/recalculate`);
+      const response = await axiosInstance.post(`lender/loans/${loanId}/recalculate`, payload);
       return response.data;
     } catch (error) {
       console.error(`Error recalculating schedule for ${loanId}:`, error);
@@ -267,11 +317,13 @@ export const lenderFlowService = {
   // ─── 8. Subscription Plans & Tier Management ───
   getAvailablePlans: async () => {
     try {
-      const response = await axiosInstance.get('admin/plans/active').catch(() => {
-        return axiosInstance.get('admin/plans');
-      });
+      const response = await axiosInstance.get('admin/plans/active');
       return response.data;
     } catch (error) {
+      if (error?.response?.status === 404) {
+        const fallback = await axiosInstance.get('admin/plans');
+        return fallback.data;
+      }
       console.error('Error fetching available plans:', error);
       throw error;
     }

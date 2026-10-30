@@ -123,22 +123,8 @@ export default function LenderOfficeJurisdictionScreen() {
         </TouchableOpacity>
 
         <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTag}>OFFICIAL LOCATION</Text>
           <Text style={styles.headerTitle}>Office & Jurisdiction</Text>
         </View>
-
-        <TouchableOpacity
-          onPress={handleSave}
-          disabled={saving}
-          style={styles.saveHeaderBtn}
-          activeOpacity={0.8}
-        >
-          {saving ? (
-            <ActivityIndicator size="small" color={colors.white} />
-          ) : (
-            <Feather name="check" size={m(17)} color={colors.white} />
-          )}
-        </TouchableOpacity>
       </View>
 
       {/* ── 2. Curved Main Body Section ── */}
@@ -306,6 +292,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 2,
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   headerTitleWrap: {
     flex: 1,

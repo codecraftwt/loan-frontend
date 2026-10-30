@@ -26,6 +26,9 @@ export default function LenderRequestDetails() {
   const { requestId, request: initialRequest } = route.params || {};
 
   const [request, setRequest] = useState(initialRequest || null);
+  const [borrowerLoans, setBorrowerLoans] = useState([]);
+  const [borrowerSummary, setBorrowerSummary] = useState(null);
+  const [showAllFacilities, setShowAllFacilities] = useState(false);
   const [loading, setLoading] = useState(!initialRequest);
 
   // Term Sheet / Accept Modal State
@@ -55,6 +58,8 @@ export default function LenderRequestDetails() {
         const res = await lenderFlowService.getRequestById(requestId);
         if (res?.success && res.request) {
           setRequest(res.request);
+          if (res.borrowerLoans) setBorrowerLoans(res.borrowerLoans);
+          if (res.borrowerSummary) setBorrowerSummary(res.borrowerSummary);
           // Pre-populate terms from application
           setSanctionAmount(String(res.request.amount || 500000));
           setSanctionRate(String(res.request.requestedRate || 12.5));
@@ -277,6 +282,74 @@ export default function LenderRequestDetails() {
 
   const borrowerName = b.userName || bUser.userName || 'Corporate Borrower';
   const businessName = b.businessName || bProfile.businessName || bUser.companyName || borrowerName;
+  const businessType = b.businessType || bProfile.businessType || 'Private Limited Company';
+  const employmentType = b.employmentType || bProfile.employmentType || 'Salaried Employee';
+  const panNumber = b.panCardNumber || bUser.panCardNumber || 'Not Provided';
+  const aadharNumber = b.aadharCardNo || bUser.aadharCardNo || 'Not Provided';
+  const gstNumber = b.gstNumber || bProfile.gstNumber || 'Not Provided';
+  const yearsInBusiness = b.yearsInBusiness !== undefined ? b.yearsInBusiness : (bProfile.yearsInBusiness ?? 3);
+
+  // Credit Score and Financials
+  const creditScore = Number(b.creditScore || bProfile.creditScore || 750);
+  const rawRiskGrade = b.riskGrade || (creditScore >= 750 ? 'A' : creditScore >= 680 ? 'B' : 'C');
+  const riskGrade = String(rawRiskGrade).replace(/^Grade\s+/i, '');
+  const annualRevenue = Number(b.annualRevenue || bProfile.annualRevenue || 0);
+  const monthlyIncome = Number(b.monthlyIncome || bProfile.monthlyIncome || 0);
+  const totalLoansTaken = b.totalLoansTaken !== undefined ? b.totalLoansTaken : (bProfile.totalLoansTaken ?? (borrowerSummary?.totalLoansCount ?? borrowerLoans.length));
+  const onTimeRepayments = b.onTimeRepayments !== undefined ? b.onTimeRepayments : (bProfile.onTimeRepayments ?? 0);
+  const defaultsCount = b.defaultsCount !== undefined ? b.defaultsCount : (bProfile.defaultsCount ?? 0);
+
+  // Contact & Address
+  const phone = b.mobileNo || bUser.mobileNo || 'Not Available';
+  const altPhone = b.altMobileNo || bUser.altMobileNo || '';
+  const email = b.email || bUser.email || 'Not Available';
+  const streetAddress = b.address || bUser.address || '';
+  const city = b.city || bUser.city || '';
+  const taluka = b.taluka || bUser.taluka || '';
+  const district = b.district || bUser.district || '';
+  const state = b.state || bUser.state || '';
+  const pincode = b.pincode || bUser.pincode || '';
+  const fullAddress = [streetAddress, taluka, city, district, state, pincode].filter(Boolean).join(', ') || 'Not Provided';
+
+  const formatAadhaar = (val) => {
+    if (!val || val === 'Not Provided') return 'Not Provided';
+    const clean = String(val).replace(/\s+/g, '');
+    if (clean.length === 12) {
+      return `${clean.slice(0, 4)} **** ${clean.slice(8)}`;
+    }
+    return val;
+  };
+
+  const formatDate = (iso) => {
+    if (!iso) return 'N/A';
+    return new Date(iso).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+  };
+
+  const formatDateTime = (iso) => {
+    if (!iso) return 'N/A';
+    return new Date(iso).toLocaleString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const isAutoClosed = request.status === 'auto_rejected';
+  const isAccepted = request.status === 'accepted';
+  const isPending = request.status === 'pending';
+  const statusLabel = isAutoClosed
+    ? 'AUTO-CLOSED'
+    : isPending
+    ? 'PENDING REVIEW'
+    : isAccepted
+    ? 'ACCEPTED & ACTIVE'
+    : request.status.toUpperCase();
 
   return (
     <ScreenWrapper
@@ -290,6 +363,7 @@ export default function LenderRequestDetails() {
 
       {/* ── 1. Top Green Header Banner ── */}
       <View style={styles.topBanner}>
+        {/* Header: Back Button + Borrower Name & App ID */}
         <View style={styles.headerRow}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
@@ -300,59 +374,61 @@ export default function LenderRequestDetails() {
           </TouchableOpacity>
 
           <View style={styles.headerTitleWrap}>
-            <Text style={styles.headerTag}>COMMERCIAL FACILITY UNDERWRITING</Text>
             <Text style={styles.headerTitle} numberOfLines={1}>
-              {businessName}
+              {borrowerName}
             </Text>
-            <Text style={styles.headerSubtitle}>
-              App ID: #{request._id.slice(-6).toUpperCase()}
-            </Text>
-          </View>
-
-          {/* Status Badge */}
-          <View
-            style={[
-              styles.statusPill,
-              request.status === 'pending'
-                ? styles.pillPending
-                : request.status === 'accepted'
-                ? styles.pillAccepted
-                : styles.pillRejected,
-            ]}
-          >
-            <Text
-              style={[
-                styles.statusPillText,
-                request.status === 'pending'
-                  ? styles.textPending
-                  : request.status === 'accepted'
-                  ? styles.textAccepted
-                  : styles.textRejected,
-              ]}
-            >
-              {request.status.toUpperCase()}
+            <Text style={styles.headerSubtitle} numberOfLines={1}>
+              App ID: #{request._id?.slice(-8).toUpperCase()} • Submitted {formatDate(request.createdAt)}
             </Text>
           </View>
         </View>
 
-        {/* Unified 3-Column Telemetry Strip on Green */}
-        <View style={styles.topMetricsCard}>
-          <View style={styles.topMetricColumn}>
-            <Text style={styles.topMetricLabel}>Principal</Text>
-            <Text style={styles.topMetricValueWhite}>{formatINR(request.amount)}</Text>
-          </View>
-          <View style={styles.topMetricDivider} />
-          <View style={styles.topMetricColumn}>
-            <Text style={styles.topMetricLabel}>Tenure / Rate</Text>
-            <Text style={styles.topMetricValueBlue}>
-              {request.tenureMonths || 12}M • {request.requestedRate || 12}%
+        {/* Below to Header: The Two Cards (Credit Score Badge & Status Pill) */}
+        <View style={styles.headerBadgesRow}>
+          <View style={styles.cibilScoreBadge}>
+            <Feather name="shield" size={m(12)} color="#15803d" />
+            <Text style={styles.cibilScoreBadgeText}>
+              SCORE: {creditScore} (GRADE {riskGrade})
             </Text>
           </View>
-          <View style={styles.topMetricDivider} />
-          <View style={styles.topMetricColumn}>
-            <Text style={styles.topMetricLabel}>CIBIL Score</Text>
-            <Text style={styles.topMetricValueDark}>
-              {underwritingData?.creditScore || 750} ({underwritingData?.riskGrade || 'A'})
+
+          <View
+            style={[
+              styles.statusPill,
+              isPending
+                ? styles.pillPending
+                : isAccepted
+                ? styles.pillAccepted
+                : isAutoClosed
+                ? styles.pillAutoClosed
+                : styles.pillRejected,
+            ]}
+          >
+            <View
+              style={[
+                styles.statusDot,
+                isPending
+                  ? styles.dotPending
+                  : isAccepted
+                  ? styles.dotAccepted
+                  : isAutoClosed
+                  ? styles.dotAutoClosed
+                  : styles.dotRejected,
+              ]}
+            />
+            <Text
+              style={[
+                styles.statusPillText,
+                isPending
+                  ? styles.textPending
+                  : isAccepted
+                  ? styles.textAccepted
+                  : isAutoClosed
+                  ? styles.textAutoClosed
+                  : styles.textRejected,
+              ]}
+            >
+              {statusLabel}
             </Text>
           </View>
         </View>
@@ -364,192 +440,400 @@ export default function LenderRequestDetails() {
           style={styles.container}
           contentContainerStyle={[
             styles.scrollContent,
-            request.status === 'pending' && { paddingBottom: m(100) },
+            isPending && { paddingBottom: m(100) },
           ]}
           showsVerticalScrollIndicator={false}
         >
-          {/* Card 1: Application Facility */}
+          {/* ── SECTION 1: LOAN APPLICATION FACILITY ── */}
           <View style={styles.card}>
             <View style={styles.cardHeaderRow}>
               <View style={styles.iconCircleBlue}>
                 <Feather name="dollar-sign" size={m(16)} color={colors.white} />
               </View>
               <View style={{ flex: 1, marginLeft: m(10) }}>
-                <Text style={styles.cardSectionTitle}>Application Facility</Text>
+                <Text style={styles.cardSectionTitle}>LOAN APPLICATION FACILITY</Text>
                 <Text style={styles.cardSectionSub}>Financing terms & collateral specification</Text>
               </View>
             </View>
 
-            <View style={styles.detailsList}>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Repayment Mode</Text>
-                <Text style={styles.detailValBold}>
-                  {request.repaymentType === 'ONE_TIME' || request.repaymentType === 'bullet'
-                    ? 'One-Time Bullet'
-                    : 'Monthly EMI'}
+            <View style={styles.facilityGrid}>
+              <View style={styles.facilityTilePrimary}>
+                <Text style={styles.facilityTileLabel}>REQUESTED PRINCIPAL</Text>
+                <Text style={styles.facilityTileValPrimary}>{formatINR(request.amount)}</Text>
+                <Text style={styles.facilityTileSub}>₹{Number(request.amount || 0).toLocaleString('en-IN')} INR</Text>
+              </View>
+
+              <View style={styles.facilityTile}>
+                <Text style={styles.facilityTileLabel}>REPAYMENT TYPE</Text>
+                <Text style={styles.facilityTileVal}>
+                  {request.repaymentType === 'ONE_TIME' ? 'One-Time Bullet' : 'Monthly EMI'}
+                </Text>
+                <Text style={styles.facilityTileSub}>
+                  {request.repaymentType === 'ONE_TIME' ? 'Lump sum at maturity' : 'Equal monthly installments'}
                 </Text>
               </View>
 
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Loan Purpose</Text>
-                <Text style={styles.detailValBold}>{request.purpose || 'Working Capital'}</Text>
+              <View style={styles.facilityTile}>
+                <Text style={styles.facilityTileLabel}>LOAN PURPOSE</Text>
+                <Text style={styles.facilityTileVal}>{request.purpose || 'Working Capital Line'}</Text>
+                <Text style={styles.facilityTileSub}>Commercial facility</Text>
               </View>
 
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Pledged Collateral</Text>
-                <View style={styles.securityTag}>
-                  <Feather name="shield" size={m(11)} color="#b45309" />
-                  <Text style={styles.securityTagText}>
-                    {request.pledgedSecurity || 'Unsecured Commercial Facility'}
-                  </Text>
+              <View style={styles.facilityTile}>
+                <Text style={styles.facilityTileLabel}>REPAYMENT TENURE</Text>
+                <Text style={styles.facilityTileVal}>{request.tenureMonths || 12} Months</Text>
+                <Text style={styles.facilityTileSub}>
+                  {((request.tenureMonths || 12) / 12).toFixed(1)} Years duration
+                </Text>
+              </View>
+            </View>
+
+            {/* Pledged Security / Collateral Offered Box */}
+            <View style={styles.securityBox}>
+              <View style={styles.securityBoxHeader}>
+                <Feather name="shield" size={m(13)} color="#b45309" />
+                <Text style={styles.securityBoxLabel}>PLEDGED SECURITY / COLLATERAL OFFERED</Text>
+                <View style={styles.securityBadge}>
+                  <Text style={styles.securityBadgeText}>Borrower Declaration</Text>
                 </View>
               </View>
-
-              {request.notes ? (
-                <View style={styles.notesBox}>
-                  <Text style={styles.notesLabel}>Borrower Note:</Text>
-                  <Text style={styles.notesVal}>{request.notes}</Text>
-                </View>
-              ) : null}
+              <Text style={styles.securityValText}>
+                {request.pledgedSecurity || 'None Specified / Unsecured Facility'}
+              </Text>
+              <Text style={styles.securityNoteText}>
+                This pledged security is recorded in the official loan application and will be incorporated into Schedule 1 of the legal facility agreement upon sanctioning.
+              </Text>
             </View>
+
+            {request.notes ? (
+              <View style={styles.notesBox}>
+                <Text style={styles.notesLabel}>Borrower Note:</Text>
+                <Text style={styles.notesVal}>{request.notes}</Text>
+              </View>
+            ) : null}
           </View>
 
-          {/* Card 2: AI Credit Underwriting Hub */}
-          <View style={styles.card}>
-            <View style={styles.cardHeaderRow}>
-              <View style={styles.iconCircleGreen}>
-                <Feather name="cpu" size={m(16)} color={colors.white} />
-              </View>
-              <View style={{ flex: 1, marginLeft: m(10) }}>
-                <Text style={styles.cardSectionTitle}>AI Credit Underwriting Hub</Text>
-                <Text style={styles.cardSectionSub}>Automated solvency & risk analysis</Text>
-              </View>
-            </View>
-
-            <View style={styles.underwritingGrid}>
-              {/* Credit Score & Grade */}
-              <View style={styles.metricTile}>
-                <Text style={styles.uwMetricLabel}>Credit Score</Text>
-                <Text style={[styles.uwMetricVal, { color: '#16a34a' }]}>
-                  {underwritingData?.creditScore || 750} / 900
-                </Text>
-                <Text style={styles.uwMetricSub}>Grade {underwritingData?.riskGrade} (Low Risk)</Text>
-              </View>
-
-              {/* DSCR Gauge */}
-              <View style={styles.metricTile}>
-                <Text style={styles.uwMetricLabel}>DSCR Ratio</Text>
-                <Text
-                  style={[
-                    styles.uwMetricVal,
-                    { color: (underwritingData?.dscr || 1) >= 1.3 ? '#16a34a' : '#d97706' },
-                  ]}
-                >
-                  {underwritingData?.dscr || 1.45}x
-                </Text>
-                <Text style={styles.uwMetricSub}>
-                  {(underwritingData?.dscr || 1) >= 1.3 ? 'Healthy Coverage' : 'Moderate Coverage'}
-                </Text>
-              </View>
-
-              {/* Max Recommended Cap */}
-              <View style={styles.metricTile}>
-                <Text style={styles.uwMetricLabel}>Recommended Cap</Text>
-                <Text style={[styles.uwMetricVal, { color: colors.oceanBlueButton }]}>
-                  {formatINR(underwritingData?.recommendedMaxCap || 500000)}
-                </Text>
-                <Text style={styles.uwMetricSub}>Based on 35% turnover</Text>
-              </View>
-
-              {/* Monthly Net Inflow */}
-              <View style={styles.metricTile}>
-                <Text style={styles.uwMetricLabel}>Monthly Cashflow</Text>
-                <Text style={styles.uwMetricVal}>
-                  {formatINR(underwritingData?.monthlyIncome || 85000)}
-                </Text>
-                <Text style={styles.uwMetricSub}>Verified Bank Inflow</Text>
-              </View>
-            </View>
-
-            {/* Statutory Checklist */}
-            <View style={styles.checklistCard}>
-              <Text style={styles.checklistTitle}>Statutory Verification Checklist</Text>
-              <View style={styles.checkItem}>
-                <Feather name="check-circle" size={m(13)} color="#16a34a" />
-                <Text style={styles.checkText}>PAN Card Authenticated via NSDL</Text>
-              </View>
-              <View style={styles.checkItem}>
-                <Feather name="check-circle" size={m(13)} color="#16a34a" />
-                <Text style={styles.checkText}>Aadhaar DigiLocker e-KYC Verified</Text>
-              </View>
-              <View style={styles.checkItem}>
-                <Feather name="check-circle" size={m(13)} color="#16a34a" />
-                <Text style={styles.checkText}>Active GST Registration & Filing History</Text>
-              </View>
-              <View style={styles.checkItem}>
-                <Feather name="check-circle" size={m(13)} color="#16a34a" />
-                <Text style={styles.checkText}>Bank Account Mandate Ready</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Card 3: Borrower Profile */}
+          {/* ── SECTION 2: BORROWER & BUSINESS DETAILS ── */}
           <View style={styles.card}>
             <View style={styles.cardHeaderRow}>
               <View style={styles.iconCircleDark}>
                 <Feather name="briefcase" size={m(16)} color={colors.white} />
               </View>
               <View style={{ flex: 1, marginLeft: m(10) }}>
-                <Text style={styles.cardSectionTitle}>Borrower Profile</Text>
-                <Text style={styles.cardSectionSub}>Corporate KYC & contact records</Text>
+                <Text style={styles.cardSectionTitle}>BORROWER & BUSINESS DETAILS</Text>
+                <Text style={styles.cardSectionSub}>Corporate constitution & statutory identifiers</Text>
               </View>
             </View>
 
             <View style={styles.detailsList}>
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Authorized Person</Text>
+                <Text style={styles.detailLabel}>Borrower Full Name</Text>
                 <Text style={styles.detailValBold}>{borrowerName}</Text>
               </View>
 
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Constitution</Text>
-                <Text style={styles.detailValBold}>
-                  {b.businessType || bProfile.businessType || 'Private Limited'}
-                </Text>
+                <Text style={styles.detailLabel}>Business / Trade Name</Text>
+                <Text style={styles.detailValBold}>{businessName}</Text>
+              </View>
+
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Business Structure</Text>
+                <Text style={styles.detailVal}>{businessType}</Text>
+              </View>
+
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Employment Type</Text>
+                <Text style={styles.detailVal}>{employmentType}</Text>
               </View>
 
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Years in Business</Text>
-                <Text style={styles.detailValBold}>
-                  {b.yearsInBusiness || bProfile.yearsInBusiness || 4} Years
-                </Text>
+                <Text style={styles.detailVal}>{yearsInBusiness} Years</Text>
               </View>
 
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>PAN Number</Text>
-                <Text style={styles.detailValMono}>
-                  {b.panCardNumber || bUser.panCardNumber || 'Disclosed'}
-                </Text>
+                <Text style={styles.detailLabel}>PAN Card Number</Text>
+                <Text style={styles.detailValMono}>{panNumber}</Text>
               </View>
 
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>GSTIN</Text>
-                <Text style={styles.detailValMono}>
-                  {b.gstNumber || bProfile.gstNumber || 'Disclosed'}
-                </Text>
+                <Text style={styles.detailLabel}>Aadhaar Card No</Text>
+                <Text style={styles.detailValMono}>{formatAadhaar(aadharNumber)}</Text>
               </View>
 
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Contact</Text>
-                <Text style={styles.detailValBold}>
-                  {b.mobileNo || bUser.mobileNo || 'N/A'}
-                </Text>
+              <View style={[styles.detailRow, { borderBottomWidth: 0 }]}>
+                <Text style={styles.detailLabel}>GST Registration No</Text>
+                <Text style={styles.detailValMono}>{gstNumber || 'Not Provided'}</Text>
               </View>
             </View>
           </View>
 
-          {/* Card 4: Disbursal OTP Status Card (when Accepted) */}
-          {request.status === 'accepted' && (
+          {/* ── SECTION 3: FINANCIAL & CREDIT ASSESSMENT ── */}
+          <View style={styles.card}>
+            <View style={styles.cardHeaderRow}>
+              <View style={styles.iconCircleGreen}>
+                <Feather name="shield" size={m(16)} color={colors.white} />
+              </View>
+              <View style={{ flex: 1, marginLeft: m(10) }}>
+                <Text style={styles.cardSectionTitle}>FINANCIAL & CREDIT ASSESSMENT</Text>
+                <Text style={styles.cardSectionSub}>Credit score, cashflow & risk grading</Text>
+              </View>
+            </View>
+
+            <View style={styles.detailsList}>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Credit Risk Score</Text>
+                <Text style={[styles.detailValBold, { color: creditScore >= 700 ? '#16a34a' : '#d97706' }]}>
+                  {creditScore} / 900
+                </Text>
+              </View>
+
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Assigned Risk Grade</Text>
+                <View style={styles.riskGradeBadge}>
+                  <Text style={styles.riskGradeBadgeText}>
+                    Grade {riskGrade} ({creditScore >= 750 ? 'Low Default Risk' : creditScore >= 680 ? 'Moderate Risk' : 'High Risk'})
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Annual Business Turnover</Text>
+                <Text style={styles.detailValBold}>{formatINR(annualRevenue)}</Text>
+              </View>
+
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Monthly Net Income / Cashflow</Text>
+                <Text style={styles.detailValBold}>{formatINR(monthlyIncome)}</Text>
+              </View>
+
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Repayment Track Record</Text>
+                <Text style={styles.detailValBold}>
+                  {totalLoansTaken} Total • {onTimeRepayments} On-Time • {defaultsCount} Defaults
+                </Text>
+              </View>
+
+              <View style={[styles.detailRow, { borderBottomWidth: 0 }]}>
+                <Text style={styles.detailLabel}>Underwriting Verification</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: m(4) }}>
+                  <Feather name="check-circle" size={m(13)} color="#16a34a" />
+                  <Text style={{ fontSize: m(11.5), fontFamily: FontFamily.primaryBold, color: '#16a34a' }}>
+                    100% Profile Complete & Verified
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {/* ── SECTION 4: BORROWER LOAN FACILITIES & REPAYMENT HISTORY ── */}
+          <View style={styles.card}>
+            <View style={styles.cardHeaderRow}>
+              <View style={[styles.iconCircleBlue, { backgroundColor: '#2563eb' }]}>
+                <Feather name="layers" size={m(16)} color={colors.white} />
+              </View>
+              <View style={{ flex: 1, marginLeft: m(10) }}>
+                <Text style={styles.cardSectionTitle}>BORROWER FACILITIES & REPAYMENT HISTORY</Text>
+                <Text style={styles.cardSectionSub}>Cross-platform borrowings & repayment track</Text>
+              </View>
+              {borrowerLoans.length > 0 && (
+                <TouchableOpacity
+                  style={styles.viewAllBadgeBtn}
+                  onPress={() => setShowAllFacilities(!showAllFacilities)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.viewAllBadgeText}>
+                    {showAllFacilities ? 'Show Recent' : `View All (${borrowerLoans.length})`}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* 4 Financial KPI Summary Cards */}
+            <View style={styles.kpiGrid}>
+              <View style={styles.kpiTile}>
+                <Text style={styles.kpiTileLabel}>TOTAL BORROWED FACILITIES</Text>
+                <Text style={styles.kpiTileVal}>
+                  {borrowerSummary?.totalLoansCount ?? borrowerLoans.length} Loans
+                </Text>
+              </View>
+
+              <View style={styles.kpiTile}>
+                <Text style={styles.kpiTileLabel}>TOTAL SANCTIONED BOOK</Text>
+                <Text style={[styles.kpiTileVal, { color: '#2563eb' }]}>
+                  {formatINR(borrowerSummary?.totalLoanAmount ?? borrowerLoans.reduce((s, l) => s + (Number(l.amount) || 0), 0))}
+                </Text>
+              </View>
+
+              <View style={styles.kpiTile}>
+                <Text style={styles.kpiTileLabel}>TOTAL REPAID AMOUNT</Text>
+                <Text style={[styles.kpiTileVal, { color: '#16a34a' }]}>
+                  {formatINR(borrowerSummary?.totalPaidAmount ?? borrowerLoans.reduce((s, l) => s + (Number(l.totalPaid) || 0), 0))}
+                </Text>
+              </View>
+
+              <View style={styles.kpiTile}>
+                <Text style={styles.kpiTileLabel}>OUTSTANDING BALANCE</Text>
+                <Text style={[styles.kpiTileVal, { color: (borrowerSummary?.totalRemainingAmount ?? 0) > 0 ? '#d97706' : colors.textSecondary }]}>
+                  {formatINR(borrowerSummary?.totalRemainingAmount ?? borrowerLoans.reduce((s, l) => s + (Number(l.remainingAmount) || 0), 0))}
+                </Text>
+              </View>
+            </View>
+
+            {/* List of Previous Facilities */}
+            {borrowerLoans.length === 0 ? (
+              <View style={styles.emptyLoansBox}>
+                <Feather name="check-circle" size={m(18)} color="#16a34a" />
+                <Text style={styles.emptyLoansText}>
+                  No prior loan facilities found on the platform. First-time applicant.
+                </Text>
+              </View>
+            ) : (
+              <View style={{ marginTop: m(10), gap: m(8) }}>
+                {(showAllFacilities ? borrowerLoans : borrowerLoans.slice(0, 3)).map((loan, idx) => {
+                  const s = (loan.paymentStatus || 'pending').toLowerCase();
+                  const isPaidStatus = s === 'paid';
+                  const isOverdueStatus = s === 'overdue';
+                  const isPartPaidStatus = s === 'part paid';
+
+                  return (
+                    <View key={loan._id || idx} style={styles.loanFacilityCard}>
+                      <View style={styles.loanFacHeader}>
+                        <View style={{ flex: 1, marginRight: m(8) }}>
+                          <Text style={styles.loanFacPurpose} numberOfLines={1}>
+                            {loan.purpose || loan.dealName || 'Commercial Facility'}
+                          </Text>
+                          <Text style={styles.loanFacLender} numberOfLines={1}>
+                            ID: #{loan._id?.slice(-8).toUpperCase() || idx + 1}
+                            {loan.lenderName ? ` • ${loan.lenderName}` : ''}
+                          </Text>
+                        </View>
+                        <View
+                          style={[
+                            styles.loanFacPill,
+                            isPaidStatus
+                              ? styles.facPillPaid
+                              : isOverdueStatus
+                              ? styles.facPillOverdue
+                              : isPartPaidStatus
+                              ? styles.facPillPartPaid
+                              : styles.facPillPending,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.loanFacPillText,
+                              isPaidStatus
+                                ? styles.facTextPaid
+                                : isOverdueStatus
+                                ? styles.facTextOverdue
+                                : isPartPaidStatus
+                                ? styles.facTextPartPaid
+                                : styles.facTextPending,
+                            ]}
+                          >
+                            {(loan.paymentStatus || 'ACTIVE').toUpperCase()}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.loanFacMetricsRow}>
+                        <View style={styles.loanFacMetricCol}>
+                          <Text style={styles.loanFacMetricLabel}>Sanctioned</Text>
+                          <Text style={styles.loanFacMetricVal}>{formatINR(loan.amount)}</Text>
+                        </View>
+                        <View style={styles.loanFacMetricCol}>
+                          <Text style={styles.loanFacMetricLabel}>Repaid</Text>
+                          <Text style={[styles.loanFacMetricVal, { color: '#16a34a' }]}>
+                            {formatINR(loan.totalPaid)}
+                          </Text>
+                        </View>
+                        <View style={styles.loanFacMetricCol}>
+                          <Text style={styles.loanFacMetricLabel}>Remaining</Text>
+                          <Text style={[styles.loanFacMetricVal, { color: (loan.remainingAmount || 0) > 0 ? '#d97706' : colors.textSecondary }]}>
+                            {formatINR(loan.remainingAmount)}
+                          </Text>
+                        </View>
+                        <View style={styles.loanFacMetricCol}>
+                          <Text style={styles.loanFacMetricLabel}>End Date</Text>
+                          <Text style={styles.loanFacMetricVal}>{formatDate(loan.loanEndDate)}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  );
+                })}
+
+                {borrowerLoans.length > 3 && (
+                  <TouchableOpacity
+                    style={styles.showMoreFacilitiesBtn}
+                    onPress={() => setShowAllFacilities(!showAllFacilities)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.showMoreFacilitiesText}>
+                      {showAllFacilities
+                        ? 'Show Less'
+                        : `Showing 3 of ${borrowerLoans.length} facilities • View All`}
+                    </Text>
+                    <Feather
+                      name={showAllFacilities ? 'chevron-up' : 'chevron-down'}
+                      size={m(14)}
+                      color="#2563eb"
+                    />
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+          </View>
+
+          {/* ── SECTION 5: CONTACT & ADDRESS INFORMATION ── */}
+          <View style={styles.card}>
+            <View style={styles.cardHeaderRow}>
+              <View style={[styles.iconCircleBlue, { backgroundColor: '#0284c7' }]}>
+                <Feather name="map-pin" size={m(16)} color={colors.white} />
+              </View>
+              <View style={{ flex: 1, marginLeft: m(10) }}>
+                <Text style={styles.cardSectionTitle}>CONTACT & ADDRESS INFORMATION</Text>
+                <Text style={styles.cardSectionSub}>Direct borrower communication channels</Text>
+              </View>
+            </View>
+
+            <View style={styles.contactGrid}>
+              <View style={styles.contactTile}>
+                <Text style={styles.contactTileLabel}>PRIMARY MOBILE</Text>
+                <View style={styles.contactRow}>
+                  <Feather name="phone" size={m(13)} color="#2563eb" />
+                  <Text style={styles.contactValBold}>{phone}</Text>
+                </View>
+              </View>
+
+              <View style={styles.contactTile}>
+                <Text style={styles.contactTileLabel}>ALTERNATE PHONE</Text>
+                <View style={styles.contactRow}>
+                  <Feather name="phone-call" size={m(13)} color="#2563eb" />
+                  <Text style={styles.contactValBold}>{altPhone || 'Not Provided'}</Text>
+                </View>
+              </View>
+
+              <View style={[styles.contactTile, { width: '100%' }]}>
+                <Text style={styles.contactTileLabel}>EMAIL ADDRESS</Text>
+                <View style={styles.contactRow}>
+                  <Feather name="mail" size={m(13)} color="#2563eb" />
+                  <Text style={styles.contactValBold}>{email}</Text>
+                </View>
+              </View>
+
+              <View style={[styles.contactTile, { width: '100%' }]}>
+                <Text style={styles.contactTileLabel}>LOCATION / ADDRESS</Text>
+                <View style={[styles.contactRow, { alignItems: 'flex-start' }]}>
+                  <Feather name="map-pin" size={m(13)} color="#2563eb" style={{ marginTop: m(2) }} />
+                  <Text style={[styles.contactValText, { flex: 1 }]}>{fullAddress}</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {/* ── SECTION 6: Disbursal OTP Status Card (when Accepted) ── */}
+          {isAccepted && (
             <View style={styles.disbursalCard}>
               <View style={styles.disbursalHeader}>
                 <View style={styles.disbursalIconWrap}>
@@ -881,12 +1165,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     paddingHorizontal: m(18),
     paddingTop: m(10),
-    paddingBottom: m(16),
+    paddingBottom: m(14),
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: m(12),
+    marginBottom: m(6),
   },
   backBtn: {
     width: m(38),
@@ -904,7 +1188,6 @@ const styles = StyleSheet.create({
   },
   headerTitleWrap: {
     flex: 1,
-    marginRight: m(8),
   },
   headerTag: {
     fontSize: m(9.5),
@@ -915,8 +1198,8 @@ const styles = StyleSheet.create({
     marginBottom: m(1),
   },
   headerTitle: {
-    fontSize: m(18),
-    lineHeight: m(24),
+    fontSize: m(19),
+    lineHeight: m(25),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
   },
@@ -925,62 +1208,57 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.primaryRegular,
     color: colors.lettersAndIcons,
     opacity: 0.85,
-    marginTop: m(1),
+    marginTop: m(2),
+  },
+  headerBadgesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(8),
+    paddingLeft: m(48),
+    marginTop: m(2),
+  },
+  cibilScoreBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(5),
+    backgroundColor: '#dcfce7',
+    paddingHorizontal: m(9),
+    paddingVertical: m(4),
+    borderRadius: m(8),
+    borderWidth: 1,
+    borderColor: '#86efac',
+  },
+  cibilScoreBadgeText: {
+    fontSize: m(10),
+    fontFamily: FontFamily.primaryBold,
+    color: '#15803d',
+    letterSpacing: 0.3,
   },
   statusPill: {
-    paddingHorizontal: m(8),
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(5),
+    paddingHorizontal: m(9),
     paddingVertical: m(4),
     borderRadius: m(8),
   },
-  pillPending: { backgroundColor: '#fef3c7' },
+  statusDot: {
+    width: m(6),
+    height: m(6),
+    borderRadius: m(3),
+  },
+  dotPending: { backgroundColor: '#b45309' },
+  dotAccepted: { backgroundColor: '#047857' },
+  dotAutoClosed: { backgroundColor: '#475569' },
+  dotRejected: { backgroundColor: '#dc2626' },
+  pillPending: { backgroundColor: '#fef3c7', borderWidth: 1, borderColor: '#fde68a' },
   textPending: { color: '#b45309', fontSize: m(10), fontFamily: FontFamily.primaryBold },
-  pillAccepted: { backgroundColor: '#ecfdf5' },
+  pillAccepted: { backgroundColor: '#ecfdf5', borderWidth: 1, borderColor: '#a7f3d0' },
   textAccepted: { color: '#047857', fontSize: m(10), fontFamily: FontFamily.primaryBold },
-  pillRejected: { backgroundColor: '#fee2e2' },
+  pillAutoClosed: { backgroundColor: '#f1f5f9', borderWidth: 1, borderColor: '#cbd5e1' },
+  textAutoClosed: { color: '#475569', fontSize: m(10), fontFamily: FontFamily.primaryBold },
+  pillRejected: { backgroundColor: '#fee2e2', borderWidth: 1, borderColor: '#fca5a5' },
   textRejected: { color: '#dc2626', fontSize: m(10), fontFamily: FontFamily.primaryBold },
-
-  // 3-Column Telemetry Strip on Green
-  topMetricsCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
-    borderRadius: m(14),
-    paddingVertical: m(9),
-    paddingHorizontal: m(14),
-    marginTop: m(2),
-  },
-  topMetricColumn: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  topMetricLabel: {
-    fontSize: m(10),
-    fontFamily: FontFamily.primaryMedium,
-    color: colors.lettersAndIcons,
-    opacity: 0.8,
-    marginBottom: m(2),
-  },
-  topMetricValueWhite: {
-    fontSize: m(15),
-    fontFamily: FontFamily.primaryBold,
-    color: colors.lettersAndIcons,
-  },
-  topMetricValueBlue: {
-    fontSize: m(13.5),
-    fontFamily: FontFamily.primaryBold,
-    color: colors.oceanBlueButton,
-  },
-  topMetricValueDark: {
-    fontSize: m(13.5),
-    fontFamily: FontFamily.primaryBold,
-    color: colors.lettersAndIcons,
-  },
-  topMetricDivider: {
-    width: 1,
-    height: m(22),
-    backgroundColor: 'rgba(9, 48, 48, 0.15)',
-  },
 
   // Main Curved Sheet
   sheetSection: {
@@ -1095,28 +1373,13 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
   },
-  securityTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fffbeb',
-    paddingHorizontal: m(8),
-    paddingVertical: m(3.5),
-    borderRadius: m(6),
-    gap: m(4),
-  },
-  securityTagText: {
-    fontSize: m(11),
-    fontFamily: FontFamily.primaryBold,
-    color: '#b45309',
-  },
   notesBox: {
-    backgroundColor: colors.white,
+    backgroundColor: '#f8fafc',
     padding: m(10),
     borderRadius: m(8),
     marginTop: m(8),
-    marginBottom: m(4),
     borderWidth: 1,
-    borderColor: 'rgba(9, 48, 48, 0.08)',
+    borderColor: '#e2e8f0',
   },
   notesLabel: {
     fontSize: m(10.5),
@@ -1130,14 +1393,23 @@ const styles = StyleSheet.create({
     marginTop: m(2),
   },
 
-  // 4-Tile Underwriting Grid
-  underwritingGrid: {
+  // ── Facility Grid & Security Box ──
+  facilityGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: m(8),
     marginBottom: m(10),
   },
-  metricTile: {
+  facilityTilePrimary: {
+    width: '48.5%',
+    backgroundColor: '#eff6ff',
+    borderRadius: m(12),
+    paddingHorizontal: m(12),
+    paddingVertical: m(10),
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+  },
+  facilityTile: {
     width: '48.5%',
     backgroundColor: '#f8fafc',
     borderRadius: m(12),
@@ -1146,48 +1418,266 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
-  uwMetricLabel: {
-    fontSize: m(10),
-    fontFamily: FontFamily.primaryMedium,
-    color: colors.textSecondary,
+  facilityTileLabel: {
+    fontSize: m(9.5),
+    fontFamily: FontFamily.primaryBold,
+    color: '#64748b',
+    letterSpacing: 0.5,
     marginBottom: m(2),
   },
-  uwMetricVal: {
-    fontSize: m(15),
+  facilityTileValPrimary: {
+    fontSize: m(16),
+    fontFamily: FontFamily.primaryBold,
+    color: '#1e40af',
+  },
+  facilityTileVal: {
+    fontSize: m(13.5),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
   },
-  uwMetricSub: {
+  facilityTileSub: {
     fontSize: m(9.5),
     fontFamily: FontFamily.primaryRegular,
-    color: colors.textSecondary,
+    color: '#64748b',
     marginTop: m(2),
   },
-
-  // Statutory Checklist
-  checklistCard: {
-    backgroundColor: '#f8fafc',
+  securityBox: {
+    backgroundColor: '#fffbeb',
     borderRadius: m(12),
     padding: m(12),
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#fde68a',
+    marginTop: m(4),
   },
-  checklistTitle: {
-    fontSize: m(11.5),
-    fontFamily: FontFamily.primaryBold,
-    color: colors.lettersAndIcons,
-    marginBottom: m(8),
-  },
-  checkItem: {
+  securityBoxHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: m(3.5),
+    marginBottom: m(4),
+    flexWrap: 'wrap',
     gap: m(6),
   },
-  checkText: {
+  securityBoxLabel: {
+    fontSize: m(10),
+    fontFamily: FontFamily.primaryBold,
+    color: '#92400e',
+    letterSpacing: 0.4,
+  },
+  securityBadge: {
+    backgroundColor: '#fef3c7',
+    paddingHorizontal: m(6),
+    paddingVertical: m(2),
+    borderRadius: m(4),
+    borderWidth: 1,
+    borderColor: '#fcd34d',
+  },
+  securityBadgeText: {
+    fontSize: m(9),
+    fontFamily: FontFamily.primaryBold,
+    color: '#b45309',
+  },
+  securityValText: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    marginBottom: m(4),
+  },
+  securityNoteText: {
+    fontSize: m(10),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#78350f',
+    lineHeight: m(14),
+  },
+
+  // ── Risk Grade Badge ──
+  riskGradeBadge: {
+    backgroundColor: '#dcfce7',
+    paddingHorizontal: m(8),
+    paddingVertical: m(3),
+    borderRadius: m(6),
+    borderWidth: 1,
+    borderColor: '#86efac',
+  },
+  riskGradeBadgeText: {
     fontSize: m(11),
+    fontFamily: FontFamily.primaryBold,
+    color: '#15803d',
+  },
+
+  // ── KPI Summary Cards ──
+  viewAllBadgeBtn: {
+    backgroundColor: '#eff6ff',
+    paddingHorizontal: m(8),
+    paddingVertical: m(4),
+    borderRadius: m(6),
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+  },
+  viewAllBadgeText: {
+    fontSize: m(10),
+    fontFamily: FontFamily.primaryBold,
+    color: '#2563eb',
+  },
+  kpiGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: m(8),
+    marginBottom: m(10),
+  },
+  kpiTile: {
+    width: '48.5%',
+    backgroundColor: '#f8fafc',
+    borderRadius: m(12),
+    paddingHorizontal: m(10),
+    paddingVertical: m(8),
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  kpiTileLabel: {
+    fontSize: m(9),
+    fontFamily: FontFamily.primaryBold,
+    color: '#64748b',
+    letterSpacing: 0.4,
+    marginBottom: m(2),
+  },
+  kpiTileVal: {
+    fontSize: m(14),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+
+  // ── Previous Facility Cards ──
+  emptyLoansBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(8),
+    backgroundColor: '#f0fdf4',
+    padding: m(12),
+    borderRadius: m(10),
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+    marginTop: m(4),
+  },
+  emptyLoansText: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#166534',
+    flex: 1,
+  },
+  loanFacilityCard: {
+    backgroundColor: '#f8fafc',
+    borderRadius: m(12),
+    padding: m(10),
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  loanFacHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: m(6),
+  },
+  loanFacPurpose: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  loanFacLender: {
+    fontSize: m(10),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#64748b',
+    marginTop: m(1),
+  },
+  loanFacPill: {
+    paddingHorizontal: m(7),
+    paddingVertical: m(2.5),
+    borderRadius: m(6),
+  },
+  loanFacPillText: {
+    fontSize: m(9),
+    fontFamily: FontFamily.primaryBold,
+    letterSpacing: 0.3,
+  },
+  facPillPaid: { backgroundColor: '#dcfce7', borderWidth: 1, borderColor: '#86efac' },
+  facTextPaid: { color: '#15803d' },
+  facPillPartPaid: { backgroundColor: '#fef3c7', borderWidth: 1, borderColor: '#fcd34d' },
+  facTextPartPaid: { color: '#b45309' },
+  facPillPending: { backgroundColor: '#eff6ff', borderWidth: 1, borderColor: '#bfdbfe' },
+  facTextPending: { color: '#1d4ed8' },
+  facPillOverdue: { backgroundColor: '#fee2e2', borderWidth: 1, borderColor: '#fca5a5' },
+  facTextOverdue: { color: '#b91c1c' },
+  loanFacMetricsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingTop: m(6),
+    borderTopWidth: 1,
+    borderColor: '#f1f5f9',
+  },
+  loanFacMetricCol: {
+    alignItems: 'flex-start',
+  },
+  loanFacMetricLabel: {
+    fontSize: m(9),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#64748b',
+    marginBottom: m(1),
+  },
+  loanFacMetricVal: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+  showMoreFacilitiesBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: m(4),
+    paddingVertical: m(8),
+    marginTop: m(4),
+  },
+  showMoreFacilitiesText: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryBold,
+    color: '#2563eb',
+  },
+
+  // ── Contact & Address Info Grid ──
+  contactGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: m(8),
+  },
+  contactTile: {
+    width: '48.5%',
+    backgroundColor: '#f8fafc',
+    borderRadius: m(12),
+    paddingHorizontal: m(12),
+    paddingVertical: m(10),
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  contactTileLabel: {
+    fontSize: m(9.5),
+    fontFamily: FontFamily.primaryBold,
+    color: '#64748b',
+    letterSpacing: 0.5,
+    marginBottom: m(4),
+  },
+  contactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(6),
+  },
+  contactValBold: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    flexShrink: 1,
+  },
+  contactValText: {
+    fontSize: m(11.5),
     fontFamily: FontFamily.primaryMedium,
     color: colors.lettersAndIcons,
+    lineHeight: m(16),
   },
 
   // Disbursal Card
