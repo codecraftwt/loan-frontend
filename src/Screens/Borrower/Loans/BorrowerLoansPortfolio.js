@@ -10,7 +10,7 @@ import {
   TextInput,
   Modal,
 } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
 import { colors, FontFamily } from '../../../constants';
 import { m } from '../../../Utils/responsive';
@@ -19,6 +19,7 @@ import borrowerFlowService from '../../../Services/borrowerFlowService';
 
 export default function BorrowerLoansPortfolio() {
   const navigation = useNavigation();
+  const route = useRoute();
   const [loans, setLoans] = useState([]);
   const [metrics, setMetrics] = useState({
     totalBorrowed: 0,
@@ -31,7 +32,7 @@ export default function BorrowerLoansPortfolio() {
   });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'active' | 'closed'
+  const [activeTab, setActiveTab] = useState(route.params?.filter || route.params?.status || 'all'); // 'all' | 'active' | 'closed'
   const [searchQuery, setSearchQuery] = useState('');
   const [filterModalVisible, setFilterModalVisible] = useState(false);
 
@@ -61,6 +62,14 @@ export default function BorrowerLoansPortfolio() {
       fetchPortfolio();
     }, [fetchPortfolio])
   );
+
+  useEffect(() => {
+    if (route.params?.filter) {
+      setActiveTab(route.params.filter);
+    } else if (route.params?.status) {
+      setActiveTab(route.params.status);
+    }
+  }, [route.params?.filter, route.params?.status]);
 
   useEffect(() => {
     fetchPortfolio();
@@ -248,7 +257,7 @@ export default function BorrowerLoansPortfolio() {
       topInsetBg={colors.primary}
       statusBarColor={colors.primary}
       statusBarStyle="dark-content"
-      includeTabBarClearance={true}
+      includeTabBarClearance={false}
       scrollable={false}
     >
       {/* Top Green Banner */}
@@ -783,7 +792,7 @@ const styles = StyleSheet.create({
 
   listContent: {
     paddingHorizontal: m(18),
-    paddingBottom: m(30),
+    paddingBottom: m(100),
   },
   loadingBox: {
     flex: 1,

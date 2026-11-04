@@ -12,7 +12,7 @@ import {
   Modal,
   ScrollView,
 } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import Feather from 'react-native-vector-icons/Feather';
 import { colors, FontFamily } from '../../../constants';
@@ -22,6 +22,7 @@ import lenderFlowService from '../../../Services/lenderFlowService';
 
 export default function LenderLoansPortfolio() {
   const navigation = useNavigation();
+  const route = useRoute();
   const user = useSelector(state => state.auth?.user);
   const [loans, setLoans] = useState([]);
   const [metrics, setMetrics] = useState({
@@ -37,7 +38,7 @@ export default function LenderLoansPortfolio() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'active' | 'overdue' | 'closed'
+  const [activeTab, setActiveTab] = useState(route.params?.filter || route.params?.status || 'all'); // 'all' | 'active' | 'overdue' | 'closed'
 
   // Quick Repayment Modal State
   const [repaymentModalVisible, setRepaymentModalVisible] = useState(false);
@@ -75,11 +76,24 @@ export default function LenderLoansPortfolio() {
     }
   }, [user?._id, user?.roleId, activeTab, search]);
 
+  useEffect(() => {
+    if (route.params?.filter) {
+      setActiveTab(route.params.filter);
+    } else if (route.params?.status) {
+      setActiveTab(route.params.status);
+    }
+  }, [route.params?.filter, route.params?.status]);
+
   useFocusEffect(
     useCallback(() => {
       if (!user?._id || user?.roleId !== 1) return;
+      if (route.params?.filter) {
+        setActiveTab(route.params.filter);
+      } else if (route.params?.status) {
+        setActiveTab(route.params.status);
+      }
       fetchPortfolio();
-    }, [user?._id, user?.roleId, fetchPortfolio])
+    }, [user?._id, user?.roleId, fetchPortfolio, route.params?.filter, route.params?.status])
   );
 
   const onRefresh = () => {
@@ -342,7 +356,7 @@ export default function LenderLoansPortfolio() {
       topInsetBg={colors.primary}
       statusBarColor={colors.primary}
       statusBarStyle="dark-content"
-      includeTabBarClearance={true}
+      includeTabBarClearance={false}
       scrollable={false}
     >
       {/* ── 1. Top Green Banner ── */}
@@ -364,9 +378,6 @@ export default function LenderLoansPortfolio() {
             activeOpacity={0.8}
             onPress={() => setActiveTab('active')}
           >
-            <View style={styles.featureRingWrapper}>
-              <Feather name="arrow-up-right" size={m(18)} color="#059669" />
-            </View>
             <Text style={styles.featureCountText} numberOfLines={1}>
               {formatINR(metrics.totalDisbursed)}
             </Text>
@@ -832,7 +843,7 @@ const styles = StyleSheet.create({
 
   listContent: {
     paddingHorizontal: m(18),
-    paddingBottom: m(30),
+    paddingBottom: m(100),
   },
   loadingBox: {
     flex: 1,

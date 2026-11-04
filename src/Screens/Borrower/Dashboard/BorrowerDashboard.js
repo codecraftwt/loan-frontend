@@ -8,6 +8,8 @@ import {
   Animated,
   ActivityIndicator,
   ScrollView,
+  BackHandler,
+  Platform,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
@@ -122,6 +124,29 @@ export default function BorrowerDashboard() {
         duration: 350,
         useNativeDriver: true,
       }).start();
+
+      const onBackPress = () => {
+        showAlert(
+          'Exit Application',
+          'Are you sure you want to exit the application?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Exit',
+              style: 'destructive',
+              onPress: () => BackHandler.exitApp(),
+            },
+          ]
+        );
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener(
+        'hardwareBackPress',
+        onBackPress
+      );
+
+      return () => subscription.remove();
     }, [fetchAllDashboardData, fadeAnim])
   );
 
@@ -133,7 +158,7 @@ export default function BorrowerDashboard() {
         if (token) {
           NotificationService.registerToken(user._id, token);
         }
-      }).catch(() => {});
+      }).catch(() => { });
     }
 
     const unsubscribe = NotificationService.addListener(() => {
@@ -144,7 +169,7 @@ export default function BorrowerDashboard() {
             setUnreadNotificationsCount(res.unreadCount || 0);
           }
         })
-        .catch(() => {});
+        .catch(() => { });
     });
     return unsubscribe;
   }, [user?._id]);
@@ -269,11 +294,8 @@ export default function BorrowerDashboard() {
             <TouchableOpacity
               style={styles.featureLeftCol}
               activeOpacity={0.8}
-              onPress={() => navigation.navigate('BorrowerLoansPortfolio')}
+              onPress={() => navigation.navigate('BorrowerLoansPortfolio', { filter: 'active' })}
             >
-              <View style={styles.featureRingWrapper}>
-                <Feather name="arrow-down-left" size={m(18)} color="#059669" />
-              </View>
               <Text style={styles.featureCountText} numberOfLines={1}>
                 {formatCurrency(totalBorrowedVal)}
               </Text>
@@ -392,7 +414,7 @@ export default function BorrowerDashboard() {
               </Text>
             </View>
             <TouchableOpacity
-              onPress={() => navigation.navigate('BorrowerLoansPortfolio')}
+              onPress={() => navigation.navigate('BorrowerLoansPortfolio', { filter: 'all' })}
               activeOpacity={0.7}
               style={styles.allRequestsBtn}
             >
@@ -409,7 +431,7 @@ export default function BorrowerDashboard() {
               <TouchableOpacity
                 style={styles.overviewCard}
                 activeOpacity={0.8}
-                onPress={() => navigation.navigate('BorrowerLoansPortfolio')}
+                onPress={() => navigation.navigate('BorrowerLoansPortfolio', { filter: 'active' })}
               >
                 <View style={styles.overviewCardTop}>
                   <View style={[styles.overviewIconBox, { backgroundColor: '#ecfdf5' }]}>

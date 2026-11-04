@@ -184,6 +184,7 @@ export default function BorrowerApplications() {
   const renderApplicationCard = ({ item }) => {
     const isAccepted = item.status === 'accepted';
     const isPending = item.status === 'pending';
+    const isExpired = item.status === 'auto_rejected';
     const isClosed = ['auto_rejected', 'rejected', 'declined'].includes(item.status);
 
     const lenderName =
@@ -229,9 +230,11 @@ export default function BorrowerApplications() {
                   ? 'clock'
                   : isLenderSigned
                   ? 'file-text'
+                  : isExpired
+                  ? 'clock'
                   : 'x-circle'
               }
-              size={m(17)}
+              size={m(14)}
               color={
                 isAccepted
                   ? '#059669'
@@ -239,7 +242,7 @@ export default function BorrowerApplications() {
                   ? '#D97706'
                   : isLenderSigned
                   ? '#2563EB'
-                  : '#DC2626'
+                  : '#64748B'
               }
             />
           </View>
@@ -256,26 +259,28 @@ export default function BorrowerApplications() {
           {/* Status Badge */}
           {isPending ? (
             <View style={styles.pillPending}>
-              <Feather name="clock" size={m(10)} color="#D97706" />
+              <Feather name="clock" size={m(9)} color="#D97706" />
               <Text style={styles.pillTextPending}>
                 {item.remainingHours != null ? `${item.remainingHours}h left` : 'IN REVIEW'}
               </Text>
             </View>
           ) : isLenderSigned ? (
             <View style={styles.pillSign}>
-              <Feather name="edit-3" size={m(10)} color="#2563EB" />
+              <Feather name="edit-3" size={m(9)} color="#2563EB" />
               <Text style={styles.pillTextSign}>SIGN CONTRACT</Text>
             </View>
           ) : isAccepted ? (
             <View style={styles.pillAccepted}>
-              <Feather name="check" size={m(10)} color="#059669" />
+              <Feather name="check" size={m(9)} color="#059669" />
               <Text style={styles.pillTextAccepted}>SANCTIONED</Text>
+            </View>
+          ) : isExpired ? (
+            <View style={styles.pillExpired}>
+              <Text style={styles.pillTextExpired}>EXPIRED</Text>
             </View>
           ) : (
             <View style={styles.pillRejected}>
-              <Text style={styles.pillTextRejected}>
-                {item.status === 'auto_rejected' ? 'EXPIRED' : 'DECLINED'}
-              </Text>
+              <Text style={styles.pillTextRejected}>DECLINED</Text>
             </View>
           )}
         </View>
@@ -365,7 +370,7 @@ export default function BorrowerApplications() {
         {isAccepted && item.activeLoan ? (
           <View style={styles.activeLoanRow}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: m(6) }}>
-              <Feather name="credit-card" size={m(13)} color="#059669" />
+              <Feather name="credit-card" size={m(12)} color="#059669" />
               <Text style={styles.activeLoanText}>
                 Active Facility · EMI: {formatINR(item.activeLoan.monthlyEmi || 0)}
               </Text>
@@ -386,7 +391,7 @@ export default function BorrowerApplications() {
             >
               <Feather
                 name={isLenderSigned ? 'edit-3' : 'file-text'}
-                size={m(12)}
+                size={m(11)}
                 color={isLenderSigned ? '#2563EB' : colors.lettersAndIcons}
               />
               <Text
@@ -411,7 +416,7 @@ export default function BorrowerApplications() {
                   })
                 }
               >
-                <Feather name="calendar" size={m(12)} color="#2563EB" />
+                <Feather name="calendar" size={m(11)} color="#2563EB" />
                 <Text style={[styles.footerActionBtnText, { color: '#2563EB' }]}>
                   Schedule
                 </Text>
@@ -428,7 +433,7 @@ export default function BorrowerApplications() {
                 openLenderChat(phone, lenderName, item);
               }}
             >
-              <Feather name="message-circle" size={m(12)} color="#059669" />
+              <Feather name="message-circle" size={m(11)} color="#059669" />
               <Text style={[styles.footerActionBtnText, { color: '#059669', fontFamily: FontFamily.primaryBold }]}>
                 Chat
               </Text>
@@ -439,7 +444,7 @@ export default function BorrowerApplications() {
         {/* Rejection / Expiration Notice */}
         {item.rejectionReason ? (
           <View style={styles.reasonBox}>
-            <Feather name="alert-circle" size={m(13)} color="#DC2626" style={{ marginTop: m(1) }} />
+            <Feather name="info" size={m(12)} color="#64748B" style={{ marginTop: m(1) }} />
             <View style={{ flex: 1 }}>
               <Text style={styles.reasonTitle}>Decision Note</Text>
               <Text style={styles.reasonText}>{item.rejectionReason}</Text>
@@ -1148,29 +1153,29 @@ const styles = StyleSheet.create({
   // Card
   card: {
     backgroundColor: colors.white,
-    borderRadius: m(18),
-    padding: m(16),
-    marginBottom: m(14),
+    borderRadius: m(14),
+    padding: m(11),
+    marginBottom: m(10),
     borderWidth: 1,
     borderColor: 'rgba(9, 48, 48, 0.07)',
     elevation: 2,
     shadowColor: colors.lettersAndIcons,
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 6,
+    shadowRadius: 5,
   },
   cardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: m(12),
+    marginBottom: m(8),
   },
   activityIconTile: {
-    width: m(38),
-    height: m(38),
-    borderRadius: m(12),
+    width: m(30),
+    height: m(30),
+    borderRadius: m(9),
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: m(10),
+    marginRight: m(8),
     borderWidth: 1,
   },
   iconTileAccepted: {
@@ -1186,40 +1191,40 @@ const styles = StyleSheet.create({
     borderColor: '#BFDBFE',
   },
   iconTileClosed: {
-    backgroundColor: '#FEE2E2',
-    borderColor: '#FECACA',
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
   },
   headerInfoCol: {
     flex: 1,
     marginRight: m(8),
   },
   lenderNameText: {
-    fontSize: m(14.5),
-    lineHeight: m(19),
+    fontSize: m(13.5),
+    lineHeight: m(17),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
   },
   purposeSubText: {
-    fontSize: m(11),
+    fontSize: m(10),
     fontFamily: FontFamily.primaryRegular,
     color: colors.textSecondary,
-    marginTop: m(2),
+    marginTop: m(1),
   },
 
   // Status Badges
   pillPending: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(4),
+    gap: m(3),
     backgroundColor: '#FFFBEB',
     borderWidth: 1,
     borderColor: '#FDE68A',
-    paddingHorizontal: m(8),
-    paddingVertical: m(4),
-    borderRadius: m(20),
+    paddingHorizontal: m(6),
+    paddingVertical: m(2.5),
+    borderRadius: m(14),
   },
   pillTextPending: {
-    fontSize: m(9.5),
+    fontSize: m(9),
     fontFamily: FontFamily.primaryBold,
     color: '#D97706',
     letterSpacing: 0.3,
@@ -1227,16 +1232,16 @@ const styles = StyleSheet.create({
   pillSign: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(4),
+    gap: m(3),
     backgroundColor: '#EFF6FF',
     borderWidth: 1,
     borderColor: '#BFDBFE',
-    paddingHorizontal: m(8),
-    paddingVertical: m(4),
-    borderRadius: m(20),
+    paddingHorizontal: m(6),
+    paddingVertical: m(2.5),
+    borderRadius: m(14),
   },
   pillTextSign: {
-    fontSize: m(9.5),
+    fontSize: m(9),
     fontFamily: FontFamily.primaryBold,
     color: '#2563EB',
     letterSpacing: 0.3,
@@ -1244,30 +1249,44 @@ const styles = StyleSheet.create({
   pillAccepted: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(4),
+    gap: m(3),
     backgroundColor: '#ECFDF5',
     borderWidth: 1,
     borderColor: '#A7F3D0',
-    paddingHorizontal: m(8),
-    paddingVertical: m(4),
-    borderRadius: m(20),
+    paddingHorizontal: m(6),
+    paddingVertical: m(2.5),
+    borderRadius: m(14),
   },
   pillTextAccepted: {
-    fontSize: m(9.5),
+    fontSize: m(9),
     fontFamily: FontFamily.primaryBold,
     color: '#059669',
+    letterSpacing: 0.3,
+  },
+  pillExpired: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    paddingHorizontal: m(6),
+    paddingVertical: m(2.5),
+    borderRadius: m(14),
+  },
+  pillTextExpired: {
+    fontSize: m(9),
+    fontFamily: FontFamily.primaryBold,
+    color: '#DC2626',
     letterSpacing: 0.3,
   },
   pillRejected: {
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
     borderColor: '#FECACA',
-    paddingHorizontal: m(8),
-    paddingVertical: m(4),
-    borderRadius: m(20),
+    paddingHorizontal: m(6),
+    paddingVertical: m(2.5),
+    borderRadius: m(14),
   },
   pillTextRejected: {
-    fontSize: m(9.5),
+    fontSize: m(9),
     fontFamily: FontFamily.primaryBold,
     color: '#DC2626',
     letterSpacing: 0.3,
@@ -1278,74 +1297,74 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F8FAFC',
-    borderRadius: m(12),
-    paddingVertical: m(10),
-    paddingHorizontal: m(12),
+    borderRadius: m(8),
+    paddingVertical: m(6),
+    paddingHorizontal: m(8),
     borderWidth: 1,
     borderColor: '#EEF2F6',
-    marginBottom: m(12),
+    marginBottom: m(7),
   },
   metricItem: {
     flex: 1,
     alignItems: 'center',
   },
   metricLabel: {
-    fontSize: m(9.5),
+    fontSize: m(8.5),
     fontFamily: FontFamily.primaryMedium,
     color: '#64748B',
-    marginBottom: m(2),
+    marginBottom: m(1),
     letterSpacing: 0.2,
   },
   metricValueBold: {
-    fontSize: m(13.5),
+    fontSize: m(12),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
   },
   metricValue: {
-    fontSize: m(11.5),
+    fontSize: m(10.5),
     fontFamily: FontFamily.primarySemiBold,
     color: colors.lettersAndIcons,
   },
   metricDivider: {
     width: 1,
-    height: m(22),
+    height: m(18),
     backgroundColor: '#E2E8F0',
   },
 
   // Sign Action Box
   signActionBox: {
     backgroundColor: '#EFF6FF',
-    borderRadius: m(14),
-    padding: m(12),
+    borderRadius: m(10),
+    padding: m(8),
     borderWidth: 1,
     borderColor: '#BFDBFE',
-    marginBottom: m(12),
-    gap: m(10),
+    marginBottom: m(8),
+    gap: m(8),
   },
   signActionLeft: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: m(10),
+    gap: m(8),
   },
   signIconCircle: {
-    width: m(32),
-    height: m(32),
-    borderRadius: m(10),
+    width: m(26),
+    height: m(26),
+    borderRadius: m(8),
     backgroundColor: '#DBEAFE',
     alignItems: 'center',
     justifyContent: 'center',
   },
   signActionTitle: {
-    fontSize: m(12.5),
+    fontSize: m(11.5),
     fontFamily: FontFamily.primaryBold,
     color: '#1E3A8A',
   },
   signActionSub: {
-    fontSize: m(10.5),
-    lineHeight: m(15),
+    fontSize: m(9.5),
+    lineHeight: m(13),
     fontFamily: FontFamily.primaryRegular,
     color: '#3B82F6',
-    marginTop: m(2),
+    marginTop: m(1),
   },
   reviewSignBtn: {
     flexDirection: 'row',
@@ -1353,13 +1372,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: m(6),
     backgroundColor: colors.lettersAndIcons,
-    paddingVertical: m(9),
-    paddingHorizontal: m(14),
-    borderRadius: m(10),
+    paddingVertical: m(6.5),
+    paddingHorizontal: m(12),
+    borderRadius: m(8),
     alignSelf: 'stretch',
   },
   reviewSignBtnText: {
-    fontSize: m(11.5),
+    fontSize: m(10.5),
     fontFamily: FontFamily.primaryBold,
     color: colors.white,
   },
@@ -1367,26 +1386,26 @@ const styles = StyleSheet.create({
   // Disbursal OTP Card
   otpCard: {
     backgroundColor: '#FFFBEB',
-    borderRadius: m(14),
-    padding: m(12),
+    borderRadius: m(10),
+    padding: m(8),
     borderWidth: 1,
     borderColor: '#FDE68A',
-    marginBottom: m(12),
+    marginBottom: m(8),
   },
   otpHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: m(8),
+    marginBottom: m(5),
   },
   otpTitle: {
-    fontSize: m(10),
+    fontSize: m(9),
     fontFamily: FontFamily.primaryBold,
     color: '#92400E',
     letterSpacing: 0.5,
   },
   otpShareNotice: {
-    fontSize: m(10),
+    fontSize: m(9),
     fontFamily: FontFamily.primaryMedium,
     color: '#B45309',
   },
@@ -1395,36 +1414,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: colors.white,
-    borderRadius: m(10),
-    paddingVertical: m(8),
-    paddingHorizontal: m(14),
+    borderRadius: m(8),
+    paddingVertical: m(5),
+    paddingHorizontal: m(10),
     borderWidth: 1,
     borderColor: '#FDE68A',
-    marginBottom: m(6),
+    marginBottom: m(4),
   },
   otpCodeText: {
-    fontSize: m(20),
+    fontSize: m(16),
     fontFamily: FontFamily.primaryBold,
     color: '#92400E',
-    letterSpacing: 5,
+    letterSpacing: 3,
   },
   copyOtpBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: m(4),
     backgroundColor: '#FEF3C7',
-    paddingHorizontal: m(10),
-    paddingVertical: m(6),
-    borderRadius: m(8),
+    paddingHorizontal: m(8),
+    paddingVertical: m(4),
+    borderRadius: m(6),
   },
   copyOtpBtnText: {
-    fontSize: m(11),
+    fontSize: m(10),
     fontFamily: FontFamily.primaryBold,
     color: '#92400E',
   },
   otpFooterText: {
-    fontSize: m(10.5),
-    lineHeight: m(14),
+    fontSize: m(9.5),
+    lineHeight: m(13),
     fontFamily: FontFamily.primaryRegular,
     color: '#78350F',
   },
@@ -1435,15 +1454,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#ECFDF5',
-    borderRadius: m(12),
-    paddingVertical: m(10),
-    paddingHorizontal: m(12),
+    borderRadius: m(8),
+    paddingVertical: m(5),
+    paddingHorizontal: m(8),
     borderWidth: 1,
     borderColor: '#A7F3D0',
-    marginBottom: m(12),
+    marginBottom: m(7),
   },
   activeLoanText: {
-    fontSize: m(11.5),
+    fontSize: m(10.5),
     fontFamily: FontFamily.primaryBold,
     color: '#065F46',
   },
@@ -1453,7 +1472,7 @@ const styles = StyleSheet.create({
     gap: m(2),
   },
   viewScheduleBtnText: {
-    fontSize: m(11),
+    fontSize: m(10),
     fontFamily: FontFamily.primarySemiBold,
     color: colors.primary,
   },
@@ -1462,26 +1481,26 @@ const styles = StyleSheet.create({
   reasonBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: m(8),
-    backgroundColor: '#FEF2F2',
-    paddingVertical: m(10),
-    paddingHorizontal: m(12),
-    borderRadius: m(12),
+    gap: m(6),
+    backgroundColor: '#F8FAFC',
+    paddingVertical: m(6),
+    paddingHorizontal: m(8),
+    borderRadius: m(8),
     borderWidth: 1,
-    borderColor: '#FEE2E2',
-    marginBottom: m(12),
+    borderColor: '#E2E8F0',
+    marginBottom: m(7),
   },
   reasonTitle: {
-    fontSize: m(11),
+    fontSize: m(10),
     fontFamily: FontFamily.primaryBold,
-    color: '#991B1B',
+    color: '#334155',
     marginBottom: m(1),
   },
   reasonText: {
-    fontSize: m(11),
+    fontSize: m(10),
     fontFamily: FontFamily.primaryRegular,
-    color: '#B91C1C',
-    lineHeight: m(15),
+    color: '#64748B',
+    lineHeight: m(13),
   },
 
   // Apply with Other Lender (Clean full-width CTA)
@@ -1489,17 +1508,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: m(8),
+    gap: m(6),
     backgroundColor: 'rgba(0, 209, 146, 0.08)',
     borderWidth: 1,
     borderColor: 'rgba(0, 209, 146, 0.25)',
-    paddingVertical: m(10),
-    paddingHorizontal: m(14),
-    borderRadius: m(12),
+    paddingVertical: m(6.5),
+    paddingHorizontal: m(10),
+    borderRadius: m(8),
     marginTop: m(2),
   },
   applyOtherBtnText: {
-    fontSize: m(11.5),
+    fontSize: m(10.5),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
   },
@@ -1509,30 +1528,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    gap: m(8),
-    paddingTop: m(10),
+    gap: m(6),
+    paddingTop: m(6),
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
-    marginTop: m(2),
+    marginTop: 0,
     flexWrap: 'wrap',
   },
   footerActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(5),
+    gap: m(4),
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    paddingHorizontal: m(11),
-    paddingVertical: m(6),
-    borderRadius: m(8),
+    paddingHorizontal: m(8),
+    paddingVertical: m(4),
+    borderRadius: m(6),
   },
   chatActionBtn: {
     backgroundColor: '#ECFDF5',
     borderColor: '#A7F3D0',
   },
   footerActionBtnText: {
-    fontSize: m(11),
+    fontSize: m(10),
     fontFamily: FontFamily.primarySemiBold,
     color: '#334155',
   },

@@ -6,13 +6,14 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  BackHandler,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
 import { useSelector, useDispatch } from 'react-redux';
 import { colors, FontFamily } from '../../../constants';
 import { m } from '../../../Utils/responsive';
-import { ScreenWrapper } from '../../../Components/common';
+import { ScreenWrapper, showAlert } from '../../../Components/common';
 import { getRevenueStatistics } from '../../../Redux/Slices/adminRevenueSlice';
 import { getAdminRecentActivities } from '../../../Redux/Slices/adminActivitiesSlice';
 
@@ -74,6 +75,33 @@ export default function AdminDashboard() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        showAlert(
+          'Exit Application',
+          'Are you sure you want to exit the application?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Exit',
+              style: 'destructive',
+              onPress: () => BackHandler.exitApp(),
+            },
+          ]
+        );
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener(
+        'hardwareBackPress',
+        onBackPress
+      );
+
+      return () => subscription.remove();
+    }, [])
+  );
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);

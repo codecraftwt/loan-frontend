@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,53 +10,29 @@ import {
   TextInput,
   Modal,
 } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
 import { colors, FontFamily } from '../../../constants';
 import { m } from '../../../Utils/responsive';
 import { ScreenWrapper, showAlert } from '../../../Components/common';
 import lenderFlowService from '../../../Services/lenderFlowService';
 
-// Filter options for modal
+// Filter options displayed directly below search bar
 const FILTER_TABS = [
-  {
-    key: 'pending',
-    label: 'Pending',
-    icon: 'clock',
-    iconColor: '#d97706',
-    iconBg: '#fef3c7',
-  },
-  {
-    key: 'accepted',
-    label: 'Accepted',
-    icon: 'check-circle',
-    iconColor: '#059669',
-    iconBg: '#ecfdf5',
-  },
-  {
-    key: 'rejected',
-    label: 'Declined',
-    icon: 'x-circle',
-    iconColor: '#dc2626',
-    iconBg: '#fee2e2',
-  },
-  {
-    key: 'all',
-    label: 'All Requests',
-    icon: 'inbox',
-    iconColor: '#2563eb',
-    iconBg: '#eff6ff',
-  },
+  { key: 'pending', label: 'Pending' },
+  { key: 'accepted', label: 'Accepted' },
+  { key: 'rejected', label: 'Declined' },
+  { key: 'all', label: 'All' },
 ];
 
 export default function LenderIncomingRequests() {
   const navigation = useNavigation();
+  const route = useRoute();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState('pending'); // 'pending' | 'accepted' | 'rejected' | 'all'
-  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [activeTab, setActiveTab] = useState(route.params?.status || route.params?.filter || 'pending'); // 'pending' | 'accepted' | 'rejected' | 'all'
 
   // Quick Reject Modal
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
@@ -85,10 +61,23 @@ export default function LenderIncomingRequests() {
     }
   }, [activeTab, search]);
 
+  useEffect(() => {
+    if (route.params?.status) {
+      setActiveTab(route.params.status);
+    } else if (route.params?.filter) {
+      setActiveTab(route.params.filter);
+    }
+  }, [route.params?.status, route.params?.filter]);
+
   useFocusEffect(
     useCallback(() => {
+      if (route.params?.status) {
+        setActiveTab(route.params.status);
+      } else if (route.params?.filter) {
+        setActiveTab(route.params.filter);
+      }
       fetchRequests();
-    }, [fetchRequests])
+    }, [fetchRequests, route.params?.status, route.params?.filter])
   );
 
   const onRefresh = () => {
@@ -211,8 +200,8 @@ export default function LenderIncomingRequests() {
               item.status === 'pending'
                 ? styles.pillPending
                 : item.status === 'accepted'
-                ? styles.pillAccepted
-                : styles.pillRejected,
+                  ? styles.pillAccepted
+                  : styles.pillRejected,
             ]}
           >
             <Text
@@ -221,15 +210,15 @@ export default function LenderIncomingRequests() {
                 item.status === 'pending'
                   ? styles.pillTextPending
                   : item.status === 'accepted'
-                  ? styles.pillTextAccepted
-                  : styles.pillTextRejected,
+                    ? styles.pillTextAccepted
+                    : styles.pillTextRejected,
               ]}
             >
               {item.status === 'pending'
                 ? 'IN REVIEW'
                 : item.status === 'accepted'
-                ? 'ACCEPTED'
-                : 'DECLINED'}
+                  ? 'ACCEPTED'
+                  : 'DECLINED'}
             </Text>
           </View>
         </View>
@@ -290,7 +279,7 @@ export default function LenderIncomingRequests() {
       topInsetBg={colors.primary}
       statusBarColor={colors.primary}
       statusBarStyle="dark-content"
-      includeTabBarClearance={true}
+      includeTabBarClearance={false}
       scrollable={false}
     >
       {/* Top Green Banner Section (Matching Figma Admin & Dashboard) */}
@@ -304,7 +293,7 @@ export default function LenderIncomingRequests() {
 
       {/* Main Curved Body Section */}
       <View style={styles.sheetSection}>
-        {/* Search & Filter Button Row */}
+        {/* Search Bar Row (Full Width) */}
         <View style={styles.searchRow}>
           <View style={styles.searchContainer}>
             <Feather name="search" size={m(16)} color={colors.textSecondary} />
@@ -323,42 +312,32 @@ export default function LenderIncomingRequests() {
               </TouchableOpacity>
             )}
           </View>
-
-          <TouchableOpacity
-            style={[
-              styles.filterBtn,
-              activeTab !== 'all' && styles.filterBtnActive,
-            ]}
-            onPress={() => setFilterModalVisible(true)}
-            activeOpacity={0.8}
-          >
-            <Feather
-              name="sliders"
-              size={m(17)}
-              color={activeTab !== 'all' ? colors.lettersAndIcons : colors.textSecondary}
-            />
-            {activeTab !== 'all' && <View style={styles.filterActiveDot} />}
-          </TouchableOpacity>
         </View>
 
-        {/* Active Filter Pill Row */}
-        {activeTab !== 'all' && (
-          <View style={styles.activeFilterPillRow}>
-            <View style={styles.activeFilterChip}>
-              <Text style={styles.activeFilterChipLabel}>Status:</Text>
-              <Text style={styles.activeFilterChipValue}>
-                {FILTER_TABS.find((o) => o.key === activeTab)?.label || activeTab}
-              </Text>
+        {/* Filter Capsule Tabs directly below Search Bar */}
+        <View style={styles.periodCapsuleRow}>
+          {FILTER_TABS.map((tab) => {
+            const isSelected = activeTab === tab.key;
+            return (
               <TouchableOpacity
-                onPress={() => setActiveTab('all')}
-                style={styles.clearFilterChipBtn}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                key={tab.key}
+                style={[styles.periodTab, isSelected && styles.periodTabActive]}
+                onPress={() => setActiveTab(tab.key)}
+                activeOpacity={0.8}
               >
-                <Feather name="x" size={m(12)} color={colors.lettersAndIcons} />
+                <Text
+                  style={[
+                    styles.periodTabText,
+                    isSelected && styles.periodTabTextActive,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {tab.label}
+                </Text>
               </TouchableOpacity>
-            </View>
-          </View>
-        )}
+            );
+          })}
+        </View>
 
         {/* List Content */}
         {loading && !refreshing ? (
@@ -481,97 +460,7 @@ export default function LenderIncomingRequests() {
         </View>
       </Modal>
 
-      {/* ── Filter Options Modal (Moved from pinned screen bar) ── */}
-      <Modal
-        visible={filterModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setFilterModalVisible(false)}
-      >
-        <TouchableOpacity
-          style={styles.filterModalOverlay}
-          activeOpacity={1}
-          onPress={() => setFilterModalVisible(false)}
-        >
-          <TouchableOpacity
-            style={styles.filterModalCard}
-            activeOpacity={1}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <View style={styles.filterModalHandle} />
 
-            {/* Modal Header */}
-            <View style={styles.filterModalHeader}>
-              <Text style={styles.filterModalTitle}>Filter Requests</Text>
-              <TouchableOpacity
-                onPress={() => setFilterModalVisible(false)}
-                style={styles.filterModalCloseBtn}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Feather name="x" size={m(16)} color={colors.lettersAndIcons} />
-              </TouchableOpacity>
-            </View>
-
-            {/* Filter Options List */}
-            <View style={styles.filterOptionsContainer}>
-              {FILTER_TABS.map((opt) => {
-                const isSelected = activeTab === opt.key;
-                return (
-                  <TouchableOpacity
-                    key={opt.key}
-                    style={[
-                      styles.filterOptionItem,
-                      isSelected && styles.filterOptionItemSelected,
-                    ]}
-                    activeOpacity={0.7}
-                    onPress={() => {
-                      setActiveTab(opt.key);
-                      setFilterModalVisible(false);
-                    }}
-                  >
-                    <View style={styles.filterOptionLeft}>
-                      <View style={[styles.filterOptionIconWrap, { backgroundColor: opt.iconBg }]}>
-                        <Feather name={opt.icon} size={m(15)} color={opt.iconColor} />
-                      </View>
-                      <Text
-                        style={[
-                          styles.filterOptionLabel,
-                          isSelected && styles.filterOptionLabelSelected,
-                        ]}
-                      >
-                        {opt.label}
-                      </Text>
-                    </View>
-
-                    {isSelected ? (
-                      <View style={styles.filterSelectedCircle}>
-                        <Feather name="check" size={m(12)} color={colors.white} />
-                      </View>
-                    ) : (
-                      <View style={styles.filterUnselectedCircle} />
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            {/* Subtle Reset Action when not 'all' */}
-            {activeTab !== 'all' && (
-              <TouchableOpacity
-                style={styles.filterResetRow}
-                onPress={() => {
-                  setActiveTab('all');
-                  setFilterModalVisible(false);
-                }}
-                activeOpacity={0.7}
-              >
-                <Feather name="rotate-ccw" size={m(13)} color={colors.textSecondary} />
-                <Text style={styles.filterResetRowText}>Reset to All Requests</Text>
-              </TouchableOpacity>
-            )}
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
     </ScreenWrapper>
   );
 }
@@ -642,6 +531,37 @@ const styles = StyleSheet.create({
     marginBottom: m(12),
     gap: m(8),
   },
+  // Capsule Filter Tabs
+  periodCapsuleRow: {
+    flexDirection: 'row',
+    backgroundColor: colors.white,
+    borderRadius: m(24),
+    padding: m(3),
+    marginHorizontal: m(18),
+    marginBottom: m(12),
+    borderWidth: 1,
+    borderColor: 'rgba(9, 48, 48, 0.08)',
+  },
+  periodTab: {
+    flex: 1,
+    paddingVertical: m(7),
+    borderRadius: m(20),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  periodTabActive: {
+    backgroundColor: colors.primary,
+  },
+  periodTabText: {
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryMedium,
+    color: colors.lettersAndIcons,
+  },
+  periodTabTextActive: {
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+  },
+
   searchContainer: {
     flex: 1,
     flexDirection: 'row',
@@ -839,7 +759,7 @@ const styles = StyleSheet.create({
 
   listContent: {
     paddingHorizontal: m(18),
-    paddingBottom: m(30),
+    paddingBottom: m(100),
   },
   loadingBox: {
     flex: 1,

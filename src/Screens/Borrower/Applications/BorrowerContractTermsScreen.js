@@ -298,7 +298,7 @@ export default function BorrowerContractTermsScreen() {
 
   // Render authentic digital signature strokes / preview
   const renderSignaturePreview = (sig, fallbackRole) => {
-    if (!sig?.signatureData) {
+    if (!sig?.signatureData || !String(sig.signatureData).trim()) {
       return (
         <View style={styles.sigPlaceholderBox}>
           <Feather name="clock" size={m(14)} color="#94a3b8" />
@@ -309,11 +309,31 @@ export default function BorrowerContractTermsScreen() {
 
     const data = String(sig.signatureData).trim();
 
-    // 1. Data URI with SVG XML
-    if (data.startsWith('data:image/svg+xml;utf8,')) {
+    // 0. Placeholder digital signature like DIGITAL_SIG_...
+    if (data.startsWith('DIGITAL_SIG_')) {
+      const parts = data.split('_');
+      const namePart = parts.length >= 4 ? parts.slice(3).join(' ') : (sig.signedBy || fallbackRole);
+      return (
+        <View style={styles.sigTextBox}>
+          <Text style={styles.sigTextVal}>{namePart}</Text>
+          <Text style={styles.sigSubMeta}>Digitally Certified Signature</Text>
+        </View>
+      );
+    }
+
+    // 1. Data URI with SVG XML or raw SVG
+    if (data.includes('svg+xml') || data.startsWith('<svg') || data.includes('<path')) {
       try {
-        const decoded = decodeURIComponent(data.replace('data:image/svg+xml;utf8,', ''));
-        const pathMatches = [...decoded.matchAll(/d="([^"]+)"/g)].map((match) => match[1]);
+        let svgString = data;
+        if (data.startsWith('data:image/svg+xml')) {
+          const rawPart = data.substring(data.indexOf(',') + 1);
+          try {
+            svgString = decodeURIComponent(rawPart);
+          } catch (_) {
+            svgString = rawPart;
+          }
+        }
+        const pathMatches = [...svgString.matchAll(/d=["']([^"']+)["']/g)].map((m) => m[1]);
         if (pathMatches.length > 0) {
           return (
             <Svg viewBox="0 0 350 160" style={styles.sigSvgCanvas}>
@@ -340,7 +360,7 @@ export default function BorrowerContractTermsScreen() {
     if (data.startsWith('{')) {
       try {
         const parsed = JSON.parse(data);
-        if (parsed?.paths && Array.isArray(parsed.paths)) {
+        if (parsed?.paths && Array.isArray(parsed.paths) && parsed.paths.length > 0) {
           return (
             <Svg viewBox="0 0 350 160" style={styles.sigSvgCanvas}>
               {parsed.paths.map((d, i) => (
@@ -452,6 +472,7 @@ export default function BorrowerContractTermsScreen() {
               }
             }}
             activeOpacity={0.8}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Feather name="chevron-left" size={m(22)} color={colors.lettersAndIcons} />
           </TouchableOpacity>
@@ -507,7 +528,7 @@ export default function BorrowerContractTermsScreen() {
 
             {/* Agreement Notice Banner */}
             <View style={styles.noticeBanner}>
-              <Feather name="shield" size={m(16)} color="#059669" />
+              <Feather name="shield" size={m(15)} color="#475569" />
               <Text style={styles.noticeText}>
                 Digitally legally binding credit contract governed by the Indian Contract Act, 1872 & IT Act, 2000.
               </Text>
@@ -547,7 +568,7 @@ export default function BorrowerContractTermsScreen() {
                   <View style={styles.ledgerCellDivider} />
                   <View style={styles.ledgerCell}>
                     <Text style={styles.ledgerCellLabel}>REPAYMENT STRUCTURE</Text>
-                    <Text style={[styles.ledgerCellVal, { color: '#1e40af' }]}>
+                    <Text style={styles.ledgerCellVal}>
                       {isEmi ? 'Monthly Equated EMI' : 'One-Time Bullet'}
                     </Text>
                   </View>
@@ -560,14 +581,14 @@ export default function BorrowerContractTermsScreen() {
                     <Text style={styles.ledgerCellLabel}>
                       {isEmi ? 'MONTHLY INSTALLMENT' : 'MATURITY PRINCIPAL'}
                     </Text>
-                    <Text style={[styles.ledgerCellVal, { color: '#2563eb' }]}>
+                    <Text style={styles.ledgerCellVal}>
                       {isEmi ? `${formatINR(calcMonthlyEmi)} / mo` : formatINR(principal)}
                     </Text>
                   </View>
                   <View style={styles.ledgerCellDivider} />
                   <View style={styles.ledgerCell}>
                     <Text style={styles.ledgerCellLabel}>TOTAL INTEREST ACCRUED</Text>
-                    <Text style={[styles.ledgerCellVal, { color: '#b45309' }]}>
+                    <Text style={styles.ledgerCellVal}>
                       {formatINR(calcTotalInterest)}
                     </Text>
                   </View>
@@ -578,7 +599,7 @@ export default function BorrowerContractTermsScreen() {
                 <View style={styles.ledgerRow}>
                   <View style={styles.ledgerCell}>
                     <Text style={styles.ledgerCellLabel}>TOTAL REPAYMENT OBLIGATION</Text>
-                    <Text style={[styles.ledgerCellVal, { color: '#059669' }]}>
+                    <Text style={styles.ledgerCellVal}>
                       {formatINR(calcTotalPayable)}
                     </Text>
                   </View>
@@ -616,9 +637,9 @@ export default function BorrowerContractTermsScreen() {
 
               <View style={[styles.partyBox, { marginTop: m(10) }]}>
                 <View style={styles.partyBoxHeader}>
-                  <Text style={[styles.partyRole, { color: '#059669' }]}>Second Party (The Borrower)</Text>
-                  <View style={[styles.nbfcBadge, { backgroundColor: '#ecfdf5', borderColor: '#a7f3d0' }]}>
-                    <Text style={[styles.nbfcBadgeText, { color: '#059669' }]}>KYC Verified</Text>
+                  <Text style={styles.partyRole}>Second Party (The Borrower)</Text>
+                  <View style={styles.nbfcBadge}>
+                    <Text style={styles.nbfcBadgeText}>KYC Verified</Text>
                   </View>
                 </View>
                 <Text style={styles.partyName}>{borrowerName}</Text>
@@ -683,12 +704,17 @@ export default function BorrowerContractTermsScreen() {
 
             {/* Bilateral Execution & Digital E-Signature Certificates */}
             <View style={styles.card}>
-              <View style={styles.sigCardHeaderRow}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: m(6) }}>
-                  <Feather name="shield" size={m(15)} color="#2563eb" />
-                  <Text style={styles.cardHeaderTitle}>Bilateral Execution & E-Signatures</Text>
+              <View style={styles.sigCardHeaderBlock}>
+                <View style={styles.sigCardHeaderTopRow}>
+                  <Feather name="shield" size={m(15)} color="#475569" />
+                  <Text style={styles.sigCardHeaderTitle}>
+                    Bilateral Execution & Digital E-Signature Certificates
+                  </Text>
                 </View>
-                <Text style={styles.auditCertTag}>CRYPTOGRAPHIC 256-BIT SHA</Text>
+                <View style={styles.auditCertPill}>
+                  <Feather name="lock" size={m(9)} color="#64748b" style={{ marginRight: m(4) }} />
+                  <Text style={styles.auditCertTag}>CRYPTOGRAPHIC 256-BIT SHA CERTIFIED AUDIT</Text>
+                </View>
               </View>
 
               {/* 1. Lender Digital Execution Certificate */}
@@ -1224,12 +1250,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: m(6),
-    backgroundColor: '#2563eb',
+    backgroundColor: colors.lettersAndIcons,
     borderRadius: m(12),
     paddingVertical: m(11),
     paddingHorizontal: m(16),
     elevation: 2,
-    shadowColor: '#2563eb',
+    shadowColor: colors.lettersAndIcons,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 4,
@@ -1318,12 +1344,12 @@ const styles = StyleSheet.create({
   noticeBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ecfdf5',
+    backgroundColor: '#f8fafc',
     borderRadius: m(12),
     padding: m(12),
     gap: m(8),
     borderWidth: 1,
-    borderColor: '#a7f3d0',
+    borderColor: '#e2e8f0',
     marginBottom: m(14),
   },
   noticeText: {
@@ -1331,7 +1357,7 @@ const styles = StyleSheet.create({
     fontSize: m(11),
     lineHeight: m(15),
     fontFamily: FontFamily.primaryMedium,
-    color: '#065f46',
+    color: '#475569',
   },
 
   // Cards
@@ -1396,20 +1422,20 @@ const styles = StyleSheet.create({
   collateralBar: {
     borderTopWidth: 1,
     borderTopColor: '#e2e8f0',
-    backgroundColor: '#fffbeb',
+    backgroundColor: '#f8fafc',
     paddingHorizontal: m(10),
     paddingVertical: m(7),
   },
   collateralBarLabel: {
     fontSize: m(9),
     fontFamily: FontFamily.primaryBold,
-    color: '#92400e',
+    color: '#64748b',
     letterSpacing: 0.3,
   },
   collateralBarVal: {
     fontSize: m(11),
     fontFamily: FontFamily.primarySemiBold,
-    color: '#78350f',
+    color: colors.lettersAndIcons,
     marginTop: m(1),
   },
 
@@ -1464,9 +1490,9 @@ const styles = StyleSheet.create({
     marginBottom: m(6),
   },
   nbfcBadge: {
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#f1f5f9',
     borderWidth: 1,
-    borderColor: '#bfdbfe',
+    borderColor: '#e2e8f0',
     paddingHorizontal: m(6),
     paddingVertical: m(2),
     borderRadius: m(4),
@@ -1474,12 +1500,12 @@ const styles = StyleSheet.create({
   nbfcBadgeText: {
     fontSize: m(9),
     fontFamily: FontFamily.primaryBold,
-    color: '#1e40af',
+    color: '#475569',
   },
   partyRole: {
     fontSize: m(10),
     fontFamily: FontFamily.primaryBold,
-    color: colors.blueButton,
+    color: '#475569',
     letterSpacing: 0.4,
     marginBottom: m(2),
   },
@@ -1497,11 +1523,11 @@ const styles = StyleSheet.create({
 
   // Clauses
   clauseText: {
+    flex: 1,
     fontSize: m(11.5),
-    lineHeight: m(16),
+    lineHeight: m(17.5),
     fontFamily: FontFamily.primaryRegular,
     color: colors.textSecondary,
-    marginBottom: m(8),
   },
   boldText: {
     fontFamily: FontFamily.primaryBold,
@@ -1543,9 +1569,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   currencyBadge: {
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#f1f5f9',
     borderWidth: 1,
-    borderColor: '#bfdbfe',
+    borderColor: '#e2e8f0',
     paddingHorizontal: m(8),
     paddingVertical: m(2.5),
     borderRadius: m(6),
@@ -1553,28 +1579,50 @@ const styles = StyleSheet.create({
   currencyBadgeText: {
     fontSize: m(9.5),
     fontFamily: FontFamily.primaryBold,
-    color: '#1e40af',
+    color: '#475569',
     letterSpacing: 0.3,
   },
   clauseItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: m(10),
+    marginBottom: m(12),
     gap: m(6),
   },
   clauseNumber: {
     fontSize: m(11.5),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
-    minWidth: m(14),
+    minWidth: m(16),
+    marginTop: m(0.5),
   },
 
   // Bilateral Signatures Section
-  sigCardHeaderRow: {
+  sigCardHeaderBlock: {
+    marginBottom: m(12),
+  },
+  sigCardHeaderTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: m(12),
+    gap: m(6),
+    marginBottom: m(6),
+  },
+  sigCardHeaderTitle: {
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    flex: 1,
+    lineHeight: m(18),
+  },
+  auditCertPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: '#f1f5f9',
+    paddingHorizontal: m(8),
+    paddingVertical: m(3),
+    borderRadius: m(5),
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   auditCertTag: {
     fontSize: m(8.5),
@@ -1659,6 +1707,12 @@ const styles = StyleSheet.create({
   sigTextBox: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  sigSubMeta: {
+    fontSize: m(9),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#64748b',
+    marginTop: m(2),
   },
   sigTextVal: {
     fontSize: m(16),

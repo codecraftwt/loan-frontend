@@ -268,7 +268,7 @@ export default function NotificationsScreen() {
         return;
       }
       if (type === 'loan_received') {
-        navigation.navigate('LenderIncomingRequests');
+        navigation.navigate('LenderRequests');
         return;
       }
     } else {

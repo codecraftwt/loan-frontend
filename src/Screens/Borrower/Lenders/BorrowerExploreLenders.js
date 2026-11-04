@@ -683,6 +683,7 @@ const styles = StyleSheet.create({
     borderColor: '#fde68a',
     borderRadius: m(14),
     padding: m(12),
+    marginHorizontal: m(18),
     marginBottom: m(12),
   },
   pendingAppIconBox: {

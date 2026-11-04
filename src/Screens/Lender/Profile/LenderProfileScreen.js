@@ -281,6 +281,12 @@ export default function LenderProfileScreen() {
       onPress: () => navigation.navigate('LenderOfficeJurisdictionScreen'),
     },
     {
+      id: 'help',
+      title: 'Help',
+      icon: 'headphones',
+      onPress: () => navigation.navigate('HelpAndSupportScreen'),
+    },
+    {
       id: 'logout',
       title: 'Logout',
       icon: 'log-out',
@@ -406,8 +412,8 @@ export default function LenderProfileScreen() {
                   activeOpacity={0.7}
                   onPress={() => handlePhotoOption('camera')}
                 >
-                  <View style={[styles.photoOptionIcon, { backgroundColor: '#E0F2FE' }]}>
-                    <Feather name="camera" size={m(18)} color="#0284C7" />
+                  <View style={[styles.photoOptionIcon, { backgroundColor: '#2F80ED' }]}>
+                    <Feather name="camera" size={m(19)} color={colors.white} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.photoOptionText}>Take Photo</Text>
@@ -423,8 +429,8 @@ export default function LenderProfileScreen() {
                   activeOpacity={0.7}
                   onPress={() => handlePhotoOption('gallery')}
                 >
-                  <View style={[styles.photoOptionIcon, { backgroundColor: '#ECFDF5' }]}>
-                    <Feather name="image" size={m(18)} color="#059669" />
+                  <View style={[styles.photoOptionIcon, { backgroundColor: '#2F80ED' }]}>
+                    <Feather name="image" size={m(19)} color={colors.white} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.photoOptionText}>Choose from Gallery</Text>
@@ -441,8 +447,8 @@ export default function LenderProfileScreen() {
                       activeOpacity={0.7}
                       onPress={() => handlePhotoOption('remove')}
                     >
-                      <View style={[styles.photoOptionIcon, { backgroundColor: '#FEE2E2' }]}>
-                        <Feather name="trash-2" size={m(18)} color="#DC2626" />
+                      <View style={[styles.photoOptionIcon, { backgroundColor: '#EF4444' }]}>
+                        <Feather name="trash-2" size={m(19)} color={colors.white} />
                       </View>
                       <View style={{ flex: 1 }}>
                         <Text style={[styles.photoOptionText, { color: '#DC2626' }]}>Remove Photo</Text>
@@ -480,9 +486,9 @@ export default function LenderProfileScreen() {
               onPress={() => setLogoutModalVisible(false)}
             />
             <View style={styles.modalCard}>
-              <Text style={styles.modalTitle}>Sign Out</Text>
+              <Text style={styles.modalTitle}>Logout</Text>
               <Text style={styles.modalSubtitle}>
-                Are you sure you want to sign out of the Institutional Terminal?
+                Are you sure you want to log out?
               </Text>
               <View style={styles.modalActionButtons}>
                 <TouchableOpacity
@@ -490,7 +496,7 @@ export default function LenderProfileScreen() {
                   activeOpacity={0.8}
                   onPress={handleConfirmLogout}
                 >
-                  <Text style={styles.modalConfirmBtnText}>Sign Out</Text>
+                  <Text style={styles.modalConfirmBtnText}>Logout</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.modalCancelBtn}
@@ -641,9 +647,9 @@ const styles = StyleSheet.create({
     gap: m(12),
   },
   photoOptionIcon: {
-    width: m(38),
-    height: m(38),
-    borderRadius: m(10),
+    width: m(42),
+    height: m(42),
+    borderRadius: m(21),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -664,14 +670,15 @@ const styles = StyleSheet.create({
     marginHorizontal: m(14),
   },
   photoCancelBtn: {
+    width: '100%',
+    height: m(48),
+    borderRadius: m(24),
+    backgroundColor: colors.lightGreen,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: m(12),
-    borderRadius: m(12),
-    backgroundColor: 'rgba(9, 48, 48, 0.05)',
   },
   photoCancelBtnText: {
-    fontSize: m(13),
+    fontSize: m(14.5),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
   },
@@ -772,14 +779,14 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: m(320),
     backgroundColor: colors.white,
-    borderRadius: m(28),
+    borderRadius: m(24),
     paddingHorizontal: m(24),
-    paddingTop: m(36),
+    paddingTop: m(32),
     paddingBottom: m(28),
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.2,
     shadowRadius: 16,
     elevation: 25,
   },
@@ -794,9 +801,9 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.primaryRegular,
     color: '#4B6358',
     textAlign: 'center',
-    marginTop: m(10),
-    marginBottom: m(26),
-    lineHeight: m(20),
+    marginTop: m(8),
+    marginBottom: m(24),
+    lineHeight: m(19),
   },
   modalActionButtons: {
     width: '100%',
@@ -813,7 +820,7 @@ const styles = StyleSheet.create({
   modalConfirmBtnText: {
     fontSize: m(14.5),
     fontFamily: FontFamily.primaryBold,
-    color: colors.lettersAndIcons,
+    color: colors.white,
   },
   modalCancelBtn: {
     width: '100%',

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
+import Clipboard from '@react-native-clipboard/clipboard';
 import { colors, FontFamily } from '../../../constants';
 import { m } from '../../../Utils/responsive';
 import { ScreenWrapper, showAlert } from '../../../Components/common';
@@ -84,6 +85,11 @@ export default function BorrowerLenderDetails() {
 
   const handleCopyLicense = (lic) => {
     if (!lic) return;
+    try {
+      Clipboard.setString(String(lic));
+    } catch (err) {
+      console.log('Clipboard copy error:', err);
+    }
     setCopiedLicense(true);
     showAlert('License Copied', `License number ${lic} copied to clipboard.`);
     setTimeout(() => setCopiedLicense(false), 2000);
@@ -178,11 +184,11 @@ export default function BorrowerLenderDetails() {
     Array.isArray(lp.servicesOffered) && lp.servicesOffered.length > 0
       ? lp.servicesOffered
       : [
-          'Commercial Term Loan',
-          'Working Capital Line',
-          'SME Business Loan',
-          'Equipment & Machinery Finance',
-        ];
+        'Commercial Term Loan',
+        'Working Capital Line',
+        'SME Business Loan',
+        'Equipment & Machinery Finance',
+      ];
 
   const totalFunded = lp.totalLoansFunded || 12;
   const disbursedVolume = lp.totalDisbursedAmount || 802000;
@@ -241,7 +247,7 @@ export default function BorrowerLenderDetails() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* ── TOP HERO BANNER (Only: Lender Name, License Number, Favorited) ── */}
+          {/* ── TOP HERO BANNER (Lender Name, License Number, Favorited) ── */}
           <View style={styles.heroCard}>
             <View style={styles.heroTopRow}>
               {/* Left: Avatar with Verified Check Badge */}
@@ -254,27 +260,15 @@ export default function BorrowerLenderDetails() {
                 </View>
               </View>
 
-              {/* Middle: Lender Name & License Number */}
+              {/* Middle: Lender Name & Status */}
               <View style={styles.heroIdentityCol}>
                 <Text style={styles.heroNameText} numberOfLines={1}>
                   {companyTitle}
                 </Text>
-
-                {lender.licenseNumber ? (
-                  <TouchableOpacity
-                    style={styles.licenseRow}
-                    activeOpacity={0.8}
-                    onPress={() => handleCopyLicense(lender.licenseNumber)}
-                  >
-                    <Feather name="shield" size={m(11)} color="#f59e0b" />
-                    <Text style={styles.licenseText}>Lic: {lender.licenseNumber}</Text>
-                    <Feather
-                      name={copiedLicense ? 'check' : 'copy'}
-                      size={m(11)}
-                      color={copiedLicense ? '#10b981' : '#94a3b8'}
-                    />
-                  </TouchableOpacity>
-                ) : null}
+                <View style={styles.verifiedBadgeRow}>
+                  <Feather name="check-circle" size={m(11)} color="#10b981" />
+                  <Text style={styles.verifiedBadgeText}>Verified Lender</Text>
+                </View>
               </View>
 
               {/* Right: Favorited Button */}
@@ -293,6 +287,34 @@ export default function BorrowerLenderDetails() {
                 </Text>
               </TouchableOpacity>
             </View>
+
+            {/* Bottom Row: Full-width License & Copy Button */}
+            {lender.licenseNumber ? (
+              <View style={styles.licenseBanner}>
+                <View style={styles.licenseLeftGroup}>
+                  <Feather name="shield" size={m(12)} color="#f59e0b" />
+                  <Text style={styles.licenseText} numberOfLines={1}>
+                    Lic: {lender.licenseNumber}
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.copyBtn}
+                  activeOpacity={0.7}
+                  onPress={() => handleCopyLicense(lender.licenseNumber)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Feather
+                    name={copiedLicense ? 'check' : 'copy'}
+                    size={m(12)}
+                    color={copiedLicense ? '#10b981' : '#fbbf24'}
+                  />
+                  <Text style={[styles.copyBtnText, copiedLicense && { color: '#10b981' }]}>
+                    {copiedLicense ? 'Copied' : 'Copy'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
           </View>
 
           {/* ── Tab Switcher: Personal Information vs Financial Information ── */}
@@ -756,21 +778,57 @@ const styles = StyleSheet.create({
     color: colors.white,
     flexShrink: 1,
   },
-  licenseRow: {
+  verifiedBadgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(5),
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    paddingHorizontal: m(7),
-    paddingVertical: m(3),
-    borderRadius: m(6),
-    alignSelf: 'flex-start',
-    marginTop: m(5),
+    gap: m(4),
+    marginTop: m(3),
+  },
+  verifiedBadgeText: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryMedium,
+    color: '#10b981',
+  },
+  licenseBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(255, 255, 255, 0.07)',
+    borderWidth: 1,
+    borderColor: 'rgba(254, 240, 138, 0.25)',
+    borderRadius: m(10),
+    paddingHorizontal: m(10),
+    paddingVertical: m(6),
+    marginTop: m(12),
+  },
+  licenseLeftGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(6),
+    flex: 1,
+    marginRight: m(8),
   },
   licenseText: {
-    fontSize: m(10),
+    fontSize: m(11),
     fontFamily: FontFamily.primaryMedium,
     color: '#fef08a',
+    flexShrink: 1,
+  },
+  copyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(4),
+    backgroundColor: 'rgba(254, 240, 138, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(254, 240, 138, 0.3)',
+    borderRadius: m(6),
+    paddingHorizontal: m(8),
+    paddingVertical: m(3.5),
+  },
+  copyBtnText: {
+    fontSize: m(10.5),
+    fontFamily: FontFamily.primaryBold,
+    color: '#fbbf24',
   },
 
   heroFavoriteBtn: {

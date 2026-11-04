@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import {
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
+import Svg, { Path } from 'react-native-svg';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { FontFamily, colors } from '../../../constants';
 import { m } from '../../../Utils/responsive';
@@ -59,11 +60,15 @@ export default function LenderLoanDetails() {
 
   // OTP Verification Modal State
   const [otpModalVisible, setOtpModalVisible] = useState(false);
+  const isInitialLoadRef = useRef(true);
 
   const fetchLoanDetails = useCallback(async () => {
     try {
       if (loanId) {
-        if (!loan) setLoading(true);
+        if (isInitialLoadRef.current) {
+          setLoading(true);
+          isInitialLoadRef.current = false;
+        }
         const res = await lenderFlowService.getLoanById(loanId);
         if (res?.success && res.loan) {
           setLoan(res.loan);
@@ -89,11 +94,11 @@ export default function LenderLoanDetails() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [loanId, loan]);
+  }, [loanId]);
 
   useEffect(() => {
     fetchLoanDetails();
-  }, [loanId]);
+  }, [fetchLoanDetails, loanId]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -328,13 +333,128 @@ export default function LenderLoanDetails() {
   const nextDueDate = nextPendingInstallment?.dueDate
     ? formatDate(nextPendingInstallment.dueDate)
     : isFullyPaid
-    ? 'Completed'
-    : 'N/A';
+      ? 'Completed'
+      : 'N/A';
 
   // Clean deal title without redundant borrower name
   const rawDealTitle = loan?.dealName || loan?.purpose || 'Working Capital Line';
   const cleanDealTitle = rawDealTitle.replace(new RegExp(`\\s*-\\s*${borrowerName}`, 'i'), '').trim() || 'Working Capital Line';
   const paidCount = installments.filter((i) => i.status === 'paid' || i.status === 'completed').length;
+
+  // Render authentic digital signature strokes / SVG / image / text
+  const renderSignatureContent = (sigData, fallbackText, subText) => {
+    const cleanFallback = fallbackText || 'Authorized Signatory';
+    const cleanSub = subText || 'Digitally Certified Signature';
+
+    if (!sigData) {
+      return (
+        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={styles.signatureCursiveText}>{cleanFallback}</Text>
+          <Text style={styles.signatureMetaSub}>{cleanSub}</Text>
+        </View>
+      );
+    }
+
+    const data = String(sigData).trim();
+
+    // 0. Placeholder digital signature like DIGITAL_SIG_...
+    if (data.startsWith('DIGITAL_SIG_')) {
+      const parts = data.split('_');
+      const namePart = parts.length >= 4 ? parts.slice(3).join(' ') : cleanFallback;
+      return (
+        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={styles.signatureCursiveText}>{namePart || cleanFallback}</Text>
+          <Text style={styles.signatureMetaSub}>{cleanSub}</Text>
+        </View>
+      );
+    }
+
+    // 1. Data URI with SVG XML (from mobile drawing pad) or raw SVG XML
+    if (data.includes('svg+xml') || data.startsWith('<svg') || data.includes('<path')) {
+      try {
+        let svgString = data;
+        if (data.startsWith('data:image/svg+xml')) {
+          const rawPart = data.substring(data.indexOf(',') + 1);
+          try {
+            svgString = decodeURIComponent(rawPart);
+          } catch (_) {
+            svgString = rawPart;
+          }
+        }
+        const pathMatches = [...svgString.matchAll(/d=["']([^"']+)["']/g)].map((m) => m[1]);
+        if (pathMatches.length > 0) {
+          return (
+            <View style={{ width: '100%', height: m(65), alignItems: 'center', justifyContent: 'center' }}>
+              <Svg viewBox="0 0 350 160" width="100%" height={m(65)}>
+                {pathMatches.map((d, i) => (
+                  <Path
+                    key={i}
+                    d={d}
+                    fill="none"
+                    stroke="#093030"
+                    strokeWidth="3.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                ))}
+              </Svg>
+            </View>
+          );
+        }
+      } catch (e) {
+        console.log('Error parsing SVG signature in LenderLoanDetails:', e);
+      }
+    }
+
+    // 2. JSON string with paths
+    if (data.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(data);
+        if (parsed?.paths && Array.isArray(parsed.paths) && parsed.paths.length > 0) {
+          return (
+            <View style={{ width: '100%', height: m(65), alignItems: 'center', justifyContent: 'center' }}>
+              <Svg viewBox="0 0 350 160" width="100%" height={m(65)}>
+                {parsed.paths.map((d, i) => (
+                  <Path
+                    key={i}
+                    d={d}
+                    fill="none"
+                    stroke="#093030"
+                    strokeWidth="3.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                ))}
+              </Svg>
+            </View>
+          );
+        }
+      } catch (e) { }
+    }
+
+    // 3. Base64 PNG/JPEG or standard web URL (from web canvas)
+    if (
+      (data.startsWith('data:image/') && !data.includes('svg+xml')) ||
+      data.startsWith('http://') ||
+      data.startsWith('https://')
+    ) {
+      return (
+        <Image
+          source={{ uri: data }}
+          style={styles.signatureImage}
+          resizeMode="contain"
+        />
+      );
+    }
+
+    // 4. Stylized typed text signature fallback
+    return (
+      <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={styles.signatureCursiveText}>{data || cleanFallback}</Text>
+        <Text style={styles.signatureMetaSub}>{cleanSub}</Text>
+      </View>
+    );
+  };
 
   return (
     <ScreenWrapper
@@ -354,7 +474,7 @@ export default function LenderLoanDetails() {
             activeOpacity={0.8}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
-            <Feather name="arrow-left" size={m(19)} color={colors.lettersAndIcons} />
+            <Feather name="chevron-left" size={m(22)} color={colors.lettersAndIcons} />
           </TouchableOpacity>
 
           <View style={styles.headerCenterWrap}>
@@ -540,8 +660,8 @@ export default function LenderLoanDetails() {
                                 isPaid
                                   ? styles.instNumberPaid
                                   : isOverdue
-                                  ? styles.instNumberOverdue
-                                  : styles.instNumberPending,
+                                    ? styles.instNumberOverdue
+                                    : styles.instNumberPending,
                               ]}
                             >
                               <Text
@@ -550,8 +670,8 @@ export default function LenderLoanDetails() {
                                   isPaid
                                     ? styles.instNumberTextPaid
                                     : isOverdue
-                                    ? styles.instNumberTextOverdue
-                                    : styles.instNumberTextPending,
+                                      ? styles.instNumberTextOverdue
+                                      : styles.instNumberTextPending,
                                 ]}
                               >
                                 {emiPadded}
@@ -578,10 +698,10 @@ export default function LenderLoanDetails() {
                                 isPaid
                                   ? styles.instStatusPaid
                                   : isPartial
-                                  ? styles.instStatusPartial
-                                  : isOverdue
-                                  ? styles.instStatusOverdue
-                                  : styles.instStatusPending,
+                                    ? styles.instStatusPartial
+                                    : isOverdue
+                                      ? styles.instStatusOverdue
+                                      : styles.instStatusPending,
                               ]}
                             >
                               <Feather
@@ -595,10 +715,10 @@ export default function LenderLoanDetails() {
                                   isPaid
                                     ? styles.instTextPaid
                                     : isPartial
-                                    ? styles.instTextPartial
-                                    : isOverdue
-                                    ? styles.instTextOverdue
-                                    : styles.instTextPending,
+                                      ? styles.instTextPartial
+                                      : isOverdue
+                                        ? styles.instTextOverdue
+                                        : styles.instTextPending,
                                 ]}
                               >
                                 {isPaid ? 'Paid' : isPartial ? 'Partial' : isOverdue ? 'Overdue' : 'Due'}
@@ -896,18 +1016,21 @@ export default function LenderLoanDetails() {
           {activeTab === 'agreement' && (
             <View style={styles.tabSectionCard}>
               <View style={styles.agreementHeaderRow}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: m(8) }}>
+                <View style={styles.agreementHeaderLeft}>
                   <View style={styles.agreementIconBox}>
-                    <Feather name="file-text" size={m(18)} color="#2563eb" />
+                    <Feather name="file-text" size={m(18)} color="#059669" />
                   </View>
-                  <View>
-                    <Text style={styles.agreementTitle}>Master Loan Facility Agreement</Text>
+                  <View style={styles.agreementTitleCol}>
+                    <Text style={styles.agreementTitle} numberOfLines={1}>
+                      Master Loan Facility Agreement
+                    </Text>
                     <Text style={styles.agreementDocId}>
                       Doc ID: {agreement.documentId || `AGR-2026-${loan._id.slice(-6).toUpperCase()}`}
                     </Text>
                   </View>
                 </View>
                 <View style={styles.fullyExecutedBadge}>
+                  <Feather name="check" size={m(10)} color="#15803d" />
                   <Text style={styles.fullyExecutedText}>
                     {agreement.status === 'fully_executed' || loan.digitalSignature ? 'Fully Executed' : 'Legally Active'}
                   </Text>
@@ -961,7 +1084,7 @@ export default function LenderLoanDetails() {
                 <View style={styles.sigCard}>
                   <View style={styles.sigCardHeader}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: m(6) }}>
-                      <Feather name="briefcase" size={m(13)} color="#2563eb" />
+                      <Feather name="briefcase" size={m(13)} color="#059669" />
                       <Text style={styles.sigPartyLabel}>Lender / Sanctioning Authority</Text>
                     </View>
                     <View style={styles.sigVerifiedBadge}>
@@ -971,23 +1094,10 @@ export default function LenderLoanDetails() {
                   </View>
 
                   <View style={styles.signaturePreviewBox}>
-                    {lenderSigData ? (
-                      lenderSigData.startsWith('data:image') || lenderSigData.startsWith('http') ? (
-                        <Image
-                          source={{ uri: lenderSigData }}
-                          style={styles.signatureImage}
-                          resizeMode="contain"
-                        />
-                      ) : (
-                        <Text style={styles.signatureCursiveText}>{lenderSigData}</Text>
-                      )
-                    ) : (
-                      <View style={{ alignItems: 'center' }}>
-                        <Text style={styles.signatureCursiveText}>
-                          {lenderSig?.signedBy || loan?.lenderId?.companyName || loan?.lenderId?.userName || 'Prajwal More'}
-                        </Text>
-                        <Text style={styles.signatureMetaSub}>Digitally Certified Signature</Text>
-                      </View>
+                    {renderSignatureContent(
+                      lenderSigData,
+                      lenderSig?.signedBy || loan?.lenderId?.companyName || loan?.lenderId?.userName || 'Prajwal More',
+                      'Digitally Certified Signature'
                     )}
                   </View>
 
@@ -1027,23 +1137,10 @@ export default function LenderLoanDetails() {
                   </View>
 
                   <View style={styles.signaturePreviewBox}>
-                    {borrowerSigData ? (
-                      borrowerSigData.startsWith('data:image') || borrowerSigData.startsWith('http') ? (
-                        <Image
-                          source={{ uri: borrowerSigData }}
-                          style={styles.signatureImage}
-                          resizeMode="contain"
-                        />
-                      ) : (
-                        <Text style={styles.signatureCursiveText}>{borrowerSigData}</Text>
-                      )
-                    ) : (
-                      <View style={{ alignItems: 'center' }}>
-                        <Text style={styles.signatureCursiveText}>
-                          {borrowerSig?.signedBy || loan?.name || borrowerName}
-                        </Text>
-                        <Text style={styles.signatureMetaSub}>E-Sign Consent Recorded</Text>
-                      </View>
+                    {renderSignatureContent(
+                      borrowerSigData,
+                      borrowerSig?.signedBy || loan?.name || borrowerName,
+                      'E-Sign Consent Recorded'
                     )}
                   </View>
 
@@ -1456,11 +1553,7 @@ export default function LenderLoanDetails() {
                   </View>
 
                   <View style={styles.contractSigImageCanvas}>
-                    {lenderSigData ? (
-                      <Image source={{ uri: lenderSigData }} style={styles.contractSignatureImg} resizeMode="contain" />
-                    ) : (
-                      <Text style={styles.contractSigFallbackText}>{lenderName}</Text>
-                    )}
+                    {renderSignatureContent(lenderSigData, lenderName, 'Digitally Verified')}
                   </View>
 
                   <View style={styles.contractSigDetails}>
@@ -1490,11 +1583,7 @@ export default function LenderLoanDetails() {
                   </View>
 
                   <View style={styles.contractSigImageCanvas}>
-                    {borrowerSigData ? (
-                      <Image source={{ uri: borrowerSigData }} style={styles.contractSignatureImg} resizeMode="contain" />
-                    ) : (
-                      <Text style={styles.contractSigFallbackText}>{borrowerName}</Text>
-                    )}
+                    {renderSignatureContent(borrowerSigData, borrowerName, 'Digitally Verified')}
                   </View>
 
                   <View style={styles.contractSigDetails}>
@@ -1589,9 +1678,9 @@ const styles = StyleSheet.create({
     gap: m(10),
   },
   backBtn: {
-    width: m(36),
-    height: m(36),
-    borderRadius: m(18),
+    width: m(38),
+    height: m(38),
+    borderRadius: m(19),
     backgroundColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1780,17 +1869,6 @@ const styles = StyleSheet.create({
     paddingBottom: m(10),
     marginBottom: m(10),
   },
-  matrixTitle: {
-    fontSize: m(13),
-    fontFamily: FontFamily.primaryBold,
-    color: colors.lettersAndIcons,
-  },
-  matrixSubtitle: {
-    fontSize: m(10.5),
-    fontFamily: FontFamily.primaryRegular,
-    color: colors.textSecondary,
-    marginTop: m(1),
-  },
   // ── Amortization & Installment Matrix (Tab 1 Refined) ──
   matrixHeaderBox: {
     marginBottom: m(14),
@@ -1837,15 +1915,14 @@ const styles = StyleSheet.create({
   matrixProgressBarFill: {
     height: '100%',
     borderRadius: m(2),
-  },
-  installmentsList: {
-    gap: m(8),
+  }, installmentsList: {
+    gap: m(6),
   },
   instCard: {
     backgroundColor: '#ffffff',
-    borderRadius: m(12),
+    borderRadius: m(10),
     paddingHorizontal: m(10),
-    paddingVertical: m(9),
+    paddingVertical: m(6),
     borderWidth: 1,
     borderColor: '#e2e8f0',
     borderLeftWidth: m(3.5),
@@ -1873,13 +1950,13 @@ const styles = StyleSheet.create({
   instLeftCol: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(8),
+    gap: m(7),
     flex: 1,
   },
   instNumberCircle: {
-    width: m(26),
-    height: m(26),
-    borderRadius: m(13),
+    width: m(22),
+    height: m(22),
+    borderRadius: m(11),
     backgroundColor: '#f1f5f9',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1894,7 +1971,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#eff6ff',
   },
   instNumberText: {
-    fontSize: m(10),
+    fontSize: m(9.5),
     fontFamily: FontFamily.primaryBold,
     color: '#475569',
   },
@@ -1911,12 +1988,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   instDueDateText: {
-    fontSize: m(12),
+    fontSize: m(11.5),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
   },
   instSubLabel: {
-    fontSize: m(9),
+    fontSize: m(8.5),
     fontFamily: FontFamily.primaryRegular,
     color: '#64748b',
     marginTop: 0,
@@ -1925,27 +2002,27 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   instEmiAmountText: {
-    fontSize: m(13),
+    fontSize: m(12.5),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
   },
   instStatusPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m(2.5),
-    paddingHorizontal: m(5),
-    paddingVertical: m(1.5),
+    gap: m(2),
+    paddingHorizontal: m(4),
+    paddingVertical: m(1),
     borderRadius: m(4),
-    marginTop: m(2),
+    marginTop: m(1.5),
   },
   instStatusPaid: { backgroundColor: '#ecfdf5', borderWidth: 1, borderColor: '#a7f3d0' },
-  instTextPaid: { color: '#059669', fontSize: m(9), fontFamily: FontFamily.primaryBold },
+  instTextPaid: { color: '#059669', fontSize: m(8.5), fontFamily: FontFamily.primaryBold },
   instStatusPartial: { backgroundColor: '#fef3c7', borderWidth: 1, borderColor: '#fde68a' },
-  instTextPartial: { color: '#b45309', fontSize: m(9), fontFamily: FontFamily.primaryBold },
+  instTextPartial: { color: '#b45309', fontSize: m(8.5), fontFamily: FontFamily.primaryBold },
   instStatusOverdue: { backgroundColor: '#fee2e2', borderWidth: 1, borderColor: '#fca5a5' },
-  instTextOverdue: { color: '#dc2626', fontSize: m(9), fontFamily: FontFamily.primaryBold },
+  instTextOverdue: { color: '#dc2626', fontSize: m(8.5), fontFamily: FontFamily.primaryBold },
   instStatusPending: { backgroundColor: '#f1f5f9', borderWidth: 1, borderColor: '#cbd5e1' },
-  instTextPending: { color: '#64748b', fontSize: m(9), fontFamily: FontFamily.primaryBold },
+  instTextPending: { color: '#64748b', fontSize: m(8.5), fontFamily: FontFamily.primaryBold },
 
   instBreakdownBar: {
     flexDirection: 'row',
@@ -1953,9 +2030,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     backgroundColor: '#f8fafc',
     borderRadius: m(6),
-    paddingVertical: m(5),
-    paddingHorizontal: m(10),
-    marginTop: m(7),
+    paddingVertical: m(3),
+    paddingHorizontal: m(8),
+    marginTop: m(4.5),
     borderWidth: 0.5,
     borderColor: '#f1f5f9',
   },
@@ -1964,14 +2041,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   instBreakdownLabel: {
-    fontSize: m(8),
+    fontSize: m(7.5),
     fontFamily: FontFamily.primaryMedium,
     color: '#94a3b8',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   instBreakdownVal: {
-    fontSize: m(10.5),
+    fontSize: m(10),
     fontFamily: FontFamily.primaryBold,
     color: colors.lettersAndIcons,
     marginTop: 0,
@@ -1981,7 +2058,7 @@ const styles = StyleSheet.create({
   },
   instBreakdownSeparator: {
     width: 1,
-    height: m(14),
+    height: m(10),
     backgroundColor: '#e2e8f0',
   },
   instActionBtn: {
@@ -1993,11 +2070,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#a7f3d0',
     borderRadius: m(6),
-    paddingVertical: m(5),
-    marginTop: m(6),
+    paddingVertical: m(3.5),
+    marginTop: m(4.5),
   },
   instActionBtnText: {
-    fontSize: m(10),
+    fontSize: m(9.5),
     fontFamily: FontFamily.primaryBold,
     color: '#047857',
   },
@@ -2209,18 +2286,31 @@ const styles = StyleSheet.create({
   // ── Loan Agreement & E-Sign (Tab 5) ──
   agreementHeaderRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     borderBottomWidth: 1,
     borderColor: '#f1f5f9',
     paddingBottom: m(10),
-    marginBottom: m(10),
+    marginBottom: m(12),
+    gap: m(8),
+  },
+  agreementHeaderLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(8),
+    marginRight: m(4),
+  },
+  agreementTitleCol: {
+    flex: 1,
   },
   agreementIconBox: {
     width: m(36),
     height: m(36),
     borderRadius: m(10),
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#ecfdf5',
+    borderWidth: 1,
+    borderColor: '#a7f3d0',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2236,12 +2326,16 @@ const styles = StyleSheet.create({
     marginTop: m(1),
   },
   fullyExecutedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(3),
     backgroundColor: '#dcfce7',
     paddingHorizontal: m(8),
-    paddingVertical: m(3),
+    paddingVertical: m(3.5),
     borderRadius: m(6),
     borderWidth: 1,
     borderColor: '#86efac',
+    flexShrink: 0,
   },
   fullyExecutedText: {
     fontSize: m(9.5),
@@ -2252,15 +2346,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#2563eb',
+    backgroundColor: '#059669',
     borderRadius: m(10),
-    paddingVertical: m(10),
+    paddingVertical: m(11),
     marginBottom: m(12),
+    shadowColor: '#059669',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
   },
   viewFullContractText: {
-    fontSize: m(12),
+    fontSize: m(12.5),
     fontFamily: FontFamily.primaryBold,
     color: '#ffffff',
+    letterSpacing: 0.2,
   },
   sanctionTermsGrid: {
     flexDirection: 'row',

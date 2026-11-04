@@ -134,7 +134,7 @@ export default function LenderAvailableBorrowers() {
       topInsetBg={colors.primary}
       statusBarColor={colors.primary}
       statusBarStyle="dark-content"
-      includeTabBarClearance={true}
+      includeTabBarClearance={false}
       scrollable={false}
     >
       {/* ── 1. Top Green Header Banner ── */}
@@ -331,7 +331,7 @@ const styles = StyleSheet.create({
 
   listContent: {
     paddingHorizontal: m(18),
-    paddingBottom: m(30),
+    paddingBottom: m(100),
   },
   loadingBox: {
     flex: 1,

@@ -8,10 +8,13 @@ import {
   Keyboard,
   UIManager,
   LayoutAnimation,
+  BackHandler,
 } from 'react-native';
 import React, { useMemo, useState, useEffect } from 'react';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useNavigation } from '@react-navigation/native';
+import { showAlert } from '../Components/common';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import { m } from 'walstar-rn-responsive';
@@ -226,6 +229,7 @@ function CustomTabBar({
 }
 
 export default function BottomNavigation() {
+  const navigation = useNavigation();
   const user = useSelector(state => state.auth.user);
   const roleId = useMemo(() => {
     const id = user?.roleId;
@@ -237,6 +241,34 @@ export default function BottomNavigation() {
 
   // Live badge counter for incoming borrower requests (roleId === 1)
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+
+  // Intercept back actions from BottomNavigation root to show Exit Application alert
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', e => {
+      // Allow navigation if it's a programmatic reset (e.g. user logged out)
+      if (e.data?.action?.type === 'RESET') {
+        return;
+      }
+
+      // Prevent navigating back to Login or popping BottomNavigation
+      e.preventDefault();
+
+      showAlert(
+        'Exit Application',
+        'Are you sure you want to exit the application?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Exit',
+            style: 'destructive',
+            onPress: () => BackHandler.exitApp(),
+          },
+        ]
+      );
+    });
+
+    return unsubscribe;
+  }, [navigation]);
 
   useEffect(() => {
     if (roleId === 1) {

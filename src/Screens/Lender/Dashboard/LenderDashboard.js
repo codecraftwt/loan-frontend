@@ -8,6 +8,8 @@ import {
   Animated,
   ActivityIndicator,
   ScrollView,
+  BackHandler,
+  Platform,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
@@ -130,6 +132,29 @@ export default function LenderDashboard() {
         duration: 350,
         useNativeDriver: true,
       }).start();
+
+      const onBackPress = () => {
+        showAlert(
+          'Exit Application',
+          'Are you sure you want to exit the application?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Exit',
+              style: 'destructive',
+              onPress: () => BackHandler.exitApp(),
+            },
+          ]
+        );
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener(
+        'hardwareBackPress',
+        onBackPress
+      );
+
+      return () => subscription.remove();
     }, [user?._id, user?.roleId, fetchAllDashboardData, fadeAnim])
   );
 
@@ -230,11 +255,8 @@ export default function LenderDashboard() {
             <TouchableOpacity
               style={styles.featureLeftCol}
               activeOpacity={0.8}
-              onPress={() => navigation.navigate('LenderLoansPortfolio')}
+              onPress={() => navigation.navigate('LenderLoans', { filter: 'active' })}
             >
-              <View style={styles.featureRingWrapper}>
-                <Feather name="arrow-up-right" size={m(18)} color="#059669" />
-              </View>
               <Text style={styles.featureCountText} numberOfLines={1}>
                 {formatCurrency(totalDisbursedVal)}
               </Text>
@@ -251,7 +273,7 @@ export default function LenderDashboard() {
               <TouchableOpacity
                 style={styles.featureStatItem}
                 activeOpacity={0.8}
-                onPress={() => navigation.navigate('LenderIncomingRequests')}
+                onPress={() => navigation.navigate('LenderRequests', { status: 'pending' })}
               >
                 <View style={[styles.featureStatIconBox, { backgroundColor: '#eff6ff' }]}>
                   <Feather name="inbox" size={m(15)} color="#2563eb" />
@@ -277,7 +299,7 @@ export default function LenderDashboard() {
               <TouchableOpacity
                 style={styles.featureStatItem}
                 activeOpacity={0.8}
-                onPress={() => navigation.navigate('LenderLoansPortfolio')}
+                onPress={() => navigation.navigate('LenderLoans')}
               >
                 <View style={[styles.featureStatIconBox, { backgroundColor: '#ecfdf5' }]}>
                   <Feather name="percent" size={m(15)} color="#059669" />
@@ -303,7 +325,7 @@ export default function LenderDashboard() {
               </Text>
             </View>
             <TouchableOpacity
-              onPress={() => navigation.navigate('LenderLoansPortfolio')}
+              onPress={() => navigation.navigate('LenderLoans', { filter: 'all' })}
               activeOpacity={0.7}
               style={styles.allRequestsBtn}
             >
@@ -320,7 +342,7 @@ export default function LenderDashboard() {
               <TouchableOpacity
                 style={styles.overviewCard}
                 activeOpacity={0.8}
-                onPress={() => navigation.navigate('LenderLoansPortfolio')}
+                onPress={() => navigation.navigate('LenderLoans', { filter: 'active' })}
               >
                 <View style={styles.overviewCardTop}>
                   <View style={[styles.overviewIconBox, { backgroundColor: '#ecfdf5' }]}>
@@ -339,7 +361,7 @@ export default function LenderDashboard() {
               <TouchableOpacity
                 style={styles.overviewCard}
                 activeOpacity={0.8}
-                onPress={() => navigation.navigate('LenderIncomingRequests')}
+                onPress={() => navigation.navigate('LenderRequests', { status: 'pending' })}
               >
                 <View style={styles.overviewCardTop}>
                   <View style={[styles.overviewIconBox, { backgroundColor: '#fffbeb' }]}>
@@ -361,7 +383,7 @@ export default function LenderDashboard() {
               <TouchableOpacity
                 style={styles.overviewCard}
                 activeOpacity={0.8}
-                onPress={() => navigation.navigate('LenderLoansPortfolio')}
+                onPress={() => navigation.navigate('LenderRequests', { status: 'accepted' })}
               >
                 <View style={styles.overviewCardTop}>
                   <View style={[styles.overviewIconBox, { backgroundColor: '#eff6ff' }]}>
@@ -380,7 +402,7 @@ export default function LenderDashboard() {
               <TouchableOpacity
                 style={styles.overviewCard}
                 activeOpacity={0.8}
-                onPress={() => navigation.navigate('LenderAvailableBorrowers')}
+                onPress={() => navigation.navigate('LenderBorrowers')}
               >
                 <View style={styles.overviewCardTop}>
                   <View style={[styles.overviewIconBox, { backgroundColor: '#f5f3ff' }]}>
@@ -408,7 +430,7 @@ export default function LenderDashboard() {
               </Text>
             </View>
             <TouchableOpacity
-              onPress={() => navigation.navigate('LenderIncomingRequests')}
+              onPress={() => navigation.navigate('LenderRequests', { status: 'pending' })}
               activeOpacity={0.7}
             >
               <Text style={styles.viewAllText}>View All</Text>
@@ -511,7 +533,7 @@ export default function LenderDashboard() {
             <TouchableOpacity
               style={styles.actionButtonSecondary}
               activeOpacity={0.85}
-              onPress={() => navigation.navigate('LenderAvailableBorrowers')}
+              onPress={() => navigation.navigate('LenderBorrowers')}
             >
               <View style={[styles.actionIconCircle, { backgroundColor: '#eff6ff' }]}>
                 <Feather name="search" size={m(16)} color="#2563eb" />

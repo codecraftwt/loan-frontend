@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,9 +10,12 @@ import {
   ActivityIndicator,
   Modal,
   TextInput,
+  PanResponder,
   Platform,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import { useSelector } from 'react-redux';
+import Svg, { Path } from 'react-native-svg';
 import Feather from 'react-native-vector-icons/Feather';
 import { m } from '../../../Utils/responsive';
 import { FontFamily, colors } from '../../../constants';
@@ -24,6 +27,8 @@ export default function LenderRequestDetails() {
   const route = useRoute();
   const navigation = useNavigation();
   const { requestId, request: initialRequest } = route.params || {};
+
+  const currentUser = useSelector((state) => state.auth?.user);
 
   const [request, setRequest] = useState(initialRequest || null);
   const [borrowerLoans, setBorrowerLoans] = useState([]);
@@ -41,6 +46,24 @@ export default function LenderRequestDetails() {
   const [sanctionProcessingFee, setSanctionProcessingFee] = useState('2500');
   const [signerName, setSignerName] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+
+  const lenderName =
+    currentUser?.companyName ||
+    currentUser?.userName ||
+    currentUser?.name ||
+    request?.lenderSnapshot?.companyName ||
+    request?.lenderSnapshot?.userName ||
+    request?.lenderId?.companyName ||
+    request?.lenderId?.userName ||
+    'Authorized Institutional Signatory';
+
+  // Digital Signature States (Matching web DigitalSignaturePad & mobile raw draw method)
+  const [signMode, setSignMode] = useState('draw'); // 'draw' | 'type'
+  const [paths, setPaths] = useState([]);
+  const [currentPath, setCurrentPath] = useState(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [consentChecked, setConsentChecked] = useState(true);
+  const currentPathRef = useRef([]);
 
   // Reject Modal State
   const [showRejectModal, setShowRejectModal] = useState(false);
@@ -162,18 +185,96 @@ export default function LenderRequestDetails() {
     };
   }, [request]);
 
+    // PanResponder for Raw Signature Drawing
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: () => true,
+        onStartShouldSetPanResponderCapture: () => true,
+        onMoveShouldSetPanResponderCapture: () => true,
+        onPanResponderGrant: (evt) => {
+          setIsDrawing(true);
+          const { locationX, locationY } = evt.nativeEvent;
+          currentPathRef.current = [`M ${locationX.toFixed(1)} ${locationY.toFixed(1)}`];
+          setCurrentPath(currentPathRef.current[0]);
+        },
+        onPanResponderMove: (evt) => {
+          const { locationX, locationY } = evt.nativeEvent;
+          if (currentPathRef.current.length > 0) {
+            currentPathRef.current.push(`L ${locationX.toFixed(1)} ${locationY.toFixed(1)}`);
+            setCurrentPath(currentPathRef.current.join(' '));
+          }
+        },
+        onPanResponderRelease: () => {
+          setIsDrawing(false);
+          if (currentPathRef.current.length > 0) {
+            const completedPath = currentPathRef.current.join(' ');
+            setPaths((prev) => [...prev, completedPath]);
+            currentPathRef.current = [];
+            setCurrentPath(null);
+          }
+        },
+        onPanResponderTerminate: () => {
+          setIsDrawing(false);
+          if (currentPathRef.current.length > 0) {
+            const completedPath = currentPathRef.current.join(' ');
+            setPaths((prev) => [...prev, completedPath]);
+            currentPathRef.current = [];
+            setCurrentPath(null);
+          }
+        },
+      }),
+    []
+  );
+
+  const clearCanvas = () => {
+    setPaths([]);
+    setCurrentPath(null);
+    currentPathRef.current = [];
+  };
+
+  const generateSvgDataUri = (pathsList) => {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 350 160" width="350" height="160"><rect width="100%" height="100%" fill="none"/>${pathsList.map((d) => `<path d="${d}" fill="none" stroke="#093030" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>`).join('')}</svg>`;
+    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+  };
+
   // Execute Accept & Issue Term Sheet
   const handleExecuteSanction = async () => {
+    if (!consentChecked) {
+      showAlert(
+        'Consent Required',
+        'Please confirm your legal authorization by checking the declaration.'
+      );
+      return;
+    }
+
+    if (signMode === 'draw' && paths.length === 0) {
+      showAlert('Signature Required', 'Please draw your signature on the pad above.');
+      return;
+    }
+
+    const finalSigner = signerName.trim() || lenderName;
+    if (signMode === 'type' && !finalSigner) {
+      showAlert('Signatory Name Required', 'Please enter your full legal name.');
+      return;
+    }
+
     try {
       setActionLoading(true);
+      const signatureData =
+        signMode === 'draw'
+          ? generateSvgDataUri(paths)
+          : `LENDER_E_SIGN_${Date.now()}_${finalSigner}`;
+
       const payload = {
         amount: Number(sanctionAmount),
         interestRate: Number(sanctionRate),
         tenureMonths: Number(sanctionTenure),
         repaymentType: sanctionRepaymentType,
         processingFee: Number(sanctionProcessingFee),
-        signatureData: `LENDER_E_SIGN_${Date.now()}_${signerName.trim()}`,
-        signedBy: signerName.trim() || 'Authorized Institutional Signatory',
+        signatureData,
+        signedBy: finalSigner,
       };
 
       const res = await lenderFlowService.acceptLoanRequest(request._id, payload);
@@ -185,6 +286,7 @@ export default function LenderRequestDetails() {
         );
         setShowAcceptModal(false);
         setSanctionStep(1);
+        clearCanvas();
       } else {
         showAlert('Sanction Failed', res?.message || 'Could not sanction loan.');
       }
@@ -607,19 +709,30 @@ export default function LenderRequestDetails() {
                 <Text style={styles.detailValBold}>{formatINR(monthlyIncome)}</Text>
               </View>
 
-              <View style={styles.detailRow}>
+              <View style={styles.detailRowStacked}>
                 <Text style={styles.detailLabel}>Repayment Track Record</Text>
-                <Text style={styles.detailValBold}>
-                  {totalLoansTaken} Total • {onTimeRepayments} On-Time • {defaultsCount} Defaults
-                </Text>
+                <View style={styles.trackRecordBadgesRow}>
+                  <View style={styles.trackPill}>
+                    <Text style={styles.trackPillText}>{totalLoansTaken} Total</Text>
+                  </View>
+                  <View style={[styles.trackPill, styles.trackPillGreen]}>
+                    <Feather name="check" size={m(10)} color="#15803d" />
+                    <Text style={[styles.trackPillText, { color: '#15803d' }]}>{onTimeRepayments} On-Time</Text>
+                  </View>
+                  <View style={[styles.trackPill, defaultsCount > 0 ? styles.trackPillRed : styles.trackPillNeutral]}>
+                    <Text style={[styles.trackPillText, { color: defaultsCount > 0 ? '#b91c1c' : '#64748b' }]}>
+                      {defaultsCount} {defaultsCount === 1 ? 'Default' : 'Defaults'}
+                    </Text>
+                  </View>
+                </View>
               </View>
 
               <View style={[styles.detailRow, { borderBottomWidth: 0 }]}>
                 <Text style={styles.detailLabel}>Underwriting Verification</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: m(4) }}>
-                  <Feather name="check-circle" size={m(13)} color="#16a34a" />
-                  <Text style={{ fontSize: m(11.5), fontFamily: FontFamily.primaryBold, color: '#16a34a' }}>
-                    100% Profile Complete & Verified
+                <View style={styles.verificationBadge}>
+                  <Feather name="check-circle" size={m(11)} color="#15803d" />
+                  <Text style={styles.verificationBadgeText}>
+                    100% Profile Verified
                   </Text>
                 </View>
               </View>
@@ -885,6 +998,10 @@ export default function LenderRequestDetails() {
           <TouchableOpacity
             style={styles.bottomAcceptBtn}
             onPress={() => {
+              setSignerName(lenderName);
+              clearCanvas();
+              setSignMode('draw');
+              setConsentChecked(true);
               setSanctionStep(1);
               setShowAcceptModal(true);
             }}
@@ -919,7 +1036,7 @@ export default function LenderRequestDetails() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView showsVerticalScrollIndicator={false} scrollEnabled={!isDrawing}>
               {sanctionStep === 1 ? (
                 /* Step 1: Configure Terms */
                 <View style={styles.stepContent}>
@@ -1033,41 +1150,176 @@ export default function LenderRequestDetails() {
 
                   <TouchableOpacity
                     style={styles.modalNextBtn}
-                    onPress={() => setSanctionStep(2)}
+                    onPress={() => {
+                    if (!signerName) setSignerName(lenderName);
+                    setSanctionStep(2);
+                  }}
                   >
                     <Text style={styles.modalNextText}>Proceed to Sign Agreement</Text>
                     <Feather name="arrow-right" size={m(16)} color="#ffffff" />
                   </TouchableOpacity>
                 </View>
               ) : (
-                /* Step 2: Digital E-Sign */
+                /* Step 2: Digital E-Sign (Raw Drawing Signature Pad matching Web & Mobile standards) */
                 <View style={styles.stepContent}>
                   <View style={styles.legalNoticeBox}>
-                    <Feather name="shield" size={m(18)} color="#16a34a" />
+                    <Feather name="shield" size={m(16)} color="#16a34a" />
                     <Text style={styles.legalNoticeText}>
                       By submitting this term sheet, you confirm that your NBFC/Lender entity sanctions {formatINR(sanctionAmount)} to {businessName}.
                     </Text>
                   </View>
 
-                  <Text style={styles.inputTitle}>Authorized Signatory Name</Text>
-                  <TextInput
-                    style={styles.modalInputField}
-                    placeholder="Enter full legal name of signatory"
-                    placeholderTextColor="#94a3b8"
-                    value={signerName}
-                    onChangeText={setSignerName}
-                  />
+                  {/* Signer Identity Bar */}
+                  <View style={styles.signerIdentityBox}>
+                    <View style={styles.signerIdentityLeft}>
+                      <View style={styles.signerIconCircle}>
+                        <Feather name="file-text" size={m(14)} color="#16a34a" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.signerIdentityTitle}>Apply Digital E-Signature</Text>
+                        <Text style={styles.signerIdentitySub} numberOfLines={1}>
+                          Signing as <Text style={styles.signerIdentityBold}>{lenderName}</Text> (Lender)
+                        </Text>
+                      </View>
+                    </View>
 
-                  <View style={styles.signaturePreviewBox}>
-                    <Text style={styles.signaturePreviewLabel}>ELECTRONIC SIGNATURE</Text>
-                    <Text style={styles.signaturePreviewText}>
-                      {signerName.trim() || 'Institutional Authorized Signatory'}
-                    </Text>
-                    <Text style={styles.signatureMeta}>
-                      Timestamp: {new Date().toLocaleDateString('en-IN')} • IP Binding Active
-                    </Text>
+                    {/* Mode Toggle (Draw / Type) */}
+                    <View style={styles.signModeToggleRow}>
+                      <TouchableOpacity
+                        style={[styles.signModeToggleBtn, signMode === 'draw' && styles.signModeToggleBtnActive]}
+                        onPress={() => setSignMode('draw')}
+                        activeOpacity={0.8}
+                      >
+                        <Feather
+                          name="edit-2"
+                          size={m(11)}
+                          color={signMode === 'draw' ? '#ffffff' : '#64748b'}
+                        />
+                        <Text
+                          style={[styles.signModeToggleText, signMode === 'draw' && styles.signModeToggleTextActive]}
+                        >
+                          Draw
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[styles.signModeToggleBtn, signMode === 'type' && styles.signModeToggleBtnActive]}
+                        onPress={() => {
+                          if (!signerName) setSignerName(lenderName);
+                          setSignMode('type');
+                        }}
+                        activeOpacity={0.8}
+                      >
+                        <Feather
+                          name="type"
+                          size={m(11)}
+                          color={signMode === 'type' ? '#ffffff' : '#64748b'}
+                        />
+                        <Text
+                          style={[styles.signModeToggleText, signMode === 'type' && styles.signModeToggleTextActive]}
+                        >
+                          Type
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
 
+                  {/* Signature Surface: DRAW MODE (Default Raw Signature) */}
+                  {signMode === 'draw' ? (
+                    <View style={styles.drawingPadWrapper}>
+                      <View style={styles.drawingPadHeader}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: m(4) }}>
+                          <Feather name="pen-tool" size={m(12)} color="#16a34a" />
+                          <Text style={styles.drawingPadTitle}>DIGITAL SIGNATURE PAD</Text>
+                        </View>
+                        <TouchableOpacity
+                          style={styles.clearBtn}
+                          activeOpacity={0.75}
+                          onPress={clearCanvas}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Feather name="rotate-ccw" size={m(11)} color="#dc2626" />
+                          <Text style={styles.clearBtnText}>Clear</Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      <View style={styles.canvasSurface} {...panResponder.panHandlers}>
+                        <Svg style={StyleSheet.absoluteFillObject}>
+                          {paths.map((p, i) => (
+                            <Path
+                              key={i}
+                              d={p}
+                              stroke="#093030"
+                              strokeWidth={3}
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              fill="none"
+                            />
+                          ))}
+                          {currentPath ? (
+                            <Path
+                              d={currentPath}
+                              stroke="#093030"
+                              strokeWidth={3}
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              fill="none"
+                            />
+                          ) : null}
+                        </Svg>
+
+                        {paths.length === 0 && !currentPath ? (
+                          <View style={styles.watermarkContainer} pointerEvents="none">
+                            <Feather name="edit-3" size={m(20)} color="rgba(9, 48, 48, 0.25)" />
+                            <Text style={styles.watermarkText}>
+                              Draw your signature here with finger or stylus
+                            </Text>
+                          </View>
+                        ) : null}
+                      </View>
+                      <Text style={styles.drawingFooterHint}>
+                        Use stylus or finger within the box. Tap Clear to reset.
+                      </Text>
+                    </View>
+                  ) : (
+                    /* Signature Surface: TYPE MODE */
+                    <View style={styles.typeModeWrapper}>
+                      <Text style={styles.inputTitle}>Signatory Full Legal Name</Text>
+                      <TextInput
+                        style={styles.modalInputField}
+                        placeholder="Enter full legal name"
+                        placeholderTextColor="#94a3b8"
+                        value={signerName}
+                        onChangeText={setSignerName}
+                      />
+
+                      <View style={styles.signaturePreviewBox}>
+                        <Text style={styles.signaturePreviewLabel}>ELECTRONIC SIGNATURE PREVIEW</Text>
+                        <Text style={styles.signaturePreviewText}>
+                          {signerName.trim() || lenderName}
+                        </Text>
+                        <Text style={styles.signatureMeta}>
+                          Timestamp: {new Date().toLocaleDateString('en-IN')} • IP Binding Active
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Legal Declaration Checkbox */}
+                  <TouchableOpacity
+                    style={styles.legalCertBox}
+                    onPress={() => setConsentChecked((prev) => !prev)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[styles.checkboxBox, consentChecked && styles.checkboxBoxChecked]}>
+                      {consentChecked && <Feather name="check" size={m(12)} color="#ffffff" />}
+                    </View>
+                    <Text style={styles.legalCertText}>
+                      I confirm that this electronic signature is legally binding and represents formal authorization under the Information Technology Act, 2000.
+                    </Text>
+                  </TouchableOpacity>
+
+                  {/* Action Buttons */}
                   <View style={styles.modalStepActionRow}>
                     <TouchableOpacity
                       style={styles.modalBackBtn}
@@ -1357,11 +1609,70 @@ const styles = StyleSheet.create({
     paddingVertical: m(8),
     borderBottomWidth: 1,
     borderColor: '#f1f5f9',
+    gap: m(8),
   },
   detailLabel: {
     fontSize: m(11.5),
     fontFamily: FontFamily.primaryRegular,
     color: colors.textSecondary,
+    flexShrink: 0,
+  },
+  detailRowStacked: {
+    paddingVertical: m(8),
+    borderBottomWidth: 1,
+    borderColor: '#f1f5f9',
+  },
+  trackRecordBadgesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(6),
+    marginTop: m(5),
+    flexWrap: 'wrap',
+  },
+  trackPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(3),
+    backgroundColor: '#f1f5f9',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    paddingHorizontal: m(8),
+    paddingVertical: m(3),
+    borderRadius: m(6),
+  },
+  trackPillText: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryBold,
+    color: '#334155',
+  },
+  trackPillGreen: {
+    backgroundColor: '#ecfdf5',
+    borderColor: '#a7f3d0',
+  },
+  trackPillRed: {
+    backgroundColor: '#fef2f2',
+    borderColor: '#fca5a5',
+  },
+  trackPillNeutral: {
+    backgroundColor: '#f8fafc',
+    borderColor: '#e2e8f0',
+  },
+  verificationBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(4),
+    backgroundColor: '#ecfdf5',
+    borderWidth: 1,
+    borderColor: '#a7f3d0',
+    paddingHorizontal: m(8),
+    paddingVertical: m(3),
+    borderRadius: m(6),
+    flexShrink: 0,
+  },
+  verificationBadgeText: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryBold,
+    color: '#15803d',
   },
   detailValBold: {
     fontSize: m(12.5),
@@ -2068,5 +2379,168 @@ const styles = StyleSheet.create({
     fontSize: m(12),
     fontWeight: '700',
     color: '#ffffff',
+  },
+  signerIdentityBox: {
+    backgroundColor: '#f8fafc',
+    borderRadius: m(12),
+    padding: m(10),
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginBottom: m(12),
+  },
+  signerIdentityLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(8),
+    marginBottom: m(8),
+  },
+  signerIconCircle: {
+    width: m(28),
+    height: m(28),
+    borderRadius: m(8),
+    backgroundColor: '#dcfce7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  signerIdentityTitle: {
+    fontSize: m(12),
+    fontFamily: FontFamily.primaryBold,
+    color: '#0f172a',
+  },
+  signerIdentitySub: {
+    fontSize: m(10.5),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#64748b',
+    marginTop: m(1),
+  },
+  signerIdentityBold: {
+    fontFamily: FontFamily.primaryBold,
+    color: '#0f172a',
+  },
+  signModeToggleRow: {
+    flexDirection: 'row',
+    backgroundColor: '#e2e8f0',
+    borderRadius: m(8),
+    padding: m(2),
+    gap: m(2),
+  },
+  signModeToggleBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: m(6),
+    borderRadius: m(6),
+    gap: m(4),
+  },
+  signModeToggleBtnActive: {
+    backgroundColor: '#0f172a',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  signModeToggleText: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primarySemiBold,
+    color: '#64748b',
+  },
+  signModeToggleTextActive: {
+    color: '#ffffff',
+    fontFamily: FontFamily.primaryBold,
+  },
+  drawingPadWrapper: {
+    marginBottom: m(12),
+  },
+  drawingPadHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: m(6),
+  },
+  drawingPadTitle: {
+    fontSize: m(10),
+    fontFamily: FontFamily.primaryBold,
+    color: '#334155',
+    letterSpacing: 0.5,
+  },
+  clearBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fee2e2',
+    paddingHorizontal: m(8),
+    paddingVertical: m(4),
+    borderRadius: m(6),
+    gap: m(4),
+  },
+  clearBtnText: {
+    fontSize: m(10),
+    fontFamily: FontFamily.primaryBold,
+    color: '#dc2626',
+  },
+  canvasSurface: {
+    width: '100%',
+    height: m(150),
+    backgroundColor: '#f8fafc',
+    borderRadius: m(12),
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: '#16a34a',
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  watermarkContainer: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: m(6),
+  },
+  watermarkText: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryMedium,
+    color: 'rgba(9, 48, 48, 0.35)',
+  },
+  drawingFooterHint: {
+    fontSize: m(9.5),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#64748b',
+    marginTop: m(4),
+  },
+  typeModeWrapper: {
+    marginBottom: m(12),
+  },
+  legalCertBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: m(8),
+    backgroundColor: '#f8fafc',
+    borderRadius: m(10),
+    padding: m(10),
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginBottom: m(14),
+  },
+  checkboxBox: {
+    width: m(18),
+    height: m(18),
+    borderRadius: m(4),
+    borderWidth: 1.5,
+    borderColor: '#94a3b8',
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: m(1),
+  },
+  checkboxBoxChecked: {
+    backgroundColor: '#16a34a',
+    borderColor: '#16a34a',
+  },
+  legalCertText: {
+    flex: 1,
+    fontSize: m(10.5),
+    lineHeight: m(15),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#475569',
   },
 });

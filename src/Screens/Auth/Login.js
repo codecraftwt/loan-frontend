@@ -73,7 +73,10 @@ export default function LoginScreen({navigation}) {
         if (userData?.roleId === 1) {
           dispatch(getActivePlan());
         }
-        navigation.navigate('BottomNavigation');
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'BottomNavigation' }],
+        });
       })
       .catch(error => {
         console.error('Error ->', error);
