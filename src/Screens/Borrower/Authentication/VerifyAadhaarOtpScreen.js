@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   ActivityIndicator,
+  Keyboard,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
@@ -17,6 +18,7 @@ import Toast from 'react-native-toast-message';
 import { m } from 'walstar-rn-responsive';
 import { FontFamily, FontSizes } from '../../../constants';
 import aadhaarKycAPI from '../../../Services/aadhaarKycService';
+import { updateRegistrationDraft } from '../../../Services/registrationDraftService';
 
 const BRAND_NAVY = '#172340';
 const BRAND_TEAL = '#118A6B';
@@ -25,7 +27,7 @@ const BRAND_BORDER = '#BDE5D8';
 
 const ProgressTracker = () => (
   <View style={styles.progressContainer}>
-    {[1, 2, 3, 4].map(step => (
+    {[1, 2, 3].map(step => (
       <View key={step} style={styles.progressStepWrap}>
         <View
           style={[
@@ -39,7 +41,7 @@ const ProgressTracker = () => (
             <Text style={styles.progressStepText}>{step}</Text>
           )}
         </View>
-        {step < 4 ? (
+        {step < 3 ? (
           <View
             style={[
               styles.progressLine,
@@ -53,11 +55,57 @@ const ProgressTracker = () => (
 );
 
 export default function VerifyAadhaarOtpScreen({ navigation, route }) {
-  const { aadhaarNumber, transactionId, userData } = route.params || {};
+  const { aadhaarNumber, transactionId, userData, source } = route.params || {};
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(m(260));
+  const scrollViewRef = useRef(null);
+
+  useEffect(() => {
+    if (userData) {
+      updateRegistrationDraft({
+        screen: 'VerifyAadhaarOtpScreen',
+        userData,
+        aadhaarNumber,
+        transactionId,
+        source: source || 'register',
+      });
+    }
+  }, [userData, aadhaarNumber, transactionId, source]);
+
+  const scrollToCard = useCallback(() => {
+    [80, 200, 350].forEach(delay => {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollTo({ y: m(150), animated: true });
+      }, delay);
+    });
+  }, []);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, e => {
+      if (e?.endCoordinates?.height) {
+        setKeyboardHeight(e.endCoordinates.height + m(40));
+      }
+      setIsKeyboardVisible(true);
+      scrollToCard();
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setIsKeyboardVisible(false);
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [scrollToCard]);
 
   const maskedAadhaar = aadhaarNumber
     ? `XXXX XXXX ${aadhaarNumber.slice(-4)}`
@@ -94,9 +142,18 @@ export default function VerifyAadhaarOtpScreen({ navigation, route }) {
         throw new Error(response?.message || 'OTP verification failed.');
       }
 
+      const kycData = response?.kycData || response?.data;
+      await updateRegistrationDraft({
+        screen: 'AadhaarKycSuccessScreen',
+        userData,
+        aadhaarNumber,
+        kycData,
+        source: source || 'register',
+      });
+
       navigation.replace('AadhaarKycSuccessScreen', {
         aadhaarNumber,
-        kycData: response?.kycData || response?.data,
+        kycData,
         userData,
       });
     } catch (apiError) {
@@ -128,8 +185,12 @@ export default function VerifyAadhaarOtpScreen({ navigation, route }) {
         text2: response?.mockOtp ? `Test OTP: ${response.mockOtp}` : undefined,
       });
 
+      const newTxId = response?.transactionId || response?.txnId || transactionId;
+      await updateRegistrationDraft({
+        transactionId: newTxId,
+      });
       navigation.setParams({
-        transactionId: response?.transactionId || response?.txnId || transactionId,
+        transactionId: newTxId,
       });
     } catch (apiError) {
       Toast.show({
@@ -150,20 +211,23 @@ export default function VerifyAadhaarOtpScreen({ navigation, route }) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <StatusBar barStyle="light-content" backgroundColor={BRAND_NAVY} />
-      <View style={styles.fixedTop}>
-        <View style={styles.headerContent}>
-          <Text style={styles.appName}>LoanHub</Text>
-          <Text style={styles.tagline}>Aadhaar eKYC Verification</Text>
-        </View>
-
-        <ProgressTracker />
-      </View>
-
       <ScrollView
+        ref={scrollViewRef}
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isKeyboardVisible && { paddingBottom: keyboardHeight },
+        ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
+        <View style={styles.topSection}>
+          <View style={styles.headerContent}>
+            <Text style={styles.appName}>LoanHub</Text>
+            <Text style={styles.tagline}>Aadhaar eKYC Verification</Text>
+          </View>
+
+          <ProgressTracker />
+        </View>
         <View style={styles.formCard}>
           <View style={styles.otpNotice}>
             <Ionicons name="checkmark" size={m(18)} color={BRAND_TEAL} />
@@ -202,6 +266,10 @@ export default function VerifyAadhaarOtpScreen({ navigation, route }) {
                 keyboardType="number-pad"
                 maxLength={6}
                 secureTextEntry
+                onFocus={() => {
+                  setIsKeyboardVisible(true);
+                  scrollToCard();
+                }}
               />
             </View>
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -262,9 +330,12 @@ const styles = StyleSheet.create({
     paddingBottom: m(40),
     backgroundColor: BRAND_TEAL,
   },
-  fixedTop: {
-    paddingHorizontal: m(20),
-    paddingTop: Platform.OS === 'ios' ? m(52) : m(32),
+  scrollContentKeyboard: {
+    paddingBottom: m(160),
+  },
+  topSection: {
+    paddingTop: Platform.OS === 'ios' ? m(52) : m(24),
+    paddingBottom: m(14),
   },
   headerContent: {
     alignItems: 'center',

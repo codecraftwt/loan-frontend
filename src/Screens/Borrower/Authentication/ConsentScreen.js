@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { updateRegistrationDraft } from '../../../Services/registrationDraftService';
 import {
   View,
   Text,
@@ -21,7 +22,7 @@ const BRAND_BORDER = '#BDE5D8';
 
 const ProgressTracker = () => (
   <View style={styles.progressContainer}>
-    {[1, 2, 3, 4].map(step => (
+    {[1, 2, 3].map(step => (
       <View key={step} style={styles.progressStepWrap}>
         <View
           style={[
@@ -35,7 +36,7 @@ const ProgressTracker = () => (
             <Text style={styles.progressStepText}>{step}</Text>
           )}
         </View>
-        {step < 4 ? (
+        {step < 3 ? (
           <View
             style={[
               styles.progressLine,
@@ -52,10 +53,25 @@ export default function ConsentScreen({ navigation, route }) {
   const [agreed, setAgreed] = useState(false);
   const { source, userData } = route.params || {};
 
+  useEffect(() => {
+    if (userData) {
+      updateRegistrationDraft({
+        screen: 'ConsentScreen',
+        userData,
+        source: source || 'register',
+      });
+    }
+  }, [userData, source]);
+
    const handleContinue = () => {
      if (!agreed) {
        return;
      }
+     updateRegistrationDraft({
+       screen: 'EnterAadhaarScreen',
+       userData,
+       source: source || 'register',
+     });
      navigation.navigate('EnterAadhaarScreen', {
        aadhaarNumber: route?.params?.aadhaarNumber,
        source,

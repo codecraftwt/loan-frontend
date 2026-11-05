@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,6 +9,7 @@ import {
   Platform,
   KeyboardAvoidingView,
   ScrollView,
+  Keyboard,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
@@ -27,6 +28,40 @@ export default function ForgotPassword({ navigation }) {
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(m(260));
+  const scrollViewRef = useRef(null);
+
+  const scrollToCard = useCallback(() => {
+    [80, 200, 350].forEach(delay => {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollTo({ y: m(120), animated: true });
+      }, delay);
+    });
+  }, []);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, e => {
+      if (e?.endCoordinates?.height) {
+        setKeyboardHeight(e.endCoordinates.height + m(40));
+      }
+      setIsKeyboardVisible(true);
+      scrollToCard();
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setIsKeyboardVisible(false);
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [scrollToCard]);
 
   // Handle email input change (do not show validation error while typing)
   const validateEmail = text => {
@@ -119,8 +154,15 @@ export default function ForgotPassword({ navigation }) {
       >
         
         <ScrollView
+          ref={scrollViewRef}
           style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            isKeyboardVisible && {
+              paddingBottom: keyboardHeight,
+              justifyContent: 'flex-start',
+            },
+          ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
@@ -170,6 +212,10 @@ export default function ForgotPassword({ navigation }) {
                   autoCapitalize="none"
                   value={email}
                   onChangeText={validateEmail}
+                  onFocus={() => {
+                    setIsKeyboardVisible(true);
+                    scrollToCard();
+                  }}
                 />
                 {isEmailFormatValid() && !emailError && (
                   <Ionicons

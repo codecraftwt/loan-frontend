@@ -14,6 +14,7 @@ import {setUser} from '../../Redux/Slices/authslice';
 import {m} from 'walstar-rn-responsive';
 import {FontFamily, colors} from '../../constants';
 import {spalshlogo} from '../../Assets';
+import {getRegistrationDraft} from '../../Services/registrationDraftService';
 
 export default function SplashScreen({navigation}) {
   const dispatch = useDispatch();
@@ -55,9 +56,91 @@ export default function SplashScreen({navigation}) {
             dispatch(setUser({ ...JSON.parse(storedUser), token }));
           }
           navigation.replace('BottomNavigation');
-        } else {
-          navigation.replace('Login');
+          return;
         }
+
+        // Check if there is an in-progress registration draft midway
+        const draft = await getRegistrationDraft();
+        if (draft && draft.screen && draft.userData) {
+          const { screen, userData, aadhaarNumber, transactionId, kycData, source } = draft;
+          const commonSource = source || 'register';
+
+          switch (screen) {
+            case 'ConsentScreen':
+              navigation.reset({
+                index: 1,
+                routes: [
+                  { name: 'Register', params: { draftUserData: userData } },
+                  { name: 'ConsentScreen', params: { source: commonSource, userData } },
+                ],
+              });
+              return;
+
+            case 'EnterAadhaarScreen':
+              navigation.reset({
+                index: 2,
+                routes: [
+                  { name: 'Register', params: { draftUserData: userData } },
+                  { name: 'ConsentScreen', params: { source: commonSource, userData } },
+                  { name: 'EnterAadhaarScreen', params: { source: commonSource, userData, aadhaarNumber } },
+                ],
+              });
+              return;
+
+            case 'VerifyAadhaarOtpScreen':
+              navigation.reset({
+                index: 3,
+                routes: [
+                  { name: 'Register', params: { draftUserData: userData } },
+                  { name: 'ConsentScreen', params: { source: commonSource, userData } },
+                  { name: 'EnterAadhaarScreen', params: { source: commonSource, userData, aadhaarNumber } },
+                  { name: 'VerifyAadhaarOtpScreen', params: { source: commonSource, userData, aadhaarNumber, transactionId } },
+                ],
+              });
+              return;
+
+            case 'AadhaarKycSuccessScreen':
+              navigation.reset({
+                index: 4,
+                routes: [
+                  { name: 'Register', params: { draftUserData: userData } },
+                  { name: 'ConsentScreen', params: { source: commonSource, userData } },
+                  { name: 'EnterAadhaarScreen', params: { source: commonSource, userData, aadhaarNumber } },
+                  { name: 'VerifyAadhaarOtpScreen', params: { source: commonSource, userData, aadhaarNumber, transactionId } },
+                  { name: 'AadhaarKycSuccessScreen', params: { source: commonSource, userData, aadhaarNumber, kycData } },
+                ],
+              });
+              return;
+
+            case 'ProfileSummaryScreen':
+              navigation.reset({
+                index: 5,
+                routes: [
+                  { name: 'Register', params: { draftUserData: userData } },
+                  { name: 'ConsentScreen', params: { source: commonSource, userData } },
+                  { name: 'EnterAadhaarScreen', params: { source: commonSource, userData, aadhaarNumber } },
+                  { name: 'VerifyAadhaarOtpScreen', params: { source: commonSource, userData, aadhaarNumber, transactionId } },
+                  { name: 'AadhaarKycSuccessScreen', params: { source: commonSource, userData, aadhaarNumber, kycData } },
+                  { name: 'ProfileSummaryScreen', params: { source: commonSource, userData, aadhaarNumber, kycData } },
+                ],
+              });
+              return;
+
+            case 'Register':
+              navigation.reset({
+                index: 0,
+                routes: [
+                  { name: 'Register', params: { draftUserData: userData } },
+                ],
+              });
+              return;
+
+            default:
+              break;
+          }
+        }
+
+        navigation.replace('Login');
       } catch (error) {
         console.error('Error checking login status:', error);
         navigation.replace('Login');

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -20,13 +20,37 @@ import { m } from 'walstar-rn-responsive';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import { FontFamily, FontSizes, colors } from '../../constants';
 import instance from '../../Utils/AxiosInstance';
+import {
+  saveRegistrationDraft,
+  getRegistrationDraft,
+  clearRegistrationDraft,
+} from '../../Services/registrationDraftService';
 
 const GRADIENT_INDIGO = '#172340';
 const GRADIENT_TEAL = '#118A6B';
 const GRADIENT_SOFT = '#EAF7F2';
 
-export default function Register({ navigation }) {
+export default function Register({ navigation, route }) {
   const [currentStep, setCurrentStep] = useState(1);
+
+  // Restore draft user data if returning from reload or back navigation
+  useEffect(() => {
+    (async () => {
+      const draftData = route?.params?.draftUserData;
+      const draft = draftData ? { userData: draftData } : await getRegistrationDraft();
+      if (draft?.userData) {
+        setName(prev => prev || draft.userData.name || '');
+        setEmail(prev => prev || draft.userData.email || '');
+        setPassword(prev => prev || draft.userData.password || '');
+        setConfirmPassword(prev => prev || draft.userData.confirmPassword || '');
+        setMobileNumber(prev => prev || draft.userData.mobileNumber || '');
+        setAddress(prev => prev || draft.userData.address || '');
+        setPanCardNumber(prev => prev || draft.userData.panCardNumber || '');
+        if (draft.userData.roleId) setRoleId(draft.userData.roleId);
+        if (draft.userData.profileImage) setProfileImage(draft.userData.profileImage);
+      }
+    })();
+  }, [route?.params?.draftUserData]);
   const totalSteps = 1;
   const pinInputs = useRef([]);
   const confirmPinInputs = useRef([]);
@@ -42,6 +66,7 @@ export default function Register({ navigation }) {
   // Step 2: Numbers
   const [aadharNumber, setAadharNumber] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
+  const [address, setAddress] = useState('');
   const [panCardNumber, setPanCardNumber] = useState('');
   const [roleId, setRoleId] = useState(2);
 
@@ -61,6 +86,7 @@ export default function Register({ navigation }) {
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
   const [aadharError, setAadharError] = useState('');
   const [mobileError, setMobileError] = useState('');
+  const [addressError, setAddressError] = useState('');
   const [panCardError, setPanCardError] = useState('');
 
   const [, setErrors] = useState({});
@@ -132,6 +158,11 @@ export default function Register({ navigation }) {
       setMobileNumber(numericText);
       setMobileError('');
     }
+  };
+
+  const handleAddressChange = text => {
+    setAddress(text);
+    setAddressError('');
   };
 
   const handlePanCardChange = text => {
@@ -234,6 +265,11 @@ export default function Register({ navigation }) {
       valid = false;
     }
 
+    if (!address || address.trim().length < 1) {
+      temp.address = 'Registered address is required.';
+      valid = false;
+    }
+
     if (!password) {
       temp.password = 'Password is required.';
       valid = false;
@@ -260,6 +296,7 @@ export default function Register({ navigation }) {
     setNameError(temp.name || '');
     setEmailError(temp.email || '');
     setMobileError(temp.mobileNumber || '');
+    setAddressError(temp.address || '');
     setPasswordError(temp.password || '');
     setConfirmPasswordError(temp.confirmPassword || '');
     return valid;
@@ -376,18 +413,27 @@ export default function Register({ navigation }) {
         mobileNo: mobileNumber,
       });
 
+      const payload = {
+        name,
+        email,
+        password,
+        confirmPassword,
+        roleId,
+        mobileNumber,
+        address,
+        panCardNumber,
+        profileImage,
+      };
+
+      await saveRegistrationDraft({
+        screen: 'ConsentScreen',
+        userData: payload,
+        source: 'register',
+      });
+
       navigation.navigate('ConsentScreen', {
         source: 'register',
-        userData: {
-          name,
-          email,
-          password,
-          confirmPassword,
-          roleId,
-          mobileNumber,
-          panCardNumber,
-          profileImage,
-        },
+        userData: payload,
       });
     } catch (error) {
       const errorMessage =
@@ -513,6 +559,45 @@ export default function Register({ navigation }) {
         </View>
         {mobileError ? (
           <Text style={styles.errorText}>{mobileError}</Text>
+        ) : null}
+      </View>
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.inputLabel}>Registered Address</Text>
+        <View
+          style={[
+            styles.inputContainer,
+            addressError ? styles.inputError : {},
+            address.trim().length >= 4 && !addressError
+              ? styles.inputSuccess
+              : {},
+          ]}
+        >
+          <Ionicons
+            name="location-outline"
+            size={20}
+            color={
+              addressError
+                ? colors.error
+                : address.trim().length >= 4 && !addressError
+                ? colors.success
+                : GRADIENT_TEAL
+            }
+            style={styles.inputIcon}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Residential / Business Address"
+            placeholderTextColor="#999"
+            value={address}
+            onChangeText={handleAddressChange}
+          />
+          {address.trim().length >= 4 && !addressError ? (
+            <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+          ) : null}
+        </View>
+        {addressError ? (
+          <Text style={styles.errorText}>{addressError}</Text>
         ) : null}
       </View>
 
@@ -1180,7 +1265,10 @@ export default function Register({ navigation }) {
             {/* Login Link */}
             <View style={styles.loginContainer}>
               <Text style={styles.loginText}>Already have an account? </Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+              <TouchableOpacity onPress={async () => {
+                await clearRegistrationDraft();
+                navigation.navigate('Login');
+              }}>
                 <Text style={styles.loginLink}>Sign In</Text>
               </TouchableOpacity>
             </View>

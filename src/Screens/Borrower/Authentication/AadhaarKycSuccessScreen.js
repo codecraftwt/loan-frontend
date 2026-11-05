@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,9 +12,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import { m } from 'walstar-rn-responsive';
 import { FontFamily, FontSizes } from '../../../constants';
-import { useDispatch, useSelector } from 'react-redux';
-import Toast from 'react-native-toast-message';
-import { registerUser } from '../../../Redux/Slices/authslice';
+import { updateRegistrationDraft } from '../../../Services/registrationDraftService';
 
 const BRAND_NAVY = '#172340';
 const BRAND_TEAL = '#118A6B';
@@ -23,7 +21,7 @@ const BRAND_BORDER = '#BDE5D8';
 
 const ProgressTracker = () => (
   <View style={styles.progressContainer}>
-    {[1, 2, 3, 4].map(step => (
+    {[1, 2, 3].map(step => (
       <View key={step} style={styles.progressStepWrap}>
         <View
           style={[
@@ -37,7 +35,7 @@ const ProgressTracker = () => (
             <Text style={styles.progressStepText}>{step}</Text>
           )}
         </View>
-        {step < 4 ? (
+        {step < 3 ? (
           <View
             style={[
               styles.progressLine,
@@ -51,15 +49,24 @@ const ProgressTracker = () => (
 );
 
 export default function AadhaarKycSuccessScreen({ navigation, route }) {
-  const dispatch = useDispatch();
-  const { isLoading } = useSelector(state => state.auth || {});
-  const [signupError, setSignupError] = useState('');
-  const { aadhaarNumber, kycData, userData } = route.params || {};
+  const { aadhaarNumber, kycData, userData, source } = route.params || {};
+
+  useEffect(() => {
+    if (userData) {
+      updateRegistrationDraft({
+        screen: 'AadhaarKycSuccessScreen',
+        userData,
+        aadhaarNumber,
+        kycData,
+        source: source || 'register',
+      });
+    }
+  }, [userData, aadhaarNumber, kycData, source]);
   const maskedAadhaar = aadhaarNumber
     ? `XXXX XXXX ${aadhaarNumber.slice(-4)}`
     : 'XXXX XXXX';
 
-  const handleContinue = async () => {
+  const handleContinue = () => {
     if (!userData) {
       navigation.reset({
         index: 0,
@@ -68,56 +75,12 @@ export default function AadhaarKycSuccessScreen({ navigation, route }) {
       return;
     }
 
-    try {
-      setSignupError('');
-      const formData = new FormData();
-      formData.append('userName', userData.name);
-      formData.append('email', userData.email);
-      formData.append('password', userData.password);
-      formData.append('confirmPassword', userData.confirmPassword);
-      formData.append('roleId', userData.roleId.toString());
-      formData.append('address', userData.address || 'Not provided');
-      formData.append('aadharCardNo', aadhaarNumber);
-
-      if (userData.mobileNumber) {
-        formData.append('mobileNo', userData.mobileNumber);
-      }
-
-      if (userData.panCardNumber && userData.panCardNumber.length === 10) {
-        formData.append('panCardNumber', userData.panCardNumber);
-      }
-
-      if (userData.profileImage) {
-        formData.append('profileImage', {
-          uri: userData.profileImage.uri,
-          type: userData.profileImage.type || 'image/jpeg',
-          name: userData.profileImage.fileName || 'profile.jpg',
-        });
-      }
-
-      await dispatch(registerUser(formData)).unwrap();
-
-      Toast.show({
-        type: 'success',
-        position: 'top',
-        text1: 'Account created successfully!',
-      });
-
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'BottomNavigation' }],
-      });
-    } catch (error) {
-      const errorMessage =
-        (typeof error === 'string' ? error : error?.message) ||
-        'Registration failed. Please try again.';
-      setSignupError(errorMessage);
-      Toast.show({
-        type: 'error',
-        position: 'top',
-        text1: errorMessage,
-      });
-    }
+    navigation.navigate('ProfileSummaryScreen', {
+      userData,
+      aadhaarNumber,
+      kycData,
+      source: source || 'register',
+    });
   };
 
   return (
@@ -162,25 +125,15 @@ export default function AadhaarKycSuccessScreen({ navigation, route }) {
             Please confirm this is correct before continuing.
           </Text>
 
-          {signupError ? (
-            <View style={styles.errorBox}>
-              <Ionicons name="alert-circle-outline" size={m(18)} color="#D93025" />
-              <Text style={styles.errorText}>{signupError}</Text>
-            </View>
-          ) : null}
-
           <TouchableOpacity
-            style={[styles.primaryButton, isLoading && styles.disabledButton]}
-            onPress={handleContinue}
-            disabled={isLoading}>
+            style={styles.primaryButton}
+            onPress={handleContinue}>
             <LinearGradient
               colors={[BRAND_NAVY, BRAND_TEAL]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.primaryButtonGradient}>
-              <Text style={styles.primaryButtonText}>
-                {isLoading ? 'Creating Account...' : 'Looks good, Continue'}
-              </Text>
+              <Text style={styles.primaryButtonText}>Looks good, Continue</Text>
               <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
             </LinearGradient>
           </TouchableOpacity>

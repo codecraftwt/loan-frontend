@@ -19,6 +19,7 @@ import {getActivePlan} from '../../Redux/Slices/planPurchaseSlice';
 import Toast from 'react-native-toast-message';
 import {m} from 'walstar-rn-responsive';
 import {FontFamily, colors} from '../../constants';
+import {clearRegistrationDraft} from '../../Services/registrationDraftService';
 
 export default function LoginScreen({navigation}) {
   const [emailOrMobile, setEmailOrMobile] = useState('');
@@ -73,6 +74,7 @@ export default function LoginScreen({navigation}) {
         if (userData?.roleId === 1) {
           dispatch(getActivePlan());
         }
+        clearRegistrationDraft();
         navigation.reset({
           index: 0,
           routes: [{ name: 'BottomNavigation' }],

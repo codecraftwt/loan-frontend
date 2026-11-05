@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   ActivityIndicator,
+  Keyboard,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
@@ -17,6 +18,7 @@ import Toast from 'react-native-toast-message';
 import { m } from 'walstar-rn-responsive';
 import { FontFamily, FontSizes } from '../../../constants';
 import aadhaarKycAPI from '../../../Services/aadhaarKycService';
+import { updateRegistrationDraft } from '../../../Services/registrationDraftService';
 
 const BRAND_NAVY = '#172340';
 const BRAND_TEAL = '#118A6B';
@@ -25,7 +27,7 @@ const BRAND_BORDER = '#BDE5D8';
 
 const ProgressTracker = () => (
   <View style={styles.progressContainer}>
-    {[1, 2, 3, 4].map(step => (
+    {[1, 2, 3].map(step => (
       <View key={step} style={styles.progressStepWrap}>
         <View
           style={[
@@ -39,7 +41,7 @@ const ProgressTracker = () => (
             <Text style={styles.progressStepText}>{step}</Text>
           )}
         </View>
-        {step < 4 ? (
+        {step < 3 ? (
           <View
             style={[
               styles.progressLine,
@@ -53,10 +55,55 @@ const ProgressTracker = () => (
 );
 
 export default function EnterAadhaarScreen({ navigation, route }) {
-  const { userData } = route.params || {};
+  const { userData, source } = route.params || {};
   const [aadhaarNumber, setAadhaarNumber] = useState(route?.params?.aadhaarNumber || '');
   const [error, setError] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(m(260));
+  const scrollViewRef = useRef(null);
+
+  useEffect(() => {
+    if (userData) {
+      updateRegistrationDraft({
+        screen: 'EnterAadhaarScreen',
+        userData,
+        aadhaarNumber,
+        source: source || 'register',
+      });
+    }
+  }, [userData, source, aadhaarNumber]);
+
+  const scrollToCard = useCallback(() => {
+    [80, 200, 350].forEach(delay => {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollTo({ y: m(150), animated: true });
+      }, delay);
+    });
+  }, []);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, e => {
+      if (e?.endCoordinates?.height) {
+        setKeyboardHeight(e.endCoordinates.height + m(40));
+      }
+      setIsKeyboardVisible(true);
+      scrollToCard();
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setIsKeyboardVisible(false);
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [scrollToCard]);
 
   const handleAadhaarChange = text => {
     const numericText = text.replace(/[^0-9]/g, '');
@@ -86,9 +133,18 @@ export default function EnterAadhaarScreen({ navigation, route }) {
         text2: response?.mockOtp ? `Test OTP: ${response.mockOtp}` : undefined,
       });
 
+      const txId = response?.transactionId || response?.txnId;
+      await updateRegistrationDraft({
+        screen: 'VerifyAadhaarOtpScreen',
+        userData,
+        aadhaarNumber,
+        transactionId: txId,
+        source: source || 'register',
+      });
+
       navigation.navigate('VerifyAadhaarOtpScreen', {
         aadhaarNumber,
-        transactionId: response?.transactionId || response?.txnId,
+        transactionId: txId,
         userData,
       });
     } catch (apiError) {
@@ -110,20 +166,23 @@ export default function EnterAadhaarScreen({ navigation, route }) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <StatusBar barStyle="light-content" backgroundColor={BRAND_NAVY} />
-      <View style={styles.fixedTop}>
-        <View style={styles.headerContent}>
-          <Text style={styles.appName}>LoanHub</Text>
-          <Text style={styles.tagline}>Aadhaar eKYC Verification</Text>
-        </View>
-
-        <ProgressTracker />
-      </View>
-
       <ScrollView
+        ref={scrollViewRef}
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isKeyboardVisible && { paddingBottom: keyboardHeight },
+        ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
+        <View style={styles.topSection}>
+          <View style={styles.headerContent}>
+            <Text style={styles.appName}>LoanHub</Text>
+            <Text style={styles.tagline}>Aadhaar eKYC Verification</Text>
+          </View>
+
+          <ProgressTracker />
+        </View>
         <View style={styles.formCard}>
           <View style={styles.iconCircle}>
             <Ionicons name="finger-print-outline" size={m(40)} color={BRAND_TEAL} />
@@ -151,6 +210,10 @@ export default function EnterAadhaarScreen({ navigation, route }) {
                 placeholderTextColor="#999"
                 keyboardType="number-pad"
                 maxLength={12}
+                onFocus={() => {
+                  setIsKeyboardVisible(true);
+                  scrollToCard();
+                }}
               />
               {aadhaarNumber.length === 12 && !error ? (
                 <Ionicons name="checkmark-circle" size={20} color="#28a745" />
@@ -200,9 +263,12 @@ const styles = StyleSheet.create({
     paddingBottom: m(40),
     backgroundColor: BRAND_TEAL,
   },
-  fixedTop: {
-    paddingHorizontal: m(20),
-    paddingTop: Platform.OS === 'ios' ? m(52) : m(32),
+  scrollContentKeyboard: {
+    paddingBottom: m(160),
+  },
+  topSection: {
+    paddingTop: Platform.OS === 'ios' ? m(52) : m(24),
+    paddingBottom: m(14),
   },
   headerContent: {
     alignItems: 'center',

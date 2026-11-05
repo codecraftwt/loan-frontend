@@ -8,6 +8,7 @@ import ConsentScreen from '../Screens/Borrower/Authentication/ConsentScreen';
 import EnterAadhaarScreen from '../Screens/Borrower/Authentication/EnterAadhaarScreen';
 import VerifyAadhaarOtpScreen from '../Screens/Borrower/Authentication/VerifyAadhaarOtpScreen';
 import AadhaarKycSuccessScreen from '../Screens/Borrower/Authentication/AadhaarKycSuccessScreen';
+import ProfileSummaryScreen from '../Screens/Borrower/Authentication/ProfileSummaryScreen';
 import ForgotPassword from '../Screens/Auth/ForgotPassword';
 import ForgotPin from '../Screens/Auth/ForgotPin';
 import OTP from '../Screens/Auth/OTP';
@@ -110,6 +111,7 @@ const Navigation = () => {
       <Stack.Screen name="EnterAadhaarScreen" component={EnterAadhaarScreen} />
       <Stack.Screen name="VerifyAadhaarOtpScreen" component={VerifyAadhaarOtpScreen} />
       <Stack.Screen name="AadhaarKycSuccessScreen" component={AadhaarKycSuccessScreen} />
+      <Stack.Screen name="ProfileSummaryScreen" component={ProfileSummaryScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
       <Stack.Screen name="ForgotPin" component={ForgotPin} />
       <Stack.Screen name="OTP" component={OTP} />
