@@ -319,7 +319,7 @@ export default function BorrowerProfileScreen() {
   if (loading && !profile.userName && !authUser?.userName) {
     return (
       <ScreenWrapper
-        backgroundColor={colors.backgroundGreenWhite}
+        backgroundColor="#F8FAFC"
         topInsetBg={colors.primary}
         statusBarColor={colors.primary}
         statusBarStyle="dark-content"
@@ -334,7 +334,7 @@ export default function BorrowerProfileScreen() {
 
   return (
     <ScreenWrapper
-      backgroundColor={colors.backgroundGreenWhite}
+      backgroundColor="#F8FAFC"
       topInsetBg={colors.primary}
       statusBarColor={colors.primary}
       statusBarStyle="dark-content"
@@ -565,7 +565,7 @@ const styles = StyleSheet.create({
   // Curved Sheet
   sheetSection: {
     flex: 1,
-    backgroundColor: colors.backgroundGreenWhite,
+    backgroundColor: '#F8FAFC',
     borderTopLeftRadius: m(36),
     borderTopRightRadius: m(36),
   },
@@ -668,13 +668,13 @@ const styles = StyleSheet.create({
   menuIconCircle: {
     width: m(44),
     height: m(44),
-    borderRadius: m(22),
-    backgroundColor: colors.blueButton,
+    borderRadius: m(14),
+    backgroundColor: colors.oceanBlueButton,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: m(16),
     elevation: 2,
-    shadowColor: colors.blueButton,
+    shadowColor: colors.oceanBlueButton,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,

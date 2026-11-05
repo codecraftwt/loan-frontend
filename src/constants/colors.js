@@ -20,7 +20,8 @@ export const colors = {
   lightGreen: '#DFF7E2',
 
   // Background Green White and Letters (#F1FFF3) - Primary app background & soft surfaces
-  backgroundGreenWhite: '#F1FFF3',
+  backgroundGreenWhite: '#F8FAFC',
+  // backgroundGreenWhite: '#F1FFF3',
   greenWhite: '#F1FFF3',
 
   // Interactive Blue Buttons

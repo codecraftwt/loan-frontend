@@ -201,7 +201,7 @@ export default function BorrowerExploreLenders() {
 
   return (
     <ScreenWrapper
-      backgroundColor={colors.backgroundGreenWhite}
+      backgroundColor="#F8FAFC"
       topInsetBg={colors.primary}
       statusBarColor={colors.primary}
       statusBarStyle="dark-content"
@@ -244,14 +244,13 @@ export default function BorrowerExploreLenders() {
             </View>
             <View style={{ flex: 1, marginLeft: m(8) }}>
               <Text style={styles.pendingAppTitle} numberOfLines={1}>
-                Application Under Review (
-                {activePendingApp.lenderSnapshot?.companyName ||
-                  activePendingApp.lenderSnapshot?.userName ||
-                  'Selected Lender'}
-                )
+                Application Under Review ({activePendingApp.lenderSnapshot?.companyName || activePendingApp.lenderSnapshot?.userName || 'Selected Lender'})
               </Text>
-              <Text style={styles.pendingAppSub} numberOfLines={2}>
-                48h decision window active ({activePendingApp.remainingHours != null ? `${activePendingApp.remainingHours}h remaining` : 'under review'}). Tap to view status.
+              <Text style={styles.pendingAppSub} numberOfLines={1}>
+                48h decision window active ({activePendingApp.remainingHours != null ? `${activePendingApp.remainingHours}h remaining` : 'under review'}).
+              </Text>
+              <Text style={styles.pendingAppActionText} numberOfLines={1}>
+                Tap to view status.
               </Text>
             </View>
             <Feather name="chevron-right" size={m(15)} color="#d97706" />
@@ -460,7 +459,7 @@ const styles = StyleSheet.create({
   // Main Curved Sheet
   sheetSection: {
     flex: 1,
-    backgroundColor: colors.backgroundGreenWhite,
+    backgroundColor: '#F8FAFC',
     borderTopLeftRadius: m(32),
     borderTopRightRadius: m(32),
     paddingTop: m(16),
@@ -558,8 +557,8 @@ const styles = StyleSheet.create({
   lenderIconCircle: {
     width: m(34),
     height: m(34),
-    borderRadius: m(17),
-    backgroundColor: colors.blueButton,
+    borderRadius: m(11),
+    backgroundColor: colors.oceanBlueButton,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: m(9),
@@ -705,5 +704,11 @@ const styles = StyleSheet.create({
     color: '#b45309',
     marginTop: m(1),
     lineHeight: m(14),
+  },
+  pendingAppActionText: {
+    fontSize: m(10.5),
+    fontFamily: FontFamily.primaryBold,
+    color: '#92400e',
+    marginTop: m(2),
   },
 });

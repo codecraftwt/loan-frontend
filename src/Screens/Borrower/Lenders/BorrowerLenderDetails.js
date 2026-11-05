@@ -140,7 +140,7 @@ export default function BorrowerLenderDetails() {
   if (loading) {
     return (
       <ScreenWrapper
-        backgroundColor={colors.backgroundGreenWhite}
+        backgroundColor="#F8FAFC"
         topInsetBg={colors.primary}
         statusBarColor={colors.primary}
         statusBarStyle="dark-content"
@@ -156,7 +156,7 @@ export default function BorrowerLenderDetails() {
   if (!lender) {
     return (
       <ScreenWrapper
-        backgroundColor={colors.backgroundGreenWhite}
+        backgroundColor="#F8FAFC"
         topInsetBg={colors.primary}
         statusBarColor={colors.primary}
         statusBarStyle="dark-content"
@@ -216,7 +216,7 @@ export default function BorrowerLenderDetails() {
 
   return (
     <ScreenWrapper
-      backgroundColor={colors.backgroundGreenWhite}
+      backgroundColor="#F8FAFC"
       topInsetBg={colors.primary}
       statusBarColor={colors.primary}
       statusBarStyle="dark-content"
@@ -279,10 +279,10 @@ export default function BorrowerLenderDetails() {
               >
                 <Feather
                   name="bookmark"
-                  size={m(12)}
-                  color={isFav ? '#d97706' : '#f59e0b'}
+                  size={m(13)}
+                  color={isFav ? colors.oceanBlueButton : colors.textSecondary}
                 />
-                <Text style={styles.heroFavoriteBtnText}>
+                <Text style={[styles.heroFavoriteBtnText, isFav && styles.heroFavoriteBtnTextActive]}>
                   {isFav ? 'Favorited' : 'Favorite'}
                 </Text>
               </TouchableOpacity>
@@ -292,7 +292,7 @@ export default function BorrowerLenderDetails() {
             {lender.licenseNumber ? (
               <View style={styles.licenseBanner}>
                 <View style={styles.licenseLeftGroup}>
-                  <Feather name="shield" size={m(12)} color="#f59e0b" />
+                  <Feather name="shield" size={m(13)} color={colors.oceanBlueButton} />
                   <Text style={styles.licenseText} numberOfLines={1}>
                     Lic: {lender.licenseNumber}
                   </Text>
@@ -307,9 +307,9 @@ export default function BorrowerLenderDetails() {
                   <Feather
                     name={copiedLicense ? 'check' : 'copy'}
                     size={m(12)}
-                    color={copiedLicense ? '#10b981' : '#fbbf24'}
+                    color={copiedLicense ? '#059669' : colors.oceanBlueButton}
                   />
-                  <Text style={[styles.copyBtnText, copiedLicense && { color: '#10b981' }]}>
+                  <Text style={[styles.copyBtnText, copiedLicense && { color: '#059669' }]}>
                     {copiedLicense ? 'Copied' : 'Copy'}
                   </Text>
                 </TouchableOpacity>
@@ -330,7 +330,7 @@ export default function BorrowerLenderDetails() {
               <Feather
                 name="user"
                 size={m(14)}
-                color={activeTab === 'personal' ? colors.white : colors.lettersAndIcons}
+                color={activeTab === 'personal' ? colors.lettersAndIcons : colors.textSecondary}
               />
               <Text
                 style={[
@@ -353,7 +353,7 @@ export default function BorrowerLenderDetails() {
               <Feather
                 name="credit-card"
                 size={m(14)}
-                color={activeTab === 'financial' ? colors.white : colors.lettersAndIcons}
+                color={activeTab === 'financial' ? colors.lettersAndIcons : colors.textSecondary}
               />
               <Text
                 style={[
@@ -373,7 +373,7 @@ export default function BorrowerLenderDetails() {
               <View style={styles.whiteCard}>
                 <View style={styles.cardHeaderRow}>
                   <View style={styles.cardHeaderLeft}>
-                    <View style={styles.iconSquareGreen}>
+                    <View style={styles.headerIconBox}>
                       <Text style={styles.iconPercentText}>%</Text>
                     </View>
                     <View style={{ flex: 1 }}>
@@ -432,7 +432,7 @@ export default function BorrowerLenderDetails() {
 
                 {/* Box 3: AVERAGE APPROVAL & UNDERWRITING TAT */}
                 <View style={styles.tatBox}>
-                  <Feather name="clock" size={m(15)} color="#2563eb" />
+                  <Feather name="clock" size={m(15)} color={colors.oceanBlueButton} />
                   <View style={{ flex: 1, marginLeft: m(8) }}>
                     <Text style={styles.tatLabel}>AVERAGE APPROVAL & UNDERWRITING TAT</Text>
                     <Text style={styles.tatVal}>{tat}</Text>
@@ -444,8 +444,8 @@ export default function BorrowerLenderDetails() {
               <View style={styles.whiteCard}>
                 <View style={styles.cardHeaderRow}>
                   <View style={styles.cardHeaderLeft}>
-                    <View style={styles.iconSquarePurple}>
-                      <Feather name="layers" size={m(16)} color="#7c3aed" />
+                    <View style={styles.headerIconBox}>
+                      <Feather name="layers" size={m(16)} color={colors.white} />
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.cardHeaderTitle}>
@@ -461,7 +461,7 @@ export default function BorrowerLenderDetails() {
                 <View style={styles.productsWrap}>
                   {services.map((item) => (
                     <View key={item} style={styles.productPill}>
-                      <Feather name="check-circle" size={m(13)} color="#2563eb" />
+                      <Feather name="check-circle" size={m(13)} color={colors.oceanBlueButton} />
                       <Text style={styles.productPillText}>{item}</Text>
                     </View>
                   ))}
@@ -472,8 +472,8 @@ export default function BorrowerLenderDetails() {
               <View style={styles.whiteCard}>
                 <View style={styles.cardHeaderRow}>
                   <View style={styles.cardHeaderLeft}>
-                    <View style={styles.iconSquareBlue}>
-                      <Feather name="trending-up" size={m(16)} color="#2563eb" />
+                    <View style={styles.headerIconBox}>
+                      <Feather name="trending-up" size={m(16)} color={colors.white} />
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.cardHeaderTitle}>
@@ -516,8 +516,8 @@ export default function BorrowerLenderDetails() {
             <View style={styles.whiteCard}>
               <View style={styles.cardHeaderRow}>
                 <View style={styles.cardHeaderLeft}>
-                  <View style={styles.iconSquareBlue}>
-                    <Feather name="user" size={m(16)} color="#2563eb" />
+                  <View style={styles.headerIconBox}>
+                    <Feather name="user" size={m(16)} color={colors.white} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.cardHeaderTitle}>Contact & Official Registration Desk</Text>
@@ -585,7 +585,7 @@ export default function BorrowerLenderDetails() {
             activeOpacity={0.85}
             onPress={handleApply}
           >
-            <Feather name="file-text" size={m(16)} color={colors.white} />
+            <Feather name="file-text" size={m(16)} color={colors.lettersAndIcons} />
             <Text style={styles.bottomApplyBtnText}>Apply with {companyTitle}</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -690,7 +690,7 @@ const styles = StyleSheet.create({
   // ── Sheet Section ──
   sheetSection: {
     flex: 1,
-    backgroundColor: colors.backgroundGreenWhite,
+    backgroundColor: '#F8FAFC',
     borderTopLeftRadius: m(28),
     borderTopRightRadius: m(28),
     paddingTop: m(14),
@@ -717,18 +717,18 @@ const styles = StyleSheet.create({
     color: '#475569',
   },
 
-  // ── Top Hero Card (Dark Navy Matching Screenshot) ──
+  // ── Top Hero Card (Clean FinWise Light Aesthetic) ──
   heroCard: {
-    backgroundColor: '#0b1329',
-    borderRadius: m(22),
+    backgroundColor: colors.white,
+    borderRadius: m(20),
     padding: m(16),
     borderWidth: 1,
-    borderColor: '#1e293b',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 6,
+    borderColor: 'rgba(9, 48, 48, 0.08)',
+    shadowColor: colors.lettersAndIcons,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
     marginBottom: m(14),
   },
   heroTopRow: {
@@ -740,17 +740,15 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   avatarBox: {
-    width: m(54),
-    height: m(54),
+    width: m(52),
+    height: m(52),
     borderRadius: m(16),
-    backgroundColor: '#2563eb',
+    backgroundColor: colors.oceanBlueButton,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
   },
   avatarInitials: {
-    fontSize: m(19),
+    fontSize: m(18),
     fontFamily: FontFamily.primaryBold,
     color: colors.white,
   },
@@ -761,11 +759,11 @@ const styles = StyleSheet.create({
     width: m(18),
     height: m(18),
     borderRadius: m(9),
-    backgroundColor: '#10b981',
+    backgroundColor: '#00D09E',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#0b1329',
+    borderColor: colors.white,
   },
   heroIdentityCol: {
     flex: 1,
@@ -773,9 +771,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   heroNameText: {
-    fontSize: m(16),
+    fontSize: m(17),
     fontFamily: FontFamily.primaryBold,
-    color: colors.white,
+    color: colors.lettersAndIcons,
     flexShrink: 1,
   },
   verifiedBadgeRow: {
@@ -787,18 +785,18 @@ const styles = StyleSheet.create({
   verifiedBadgeText: {
     fontSize: m(11),
     fontFamily: FontFamily.primaryMedium,
-    color: '#10b981',
+    color: '#059669',
   },
   licenseBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(255, 255, 255, 0.07)',
+    backgroundColor: '#f8fafc',
     borderWidth: 1,
-    borderColor: 'rgba(254, 240, 138, 0.25)',
+    borderColor: '#e2e8f0',
     borderRadius: m(10),
-    paddingHorizontal: m(10),
-    paddingVertical: m(6),
+    paddingHorizontal: m(12),
+    paddingVertical: m(8),
     marginTop: m(12),
   },
   licenseLeftGroup: {
@@ -809,47 +807,50 @@ const styles = StyleSheet.create({
     marginRight: m(8),
   },
   licenseText: {
-    fontSize: m(11),
+    fontSize: m(11.5),
     fontFamily: FontFamily.primaryMedium,
-    color: '#fef08a',
+    color: colors.lettersAndIcons,
     flexShrink: 1,
   },
   copyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: m(4),
-    backgroundColor: 'rgba(254, 240, 138, 0.12)',
+    backgroundColor: '#eff6ff',
     borderWidth: 1,
-    borderColor: 'rgba(254, 240, 138, 0.3)',
+    borderColor: '#bfdbfe',
     borderRadius: m(6),
     paddingHorizontal: m(8),
-    paddingVertical: m(3.5),
+    paddingVertical: m(4),
   },
   copyBtnText: {
     fontSize: m(10.5),
     fontFamily: FontFamily.primaryBold,
-    color: '#fbbf24',
+    color: colors.oceanBlueButton,
   },
 
   heroFavoriteBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: m(5),
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    backgroundColor: '#f8fafc',
     borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.3)',
+    borderColor: '#e2e8f0',
     borderRadius: m(10),
     paddingHorizontal: m(12),
     paddingVertical: m(8),
   },
   heroFavoriteBtnActive: {
-    backgroundColor: 'rgba(245, 158, 11, 0.3)',
-    borderColor: '#f59e0b',
+    backgroundColor: '#eff6ff',
+    borderColor: '#bfdbfe',
   },
   heroFavoriteBtnText: {
     fontSize: m(11),
     fontFamily: FontFamily.primaryBold,
-    color: '#fbbf24',
+    color: colors.lettersAndIcons,
+  },
+  heroFavoriteBtnTextActive: {
+    color: colors.oceanBlueButton,
   },
 
   // ── Tab Switcher Capsule ──
@@ -873,17 +874,17 @@ const styles = StyleSheet.create({
     borderRadius: m(11),
   },
   tabButtonActive: {
-    backgroundColor: '#2563eb',
+    backgroundColor: colors.primary,
     elevation: 1,
   },
   tabButtonText: {
     fontSize: m(11.5),
     fontFamily: FontFamily.primaryMedium,
-    color: colors.lettersAndIcons,
+    color: colors.textSecondary,
   },
   tabButtonTextActive: {
     fontFamily: FontFamily.primaryBold,
-    color: colors.white,
+    color: colors.lettersAndIcons,
   },
 
   // ── White Card Container ──
@@ -916,40 +917,18 @@ const styles = StyleSheet.create({
     gap: m(10),
     flex: 1,
   },
-  iconSquareGreen: {
-    width: m(32),
-    height: m(32),
-    borderRadius: m(10),
-    backgroundColor: '#ecfdf5',
+  headerIconBox: {
+    width: m(34),
+    height: m(34),
+    borderRadius: m(11),
+    backgroundColor: colors.oceanBlueButton,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#a7f3d0',
   },
   iconPercentText: {
     fontSize: m(15),
     fontFamily: FontFamily.primaryBold,
-    color: '#059669',
-  },
-  iconSquarePurple: {
-    width: m(32),
-    height: m(32),
-    borderRadius: m(10),
-    backgroundColor: '#faf5ff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#e9d5ff',
-  },
-  iconSquareBlue: {
-    width: m(32),
-    height: m(32),
-    borderRadius: m(10),
-    backgroundColor: '#eff6ff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#bfdbfe',
+    color: colors.white,
   },
   cardHeaderTitle: {
     fontSize: m(13),
@@ -1033,7 +1012,7 @@ const styles = StyleSheet.create({
   tatLabel: {
     fontSize: m(8.5),
     fontFamily: FontFamily.primaryBold,
-    color: '#1d4ed8',
+    color: colors.oceanBlueButton,
     letterSpacing: 0.4,
   },
   tatVal: {
@@ -1053,9 +1032,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: m(6),
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#f8fafc',
     borderWidth: 1,
-    borderColor: '#bfdbfe',
+    borderColor: '#e2e8f0',
     borderRadius: m(20),
     paddingHorizontal: m(10),
     paddingVertical: m(6),
@@ -1063,7 +1042,7 @@ const styles = StyleSheet.create({
   productPillText: {
     fontSize: m(11),
     fontFamily: FontFamily.primarySemiBold,
-    color: '#1e3a8a',
+    color: colors.lettersAndIcons,
   },
 
   // ── Track Record Grid ──
@@ -1091,7 +1070,7 @@ const styles = StyleSheet.create({
   trackRecordValBlue: {
     fontSize: m(16),
     fontFamily: FontFamily.primaryBold,
-    color: '#2563eb',
+    color: colors.oceanBlueButton,
     marginBottom: m(2),
   },
   trackRecordValGreen: {
@@ -1142,19 +1121,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: m(8),
-    backgroundColor: colors.lettersAndIcons,
+    backgroundColor: colors.primary,
     borderRadius: m(16),
     paddingVertical: m(14),
     elevation: 3,
-    shadowColor: colors.lettersAndIcons,
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.2,
     shadowRadius: 5,
     marginTop: m(6),
   },
   bottomApplyBtnText: {
     fontSize: m(13.5),
     fontFamily: FontFamily.primaryBold,
-    color: colors.white,
+    color: colors.lettersAndIcons,
   },
 });

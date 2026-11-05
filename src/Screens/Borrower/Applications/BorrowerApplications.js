@@ -210,18 +210,7 @@ export default function BorrowerApplications() {
       <View style={styles.card}>
         {/* Card Header Row */}
         <View style={styles.cardHeaderRow}>
-          <View
-            style={[
-              styles.activityIconTile,
-              isAccepted
-                ? styles.iconTileAccepted
-                : isPending
-                ? styles.iconTilePending
-                : isLenderSigned
-                ? styles.iconTileSign
-                : styles.iconTileClosed,
-            ]}
-          >
+          <View style={styles.activityIconTile}>
             <Feather
               name={
                 isAccepted
@@ -234,16 +223,8 @@ export default function BorrowerApplications() {
                   ? 'clock'
                   : 'x-circle'
               }
-              size={m(14)}
-              color={
-                isAccepted
-                  ? '#059669'
-                  : isPending
-                  ? '#D97706'
-                  : isLenderSigned
-                  ? '#2563EB'
-                  : '#64748B'
-              }
+              size={m(15)}
+              color={colors.white}
             />
           </View>
 
@@ -470,7 +451,7 @@ export default function BorrowerApplications() {
 
   return (
     <ScreenWrapper
-      backgroundColor={colors.backgroundGreenWhite}
+      backgroundColor="#F8FAFC"
       topInsetBg={colors.primary}
       statusBarColor={colors.primary}
       statusBarStyle="dark-content"
@@ -959,7 +940,7 @@ const styles = StyleSheet.create({
   // Main Curved Sheet
   sheetSection: {
     flex: 1,
-    backgroundColor: colors.backgroundGreenWhite,
+    backgroundColor: '#F8FAFC',
     borderTopLeftRadius: m(32),
     borderTopRightRadius: m(32),
     paddingTop: m(16),
@@ -1170,13 +1151,13 @@ const styles = StyleSheet.create({
     marginBottom: m(8),
   },
   activityIconTile: {
-    width: m(30),
-    height: m(30),
-    borderRadius: m(9),
+    width: m(32),
+    height: m(32),
+    borderRadius: m(11),
+    backgroundColor: colors.oceanBlueButton,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: m(8),
-    borderWidth: 1,
   },
   iconTileAccepted: {
     backgroundColor: '#ECFDF5',

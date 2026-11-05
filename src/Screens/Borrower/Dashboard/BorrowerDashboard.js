@@ -314,8 +314,8 @@ export default function BorrowerDashboard() {
                 activeOpacity={0.8}
                 onPress={() => navigation.navigate('BorrowerLoansPortfolio')}
               >
-                <View style={[styles.featureStatIconBox, { backgroundColor: '#eff6ff' }]}>
-                  <Feather name="clock" size={m(15)} color="#2563eb" />
+                <View style={styles.featureStatIconBox}>
+                  <Feather name="clock" size={m(15)} color={colors.white} />
                 </View>
                 <View style={styles.featureStatTexts}>
                   <Text style={styles.featureStatLabel}>Upcoming EMI</Text>
@@ -340,8 +340,8 @@ export default function BorrowerDashboard() {
                 activeOpacity={0.8}
                 onPress={() => navigation.navigate('BorrowerExploreLenders')}
               >
-                <View style={[styles.featureStatIconBox, { backgroundColor: '#ecfdf5' }]}>
-                  <Feather name="users" size={m(15)} color="#059669" />
+                <View style={styles.featureStatIconBox}>
+                  <Feather name="users" size={m(15)} color={colors.white} />
                 </View>
                 <View style={styles.featureStatTexts}>
                   <Text style={styles.featureStatLabel}>Available Lenders</Text>
@@ -357,7 +357,7 @@ export default function BorrowerDashboard() {
             <View style={styles.acceptedBannerCard}>
               <View style={styles.acceptedBannerHeader}>
                 <View style={styles.acceptedIconCircle}>
-                  <Feather name="check-circle" size={m(18)} color="#059669" />
+                  <Feather name="check-circle" size={m(18)} color={colors.white} />
                 </View>
                 <View style={{ flex: 1, marginLeft: m(10) }}>
                   <Text style={styles.acceptedBadgeText}>LOAN OFFER ACCEPTED</Text>
@@ -434,11 +434,11 @@ export default function BorrowerDashboard() {
                 onPress={() => navigation.navigate('BorrowerLoansPortfolio', { filter: 'active' })}
               >
                 <View style={styles.overviewCardTop}>
-                  <View style={[styles.overviewIconBox, { backgroundColor: '#ecfdf5' }]}>
-                    <Feather name="layers" size={m(16)} color="#059669" />
+                  <View style={styles.overviewIconBox}>
+                    <Feather name="layers" size={m(16)} color={colors.white} />
                   </View>
-                  <View style={[styles.overviewTag, { backgroundColor: '#ecfdf5' }]}>
-                    <Text style={[styles.overviewTagText, { color: '#059669' }]}>ACTIVE</Text>
+                  <View style={styles.overviewTag}>
+                    <Text style={styles.overviewTagText}>ACTIVE</Text>
                   </View>
                 </View>
                 <Text style={styles.overviewValue}>{portfolioMetrics.activeLoansCount || 0}</Text>
@@ -453,11 +453,11 @@ export default function BorrowerDashboard() {
                 onPress={() => navigation.navigate('BorrowerApplications')}
               >
                 <View style={styles.overviewCardTop}>
-                  <View style={[styles.overviewIconBox, { backgroundColor: '#fffbeb' }]}>
-                    <Feather name="clock" size={m(16)} color="#d97706" />
+                  <View style={styles.overviewIconBox}>
+                    <Feather name="clock" size={m(16)} color={colors.white} />
                   </View>
-                  <View style={[styles.overviewTag, { backgroundColor: '#fffbeb' }]}>
-                    <Text style={[styles.overviewTagText, { color: '#d97706' }]}>PENDING</Text>
+                  <View style={styles.overviewTag}>
+                    <Text style={styles.overviewTagText}>PENDING</Text>
                   </View>
                 </View>
                 <Text style={styles.overviewValue}>{stats.pendingApplications || 0}</Text>
@@ -475,11 +475,11 @@ export default function BorrowerDashboard() {
                 onPress={() => navigation.navigate('BorrowerApplications')}
               >
                 <View style={styles.overviewCardTop}>
-                  <View style={[styles.overviewIconBox, { backgroundColor: '#eff6ff' }]}>
-                    <Feather name="check-circle" size={m(16)} color="#2563eb" />
+                  <View style={styles.overviewIconBox}>
+                    <Feather name="check-circle" size={m(16)} color={colors.white} />
                   </View>
-                  <View style={[styles.overviewTag, { backgroundColor: '#eff6ff' }]}>
-                    <Text style={[styles.overviewTagText, { color: '#2563eb' }]}>ACCEPTED</Text>
+                  <View style={styles.overviewTag}>
+                    <Text style={styles.overviewTagText}>ACCEPTED</Text>
                   </View>
                 </View>
                 <Text style={styles.overviewValue}>{stats.acceptedApplications || 0}</Text>
@@ -494,11 +494,11 @@ export default function BorrowerDashboard() {
                 onPress={() => navigation.navigate('BorrowerExploreLenders')}
               >
                 <View style={styles.overviewCardTop}>
-                  <View style={[styles.overviewIconBox, { backgroundColor: '#f5f3ff' }]}>
-                    <Feather name="shield" size={m(16)} color="#7c3aed" />
+                  <View style={styles.overviewIconBox}>
+                    <Feather name="shield" size={m(16)} color={colors.white} />
                   </View>
-                  <View style={[styles.overviewTag, { backgroundColor: '#f5f3ff' }]}>
-                    <Text style={[styles.overviewTagText, { color: '#7c3aed' }]}>NETWORK</Text>
+                  <View style={styles.overviewTag}>
+                    <Text style={styles.overviewTagText}>NETWORK</Text>
                   </View>
                 </View>
                 <Text style={styles.overviewValue}>{stats.totalLendersAvailable || 2}</Text>
@@ -692,7 +692,7 @@ const styles = StyleSheet.create({
   // ==========================================
   sheetSection: {
     flex: 1,
-    backgroundColor: colors.backgroundGreenWhite,
+    backgroundColor: '#F8FAFC',
     borderTopLeftRadius: m(40),
     borderTopRightRadius: m(40),
     paddingHorizontal: m(18),
@@ -780,7 +780,8 @@ const styles = StyleSheet.create({
   featureStatIconBox: {
     width: m(34),
     height: m(34),
-    borderRadius: m(10),
+    borderRadius: m(11),
+    backgroundColor: colors.oceanBlueButton,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: m(10),
@@ -953,9 +954,10 @@ const styles = StyleSheet.create({
     marginBottom: m(6),
   },
   overviewIconBox: {
-    width: m(30),
-    height: m(30),
-    borderRadius: m(10),
+    width: m(32),
+    height: m(32),
+    borderRadius: m(11),
+    backgroundColor: colors.oceanBlueButton,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -963,11 +965,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: m(6),
     paddingVertical: m(2),
     borderRadius: m(6),
+    backgroundColor: '#eff6ff',
   },
   overviewTagText: {
     fontSize: m(8.5),
     fontFamily: FontFamily.primaryBold,
     letterSpacing: 0.4,
+    color: colors.oceanBlueButton,
   },
   overviewValue: {
     fontSize: m(20),
@@ -1247,8 +1251,8 @@ const styles = StyleSheet.create({
   acceptedIconCircle: {
     width: m(38),
     height: m(38),
-    borderRadius: m(19),
-    backgroundColor: '#d1fae5',
+    borderRadius: m(12),
+    backgroundColor: colors.oceanBlueButton,
     alignItems: 'center',
     justifyContent: 'center',
   },

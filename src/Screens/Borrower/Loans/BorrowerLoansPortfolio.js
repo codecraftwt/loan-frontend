@@ -186,7 +186,7 @@ export default function BorrowerLoansPortfolio() {
         {/* Top Header Row */}
         <View style={styles.cardHeaderRow}>
           <View style={styles.activityIconTile}>
-            <Feather name="credit-card" size={m(16)} color="#059669" />
+            <Feather name="credit-card" size={m(16)} color={colors.white} />
           </View>
 
           <View style={styles.headerInfoCol}>
@@ -253,7 +253,7 @@ export default function BorrowerLoansPortfolio() {
 
   return (
     <ScreenWrapper
-      backgroundColor={colors.backgroundGreenWhite}
+      backgroundColor="#F8FAFC"
       topInsetBg={colors.primary}
       statusBarColor={colors.primary}
       statusBarStyle="dark-content"
@@ -611,7 +611,7 @@ const styles = StyleSheet.create({
   // Main Curved Sheet
   sheetSection: {
     flex: 1,
-    backgroundColor: colors.backgroundGreenWhite,
+    backgroundColor: '#F8FAFC',
     borderTopLeftRadius: m(32),
     borderTopRightRadius: m(32),
     paddingTop: m(16),
@@ -827,12 +827,10 @@ const styles = StyleSheet.create({
     marginBottom: m(12),
   },
   activityIconTile: {
-    width: m(38),
-    height: m(38),
-    borderRadius: m(12),
-    backgroundColor: '#ECFDF5',
-    borderWidth: 1,
-    borderColor: '#A7F3D0',
+    width: m(34),
+    height: m(34),
+    borderRadius: m(11),
+    backgroundColor: colors.oceanBlueButton,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: m(10),
@@ -925,7 +923,7 @@ const styles = StyleSheet.create({
   progressPercentText: {
     fontSize: m(11),
     fontFamily: FontFamily.primaryBold,
-    color: '#059669',
+    color: colors.oceanBlueButton,
   },
   progressBarTrack: {
     height: m(6),
@@ -935,7 +933,7 @@ const styles = StyleSheet.create({
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: '#059669',
+    backgroundColor: colors.oceanBlueButton,
     borderRadius: m(3),
   },
 
