@@ -12,7 +12,8 @@ import {
   TextInput,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { getActivePlan } from '../../../Redux/Slices/planPurchaseSlice';
 import Feather from 'react-native-vector-icons/Feather';
 import { FontFamily, colors } from '../../../constants';
 import { m } from '../../../Utils/responsive';
@@ -110,6 +111,7 @@ const DEFAULT_PLANS = [
 
 export default function LenderSubscriptionScreen() {
   const navigation = useNavigation();
+  const dispatch = useDispatch();
   const authUser = useSelector((state) => state.auth?.user);
 
   const [activeTab, setActiveTab] = useState('browse'); // 'browse' | 'history'
@@ -287,6 +289,7 @@ export default function LenderSubscriptionScreen() {
       try {
         orderRes = await lenderFlowService.createPlanOrder(planId);
       } catch (orderErr) {
+        console.warn('Backend plan order creation issue, using fallback order:', orderErr);
         orderRes = {
           success: true,
           data: {
@@ -322,30 +325,54 @@ export default function LenderSubscriptionScreen() {
         };
       }
 
-      // 3. Verify Payment
+      // 3. Extract verified Razorpay response properties
+      const rPaymentId =
+        paymentResult.razorpay_payment_id ||
+        paymentResult.data?.razorpay_payment_id ||
+        paymentResult.paymentId;
+      const rOrderId =
+        paymentResult.razorpay_order_id ||
+        paymentResult.data?.razorpay_order_id ||
+        orderData.orderId ||
+        orderData.id;
+      const rSignature =
+        paymentResult.razorpay_signature ||
+        paymentResult.data?.razorpay_signature ||
+        paymentResult.signature;
+
       const verifyPayload = {
-        orderId: paymentResult.razorpay_order_id || orderData.orderId,
+        razorpay_payment_id: rPaymentId,
+        razorpay_order_id: rOrderId,
+        razorpay_signature: rSignature,
         planId: planId,
-        paymentId: paymentResult.razorpay_payment_id,
-        signature: paymentResult.razorpay_signature,
+        paymentId: rPaymentId,
+        orderId: rOrderId,
+        signature: rSignature,
       };
 
+      const verifyRes = await lenderFlowService.verifyPlanPayment(verifyPayload);
+
+      if (verifyRes && verifyRes.success === false) {
+        throw new Error(verifyRes.message || 'Payment verification failed on server.');
+      }
+
+      // 4. Immediately update Redux global store so the whole app recognizes the active plan
       try {
-        await lenderFlowService.verifyPlanPayment(verifyPayload);
-      } catch (verifyErr) {
-        console.warn('Payment verify response:', verifyErr);
+        await dispatch(getActivePlan()).unwrap();
+      } catch (reduxErr) {
+        console.warn('Redux getActivePlan sync warning:', reduxErr);
       }
 
       setCheckoutModalVisible(false);
       showAlert(
         'Subscription Activated! 👑',
-        `Your membership has been renewed with ${selectedPlanForPurchase.planName}. Quota and verified borrower access updated.`
+        `Your membership has been activated with ${selectedPlanForPurchase.planName}. Quota and verified borrower access updated.`
       );
-      fetchSubscriptionData();
+      fetchSubscriptionData(true);
     } catch (err) {
       console.error('Error in purchase flow:', err);
       const msg =
-        err.response?.data?.message || 'Could not complete subscription upgrade.';
+        err.response?.data?.message || err?.message || 'Could not complete subscription upgrade.';
       showAlert('Purchase Notice', msg);
     } finally {
       setPurchasing(false);

@@ -125,7 +125,7 @@ export default function LenderDashboard() {
   useFocusEffect(
     useCallback(() => {
       if (!user?._id || user?.roleId !== 1) return;
-      fetchAllDashboardData();
+      fetchAllDashboardData(true, true);
       fadeAnim.setValue(0);
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -168,7 +168,7 @@ export default function LenderDashboard() {
             setUnreadNotificationsCount(res.unreadCount || 0);
           }
         })
-        .catch(() => {});
+        .catch(() => { });
     });
     return unsubscribe;
   }, []);
@@ -315,7 +315,7 @@ export default function LenderDashboard() {
           </View>
 
           {/* ======================================================== */}
-          {/* PORTFOLIO OVERVIEW (2x2 Grid Matching Borrower Dashboard) */}
+          {/* PORTFOLIO OVERVIEW                                       */}
           {/* ======================================================== */}
           <View style={[styles.sectionHeaderRow, { marginTop: m(4), marginBottom: m(12) }]}>
             <View>
@@ -334,30 +334,11 @@ export default function LenderDashboard() {
             </TouchableOpacity>
           </View>
 
-          {/* 2x2 Clean Activity Grid */}
+          {/* 2x2 Clean Activity Grid Matching Web Dashboard Stats */}
           <View style={styles.overviewGrid}>
             {/* Row 1 */}
             <View style={styles.overviewGridRow}>
-              {/* 1. Active Facilities */}
-              <TouchableOpacity
-                style={styles.overviewCard}
-                activeOpacity={0.8}
-                onPress={() => navigation.navigate('LenderLoans', { filter: 'active' })}
-              >
-                <View style={styles.overviewCardTop}>
-                  <View style={[styles.overviewIconBox, { backgroundColor: '#ecfdf5' }]}>
-                    <Feather name="layers" size={m(16)} color="#059669" />
-                  </View>
-                  <View style={[styles.overviewTag, { backgroundColor: '#ecfdf5' }]}>
-                    <Text style={[styles.overviewTagText, { color: '#059669' }]}>ACTIVE</Text>
-                  </View>
-                </View>
-                <Text style={styles.overviewValue}>{activeLoansCount}</Text>
-                <Text style={styles.overviewTitle}>Active Facilities</Text>
-                <Text style={styles.overviewSub}>Earning interest</Text>
-              </TouchableOpacity>
-
-              {/* 2. In Review */}
+              {/* 1. Pending Action (stats.pendingRequests) */}
               <TouchableOpacity
                 style={styles.overviewCard}
                 activeOpacity={0.8}
@@ -368,53 +349,74 @@ export default function LenderDashboard() {
                     <Feather name="clock" size={m(16)} color="#d97706" />
                   </View>
                   <View style={[styles.overviewTag, { backgroundColor: '#fffbeb' }]}>
-                    <Text style={[styles.overviewTagText, { color: '#d97706' }]}>PENDING</Text>
+                    <Text style={[styles.overviewTagText, { color: '#d97706' }]}>PENDING ACTION</Text>
                   </View>
                 </View>
-                <Text style={styles.overviewValue}>{pendingCount}</Text>
-                <Text style={styles.overviewTitle}>New Inquiries</Text>
-                <Text style={styles.overviewSub}>Awaiting decision</Text>
+                <Text style={styles.overviewValue}>{stats.pendingRequests || 0}</Text>
+                <Text style={styles.overviewTitle}>Pending Action</Text>
+                <Text style={styles.overviewSub}>Awaiting credit review</Text>
               </TouchableOpacity>
-            </View>
 
-            {/* Row 2 */}
-            <View style={styles.overviewGridRow}>
-              {/* 3. Sanctioned Deals */}
+              {/* 2. Accepted Deals (stats.acceptedRequests) */}
               <TouchableOpacity
                 style={styles.overviewCard}
                 activeOpacity={0.8}
                 onPress={() => navigation.navigate('LenderRequests', { status: 'accepted' })}
               >
                 <View style={styles.overviewCardTop}>
-                  <View style={[styles.overviewIconBox, { backgroundColor: '#eff6ff' }]}>
-                    <Feather name="check-circle" size={m(16)} color="#2563eb" />
+                  <View style={[styles.overviewIconBox, { backgroundColor: '#ecfdf5' }]}>
+                    <Feather name="check-circle" size={m(16)} color="#059669" />
                   </View>
-                  <View style={[styles.overviewTag, { backgroundColor: '#eff6ff' }]}>
-                    <Text style={[styles.overviewTagText, { color: '#2563eb' }]}>SANCTIONED</Text>
+                  <View style={[styles.overviewTag, { backgroundColor: '#ecfdf5' }]}>
+                    <Text style={[styles.overviewTagText, { color: '#059669' }]}>ACCEPTED DEALS</Text>
                   </View>
                 </View>
                 <Text style={styles.overviewValue}>{stats.acceptedRequests || 0}</Text>
-                <Text style={styles.overviewTitle}>Sanctioned Deals</Text>
-                <Text style={styles.overviewSub}>Ready to disburse</Text>
+                <Text style={styles.overviewTitle}>Accepted Deals</Text>
+                <Text style={styles.overviewSub}>Funded / Partnered</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Row 2 */}
+            <View style={styles.overviewGridRow}>
+              {/* 3. Total Inquiries (stats.totalRequests) */}
+              <TouchableOpacity
+                style={styles.overviewCard}
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate('LenderRequests', { status: 'all' })}
+              >
+                <View style={styles.overviewCardTop}>
+                  <View style={[styles.overviewIconBox, { backgroundColor: '#ecfdf5' }]}>
+                    <Feather name="inbox" size={m(16)} color="#059669" />
+                  </View>
+                  <View style={[styles.overviewTag, { backgroundColor: '#ecfdf5' }]}>
+                    <Text style={[styles.overviewTagText, { color: '#059669' }]}>TOTAL INQUIRIES</Text>
+                  </View>
+                </View>
+                <Text style={styles.overviewValue}>{stats.totalRequests || 0}</Text>
+                <Text style={styles.overviewTitle}>Total Inquiries</Text>
+                <Text style={styles.overviewSub}>Lifetime applications</Text>
               </TouchableOpacity>
 
-              {/* 4. Borrower Network */}
+              {/* 4. Connected Borrowers (stats.connectedBorrowersCount) */}
               <TouchableOpacity
                 style={styles.overviewCard}
                 activeOpacity={0.8}
                 onPress={() => navigation.navigate('LenderBorrowers')}
               >
                 <View style={styles.overviewCardTop}>
-                  <View style={[styles.overviewIconBox, { backgroundColor: '#f5f3ff' }]}>
-                    <Feather name="users" size={m(16)} color="#7c3aed" />
+                  <View style={[styles.overviewIconBox, { backgroundColor: '#fffbeb' }]}>
+                    <Feather name="users" size={m(16)} color="#d97706" />
                   </View>
-                  <View style={[styles.overviewTag, { backgroundColor: '#f5f3ff' }]}>
-                    <Text style={[styles.overviewTagText, { color: '#7c3aed' }]}>NETWORK</Text>
+                  <View style={[styles.overviewTag, { backgroundColor: '#fffbeb' }]}>
+                    <Text style={[styles.overviewTagText, { color: '#d97706' }]}>CONNECTED</Text>
                   </View>
                 </View>
-                <Text style={styles.overviewValue}>{stats.availableBorrowersCount || 1}</Text>
-                <Text style={styles.overviewTitle}>Borrower Network</Text>
-                <Text style={styles.overviewSub}>Verified pool</Text>
+                <Text style={styles.overviewValue}>
+                  {stats.connectedBorrowersCount ?? stats.availableBorrowersCount ?? 0}
+                </Text>
+                <Text style={styles.overviewTitle}>Connected Borrowers</Text>
+                <Text style={styles.overviewSub}>Accepted borrowers</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -535,11 +537,11 @@ export default function LenderDashboard() {
               activeOpacity={0.85}
               onPress={() => navigation.navigate('LenderBorrowers')}
             >
-              <View style={[styles.actionIconCircle, { backgroundColor: '#eff6ff' }]}>
-                <Feather name="search" size={m(16)} color="#2563eb" />
+              <View style={[styles.actionIconCircle, { backgroundColor: '#ecfdf5' }]}>
+                <Feather name="user-check" size={m(16)} color="#05C46B" />
               </View>
               <View style={styles.actionTextWrap}>
-                <Text style={styles.actionTitleSecondary}>Explore Borrowers</Text>
+                <Text style={styles.actionTitleSecondary}>Connected Borrowers</Text>
                 <Text style={styles.actionSubSecondary}>Deploy capital</Text>
               </View>
               <Feather name="chevron-right" size={m(16)} color={colors.textSecondary} />
