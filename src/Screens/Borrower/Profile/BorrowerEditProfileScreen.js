@@ -10,25 +10,106 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Toast from 'react-native-toast-message';
 import { colors, FontFamily } from '../../../constants';
 import { m } from '../../../Utils/responsive';
-import { ScreenWrapper, showAlert } from '../../../Components/common';
+import { ScreenWrapper } from '../../../Components/common';
 import borrowerFlowService from '../../../Services/borrowerFlowService';
-
-const BUSINESS_TYPES = [
-  'Private Limited Company',
-  'Limited Liability Partnership (LLP)',
-  'Sole Proprietorship',
-  'Partnership Firm',
-  'Public Limited',
-];
 
 const EMPLOYMENT_TYPES = [
   'Business Owner / Self-Employed',
-  'Corporate Executive',
-  'Salaried Professional',
-  'Partner / Director',
+  'Salaried Employee',
+  'Farmer / Agriculture',
+  'Student',
+  'Professional (Doctor, CA, Lawyer, etc.)',
+  'Freelancer / Consultant',
 ];
+
+const getIncomeLabels = (type) => {
+  switch (type) {
+    case 'Salaried Employee':
+      return {
+        annual: 'Annual Gross Salary / CTC (₹ INR)',
+        annualPlaceholder: 'e.g. 600000',
+        monthly: 'Monthly In-Hand Net Salary (₹)',
+        monthlyPlaceholder: 'e.g. 45000',
+      };
+    case 'Farmer / Agriculture':
+      return {
+        annual: 'Annual Agricultural Income (₹ INR)',
+        annualPlaceholder: 'e.g. 450000',
+        monthly: 'Average Monthly Farm Income (₹)',
+        monthlyPlaceholder: 'e.g. 35000',
+      };
+    case 'Student':
+      return {
+        annual: 'Annual Stipend / Family Allowance (₹ INR)',
+        annualPlaceholder: 'e.g. 120000',
+        monthly: 'Monthly Pocket Money / Stipend (₹)',
+        monthlyPlaceholder: 'e.g. 10000',
+      };
+    case 'Professional (Doctor, CA, Lawyer, etc.)':
+      return {
+        annual: 'Annual Professional Gross Receipts (₹ INR)',
+        annualPlaceholder: 'e.g. 1200000',
+        monthly: 'Monthly Net Professional Income (₹)',
+        monthlyPlaceholder: 'e.g. 90000',
+      };
+    case 'Freelancer / Consultant':
+      return {
+        annual: 'Annual Contract Billings / Revenue (₹ INR)',
+        annualPlaceholder: 'e.g. 750000',
+        monthly: 'Monthly Net Average Earnings (₹)',
+        monthlyPlaceholder: 'e.g. 60000',
+      };
+    case 'Business Owner / Self-Employed':
+    default:
+      return {
+        annual: 'Annual Turnover / Revenue (₹ INR)',
+        annualPlaceholder: 'e.g. 2500000',
+        monthly: 'Monthly Net Business Income (₹)',
+        monthlyPlaceholder: 'e.g. 150000',
+      };
+  }
+};
+
+const formatINR = (val) => {
+  if (!val || isNaN(val)) return '₹0';
+  const num = Number(val);
+  if (num >= 10000000) return `₹${(num / 10000000).toFixed(2)} Cr`;
+  if (num >= 100000) return `₹${(num / 100000).toFixed(2)} Lakh`;
+  return `₹${num.toLocaleString('en-IN')}`;
+};
+
+const getCreditRiskGrade = (score) => {
+  const s = Number(score) || 750;
+  if (s >= 750) {
+    return {
+      grade: 'Grade A',
+      label: 'Low Default Risk',
+      bg: '#ECFDF5',
+      text: '#059669',
+      border: '#A7F3D0',
+    };
+  }
+  if (s >= 650) {
+    return {
+      grade: 'Grade B',
+      label: 'Moderate Default Risk',
+      bg: '#FFFBEB',
+      text: '#D97706',
+      border: '#FDE68A',
+    };
+  }
+  return {
+    grade: 'Grade C',
+    label: 'High Default Risk',
+    bg: '#FFF1F2',
+    text: '#E11D48',
+    border: '#FECDD3',
+  };
+};
 
 export default function BorrowerEditProfileScreen() {
   const navigation = useNavigation();
@@ -66,7 +147,9 @@ export default function BorrowerEditProfileScreen() {
 
   const fetchProfile = useCallback(async () => {
     try {
-      setLoading(true);
+      if (!profile.userName && !profile.address) {
+        setLoading(true);
+      }
       const res = await borrowerFlowService.getProfile();
       if (res?.success && res.borrower) {
         const b = res.borrower;
@@ -97,11 +180,11 @@ export default function BorrowerEditProfileScreen() {
         });
       }
     } catch (err) {
-      console.error('Error fetching borrower profile:', err);
+      console.warn('Error fetching borrower profile:', err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [profile.userName, profile.address]);
 
   useEffect(() => {
     fetchProfile();
@@ -112,6 +195,9 @@ export default function BorrowerEditProfileScreen() {
       setActiveTab(route.params.section);
     }
   }, [route.params?.section]);
+
+  const dynamicLabels = useMemo(() => getIncomeLabels(profile.employmentType), [profile.employmentType]);
+  const creditRisk = useMemo(() => getCreditRiskGrade(profile.creditScore), [profile.creditScore]);
 
   const handleSave = async () => {
     try {
@@ -140,15 +226,35 @@ export default function BorrowerEditProfileScreen() {
 
       const res = await borrowerFlowService.updateProfile(payload);
       if (res?.success) {
-        showAlert(
-          'Profile Saved',
-          'Your corporate details have been successfully synchronized.',
-          [{ text: 'OK', onPress: () => navigation.goBack() }]
-        );
+        try {
+          const currentStored = await AsyncStorage.getItem('user');
+          if (currentStored) {
+            const parsed = JSON.parse(currentStored);
+            await AsyncStorage.setItem('user', JSON.stringify({ ...parsed, ...payload }));
+          }
+        } catch (e) {}
+
+        Toast.show({
+          type: 'success',
+          text1: 'Changes Saved',
+          text2: 'Profile details updated successfully.',
+          position: 'top',
+          visibilityTime: 2000,
+        });
+
+        setTimeout(() => {
+          navigation.goBack();
+        }, 400);
       }
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to update details.';
-      showAlert('Save Error', msg);
+      Toast.show({
+        type: 'error',
+        text1: 'Save Error',
+        text2: msg,
+        position: 'top',
+        visibilityTime: 3500,
+      });
     } finally {
       setSaving(false);
     }
@@ -180,7 +286,7 @@ export default function BorrowerEditProfileScreen() {
                 ? 'Statutory KYC'
                 : activeTab === 'entity'
                 ? 'Corporate Entity'
-                : 'Registered Office'}
+                : 'Regional Location'}
             </Text>
           </View>
 
@@ -190,7 +296,7 @@ export default function BorrowerEditProfileScreen() {
 
       {/* Main Curved Body Section */}
       <View style={styles.sheetSection}>
-        {loading ? (
+        {loading && !profile.userName && !profile.address ? (
           <View style={styles.centerLoading}>
             <ActivityIndicator size="large" color={colors.lettersAndIcons} />
             <Text style={styles.loadingText}>Loading information...</Text>
@@ -401,129 +507,133 @@ export default function BorrowerEditProfileScreen() {
               </>
             )}
 
-            {/* ─── TAB 2: Entity Info ─── */}
+            {/* ─── TAB 2: Entity & Financial Info ─── */}
             {activeTab === 'entity' && (
-              <View style={styles.cardContainer}>
-                <View style={styles.cardHeader}>
-                  <Feather name="layers" size={m(16)} color={colors.lettersAndIcons} />
-                  <Text style={styles.cardTitle}>Commercial Entity & Constitution</Text>
-                </View>
-
-                <View style={styles.fieldWrap}>
-                  <Text style={styles.inputLabel}>ENTERPRISE LEGAL NAME</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    value={profile.companyName}
-                    onChangeText={t => setProfile({ ...profile, companyName: t })}
-                    placeholder="e.g. Apex Precision Engineering Pvt Ltd"
-                    placeholderTextColor="#94A3B8"
-                  />
-                </View>
-
-                <View style={styles.fieldWrap}>
-                  <Text style={styles.inputLabel}>ENTITY CONSTITUTION</Text>
-                  <View style={styles.chipsWrap}>
-                    {BUSINESS_TYPES.map(bt => {
-                      const isSelected = profile.businessType === bt;
-                      return (
-                        <TouchableOpacity
-                          key={bt}
-                          style={[styles.chip, isSelected && styles.chipActive]}
-                          onPress={() => setProfile({ ...profile, businessType: bt })}
-                          activeOpacity={0.8}
-                        >
-                          <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>
-                            {bt}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
+              <>
+                {/* 1. Commercial Entity Card */}
+                <View style={styles.cardContainer}>
+                  <View style={styles.cardHeader}>
+                    <Feather name="layers" size={m(16)} color={colors.lettersAndIcons} />
+                    <Text style={styles.cardTitle}>Commercial Entity</Text>
                   </View>
-                </View>
 
-                <View style={styles.fieldWrap}>
-                  <Text style={styles.inputLabel}>BUSINESS PROFILE / VERTICAL</Text>
-                  <View style={styles.chipsWrap}>
-                    {EMPLOYMENT_TYPES.map(et => {
-                      const isSelected = profile.employmentType === et;
-                      return (
-                        <TouchableOpacity
-                          key={et}
-                          style={[styles.chip, isSelected && styles.chipActive]}
-                          onPress={() => setProfile({ ...profile, employmentType: et })}
-                          activeOpacity={0.8}
-                        >
-                          <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>
-                            {et}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </View>
-
-                <View style={styles.twoColumnRow}>
-                  <View style={[styles.fieldWrap, { flex: 1 }]}>
-                    <Text style={styles.inputLabel}>VINTAGE (YEARS)</Text>
+                  <View style={styles.fieldWrap}>
+                    <Text style={styles.inputLabel}>ENTERPRISE LEGAL NAME</Text>
                     <TextInput
                       style={styles.textInput}
-                      keyboardType="numeric"
-                      value={profile.yearsInBusiness}
-                      onChangeText={t => setProfile({ ...profile, yearsInBusiness: t })}
-                      placeholder="3"
-                      placeholderTextColor="#94A3B8"
-                    />
-                  </View>
-                  <View style={[styles.fieldWrap, { flex: 1 }]}>
-                    <Text style={styles.inputLabel}>CIBIL / COMMERCIAL SCORE</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      keyboardType="numeric"
-                      value={profile.creditScore}
-                      onChangeText={t => setProfile({ ...profile, creditScore: t })}
-                      placeholder="750"
+                      value={profile.companyName}
+                      onChangeText={t => setProfile({ ...profile, companyName: t })}
+                      placeholder="e.g. Apex Precision Engineering Pvt Ltd"
                       placeholderTextColor="#94A3B8"
                     />
                   </View>
                 </View>
 
-                <View style={styles.twoColumnRow}>
-                  <View style={[styles.fieldWrap, { flex: 1 }]}>
-                    <Text style={styles.inputLabel}>ANNUAL TURNOVER (₹)</Text>
+                {/* 2. Financial Information Card (Exact parity with Web) */}
+                <View style={styles.cardContainer}>
+                  <View style={styles.cardHeaderWithSub}>
+                    <View style={styles.cardHeaderIconRow}>
+                      <Feather name="credit-card" size={m(16)} color={colors.lettersAndIcons} />
+                      <Text style={styles.cardTitle}>Financial Information</Text>
+                    </View>
+                    <Text style={styles.cardSubtitle}>
+                      Source of income, annual turnover / gross receipts, and monthly net earnings.
+                    </Text>
+                  </View>
+
+                  {/* Primary Source of Income */}
+                  <View style={styles.fieldWrap}>
+                    <Text style={styles.inputLabel}>
+                      PRIMARY SOURCE OF INCOME / OCCUPATION <Text style={{ color: '#EF4444' }}>*</Text>
+                    </Text>
+                    <View style={styles.chipsWrap}>
+                      {EMPLOYMENT_TYPES.map(et => {
+                        const isSelected = profile.employmentType === et;
+                        return (
+                          <TouchableOpacity
+                            key={et}
+                            style={[styles.chip, isSelected && styles.chipActive]}
+                            onPress={() => setProfile({ ...profile, employmentType: et })}
+                            activeOpacity={0.8}
+                          >
+                            <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>
+                              {et}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  {/* Dynamic Annual Turnover / Salary Input */}
+                  <View style={styles.fieldWrap}>
+                    <Text style={styles.inputLabel}>
+                      {dynamicLabels.annual.toUpperCase()} <Text style={{ color: '#EF4444' }}>*</Text>
+                    </Text>
                     <TextInput
                       style={styles.textInput}
                       keyboardType="numeric"
                       value={profile.annualRevenue}
                       onChangeText={t => setProfile({ ...profile, annualRevenue: t })}
-                      placeholder="e.g. 5000000"
+                      placeholder={dynamicLabels.annualPlaceholder}
                       placeholderTextColor="#94A3B8"
                     />
+                    {Number(profile.annualRevenue) > 0 && (
+                      <Text style={styles.amountHint}>
+                        Annual Amount: {formatINR(profile.annualRevenue)}
+                      </Text>
+                    )}
                   </View>
-                  <View style={[styles.fieldWrap, { flex: 1 }]}>
-                    <Text style={styles.inputLabel}>MONTHLY INFLOW (₹)</Text>
+
+                  {/* Dynamic Monthly Net Income */}
+                  <View style={styles.fieldWrap}>
+                    <Text style={styles.inputLabel}>
+                      {dynamicLabels.monthly.toUpperCase()}
+                    </Text>
                     <TextInput
                       style={styles.textInput}
                       keyboardType="numeric"
                       value={profile.monthlyIncome}
                       onChangeText={t => setProfile({ ...profile, monthlyIncome: t })}
-                      placeholder="e.g. 350000"
+                      placeholder={dynamicLabels.monthlyPlaceholder}
                       placeholderTextColor="#94A3B8"
                     />
+                    {Number(profile.monthlyIncome) > 0 && (
+                      <Text style={styles.amountHint}>
+                        Monthly: {formatINR(profile.monthlyIncome)}/month
+                      </Text>
+                    )}
+                  </View>
+
+                  {/* CIBIL / Credit Score with Dynamic Grade Badge */}
+                  <View style={styles.fieldWrap}>
+                    <View style={styles.scoreLabelRow}>
+                      <Text style={styles.inputLabel}>
+                        CIBIL / CREDIT SCORE <Text style={{ color: '#EF4444' }}>*</Text>
+                      </Text>
+                      {!!profile.creditScore && (
+                        <View style={[styles.gradeBadge, { backgroundColor: creditRisk.bg, borderColor: creditRisk.border }]}>
+                          <Text style={[styles.gradeBadgeText, { color: creditRisk.text }]}>
+                            {creditRisk.grade} ({creditRisk.label})
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <TextInput
+                      style={styles.textInput}
+                      keyboardType="numeric"
+                      value={profile.creditScore}
+                      onChangeText={t => setProfile({ ...profile, creditScore: t })}
+                      placeholder="e.g. 750 (Score between 300 - 900)"
+                      placeholderTextColor="#94A3B8"
+                      maxLength={3}
+                    />
+                    <Text style={styles.scoreHelperText}>
+                      750 - 900 = Grade A • 650 - 749 = Grade B • &lt;650 = Grade C
+                    </Text>
                   </View>
                 </View>
-
-                <View style={styles.fieldWrap}>
-                  <Text style={styles.inputLabel}>GSTIN (OPTIONAL)</Text>
-                  <TextInput
-                    style={[styles.textInput, { textTransform: 'uppercase' }]}
-                    autoCapitalize="characters"
-                    value={profile.gstNumber}
-                    onChangeText={t => setProfile({ ...profile, gstNumber: t.toUpperCase() })}
-                    placeholder="27AAAAA0000A1Z5"
-                    placeholderTextColor="#94A3B8"
-                  />
-                </View>
-              </View>
+              </>
             )}
 
             {/* ─── TAB 3: Address ─── */}
@@ -531,7 +641,7 @@ export default function BorrowerEditProfileScreen() {
               <View style={styles.cardContainer}>
                 <View style={styles.cardHeader}>
                   <Feather name="map-pin" size={m(16)} color={colors.lettersAndIcons} />
-                  <Text style={styles.cardTitle}>Registered Office Premise</Text>
+                  <Text style={styles.cardTitle}>Regional Location, Taluka & District Address</Text>
                 </View>
 
                 <View style={styles.fieldWrap}>
@@ -824,6 +934,23 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
+  cardHeaderWithSub: {
+    paddingBottom: m(8),
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    gap: m(4),
+  },
+  cardHeaderIconRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(8),
+  },
+  cardSubtitle: {
+    fontSize: m(11),
+    fontFamily: FontFamily.bodyRegular,
+    color: '#94A3B8',
+    lineHeight: m(16),
+  },
   cardTitle: {
     fontSize: m(14),
     fontFamily: FontFamily.primaryBold,
@@ -833,6 +960,33 @@ const styles = StyleSheet.create({
   // Form Fields
   fieldWrap: {
     gap: m(6),
+  },
+  amountHint: {
+    fontSize: m(11),
+    fontFamily: FontFamily.bodyMedium,
+    color: '#059669',
+    marginTop: m(2),
+  },
+  scoreLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  gradeBadge: {
+    paddingHorizontal: m(8),
+    paddingVertical: m(2),
+    borderRadius: m(10),
+    borderWidth: 1,
+  },
+  gradeBadgeText: {
+    fontSize: m(9.5),
+    fontFamily: FontFamily.primaryBold,
+  },
+  scoreHelperText: {
+    fontSize: m(10),
+    fontFamily: FontFamily.bodyRegular,
+    color: '#94A3B8',
+    marginTop: m(2),
   },
   inputLabel: {
     fontSize: m(10),

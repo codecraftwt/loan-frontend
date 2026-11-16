@@ -21,7 +21,7 @@ import { FontFamily, colors } from '../../../constants';
 import { m } from '../../../Utils/responsive';
 import { ScreenWrapper, showAlert } from '../../../Components/common';
 import borrowerFlowService from '../../../Services/borrowerFlowService';
-import { logout, updateUserProfile, deleteProfileImage, setUser } from '../../../Redux/Slices/authslice';
+import { logout, updateUserProfile, deleteProfileImage } from '../../../Redux/Slices/authslice';
 
 const requestCameraPermission = async () => {
   if (Platform.OS !== 'android') {
@@ -72,7 +72,7 @@ export default function BorrowerProfileScreen() {
   });
 
   const fetchProfile = useCallback(async () => {
-    if (!authUser || isLoggingOut.current) return;
+    if (isLoggingOut.current) return;
     try {
       setLoading(true);
       const res = await borrowerFlowService.getProfile();
@@ -87,19 +87,7 @@ export default function BorrowerProfileScreen() {
           mobileNo: b.mobileNo || authUser?.mobileNo || '',
           profileImage: currentImg,
         });
-        if (b.profileImage !== authUser?.profileImage) {
-          dispatch(setUser({ profileImage: b.profileImage || null }));
-          const currentStored = await AsyncStorage.getItem('user');
-          if (currentStored) {
-            try {
-              const parsed = JSON.parse(currentStored);
-              await AsyncStorage.setItem(
-                'user',
-                JSON.stringify({ ...parsed, profileImage: b.profileImage || null })
-              );
-            } catch (e) {}
-          }
-        }
+
         if (res.profileCompletion) {
           setProfileCompletion(res.profileCompletion);
         }
@@ -108,13 +96,13 @@ export default function BorrowerProfileScreen() {
       if (err?.response?.status === 401 || isLoggingOut.current) {
         return;
       }
-      console.error('Error fetching borrower profile:', err);
+      console.warn('Error fetching borrower profile:', err);
     } finally {
       if (!isLoggingOut.current) {
         setLoading(false);
       }
     }
-  }, [authUser, dispatch]);
+  }, [authUser?.userName, authUser?.companyName, authUser?.email, authUser?.mobileNo, authUser?.profileImage]);
 
   useFocusEffect(
     useCallback(() => {
@@ -298,7 +286,7 @@ export default function BorrowerProfileScreen() {
     },
     {
       id: 'office_address',
-      title: 'Office & Jurisdiction',
+      title: 'Regional Location',
       icon: 'map-pin',
       onPress: () => navigation.navigate('BorrowerEditProfileScreen', { section: 'address' }),
     },

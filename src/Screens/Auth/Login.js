@@ -81,7 +81,7 @@ export default function LoginScreen({navigation}) {
         });
       })
       .catch(error => {
-        console.error('Error ->', error);
+        console.warn('Login error ->', error);
         const errorMessage =
           (typeof error === 'string' ? error : null) ||
           error?.message ||

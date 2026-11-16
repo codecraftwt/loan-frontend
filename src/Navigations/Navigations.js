@@ -95,8 +95,8 @@ const Navigation = () => {
         animationDuration: 220,
         gestureEnabled: true,
         gestureDirection: 'horizontal',
-        freezeOnBlur: true,
-        detachInactiveScreens: true,
+        freezeOnBlur: false,
+        detachInactiveScreens: false,
       }}
     >
       <Stack.Screen

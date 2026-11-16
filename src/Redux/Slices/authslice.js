@@ -104,7 +104,7 @@ export const login = createAsyncThunk(
       }
     } catch (error) {
       // If there is a network issue or other API issues, capture the error and pass it to rejectWithValue
-      console.error('Login error:', error.response?.data?.message || error.message);
+      console.warn('Login error:', error.response?.data?.message || error.message);
       if (
         error.response &&
         error.response.data &&
