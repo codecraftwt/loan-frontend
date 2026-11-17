@@ -232,7 +232,7 @@ export default function BorrowerEditProfileScreen() {
             const parsed = JSON.parse(currentStored);
             await AsyncStorage.setItem('user', JSON.stringify({ ...parsed, ...payload }));
           }
-        } catch (e) {}
+        } catch (e) { }
 
         Toast.show({
           type: 'success',
@@ -283,10 +283,10 @@ export default function BorrowerEditProfileScreen() {
           <View style={styles.headerTitleWrap}>
             <Text style={styles.headerTitle} numberOfLines={1}>
               {activeTab === 'kyc'
-                ? 'Statutory KYC'
+                ? 'Edit Profile'
                 : activeTab === 'entity'
-                ? 'Corporate Entity'
-                : 'Regional Location'}
+                  ? 'Corporate Entity'
+                  : 'Regional Location'}
             </Text>
           </View>
 
@@ -310,131 +310,11 @@ export default function BorrowerEditProfileScreen() {
             {/* ─── TAB 1: Statutory KYC ─── */}
             {activeTab === 'kyc' && (
               <>
-                <View style={styles.statutoryGrid}>
-                  {/* PAN Card */}
-                  <View style={styles.statutoryCard}>
-                    <View style={styles.statutoryHeader}>
-                      <View style={styles.statutoryIconBox}>
-                        <Feather name="file-text" size={m(16)} color={colors.lettersAndIcons} />
-                      </View>
-                      <View style={styles.statutoryBadgeSuccess}>
-                        <Feather name="check" size={m(10)} color="#059669" />
-                        <Text style={styles.statutoryBadgeSuccessText}>NSDL VERIFIED</Text>
-                      </View>
-                    </View>
-                    <Text style={styles.statutoryLabel}>Permanent Account No.</Text>
-                    <Text style={styles.statutoryValue}>
-                      {profile.panCardNumber ? profile.panCardNumber.toUpperCase() : 'NOT PROVIDED'}
-                    </Text>
-                    <Text style={styles.statutorySub}>Direct Tax Department matched</Text>
-                  </View>
-
-                  {/* Aadhaar DigiLocker */}
-                  <View style={styles.statutoryCard}>
-                    <View style={styles.statutoryHeader}>
-                      <View style={styles.statutoryIconBox}>
-                        <Feather name="shield" size={m(16)} color={colors.lettersAndIcons} />
-                      </View>
-                      <View
-                        style={
-                          digilockerKyc?.isAadhaarVerified || profile.aadharCardNo
-                            ? styles.statutoryBadgeSuccess
-                            : styles.statutoryBadgePending
-                        }
-                      >
-                        <Feather
-                          name={
-                            digilockerKyc?.isAadhaarVerified || profile.aadharCardNo
-                              ? 'check'
-                              : 'clock'
-                          }
-                          size={m(10)}
-                          color={
-                            digilockerKyc?.isAadhaarVerified || profile.aadharCardNo
-                              ? '#059669'
-                              : '#D97706'
-                          }
-                        />
-                        <Text
-                          style={
-                            digilockerKyc?.isAadhaarVerified || profile.aadharCardNo
-                              ? styles.statutoryBadgeSuccessText
-                              : styles.statutoryBadgePendingText
-                          }
-                        >
-                          {digilockerKyc?.isAadhaarVerified || profile.aadharCardNo
-                            ? 'DIGILOCKER SYNC'
-                            : 'PENDING'}
-                        </Text>
-                      </View>
-                    </View>
-                    <Text style={styles.statutoryLabel}>Aadhaar UIDAI (12-Digit)</Text>
-                    <Text style={styles.statutoryValue}>
-                      {profile.aadharCardNo
-                        ? `•••• •••• ${profile.aadharCardNo.slice(-4)}`
-                        : 'NOT LINKED'}
-                    </Text>
-                    <Text style={styles.statutorySub}>e-KYC verified with OTP</Text>
-                  </View>
-
-                  {/* GSTIN Filing Status */}
-                  <View style={styles.statutoryCard}>
-                    <View style={styles.statutoryHeader}>
-                      <View style={styles.statutoryIconBox}>
-                        <Feather name="activity" size={m(16)} color={colors.lettersAndIcons} />
-                      </View>
-                      <View
-                        style={
-                          profile.gstNumber
-                            ? styles.statutoryBadgeSuccess
-                            : styles.statutoryBadgePending
-                        }
-                      >
-                        <Feather
-                          name={profile.gstNumber ? 'check' : 'minus'}
-                          size={m(10)}
-                          color={profile.gstNumber ? '#059669' : '#64748B'}
-                        />
-                        <Text
-                          style={
-                            profile.gstNumber
-                              ? styles.statutoryBadgeSuccessText
-                              : styles.statutoryBadgeNeutralText
-                          }
-                        >
-                          {profile.gstNumber ? 'GSTR COMPLIANT' : 'OPTIONAL'}
-                        </Text>
-                      </View>
-                    </View>
-                    <Text style={styles.statutoryLabel}>Goods & Services Tax (GSTIN)</Text>
-                    <Text style={styles.statutoryValue}>
-                      {profile.gstNumber ? profile.gstNumber.toUpperCase() : 'UNREGISTERED'}
-                    </Text>
-                    <Text style={styles.statutorySub}>Monthly 3B/GSTR-1 status active</Text>
-                  </View>
-
-                  {/* Bank Mandate */}
-                  <View style={styles.statutoryCard}>
-                    <View style={styles.statutoryHeader}>
-                      <View style={styles.statutoryIconBox}>
-                        <Feather name="credit-card" size={m(16)} color={colors.lettersAndIcons} />
-                      </View>
-                      <View style={styles.statutoryBadgeSuccess}>
-                        <Feather name="check" size={m(10)} color="#059669" />
-                        <Text style={styles.statutoryBadgeSuccessText}>NPCI MANDATE</Text>
-                      </View>
-                    </View>
-                    <Text style={styles.statutoryLabel}>e-NACH Auto-Debit</Text>
-                    <Text style={styles.statutoryValue}>ACTIVE MANDATE</Text>
-                    <Text style={styles.statutorySub}>Scheduled EMI debits authorized</Text>
-                  </View>
-                </View>
-
                 {/* Authorized Signatory Details */}
                 <View style={styles.cardContainer}>
                   <View style={styles.cardHeader}>
                     <Feather name="user-check" size={m(16)} color={colors.lettersAndIcons} />
-                    <Text style={styles.cardTitle}>Authorized Signatory Information</Text>
+                    <Text style={styles.cardTitle}>Personal Identifiers & Contact Channels</Text>
                   </View>
 
                   <View style={styles.fieldWrap}>
@@ -835,86 +715,6 @@ const styles = StyleSheet.create({
     fontSize: m(13),
     fontFamily: FontFamily.bodyRegular,
     color: '#64748B',
-  },
-
-  // Statutory Checklist Grid (Neutral #F8FAFC)
-  statutoryGrid: {
-    gap: m(10),
-  },
-  statutoryCard: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: m(14),
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: m(12),
-  },
-  statutoryHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: m(8),
-  },
-  statutoryIconBox: {
-    width: m(32),
-    height: m(32),
-    borderRadius: m(8),
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statutoryBadgeSuccess: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(4),
-    backgroundColor: '#DCFCE7',
-    paddingHorizontal: m(8),
-    paddingVertical: m(3),
-    borderRadius: m(6),
-  },
-  statutoryBadgeSuccessText: {
-    fontSize: m(9),
-    fontFamily: FontFamily.primaryBold,
-    color: '#166534',
-  },
-  statutoryBadgePending: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m(4),
-    backgroundColor: '#FEF3C7',
-    paddingHorizontal: m(8),
-    paddingVertical: m(3),
-    borderRadius: m(6),
-  },
-  statutoryBadgePendingText: {
-    fontSize: m(9),
-    fontFamily: FontFamily.primaryBold,
-    color: '#92400E',
-  },
-  statutoryBadgeNeutralText: {
-    fontSize: m(9),
-    fontFamily: FontFamily.primaryBold,
-    color: '#64748B',
-  },
-  statutoryLabel: {
-    fontSize: m(10),
-    fontFamily: FontFamily.bodyRegular,
-    color: '#64748B',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  statutoryValue: {
-    fontSize: m(14),
-    fontFamily: FontFamily.primaryBold,
-    color: colors.lettersAndIcons,
-    marginTop: m(2),
-  },
-  statutorySub: {
-    fontSize: m(11),
-    fontFamily: FontFamily.bodyRegular,
-    color: '#94A3B8',
-    marginTop: m(3),
   },
 
   // Generic Card Containers

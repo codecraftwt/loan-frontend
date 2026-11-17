@@ -45,6 +45,38 @@ const requestCameraPermission = async () => {
   }
 };
 
+/**
+ * Maps backend missing field label to the corresponding edit section tab
+ */
+const mapFieldToSection = (fieldName) => {
+  if (!fieldName) return 'kyc';
+  const f = fieldName.toLowerCase();
+  if (
+    f.includes('address') ||
+    f.includes('city') ||
+    f.includes('taluka') ||
+    f.includes('tehsil') ||
+    f.includes('district') ||
+    f.includes('state') ||
+    f.includes('pincode')
+  ) {
+    return 'address';
+  }
+  if (
+    f.includes('income') ||
+    f.includes('turnover') ||
+    f.includes('occupation') ||
+    f.includes('cibil') ||
+    f.includes('credit') ||
+    f.includes('entity') ||
+    f.includes('business') ||
+    f.includes('revenue')
+  ) {
+    return 'entity';
+  }
+  return 'kyc';
+};
+
 export default function BorrowerProfileScreen() {
   const navigation = useNavigation();
   const dispatch = useDispatch();
@@ -268,7 +300,7 @@ export default function BorrowerProfileScreen() {
   const menuItems = [
     {
       id: 'edit_profile',
-      title: 'Edit Profile & Statutory KYC',
+      title: 'Edit Profile',
       icon: 'user',
       onPress: () => navigation.navigate('BorrowerEditProfileScreen', { section: 'kyc' }),
     },
@@ -347,6 +379,106 @@ export default function BorrowerProfileScreen() {
             {/* User / Enterprise Name & ID */}
             <Text style={styles.userName}>{displayName}</Text>
             <Text style={styles.userIdText}>ID: {displayId}</Text>
+
+            {/* ── Profile Completion Status Card (Matching Web Dossier Banner) ── */}
+            <View style={styles.completionCard}>
+              <View style={styles.completionTopRow}>
+                {/* Circular Percentage Badge */}
+                <View
+                  style={[
+                    styles.percentBadge,
+                    profileCompletion.isComplete
+                      ? styles.percentBadgeSuccess
+                      : styles.percentBadgePending,
+                  ]}
+                >
+                  {profileCompletion.isComplete ? (
+                    <Feather name="check" size={m(18)} color="#15803D" />
+                  ) : (
+                    <Text style={styles.percentText}>{profileCompletion.percentage}%</Text>
+                  )}
+                </View>
+
+                {/* Title & Status Tag */}
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <View style={styles.completionTitleRow}>
+                    <Text style={styles.completionTitle} numberOfLines={1}>
+                      {profileCompletion.isComplete
+                        ? '100% Profile Complete'
+                        : `Profile Completion: ${profileCompletion.percentage}%`}
+                    </Text>
+                    <View
+                      style={[
+                        styles.statusPill,
+                        profileCompletion.isComplete
+                          ? styles.statusPillSuccess
+                          : styles.statusPillWarning,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.statusPillText,
+                          profileCompletion.isComplete
+                            ? styles.statusPillTextSuccess
+                            : styles.statusPillTextWarning,
+                        ]}
+                      >
+                        {profileCompletion.isComplete ? 'Ready to Apply' : 'Loan Lock Active'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text style={styles.completionSubtitle}>
+                    {profileCompletion.isComplete
+                      ? 'All borrower parameters and financial credentials are complete.'
+                      : 'Complete 100% of your profile details below to unlock batch loan applications.'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Progress Bar */}
+              <View style={styles.progressBarTrack}>
+                <View
+                  style={[
+                    styles.progressBarFill,
+                    {
+                      width: `${Math.max(
+                        5,
+                        Math.min(100, profileCompletion.percentage || 0)
+                      )}%`,
+                    },
+                  ]}
+                />
+              </View>
+
+              {/* Missing Fields List (if incomplete) */}
+              {!profileCompletion.isComplete &&
+                profileCompletion.missingFields?.length > 0 && (
+                  <View style={styles.missingFieldsContainer}>
+                    <Text style={styles.missingFieldsLabel}>
+                      Pending details ({profileCompletion.missingFields.length}):
+                    </Text>
+                    <View style={styles.missingFieldsWrap}>
+                      {profileCompletion.missingFields.map((field, idx) => (
+                        <TouchableOpacity
+                          key={idx}
+                          style={styles.missingFieldPill}
+                          activeOpacity={0.75}
+                          onPress={() =>
+                            navigation.navigate('BorrowerEditProfileScreen', {
+                              section: mapFieldToSection(field),
+                            })
+                          }
+                        >
+                          <Feather name="alert-circle" size={m(11)} color="#BE123C" />
+                          <Text style={styles.missingFieldText}>{field}</Text>
+                          <Feather name="chevron-right" size={m(10)} color="#BE123C" />
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                )}
+            </View>
 
             {/* Figma-Style Blue Circle Menu Items matching Lender layout */}
             <View style={styles.menuList}>
@@ -639,7 +771,140 @@ const styles = StyleSheet.create({
     color: '#4B6358',
     textAlign: 'center',
     marginTop: m(2),
+    marginBottom: m(14),
+  },
+
+  // Profile Completion Dossier Card
+  completionCard: {
+    marginHorizontal: m(18),
     marginBottom: m(16),
+    backgroundColor: colors.white,
+    borderRadius: m(20),
+    padding: m(16),
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  completionTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(12),
+  },
+  percentBadge: {
+    width: m(44),
+    height: m(44),
+    borderRadius: m(22),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  percentBadgePending: {
+    backgroundColor: '#DCFCE7',
+    borderWidth: 1.5,
+    borderColor: '#86EFAC',
+  },
+  percentBadgeSuccess: {
+    backgroundColor: '#DCFCE7',
+    borderWidth: 1.5,
+    borderColor: '#86EFAC',
+  },
+  percentText: {
+    fontSize: m(13.5),
+    fontFamily: FontFamily.primaryBold,
+    color: '#15803D',
+  },
+  completionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: m(6),
+  },
+  completionTitle: {
+    fontSize: m(13),
+    fontFamily: FontFamily.primaryBold,
+    color: colors.lettersAndIcons,
+    flexShrink: 1,
+  },
+  statusPill: {
+    paddingHorizontal: m(8),
+    paddingVertical: m(2),
+    borderRadius: m(10),
+  },
+  statusPillWarning: {
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  statusPillSuccess: {
+    backgroundColor: '#DCFCE7',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  statusPillText: {
+    fontSize: m(9.5),
+    fontFamily: FontFamily.primaryBold,
+  },
+  statusPillTextWarning: {
+    color: '#92400E',
+  },
+  statusPillTextSuccess: {
+    color: '#166534',
+  },
+  completionSubtitle: {
+    fontSize: m(11),
+    fontFamily: FontFamily.bodyRegular,
+    color: '#64748B',
+    marginTop: m(3),
+    lineHeight: m(15),
+  },
+  progressBarTrack: {
+    width: '100%',
+    height: m(7),
+    backgroundColor: '#E2E8F0',
+    borderRadius: m(4),
+    marginTop: m(12),
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#05C46B',
+    borderRadius: m(4),
+  },
+  missingFieldsContainer: {
+    marginTop: m(12),
+    paddingTop: m(10),
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  missingFieldsLabel: {
+    fontSize: m(11),
+    fontFamily: FontFamily.primaryBold,
+    color: '#475569',
+    marginBottom: m(8),
+  },
+  missingFieldsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: m(6),
+  },
+  missingFieldPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m(4),
+    backgroundColor: '#FFF1F2',
+    borderWidth: 1,
+    borderColor: '#FECDD3',
+    paddingHorizontal: m(8),
+    paddingVertical: m(4),
+    borderRadius: m(8),
+  },
+  missingFieldText: {
+    fontSize: m(10.5),
+    fontFamily: FontFamily.primaryBold,
+    color: '#BE123C',
   },
 
   // Figma-Style Blue Circle Menu Items

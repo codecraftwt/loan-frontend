@@ -254,7 +254,7 @@ export default function BorrowerDashboard() {
             <TouchableOpacity
               style={styles.greetingTextContainer}
               activeOpacity={0.9}
-              onPress={() => navigation.navigate('BorrowerProfileScreen')}
+              onPress={() => navigation.navigate('BorrowerProfile')}
             >
               <Text style={styles.greetingTitle}>Hi, Welcome Back</Text>
               <Text style={styles.greetingSubtitle} numberOfLines={1}>

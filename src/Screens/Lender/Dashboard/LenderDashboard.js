@@ -354,7 +354,6 @@ export default function LenderDashboard() {
                 </View>
                 <Text style={styles.overviewValue}>{stats.pendingRequests || 0}</Text>
                 <Text style={styles.overviewTitle}>Pending Action</Text>
-                <Text style={styles.overviewSub}>Awaiting credit review</Text>
               </TouchableOpacity>
 
               {/* 2. Accepted Deals (stats.acceptedRequests) */}
@@ -373,7 +372,6 @@ export default function LenderDashboard() {
                 </View>
                 <Text style={styles.overviewValue}>{stats.acceptedRequests || 0}</Text>
                 <Text style={styles.overviewTitle}>Accepted Deals</Text>
-                <Text style={styles.overviewSub}>Funded / Partnered</Text>
               </TouchableOpacity>
             </View>
 
@@ -395,7 +393,6 @@ export default function LenderDashboard() {
                 </View>
                 <Text style={styles.overviewValue}>{stats.totalRequests || 0}</Text>
                 <Text style={styles.overviewTitle}>Total Inquiries</Text>
-                <Text style={styles.overviewSub}>Lifetime applications</Text>
               </TouchableOpacity>
 
               {/* 4. Connected Borrowers (stats.connectedBorrowersCount) */}
@@ -416,7 +413,6 @@ export default function LenderDashboard() {
                   {stats.connectedBorrowersCount ?? stats.availableBorrowersCount ?? 0}
                 </Text>
                 <Text style={styles.overviewTitle}>Connected Borrowers</Text>
-                <Text style={styles.overviewSub}>Accepted borrowers</Text>
               </TouchableOpacity>
             </View>
           </View>

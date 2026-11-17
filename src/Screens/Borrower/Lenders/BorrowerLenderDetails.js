@@ -28,30 +28,29 @@ export default function BorrowerLenderDetails() {
   const [activePendingApp, setActivePendingApp] = useState(null);
   const [copiedLicense, setCopiedLicense] = useState(false);
 
-  // Fetch lender details from GET /api/borrower/lenders endpoint
+  // Fetch lender details from GET /api/borrower/lenders/:id endpoint
   const fetchLender = async () => {
+    if (!targetId) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
-      const [lendersRes, appsRes] = await Promise.allSettled([
-        borrowerFlowService.getLenders(),
+      const [lenderRes, appsRes] = await Promise.allSettled([
+        borrowerFlowService.getLenderById(targetId),
         borrowerFlowService.getMyApplications(),
       ]);
 
-      if (lendersRes.status === 'fulfilled' && lendersRes.value?.success) {
-        const list = lendersRes.value.lenders || [];
-        let matched = null;
-        if (targetId) {
-          matched = list.find((l) => String(l._id) === String(targetId));
-        }
-        if (!matched && list.length > 0) {
-          matched = list[0];
-        }
-        setLender(matched);
-      } else if (targetId) {
-        // Direct fallback
-        const single = await borrowerFlowService.getLenderById(targetId);
-        if (single?.success && single.lender) {
-          setLender(single.lender);
+      if (lenderRes.status === 'fulfilled' && lenderRes.value?.success && lenderRes.value?.lender) {
+        setLender(lenderRes.value.lender);
+      } else {
+        // Fallback to marketplace list in case single fetch fails
+        const lendersRes = await borrowerFlowService.getLenders();
+        if (lendersRes?.success && lendersRes.lenders) {
+          const matched = lendersRes.lenders.find((l) => String(l._id) === String(targetId));
+          setLender(matched || null);
+        } else {
+          setLender(null);
         }
       }
 
@@ -62,6 +61,7 @@ export default function BorrowerLenderDetails() {
       }
     } catch (err) {
       console.error('Error fetching lender profile:', err);
+      setLender(null);
     } finally {
       setLoading(false);
     }
@@ -174,24 +174,16 @@ export default function BorrowerLenderDetails() {
 
   const lp = lender.lenderProfile || {};
   const companyTitle = lender.companyName || lender.userName || 'Institutional Lender';
-  const minRate = lp.minInterestRate != null ? lp.minInterestRate : 9.5;
-  const maxRate = lp.maxInterestRate != null ? lp.maxInterestRate : 14.0;
-  const minAmount = lp.minLoanAmount != null ? lp.minLoanAmount : 500000;
-  const maxAmount = lp.maxLoanAmount != null ? lp.maxLoanAmount : 100000000;
-  const tat = lp.turnaroundTime || '24-48 Hours';
+  const minRateText = lp.minInterestRate != null ? `${lp.minInterestRate}%` : 'On Request';
+  const maxRateText = lp.maxInterestRate != null ? `${lp.maxInterestRate}%` : 'On Request';
+  const minAmountText = lp.minLoanAmount && Number(lp.minLoanAmount) > 0 ? formatINR(lp.minLoanAmount) : 'Flexible';
+  const maxAmountText = lp.maxLoanAmount && Number(lp.maxLoanAmount) > 0 ? formatINR(lp.maxLoanAmount) : 'Flexible Limits';
+  const tat = lp.turnaroundTime || '24-48 Hours (Standard Verification)';
   const isFav = !!lender.isFavorite;
-  const services =
-    Array.isArray(lp.servicesOffered) && lp.servicesOffered.length > 0
-      ? lp.servicesOffered
-      : [
-        'Commercial Term Loan',
-        'Working Capital Line',
-        'SME Business Loan',
-        'Equipment & Machinery Finance',
-      ];
+  const services = Array.isArray(lp.servicesOffered) ? lp.servicesOffered : [];
 
-  const totalFunded = lp.totalLoansFunded || 12;
-  const disbursedVolume = lp.totalDisbursedAmount || 802000;
+  const totalFunded = lp.totalLoansFunded != null ? lp.totalLoansFunded : 0;
+  const disbursedVolume = lp.totalDisbursedAmount != null ? lp.totalDisbursedAmount : 0;
   const reviewScore = lp.rating && lp.ratingCount ? `${lp.rating} ★ (${lp.ratingCount})` : 'New Desk';
 
   const isDistinctCompany = Boolean(
@@ -397,7 +389,7 @@ export default function BorrowerLenderDetails() {
                     <Text style={styles.bracketBoxLabel}>
                       MINIMUM RATE (PRIME / BEST CREDIT)
                     </Text>
-                    <Text style={styles.bracketRateVal}>{minRate}%</Text>
+                    <Text style={styles.bracketRateVal}>{minRateText}</Text>
                     <Text style={styles.bracketSubtext}>
                       For borrowers with strong credit & high risk grade.
                     </Text>
@@ -407,7 +399,7 @@ export default function BorrowerLenderDetails() {
                     <Text style={styles.bracketBoxLabel}>
                       MAXIMUM RATE (SUBPRIME / HIGHER RISK)
                     </Text>
-                    <Text style={styles.bracketRateVal}>{maxRate}%</Text>
+                    <Text style={styles.bracketRateVal}>{maxRateText}</Text>
                     <Text style={styles.bracketSubtext}>
                       Capped APR for higher risk or customized credit structures.
                     </Text>
@@ -421,12 +413,12 @@ export default function BorrowerLenderDetails() {
                 <View style={styles.dualBoxRow}>
                   <View style={styles.bracketBox}>
                     <Text style={styles.bracketBoxLabel}>MINIMUM LOAN AMOUNT</Text>
-                    <Text style={styles.bracketAmountVal}>{formatINR(minAmount)}</Text>
+                    <Text style={styles.bracketAmountVal}>{minAmountText}</Text>
                   </View>
 
                   <View style={styles.bracketBox}>
                     <Text style={styles.bracketBoxLabel}>MAXIMUM TICKET SIZE LIMIT</Text>
-                    <Text style={styles.bracketAmountVal}>{formatINR(maxAmount)}</Text>
+                    <Text style={styles.bracketAmountVal}>{maxAmountText}</Text>
                   </View>
                 </View>
 
@@ -459,12 +451,18 @@ export default function BorrowerLenderDetails() {
                 </View>
 
                 <View style={styles.productsWrap}>
-                  {services.map((item) => (
-                    <View key={item} style={styles.productPill}>
-                      <Feather name="check-circle" size={m(13)} color={colors.oceanBlueButton} />
-                      <Text style={styles.productPillText}>{item}</Text>
-                    </View>
-                  ))}
+                  {services.length > 0 ? (
+                    services.map((item, idx) => (
+                      <View key={`${item}-${idx}`} style={styles.productPill}>
+                        <Feather name="check-circle" size={m(13)} color={colors.oceanBlueButton} />
+                        <Text style={styles.productPillText}>{item}</Text>
+                      </View>
+                    ))
+                  ) : (
+                    <Text style={styles.emptyServicesText}>
+                      Offers comprehensive commercial & business loan financing on request.
+                    </Text>
+                  )}
                 </View>
               </View>
 
@@ -538,18 +536,18 @@ export default function BorrowerLenderDetails() {
 
                 <View style={styles.personalDetailItem}>
                   <Text style={styles.personalDetailLabel}>Official Email</Text>
-                  <Text style={styles.personalDetailVal}>{lender.email || 'partner@loanhub.in'}</Text>
+                  <Text style={styles.personalDetailVal}>{lender.email || 'Not Specified'}</Text>
                 </View>
 
                 <View style={styles.personalDetailItem}>
                   <Text style={styles.personalDetailLabel}>Direct Contact</Text>
-                  <Text style={styles.personalDetailVal}>{lender.mobileNo || '+91 9876545678'}</Text>
+                  <Text style={styles.personalDetailVal}>{lender.mobileNo || 'Not Specified'}</Text>
                 </View>
 
                 <View style={styles.personalDetailItem}>
                   <Text style={styles.personalDetailLabel}>Operating Jurisdiction</Text>
                   <Text style={styles.personalDetailVal}>
-                    {lender.stateOfOperation || 'India (Pan-India)'}
+                    {lender.stateOfOperation || lender.state || 'Pan India Coverage'}
                   </Text>
                 </View>
 
@@ -563,7 +561,7 @@ export default function BorrowerLenderDetails() {
                       lender.district,
                       lender.state,
                       lender.pincode
-                    ) || 'Kolhapur, Maharashtra, India'}
+                    ) || 'Address available on request.'}
                   </Text>
                 </View>
 
@@ -1043,6 +1041,13 @@ const styles = StyleSheet.create({
     fontSize: m(11),
     fontFamily: FontFamily.primarySemiBold,
     color: colors.lettersAndIcons,
+  },
+  emptyServicesText: {
+    fontSize: m(11.5),
+    fontFamily: FontFamily.primaryRegular,
+    color: '#94a3b8',
+    fontStyle: 'italic',
+    paddingVertical: m(6),
   },
 
   // ── Track Record Grid ──

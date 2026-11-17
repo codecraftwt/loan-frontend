@@ -292,7 +292,7 @@ export default function BorrowerApply() {
         'Profile Incomplete (100% Required)',
         `Your profile is only ${profileCompletion.percentage}% complete. Lenders require verified personal, address, and financial details before evaluating applications.`,
         [
-          { text: 'Complete Profile (100%)', onPress: () => navigation.navigate('BorrowerProfileScreen') },
+          { text: 'Complete Profile (100%)', onPress: () => navigation.navigate('BottomNavigation', { screen: 'BorrowerProfile' }) },
           { text: 'Cancel', style: 'cancel' },
         ]
       );
@@ -358,7 +358,7 @@ export default function BorrowerApply() {
           'Profile Incomplete',
           data.message || 'Please complete 100% of your borrower profile details before applying.',
           [
-            { text: 'Complete Profile', onPress: () => navigation.navigate('BorrowerProfileScreen') },
+            { text: 'Complete Profile', onPress: () => navigation.navigate('BottomNavigation', { screen: 'BorrowerProfile' }) },
             { text: 'Cancel', style: 'cancel' },
           ]
         );
@@ -497,7 +497,7 @@ export default function BorrowerApply() {
                 <TouchableOpacity
                   style={[styles.alertBtn, { backgroundColor: '#dc2626' }]}
                   activeOpacity={0.85}
-                  onPress={() => navigation.navigate('BorrowerProfileScreen')}
+                  onPress={() => navigation.navigate('BottomNavigation', { screen: 'BorrowerProfile' })}
                 >
                   <Text style={styles.alertBtnText}>Complete Profile (100%)</Text>
                   <Feather name="chevron-right" size={m(14)} color={colors.white} />
